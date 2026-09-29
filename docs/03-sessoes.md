@@ -37,7 +37,7 @@ Uma sessão do Claude Code = um item. Ritual:
   seção e comprimento comercial (96, 120, 144, 168, 192), escolhendo o menor que cabe. Testes com o fixture plain."
   Saída: `cutList(wall-144-plain)` = 3 plates + 10 studs.
 
-- [ ] **S5 — SVG da elevação**
+- [x] **S5 — SVG da elevação**
   Prompt: "Crie `src/output/svg.ts`: `panelSvg(panel, opts): string`. Escala 4 px/pol. Retângulo por member,
   cota do comprimento total e da altura, marca de layout no rodapé, ID do painel no topo. Sem dependências.
   Salve o SVG do fixture plain em `test/__snapshots__/` e me diga o caminho para eu abrir no navegador."
