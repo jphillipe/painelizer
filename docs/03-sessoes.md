@@ -9,7 +9,7 @@ Uma sessão do Claude Code = um item. Ritual:
 
 ## Fase 1 — Motor: parede reta
 
-- [ ] **S1 — Tipos e unidades**
+- [x] **S1 — Tipos e unidades**
   Prompt: "Crie `src/types.ts` com `Wall`, `Opening`, `Member`, `MemberRole`, `Panel`, `Config` conforme
   `docs/02-framing.md`. `Wall.section` é `'2x4' | '2x6'`; a espessura real (3.5 / 5.5) é derivada, nunca
   entrada. `Config.headerHeight` é opcional (ver S7). Crie `src/units.ts` com `parseFeetInches(s: string): number` e

@@ -21,3 +21,7 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
 - 2026-09-28 — Zonas de abertura que se sobrepõem ou se tocam são fundidas e compartilham king — janela ao lado de porta é comum; sem isso o motor geraria kings sobrepostos.
 - 2026-09-28 — Divisão em painéis prefere quebra em stud múltiplo de 48" — módulo do OSB, mesmo com sheathing fora do escopo v1.
 - 2026-09-28 — Scripts `test` e `typecheck` na raiz delegam para os pacotes (`pnpm -r`) — CLAUDE.md manda rodar na raiz.
+- 2026-09-28 — `Section` nominal ('2x4'…'2x12') com tabela `SECTION_DEPTH` e `sectionDepth()` em `types.ts`; `WallSection` restringe parede a 2x4/2x6, header pode usar qualquer seção — a profundidade real é derivada num único lugar, nunca digitada.
+- 2026-09-28 — `Opening` não tem altura de sill como entrada: base do RO = base do header − `roughHeight` (segue `02-framing`, não `01-escopo`) — evita dois campos que podem conflitar; revisar se P2 indicar que a fábrica cota o sill.
+- 2026-09-28 — `formatFeetInches` arredonda ao 1/16", omite pés abaixo de 12" (`1 1/2"`) e, com pés, sempre mostra a polegada inteira (`1'-0 1/16"`); `formatInches` extra dá só polegadas (`92 5/8"`) para listas de corte — é a notação da lista de corte em `00-visao`.
+- 2026-09-28 — `parseFeetInches` aceita espaço ou hífen entre pés, polegadas e fração, aspas opcionais e decimal puro (`92.625`); string inválida lança `RangeError` — entrada JSON pode vir de humano ou de IA, melhor falhar cedo.
