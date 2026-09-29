@@ -27,7 +27,7 @@ com confirmação humana. Formato: `- [ ] Pn — pergunta — hipótese atual �
 - [ ] **P8 — Peso por peça.** Densidade usada para estimar peso do painel (SPF ~ 1.3 lb/pé linear para 2x4,
   ~2.0 para 2x6?). — hipótese: tabela fixa em `src/data/lumber.json` — S12.
 - [ ] **P9 — Comprimentos comerciais em estoque.** 8/10/12/14/16' ou também 9' e 20'? Preço por comprimento? —
-  hipótese: 96, 120, 144, 168, 192 — S4.
+  hipótese: 96, 120, 144, 168, 192 (`DEFAULT_STOCK_LENGTHS` em `output/bom.ts`, parametrizável) — S4 (feita com a hipótese).
 
 ## Normativo
 - [ ] **P10 — Tabela IRC em vigor.** Massachusetts 780 CMR 10ª edição (base IRC 2021) tem emendas sobre R602.7?

@@ -31,7 +31,7 @@ Uma sessão do Claude Code = um item. Ritual:
   Crie um helper de teste que compara members por (role, section, length, x, y) ignorando ordem."
   Saída: fixture verde.
 
-- [ ] **S4 — Lista de corte**
+- [x] **S4 — Lista de corte**
   Prompt: "Crie `src/output/cutlist.ts`: `cutList(panel): CutLine[]` agrupando por (role, section, length),
   ordenado por role e comprimento desc. Crie `src/output/bom.ts`: `bom(panels): BomLine[]` consolidando por
   seção e comprimento comercial (96, 120, 144, 168, 192), escolhendo o menor que cabe. Testes com o fixture plain."
