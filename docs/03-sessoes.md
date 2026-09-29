@@ -25,7 +25,7 @@ Uma sessão do Claude Code = um item. Ritual:
   o que fazer quando a última marca (128) e o fechamento (141.5) ficam a menos de 1.5" — proposta: manter os dois."
   Saída: função + testes.
 
-- [ ] **S3 — Plates e panelizeWall (sem abertura)**
+- [x] **S3 — Plates e panelizeWall (sem abertura)**
   Prompt: "Crie `src/rules/plates.ts` (3 plates) e `src/panelize/panelizeWall.ts` que monta o `Panel` de uma
   parede sem aberturas usando plates + layoutStuds. Faça `test/fixtures/wall-144-plain.json` passar exatamente.
   Crie um helper de teste que compara members por (role, section, length, x, y) ignorando ordem."
