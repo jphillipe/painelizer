@@ -1,0 +1,40 @@
+{
+  "$comment": "Parede reta 12' 2x6 sem abertura. Alvo da sessão S3. Members comparados por (role, section, length, x, y), ordem irrelevante.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": 92.625
+  },
+  "wall": {
+    "id": "W-plain",
+    "length": 144,
+    "height": 97.125,
+    "thickness": 5.5,
+    "exterior": true,
+    "bearing": true,
+    "openings": []
+  },
+  "expected": {
+    "members": [
+      { "role": "bottomPlate",    "section": "2x6", "length": 144,    "x": 0,     "y": 0,      "orientation": "horizontal" },
+      { "role": "topPlate",       "section": "2x6", "length": 144,    "x": 0,     "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 144,    "x": 0,     "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0,     "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 16,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 32,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 48,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 64,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 80,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 96,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 112,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 128,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" }
+    ],
+    "cutList": [
+      { "role": "plates", "section": "2x6", "length": 144,    "qty": 3 },
+      { "role": "stud",   "section": "2x6", "length": 92.625, "qty": 10 }
+    ],
+    "warnings": []
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). Conferir com a equipe de produção antes de tratar como referência.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": 92.625,
+    "defaultHeaderSection": "2x10",
+    "defaultHeaderPlies": 2
+  },
+  "wall": {
+    "id": "W-window",
+    "length": 144,
+    "height": 97.125,
+    "thickness": 5.5,
+    "exterior": true,
+    "bearing": true,
+    "openings": [
+      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48 }
+    ]
+  },
+  "expected": {
+    "members": [
+      { "role": "bottomPlate",    "section": "2x6",  "length": 144,    "x": 0,     "y": 0,      "orientation": "horizontal" },
+      { "role": "topPlate",       "section": "2x6",  "length": 144,    "x": 0,     "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6",  "length": 144,    "x": 0,     "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0,     "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 16,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 32,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 96,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 112,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 128,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 45,   "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 85.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 46.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 84,   "y": 1.5, "orientation": "vertical" },
+      { "role": "header",  "section": "2x10", "length": 39, "x": 46.5, "y": 84.875, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill",    "section": "2x6",  "length": 36, "x": 48,   "y": 35.375, "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 64, "y": 1.5, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 80, "y": 1.5, "orientation": "vertical" }
+    ],
+    "warnings": []
+  }
+}
