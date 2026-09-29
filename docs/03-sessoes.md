@@ -18,7 +18,7 @@ Uma sessão do Claude Code = um item. Ritual:
   Testes para 0, 1.5, 36, 92.625, 97.125, 144, e o inverso. Frações até 1/16."
   Saída: tipos compilando; units com testes verdes.
 
-- [ ] **S2 — Layout de studs**
+- [x] **S2 — Layout de studs**
   Prompt: "Crie `src/rules/studs.ts` com `layoutStuds(length, spacing, studThickness = 1.5): number[]`
   retornando posições x (borda esquerda), com o último stud em `length − studThickness`. Regras em CLAUDE.md.
   Testes: 144 → [0,16,…,128,142.5]; 16 → [0,14.5]; 15 → [0,13.5]; 143 → decidir e registrar em 04-decisoes.md
