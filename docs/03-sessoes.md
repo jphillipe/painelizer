@@ -3,7 +3,8 @@
 Uma sessão do Claude Code = um item. Ritual:
 1. Abrir: "Leia CLAUDE.md e docs/03-sessoes.md. Vamos fazer a sessão N. Antes de escrever código, explique a abordagem."
 2. Critério de saída = `pnpm test` e `pnpm typecheck` verdes (rodam na raiz) + critério do item.
-3. Fechar: marcar `[x]`, registrar decisões em `docs/04-decisoes.md`, commit. `/clear` antes da próxima.
+3. Fechar: marcar `[x]`, registrar decisões em `docs/04-decisoes.md`. O Claude sugere a mensagem de commit;
+   quem commita é o humano. `/clear` antes da próxima.
 4. Se a sessão esbarrar numa pergunta que só a fábrica responde, anotar em `docs/05-pendencias.md` e seguir
    com a hipótese registrada lá. Não inventar convenção de framing.
 

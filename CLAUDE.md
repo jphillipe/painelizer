@@ -16,7 +16,8 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
 - Coordenadas de peça (`x`, `y`) = canto inferior esquerdo. y=0 é a base da bottom plate.
 - Antes de implementar qualquer regra de framing, explique a abordagem em até 5 linhas e aguarde confirmação.
 - Uma sessão = um item de `docs/03-sessoes.md`. Ao terminar: marcar o item, registrar decisões novas em
-  `docs/04-decisoes.md`, commit com mensagem descrevendo a regra (não o código).
+  `docs/04-decisoes.md` e sugerir uma mensagem de commit descrevendo a regra (não o código).
+- NUNCA rodar `git commit` ou `git push`. Quem commita é o humano. Deixar as mudanças no working tree.
 - Sem IA generativa dentro do motor. O motor é determinístico.
 
 ## Comandos
