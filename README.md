@@ -35,3 +35,11 @@ Pendências com a fábrica (painéis reais, altura de header, cantos…) em `doc
 claude
 ```
 Primeiro prompt: ver `docs/03-sessoes.md`, sessão 1.
+
+## Usar o CLI
+```bash
+pnpm panelizer build packages/cli/examples/casa-exemplo.json --out saida/
+```
+Gera `saida/cutlist.csv`, `saida/bom.csv` e `saida/panels/<id>.svg` (um por painel; abra no navegador).
+Entrada: `{ "name", "config", "walls": [...], "stockLengths"? }` — medidas em polegadas decimais ou
+pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Ver `packages/cli/examples/casa-exemplo.json` e `packages/cli/src/project.ts`.

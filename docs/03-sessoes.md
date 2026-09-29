@@ -43,7 +43,7 @@ Uma sessão do Claude Code = um item. Ritual:
   Salve o SVG do fixture plain em `test/__snapshots__/` e me diga o caminho para eu abrir no navegador."
   Saída: SVG abre e mostra o painel corretamente.
 
-- [ ] **S6 — CLI**
+- [x] **S6 — CLI**
   Prompt: "Crie `packages/cli` com `panelizer build <projeto.json> --out <dir>`: lê `Wall[]` + `Config`,
   gera `cutlist.csv`, `bom.csv` e um SVG por painel. Só o CLI pode usar Node fs."
   Saída: comando roda de ponta a ponta com um JSON de exemplo.

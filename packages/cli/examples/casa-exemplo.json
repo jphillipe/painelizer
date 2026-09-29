@@ -1,0 +1,16 @@
+{
+  "$comment": "Exemplo de entrada do CLI. Paredes retas sem abertura (aberturas chegam na S7) e até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
+  "name": "casa-exemplo",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": "92 5/8\""
+  },
+  "walls": [
+    { "id": "W01", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "openings": [] },
+    { "id": "W02", "length": "16'", "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "openings": [] },
+    { "id": "W03", "length": 120, "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "openings": [] },
+    { "id": "W04", "length": "10'-9 1/2\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+  ]
+}

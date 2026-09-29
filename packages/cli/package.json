@@ -1,0 +1,27 @@
+{
+  "name": "cli",
+  "version": "1.0.0",
+  "description": "panelizer CLI: JSON de paredes → cutlist.csv, bom.csv e um SVG por painel",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "panelizer": "./bin/panelizer.mjs"
+  },
+  "scripts": {
+    "panelizer": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.8.1",
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "dependencies": {
+    "core": "workspace:^"
+  }
+}
