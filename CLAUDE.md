@@ -2,6 +2,7 @@
 
 Leia `docs/00-visao.md` na primeira sessão. O plano de trabalho está em `docs/03-sessoes.md`.
 Decisões tomadas estão em `docs/04-decisoes.md` — consulte antes de perguntar.
+Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a hipótese em vigor — use a hipótese, não invente.
 
 ## Regras invioláveis
 - Unidades: polegadas decimais em todo o `packages/core`. Formatação pés-pol-fração só em `src/units.ts`.

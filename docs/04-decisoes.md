@@ -14,3 +14,10 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
 - 2026-09-23 — Headers só por tabela IRC R602.7 em JSON; fora da tabela → requiresEngineer, nunca extrapolar.
 - 2026-09-23 — Stack: TypeScript strict, Vitest, pnpm workspaces (core / cli / ui). Core sem DOM. UI em Next.js; backend Supabase (auth + projects.jsonb + storage), só na fase 5.
 - 2026-09-23 — Fixtures são a verdade nos testes; alterar fixture exige confirmação humana.
+- 2026-09-28 — Perguntas que só a fábrica responde vão para `docs/05-pendencias.md`; o motor segue com a hipótese registrada lá — painéis reais não disponíveis no início; não travar o desenvolvimento.
+- 2026-09-28 — `Wall.section` ('2x4' | '2x6') é a entrada; espessura derivada — evita mapear 5.5 → "2x6" em cada regra. Substitui `thickness` nos fixtures (confirmado pelo humano).
+- 2026-09-28 — `config.headerHeight` opcional na v1; ausente = header encostado na top plate — substitui a decisão de 23/09 ("configurável fica para v2"): fábricas usam altura padrão de header para toda a casa, e sem isso a porta com `roughHeight` de entrada não fecha. Default mantém os fixtures atuais válidos.
+- 2026-09-28 — Porta: `roughHeight` é entrada; conflito com a base do header gera aviso, não erro — resposta definitiva em P4.
+- 2026-09-28 — Zonas de abertura que se sobrepõem ou se tocam são fundidas e compartilham king — janela ao lado de porta é comum; sem isso o motor geraria kings sobrepostos.
+- 2026-09-28 — Divisão em painéis prefere quebra em stud múltiplo de 48" — módulo do OSB, mesmo com sheathing fora do escopo v1.
+- 2026-09-28 — Scripts `test` e `typecheck` na raiz delegam para os pacotes (`pnpm -r`) — CLAUDE.md manda rodar na raiz.

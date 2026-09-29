@@ -4,10 +4,10 @@ Motor de painelização de paredes para light wood frame. Ver `docs/00-visao.md`
 
 ## Setup (uma vez)
 ```bash
-pnpm init -y            # se ainda não houver package.json na raiz
+pnpm init               # se ainda não houver package.json na raiz (pnpm 10 não aceita -y)
 mkdir -p packages/core/src/rules packages/core/src/panelize packages/core/src/output packages/core/src/data packages/core/test/rules
 cd packages/core
-pnpm init -y
+pnpm init
 pnpm add -D typescript vitest
 npx tsc --init --strict --target ES2022 --module ESNext --moduleResolution bundler --outDir dist
 ```
@@ -22,6 +22,13 @@ Crie `pnpm-workspace.yaml` na raiz:
 packages:
   - packages/*
 ```
+
+Na raiz, `package.json` delega para os pacotes:
+```json
+"scripts": { "test": "pnpm -r test", "typecheck": "pnpm -r typecheck" }
+```
+
+Pendências com a fábrica (painéis reais, altura de header, cantos…) em `docs/05-pendencias.md`.
 
 ## Começar a trabalhar
 ```bash

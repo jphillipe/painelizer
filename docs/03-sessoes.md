@@ -2,14 +2,17 @@
 
 Uma sessão do Claude Code = um item. Ritual:
 1. Abrir: "Leia CLAUDE.md e docs/03-sessoes.md. Vamos fazer a sessão N. Antes de escrever código, explique a abordagem."
-2. Critério de saída = `pnpm test` e `pnpm typecheck` verdes + critério do item.
+2. Critério de saída = `pnpm test` e `pnpm typecheck` verdes (rodam na raiz) + critério do item.
 3. Fechar: marcar `[x]`, registrar decisões em `docs/04-decisoes.md`, commit. `/clear` antes da próxima.
+4. Se a sessão esbarrar numa pergunta que só a fábrica responde, anotar em `docs/05-pendencias.md` e seguir
+   com a hipótese registrada lá. Não inventar convenção de framing.
 
 ## Fase 1 — Motor: parede reta
 
 - [ ] **S1 — Tipos e unidades**
   Prompt: "Crie `src/types.ts` com `Wall`, `Opening`, `Member`, `MemberRole`, `Panel`, `Config` conforme
-  `docs/02-framing.md`. Crie `src/units.ts` com `parseFeetInches(s: string): number` e
+  `docs/02-framing.md`. `Wall.section` é `'2x4' | '2x6'`; a espessura real (3.5 / 5.5) é derivada, nunca
+  entrada. `Config.headerHeight` é opcional (ver S7). Crie `src/units.ts` com `parseFeetInches(s: string): number` e
   `formatFeetInches(n: number): string`. Formatos aceitos: `12'`, `12'-0\"`, `8'-1 1/8\"`, `92 5/8\"`, `36\"`.
   Testes para 0, 1.5, 36, 92.625, 97.125, 144, e o inverso. Frações até 1/16."
   Saída: tipos compilando; units com testes verdes.
@@ -44,24 +47,36 @@ Uma sessão do Claude Code = um item. Ritual:
   gera `cutlist.csv`, `bom.csv` e um SVG por painel. Só o CLI pode usar Node fs."
   Saída: comando roda de ponta a ponta com um JSON de exemplo.
 
+- [ ] **Checkpoint — painéis reais (sem Claude)**
+  Resolver P1, P2, P3 e P4 de `docs/05-pendencias.md` com a fábrica. Transcrever ao menos um painel real para
+  `test/fixtures/real-*.json`. Se ainda não for possível, seguir com as hipóteses e voltar aqui antes da Fase 3.
+
 ## Fase 2 — Aberturas
 
-- [ ] **S7 — Janela (header fixo)**
+- [ ] **S7 — Janela**
   Prompt: "Implemente `src/rules/openings.ts`: `openingZone`, `framingForOpening` gerando king, jack, header,
   sill e cripples conforme o exemplo resolvido em `docs/02-framing.md`. Por enquanto a seção do header vem
-  de `config.defaultHeaderSection`. Integre em `panelizeWall` removendo studs de layout dentro da zona.
-  Faça `test/fixtures/wall-144-window.json` passar."
-  Saída: 18 peças, fixture verde, SVG conferido visualmente.
+  de `config.defaultHeaderSection`. Posição do header: se `config.headerHeight` (y da base do header) existir,
+  usar; senão, encostar na top plate. Cripples acima do header quando sobrar ≥ 1.5\". Integre em `panelizeWall`
+  removendo studs de layout dentro da zona. Faça `test/fixtures/wall-144-window.json` passar (sem headerHeight)
+  e adicione um teste com `headerHeight: 82.5` conferindo cripples acima."
+  Saída: 18 peças, fixture verde, SVG conferido visualmente nos dois casos.
 
-- [ ] **S8 — Porta**
+- [ ] **S8 — Porta e aberturas vizinhas**
   Prompt: "Estenda `framingForOpening` para `type: 'door'`: sem sill, sem cripples abaixo, jack até o header.
-  Fixture novo: parede 120\" com porta RO 38 × 82 em offset 40."
+  `roughHeight` da porta é entrada; se a base do header resultante não bater com `1.5 + roughHeight`, emitir
+  aviso `DOOR_RO_HEIGHT_MISMATCH` (ver P4). Fixture novo: parede 120\" com porta RO 38 × 82 em offset 40.
+  Depois: quando duas zonas de abertura se sobrepõem ou se tocam (janela ao lado de porta), fundir em uma zona
+  e compartilhar o king entre elas; fixture com janela 36 e porta 38 separadas por 4\"."
 
 - [ ] **S9 — Tabela de headers IRC**
   Prompt: "Crie `src/data/irc-headers.json` (estrutura proposta antes de digitar) e `src/rules/headers.ts`:
   `headerFor({ span, exterior, bearing, buildingWidth, groundSnowLoad, floorsSupported })` →
   `{ section, plies, jackStuds } | { requiresEngineer: true }`. Nunca extrapolar. Testes com 3 linhas conhecidas."
-  Nota: os valores da tabela são digitados pelo humano a partir do código em vigor; o Claude só estrutura.
+  Nota: os valores da tabela são digitados pelo humano a partir do código em vigor (ver P10); o Claude só estrutura.
+  Duas passadas: (1) Claude cria o schema e testes de consistência interna (vão cresce com a seção, cai com carga
+  de neve e com pavimentos suportados; jacks nunca diminuem com o vão); (2) humano digita; (3) Claude roda os
+  testes para pegar erro de digitação. A função escolhe a menor seção cujo vão máximo ≥ span.
 
 - [ ] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,
@@ -69,17 +84,24 @@ Uma sessão do Claude Code = um item. Ritual:
 
 ## Fase 3 — Casa inteira
 
-- [ ] **S11 — Cantos L e interseções T**
-- [ ] **S12 — Divisão em painéis (comprimento/peso máximo)**
+Prompts a escrever ao chegar aqui, já com as respostas de `05-pendencias.md` (P5, P6, P8).
+
+- [ ] **S11 — Cantos L e interseções T** (P5)
+- [ ] **S12 — Divisão em painéis (comprimento/peso máximo)** — nunca dentro de zona de abertura; preferir
+  quebra em stud de layout múltiplo de 48"; depois qualquer stud de layout; peso por `src/data/lumber.json` (P6, P8).
 - [ ] **S13 — Numeração e planta de painéis**
 - [ ] **S14 — Laps de plate entre painéis**
 
-## Fase 4 — IA na entrada
+## Fase 4 — Entrada de dados
+
+Decidir P12 antes. Se houver DXF, S15 vira "importar DXF → `Wall[]`" e a visão sobre PDF vai para o backlog.
 
 - [ ] **S15 — Prompt para extração de paredes** (API do Claude, imagem do PDF → `Wall[]` + confiança)
 - [ ] **S16 — Script `panelizer extract <planta.pdf>`** gerando o JSON de entrada para revisão
 
 ## Fase 5 — App
+
+Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
 
 - [ ] **S17 — Next.js: página que carrega um JSON e mostra os SVGs**
 - [ ] **S18 — Editor de paredes (canvas SVG + painel de propriedades)**

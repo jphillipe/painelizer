@@ -10,7 +10,7 @@
     "id": "W-plain",
     "length": 144,
     "height": 97.125,
-    "thickness": 5.5,
+    "section": "2x6",
     "exterior": true,
     "bearing": true,
     "openings": []

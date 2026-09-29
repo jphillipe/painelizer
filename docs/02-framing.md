@@ -19,12 +19,17 @@
 - `Member.x`, `Member.y` = canto inferior esquerdo da peça.
 - Layout: borda esquerda do stud na marca (0, 16, 32…). Último stud em x = comprimento − 1.5.
 - Altura padrão de parede: 97.125" (8'-1 1/8") = 3 plates × 1.5 + stud 92.625.
+- Parede declara `section` ('2x4' | '2x6'); espessura real (3.5 / 5.5) é derivada, nunca entrada.
 - Zona de abertura = [offset − 3, offset + roughWidth + 3]: king (1.5) + jack (1.5) de cada lado.
   Studs de layout cujo intervalo [x, x+1.5] intersecte a zona são removidos.
-- Header encostado na face inferior da top plate (v1). Topo do RO = base do header.
+- Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas.
+- Base do header: `config.headerHeight` (y) se definido; senão, encostado na face inferior da top plate.
+  Topo do RO = base do header. Altura padrão da fábrica é pendência P2.
 - Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
-- Cripples abaixo do sill nas marcas de layout que caem dentro do RO (exceto onde coincide com jack).
+- Cripples abaixo do sill nas marcas de layout que caem dentro do RO, exceto a marca que fica colada ao jack
+  (ex.: marca 48 com jack em 46.5–48) — hipótese, pendência P3.
 - Cripples acima do header: só se houver espaço ≥ 1.5" entre header e top plate.
+- Porta: `roughHeight` é entrada; se `1.5 + roughHeight` ≠ base do header, aviso (pendência P4).
 
 ## Regras e referências (IRC 2021/2024)
 | Regra | Ref. | Comportamento |
@@ -40,7 +45,8 @@
 | Cantos e T | Prática da equipe | Configurável: California corner vs 3-stud; ladder vs stud de encosto |
 
 As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em `src/data/irc-headers.json`
-é a tarefa da sessão 6, a partir da edição em vigor no estado (Massachusetts adota o IRC com emendas).
+é a tarefa da sessão S9, a partir da edição em vigor no estado (Massachusetts adota o IRC com emendas — ver P10).
+A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeira comprada.
 
 ## Exemplo resolvido — parede 144" com janela
 Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
@@ -52,7 +58,7 @@ Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
 5. Header 2x10, 2 plies: L=39 (36 + 2×1.5), x=46.5, y=84.875 (94.125 − 9.25). Topo do RO = 84.875.
 6. Jack: x=46.5 e x=84, y=1.5, L=83.375 (84.875 − 1.5).
 7. RO base = 84.875 − 48 = 36.875. Sill 2x6 deitado: x=48, y=35.375, L=36.
-8. Cripples abaixo do sill: marcas 64 e 80 (48 coincide com jack). y=1.5, L=33.875 (35.375 − 1.5).
+8. Cripples abaixo do sill: marcas 64 e 80 (marca 48 fica colada ao jack — omitida, P3). y=1.5, L=33.875 (35.375 − 1.5).
 9. Cripples acima do header: header toca a top plate → nenhum.
 
 Total: 18 peças. Fixture: `test/fixtures/wall-144-window.json`.

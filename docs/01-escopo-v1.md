@@ -9,10 +9,11 @@ equipe usando só o desenho gerado.
 
 ### Entrada
 - Paredes retas, ângulos de 90° apenas.
-- Atributos: comprimento, altura, espessura (2x4 / 2x6), externa/interna, portante/não.
+- Atributos: comprimento, altura, seção (2x4 / 2x6; espessura derivada), externa/interna, portante/não.
 - Aberturas: porta ou janela; RO largura × altura; posição a partir do início da parede; altura do sill (janela).
 - Configuração: espaçamento (16"/24" OC), largura da edificação, carga de neve no solo, pavimentos suportados,
-  comprimento e peso máximos de painel, estilo de canto e de interseção T.
+  altura padrão de header (opcional; ausente = encostado na top plate), comprimento e peso máximos de painel,
+  estilo de canto e de interseção T.
 - Entrada v1 = arquivo JSON. (IA lendo PDF e tela vêm depois — ver Ordem de construção em `00-visao.md`.)
 
 ### Motor
@@ -22,7 +23,9 @@ equipe usando só o desenho gerado.
 - Headers por tabela prescritiva IRC R602.7 (JSON). Fora da tabela → `requiresEngineer: true`.
 - Cantos L (California / 3-stud) e interseções T (ladder / stud de encosto), configuráveis.
 - Blocking horizontal quando altura exceder limite configurável.
-- Divisão em painéis por comprimento/peso máximo; nunca dentro de abertura; preferir quebra em stud de layout.
+- Divisão em painéis por comprimento/peso máximo; nunca dentro de abertura; preferir quebra em stud de layout
+  múltiplo de 48" (módulo do OSB), depois qualquer stud de layout.
+- Aberturas vizinhas com zonas sobrepostas compartilham king stud.
 - Numeração `{pavimento}-{parede}-P{n}`.
 - Validações como avisos, não erros.
 
@@ -43,7 +46,8 @@ equipe usando só o desenho gerado.
 
 ## Backlog v2
 - Leitura de PDF com Claude (visão) → `Wall[]` com confiança; confirmação humana obrigatória.
-- Importação/exportação DXF.
+- Importação/exportação DXF. Se os arquitetos entregarem DXF, a importação sobe para a Fase 4 no lugar da visão
+  sobre PDF (ver P12 em `05-pendencias.md`): cotas vetoriais são mais confiáveis que leitura de imagem.
 - Rake walls.
 - Sheathing (OSB) com aproveitamento.
 - Visualizador 3D no navegador.
