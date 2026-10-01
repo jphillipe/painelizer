@@ -7,7 +7,7 @@
  * - `bom.csv` — lista de material consolidada;
  * - `panels/<id>.svg` — elevação de cada painel.
  *
- * Erros do core (abertura ainda sem suporte, peça sem comprimento comercial…)
+ * Erros do core (porta ainda sem suporte, peça sem comprimento comercial…)
  * são recolhidos por parede e devolvidos juntos; um projeto com erro não gera
  * nenhum arquivo — meia saída na fábrica é pior que nenhuma.
  */

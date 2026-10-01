@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Wall } from '../../src/types';
+import type { Config, Member, Opening, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { expectSameMembers } from '../helpers/members';
 import plain from '../fixtures/wall-144-plain.json';
@@ -48,11 +48,102 @@ describe('panelizeWall — parede sem abertura', () => {
     expect(panel.warnings.map((w) => w.code)).toEqual(['STUD_LENGTH_MISMATCH']);
   });
 
-  it('parede com abertura ainda não é suportada (S7)', () => {
-    expect(() => panelizeWall(window.wall as Wall, window.config as Config)).toThrow(/S7/);
-  });
-
   it('altura que não comporta stud lança RangeError', () => {
     expect(() => panelizeWall({ ...wall, height: 4.5 }, config)).toThrow(RangeError);
+  });
+});
+
+/** Nenhum par de peças verticais ocupa o mesmo trecho de x na mesma faixa de y. */
+function expectNoVerticalOverlap(members: Member[]) {
+  const v = members.filter((m) => m.orientation === 'vertical');
+  for (let i = 0; i < v.length; i++) {
+    for (let j = i + 1; j < v.length; j++) {
+      const a = v[i]!;
+      const b = v[j]!;
+      const xOverlap = a.x < b.x + 1.5 && b.x < a.x + 1.5;
+      const yOverlap = a.y < b.y + b.length && b.y < a.y + a.length;
+      expect(xOverlap && yOverlap, `${a.role}@${a.x},${a.y} × ${b.role}@${b.x},${b.y}`).toBe(false);
+    }
+  }
+}
+
+describe('panelizeWall — janela', () => {
+  const wWall = window.wall as Wall;
+  const wConfig = window.config as Config;
+  const win = wWall.openings[0] as Opening;
+  const studXs = (p: Panel) => p.members.filter((m) => m.role === 'stud').map((m) => m.x);
+
+  it('fixture wall-144-window passa exatamente (18 peças)', () => {
+    const panel = panelizeWall(wWall, wConfig);
+    expectSameMembers(panel.members, window.expected.members as Member[]);
+    expect(panel.members).toHaveLength(18);
+    expect(panel.warnings).toEqual(window.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('headerHeight 82.5: 20 peças, cripples acima e abaixo, sem sobreposição', () => {
+    const panel = panelizeWall(wWall, { ...wConfig, headerHeight: 82.5 });
+    expect(panel.members).toHaveLength(20);
+    const cripples = panel.members.filter((m) => m.role === 'cripple');
+    expect(cripples.map((c) => [c.x, c.y, c.length])).toEqual([
+      [64, 1.5, 31.5],
+      [80, 1.5, 31.5],
+      [64, 91.75, 2.375],
+      [80, 91.75, 2.375],
+    ]);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('2 kings + 2 jacks: zona [42, 90] remove as marcas 48, 64 e 80; 88.5 não colide com 96', () => {
+    const panel = panelizeWall(
+      { ...wWall, openings: [{ ...win, kingStuds: 2, jackStuds: 2 }] },
+      wConfig,
+    );
+    expect(studXs(panel)).toEqual([0, 16, 32, 96, 112, 128, 142.5]);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('duas janelas separadas: cada zona remove só os studs que sobrepõe', () => {
+    const panel = panelizeWall(
+      {
+        ...wWall,
+        length: 192,
+        openings: [
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
+          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48 }, // zona [97, 139]
+        ],
+      },
+      wConfig,
+    );
+    // 16 (16–17.5) invade a zona a por 0.5"; 96 (96–97.5) invade a zona b
+    expect(studXs(panel)).toEqual([0, 48, 64, 80, 144, 160, 176, 190.5]);
+    expect(panel.members.filter((m) => m.role === 'header')).toHaveLength(2);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('stud que só encosta no king fica (zona começa em 33.5, stud 32 termina em 33.5)', () => {
+    const panel = panelizeWall({ ...wWall, openings: [{ ...win, offset: 36.5 }] }, wConfig);
+    expect(studXs(panel)).toContain(32);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('zonas que se tocam ou se sobrepõem: erro apontando a S8', () => {
+    const touching: Wall = {
+      ...wWall,
+      length: 192,
+      openings: [
+        { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
+        { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48 }, // zona [47, 77]
+      ],
+    };
+    expect(() => panelizeWall(touching, wConfig)).toThrow(/a e b .*S8/);
+    const overlapping = { ...touching, openings: [touching.openings[0]!, { ...touching.openings[1]!, offset: 45 }] };
+    expect(() => panelizeWall(overlapping, wConfig)).toThrow(/S8/);
+  });
+
+  it('porta ainda não é suportada (S8)', () => {
+    expect(() =>
+      panelizeWall({ ...wWall, openings: [{ ...win, type: 'door', roughHeight: 82 }] }, wConfig),
+    ).toThrow(/S8/);
   });
 });

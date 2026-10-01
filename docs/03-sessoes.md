@@ -54,7 +54,7 @@ Uma sessão do Claude Code = um item. Ritual:
 
 ## Fase 2 — Aberturas
 
-- [ ] **S7 — Janela**
+- [x] **S7 — Janela**
   Prompt: "Implemente `src/rules/openings.ts`: `openingZone`, `framingForOpening` gerando king, jack, header,
   sill e cripples conforme o exemplo resolvido em `docs/02-framing.md`. Por enquanto a seção do header vem
   de `config.defaultHeaderSection`. Posição do header: se `config.headerHeight` (y da base do header) existir,

@@ -96,9 +96,9 @@ describe('run (I/O em memória)', () => {
     expect(m.written.size).toBe(0);
   });
 
-  it('parede com abertura: código 1, problemas listados, nada gravado', () => {
+  it('parede com porta (S8 pendente): código 1, problemas listados, nada gravado', () => {
     const project = JSON.parse(exampleText) as { walls: { openings: unknown[] }[] };
-    project.walls[0]!.openings.push({ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
+    project.walls[0]!.openings.push({ id: 'P1', type: 'door', offset: 48, roughWidth: 36, roughHeight: 82 });
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(1);
     expect(m.err[0]).toBe('erro: 1 problema(s) ao gerar os painéis — nenhum arquivo gravado');

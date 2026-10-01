@@ -10,7 +10,8 @@ equipe usando só o desenho gerado.
 ### Entrada
 - Paredes retas, ângulos de 90° apenas.
 - Atributos: comprimento, altura, seção (2x4 / 2x6; espessura derivada), externa/interna, portante/não.
-- Aberturas: porta ou janela; RO largura × altura; posição a partir do início da parede; altura do sill (janela).
+- Aberturas: porta ou janela; RO largura × altura; posição a partir do início da parede; altura do sill (janela);
+  nº de king e jack studs por lado (opcional, default 1 e 1).
 - Configuração: espaçamento (16"/24" OC), largura da edificação, carga de neve no solo, pavimentos suportados,
   altura padrão de header (opcional; ausente = encostado na top plate), comprimento e peso máximos de painel,
   estilo de canto e de interseção T.

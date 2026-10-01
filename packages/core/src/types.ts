@@ -43,6 +43,10 @@ export interface Opening {
   offset: number;
   roughWidth: number;
   roughHeight: number;
+  /** King studs de cada lado (inteiro ≥ 1). Ausente = 1. */
+  kingStuds?: number;
+  /** Jack studs de cada lado (inteiro ≥ 1). Ausente = 1. O header apoia em todos. */
+  jackStuds?: number;
 }
 
 export interface Wall {

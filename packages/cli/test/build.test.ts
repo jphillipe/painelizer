@@ -45,9 +45,22 @@ describe('buildProject', () => {
     expect(warnings[0]).toMatchObject({ panelId: 'W01', warning: { code: 'STUD_LENGTH_MISMATCH' } });
   });
 
-  it('parede com abertura (S7 pendente) e plate sem comprimento comercial viram problemas, sem arquivos', () => {
+  it('janela gera kings, jacks, header, sill e cripples no painel e na lista de corte', () => {
     const p = example();
+    p.config.defaultHeaderSection = '2x10';
+    p.config.defaultHeaderPlies = 2;
     p.walls[0]!.openings.push({ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
+    const r = buildProject(p);
+    expect(r.panels[0]!.members).toHaveLength(18);
+    const csv = r.files.find((f) => f.path === 'cutlist.csv')!.content;
+    expect(csv).toContain('W01,header,2x10,39,"39""",2');
+    expect(csv).toContain('W01,sill,2x6,36,"36""",1');
+    expect(csv).toContain('W01,cripple,2x6,33.875,"33 7/8""",2');
+  });
+
+  it('porta (S8 pendente) e plate sem comprimento comercial viram problemas, sem arquivos', () => {
+    const p = example();
+    p.walls[0]!.openings.push({ id: 'P1', type: 'door', offset: 48, roughWidth: 36, roughHeight: 82 });
     p.walls.push({ id: 'W99', length: 240, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] });
 
     let error: BuildError | undefined;
@@ -58,7 +71,7 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(1);
-    expect(error!.problems[0]).toMatch(/^parede W01: .*abertura/);
+    expect(error!.problems[0]).toMatch(/^parede W01: .*porta chega na S8/);
 
     // Sem a abertura, o erro da BOM (plate de 240") aparece.
     p.walls[0]!.openings = [];

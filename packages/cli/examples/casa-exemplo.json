@@ -1,5 +1,5 @@
 {
-  "$comment": "Exemplo de entrada do CLI. Paredes retas sem abertura (aberturas chegam na S7) e até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
+  "$comment": "Exemplo de entrada do CLI. Paredes retas sem abertura (janelas exigem config.defaultHeaderSection e defaultHeaderPlies até a S9; portas chegam na S8) e até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
   "name": "casa-exemplo",
   "config": {
     "studSpacing": 16,

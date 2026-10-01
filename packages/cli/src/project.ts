@@ -95,11 +95,7 @@ function configFrom(raw: unknown, path: string): Config {
     config.defaultHeaderSection = oneOf(c['defaultHeaderSection'], SECTIONS, `${path}.defaultHeaderSection`);
   }
   if (c['defaultHeaderPlies'] !== undefined) {
-    const plies = c['defaultHeaderPlies'];
-    if (typeof plies !== 'number' || !Number.isInteger(plies) || plies < 1) {
-      throw new ProjectError(`${path}.defaultHeaderPlies: esperado inteiro ≥ 1, recebido ${show(plies)}`);
-    }
-    config.defaultHeaderPlies = plies;
+    config.defaultHeaderPlies = count(c['defaultHeaderPlies'], `${path}.defaultHeaderPlies`);
   }
   return config;
 }
@@ -121,13 +117,16 @@ function wallFrom(raw: unknown, path: string): Wall {
 
 function openingFrom(raw: unknown, path: string): Opening {
   const o = obj(raw, path);
-  return {
+  const opening: Opening = {
     id: str(o['id'], `${path}.id`),
     type: oneOf(o['type'], OPENING_TYPES, `${path}.type`),
     offset: measure(o['offset'], `${path}.offset`),
     roughWidth: positive(o['roughWidth'], `${path}.roughWidth`),
     roughHeight: positive(o['roughHeight'], `${path}.roughHeight`),
   };
+  if (o['kingStuds'] !== undefined) opening.kingStuds = count(o['kingStuds'], `${path}.kingStuds`);
+  if (o['jackStuds'] !== undefined) opening.jackStuds = count(o['jackStuds'], `${path}.jackStuds`);
+  return opening;
 }
 
 // ---- primitivos -------------------------------------------------------------
@@ -178,6 +177,14 @@ function positive(v: unknown, path: string): number {
   const n = measure(v, path);
   if (n <= 0) throw new ProjectError(`${path}: esperado medida > 0, recebido ${show(v)}`);
   return n;
+}
+
+/** Inteiro ≥ 1 (plies, kings, jacks). */
+function count(v: unknown, path: string): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) {
+    throw new ProjectError(`${path}: esperado inteiro ≥ 1, recebido ${show(v)}`);
+  }
+  return v;
 }
 
 function show(v: unknown): string {

@@ -83,6 +83,24 @@ describe('parseProject', () => {
     ]);
   });
 
+  it('kingStuds e jackStuds opcionais por abertura, inteiros ≥ 1', () => {
+    const withOpening = (extra: Record<string, unknown>) =>
+      valid({
+        walls: [
+          {
+            ...(valid().walls as object[])[0],
+            openings: [{ id: 'J1', type: 'window', offset: 48, roughWidth: 60, roughHeight: 48, ...extra }],
+          },
+        ],
+      });
+    const p = projectFrom(withOpening({ kingStuds: 2, jackStuds: 2 }));
+    expect(p.walls[0]?.openings[0]).toMatchObject({ kingStuds: 2, jackStuds: 2 });
+    expect(() => projectFrom(withOpening({ kingStuds: 0 }), 'projeto')).toThrow(
+      /projeto\.walls\[0\]\.openings\[0\]\.kingStuds: esperado inteiro ≥ 1/,
+    );
+    expect(() => projectFrom(withOpening({ jackStuds: '2' }), 'projeto')).toThrow(/jackStuds/);
+  });
+
   it.each([
     [valid({ walls: [] }), /walls: nenhuma parede/],
     [valid({ walls: 'x' }), /walls: esperado array/],

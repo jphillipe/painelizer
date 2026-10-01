@@ -7,6 +7,7 @@ export * from './types';
 export * from './units';
 export { layoutStuds } from './rules/studs';
 export { layoutPlates } from './rules/plates';
+export { framingForOpening, openingStudCounts, openingZone, type OpeningZone } from './rules/openings';
 export { panelizeWall } from './panelize/panelizeWall';
 export * from './output/cutlist';
 export * from './output/bom';

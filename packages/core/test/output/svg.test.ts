@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Panel, Wall } from '../../src/types';
+import type { Config, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { esc, memberBox, panelSvg, px } from '../../src/output/svg';
 import plain from '../fixtures/wall-144-plain.json';
@@ -7,16 +7,11 @@ import window from '../fixtures/wall-144-window.json';
 
 const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
 
-/** Painel montado a partir dos members esperados do fixture da janela (S7 ainda não existe). */
-const windowPanel: Panel = {
-  id: window.wall.id,
-  wallId: window.wall.id,
-  length: window.wall.length,
-  height: window.wall.height,
-  section: window.wall.section as Panel['section'],
-  members: window.expected.members as Member[],
-  warnings: [],
-};
+const windowPanel = panelizeWall(window.wall as Wall, window.config as Config);
+const lowHeaderPanel = panelizeWall(window.wall as Wall, {
+  ...(window.config as Config),
+  headerHeight: 82.5,
+});
 
 /** Origem do desenho em px: margem 24 + 56 de espaço para a cota da altura; 24 + 44 do título. */
 const X0 = 24 + 56;
@@ -160,8 +155,15 @@ describe('panelSvg', () => {
     await expect(svg).toMatchFileSnapshot('../__snapshots__/wall-144-plain.svg');
   });
 
-  it('snapshot do fixture da janela (members esperados) em test/__snapshots__/wall-144-window.svg', async () => {
+  it('snapshot do fixture da janela em test/__snapshots__/wall-144-window.svg', async () => {
     await expect(panelSvg(windowPanel)).toMatchFileSnapshot('../__snapshots__/wall-144-window.svg');
+  });
+
+  it('snapshot da janela com headerHeight 82.5 em test/__snapshots__/wall-144-window-header-82.5.svg', async () => {
+    expect(rects(panelSvg(lowHeaderPanel))).toHaveLength(20);
+    await expect(panelSvg(lowHeaderPanel)).toMatchFileSnapshot(
+      '../__snapshots__/wall-144-window-header-82.5.svg',
+    );
   });
 });
 

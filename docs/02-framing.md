@@ -20,15 +20,18 @@
 - Layout: borda esquerda do stud na marca (0, 16, 32…). Último stud em x = comprimento − 1.5.
 - Altura padrão de parede: 97.125" (8'-1 1/8") = 3 plates × 1.5 + stud 92.625.
 - Parede declara `section` ('2x4' | '2x6'); espessura real (3.5 / 5.5) é derivada, nunca entrada.
-- Zona de abertura = [offset − 3, offset + roughWidth + 3]: king (1.5) + jack (1.5) de cada lado.
-  Studs de layout cujo intervalo [x, x+1.5] intersecte a zona são removidos.
+- Zona de abertura = [offset − (kings + jacks)·1.5, offset + roughWidth + (kings + jacks)·1.5]. `kingStuds` e
+  `jackStuds` são por abertura, default 1 e 1 (zona = RO ± 3"). Kings na borda externa da zona, jacks colados
+  ao RO; o header apoia em todos os jacks (comprimento = roughWidth + 2·jacks·1.5).
+  Studs de layout cujo intervalo [x, x+1.5] se sobreponha à zona são removidos; o que só encosta no king fica.
 - Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas.
 - Base do header: `config.headerHeight` (y) se definido; senão, encostado na face inferior da top plate.
   Topo do RO = base do header. Altura padrão da fábrica é pendência P2.
 - Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
 - Cripples abaixo do sill nas marcas de layout que caem dentro do RO, exceto a marca que fica colada ao jack
   (ex.: marca 48 com jack em 46.5–48) — hipótese, pendência P3.
-- Cripples acima do header: só se houver espaço ≥ 1.5" entre header e top plate.
+- Cripples acima do header: mesmas marcas dos cripples abaixo do sill (inclusive a omissão da marca colada
+  ao jack), só se houver espaço ≥ 1.5" entre header e top plate. Abaixo do sill vale o mesmo mínimo de 1.5".
 - Porta: `roughHeight` é entrada; se `1.5 + roughHeight` ≠ base do header, aviso (pendência P4).
 
 ## Regras e referências (IRC 2021/2024)
