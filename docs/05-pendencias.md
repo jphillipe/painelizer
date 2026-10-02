@@ -3,42 +3,67 @@
 Perguntas que só a equipe de produção responde. O motor avança com hipóteses (marcadas nos fixtures e em
 `04-decisoes.md`); cada resposta aqui vira uma linha em `04-decisoes.md` e, se preciso, um ajuste de fixture
 com confirmação humana. Formato: `- [ ] Pn — pergunta — hipótese atual — sessão que depende`.
+Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`.
 
 ## Bloqueia o critério de sucesso
 - [ ] **P1 — Painéis reais.** Obter 2 ou 3 painéis já fabricados (folha + lista de corte, de preferência um com
   janela e um com porta) e transcrever para `test/fixtures/real-*.json`. Sem isso, todos os fixtures são hipótese
   e o critério de sucesso de `01-escopo` não pode ser verificado. — hipótese: fixtures sintéticos — S7 em diante.
-- [ ] **P2 — Altura de header.** A fábrica usa altura padrão de header para toda a casa (ex.: 6'-10 1/2" = 82.5"
-  do subfloor ao fundo do header, ou do topo da bottom plate?) ou encosta o header na top plate? Se altura padrão,
-  qual? — hipótese: encostado na top plate (`config.headerHeight` ausente) — S7, S8.
-- [ ] **P3 — Cripple encostado no jack.** Abaixo do sill, a marca de layout que cai colada ao jack (ex.: marca 48
-  com jack em 46.5–48) recebe cripple ou não? — hipótese: não recebe (exemplo resolvido em `02-framing`) — S7.
-- [ ] **P4 — Porta: RO altura.** Com header em altura padrão (P2), `roughHeight` da porta é entrada ou resultado?
-  Se a fábrica sempre usa RO de porta = 82" ou 82.5", o campo pode ser derivado. — hipótese: entrada; se
-  conflitar com o header, aviso — S8.
+  Em 2026-09-30 chegou só um pacote ilustrativo (`docs/examples/Exemplos_Paineis_Prefabricados.pdf`), que não
+  serve como fixture (contagens não fecham com o desenho). Pedido refeito; as perguntas P2–P12 foram respondidas.
+- [x] **P2 — Altura de header.** — **Resposta (2026-10-01):** altura padrão; topo dos RO na mesma altura sempre que
+  possível, **82 1/2" do subfloor até a face inferior do header**. Nunca encostam automaticamente na top plate.
+  Se o projeto estrutural ou arquitetônico indicar outra altura, segue o projeto. — Impacto: `headerHeight: 82.5`
+  é o caso normal (subfloor = y=0, então o valor entra direto); precisa de sobrescrita por abertura (S7.1).
+- [ ] **P3 — Cripple encostado no jack.** — **Resposta (2026-10-01):** confirmada a hipótese: se a marca de 16"
+  cai "praticamente junto" ao jack, não colocam cripple; o jack serve de layout, desde que o espaçamento máximo e
+  a fixação do sheathing sejam respeitados. Fica aberta só a tolerância — ver P13. — S7 (feita com a hipótese).
+- [x] **P4 — Porta: RO altura.** — **Resposta (2026-10-01):** porta padrão 6'-8" (80") usa **RO de 82 1/2"** de
+  altura; largura depende da porta e do fabricante; medida do projeto ou do fabricante tem prioridade. — Impacto:
+  como o header fica a 82.5 do subfloor, **o RO da porta é medido a partir do subfloor (y=0)**, não do topo da
+  bottom plate: base do header = `roughHeight`. Corrige a regra `1.5 + roughHeight` da S8.
 
 ## Afeta lista de corte / material
-- [ ] **P5 — Cantos e T.** California corner ou 3-stud? Ladder ou stud de encosto? Um padrão para a fábrica ou
-  varia por projeto? — hipótese: configurável, default California + ladder — S11.
-- [ ] **P6 — Módulo de 48".** Painéis quebram em múltiplos de 48" por causa do OSB, mesmo sem sheathing no
-  escopo? Comprimento e peso máximos reais (caminhão, mesa)? — hipótese: preferir quebra em stud que seja
-  múltiplo de 48"; máx. 16' — S12.
-- [ ] **P7 — Pré-corte de stud.** 92 5/8" para 2x4 e 2x6? Parede de 9' usa 104 5/8"? — hipótese: sim — S1.
+- [x] **P5 — Cantos e T.** — **Resposta (2026-10-01):** padrão **California corner** nos cantos externos e
+  **ladder blocking** nos T; muda para 3 studs ou stud de encosto quando o estrutural, o projeto ou a obra exigir.
+  — Impacto: hipótese confirmada; configurável por projeto com esse default — S11.
+- [x] **P6 — Módulo de 48".** — **Resposta (2026-10-01):** painéis de até **~20'-0" (240")**; quebra compatível
+  com módulo de 48" sempre que possível, mas não obrigatório; peso limitado pelo equipamento de içamento e
+  transporte (valor não informado — ver P15). — Impacto: máx. 16' → 240"; plates de painel > 16' não saem de uma
+  peça de estoque (ver P14) — S12, S14.
+- [x] **P7 — Pré-corte de stud.** — **Resposta (2026-10-01):** 8' → **92 5/8"**; 9' → **104 5/8"**; iguais para 2x4
+  e 2x6. — Impacto: hipótese confirmada; um projeto com paredes de 8' e 9' precisa de mais de um pré-corte no
+  config (S7.1).
 - [ ] **P8 — Peso por peça.** Densidade usada para estimar peso do painel (SPF ~ 1.3 lb/pé linear para 2x4,
-  ~2.0 para 2x6?). — hipótese: tabela fixa em `src/data/lumber.json` — S12.
-- [ ] **P9 — Comprimentos comerciais em estoque.** 8/10/12/14/16' ou também 9' e 20'? Preço por comprimento? —
-  hipótese: 96, 120, 144, 168, 192 (`DEFAULT_STOCK_LENGTHS` em `output/bom.ts`, parametrizável) — S4 (feita com a hipótese).
+  ~2.0 para 2x6?). Madeira confirmada: SPF No. 2 (P10). — hipótese: tabela fixa em `src/data/lumber.json` — S12.
+- [x] **P9 — Comprimentos comerciais em estoque.** — **Resposta (2026-10-01):** 2x4 e 2x6 em **8', 10', 12', 14' e
+  16'**, mais os pré-cortes **92 5/8" e 104 5/8"**. — Impacto: default da BOM confirmado; falta incluir os
+  pré-cortes (S7.1). Preço por comprimento não informado (orçamento continua sem tabela).
 
 ## Normativo
-- [ ] **P10 — Tabela IRC em vigor.** Massachusetts 780 CMR 10ª edição (base IRC 2021) tem emendas sobre R602.7?
-  Espécie/grau assumidos pela tabela (#2 DF-L, Hem-fir, SPF, SP) batem com a madeira comprada? — S9.
-- [ ] **P11 — Fire blocking.** Altura a partir da qual a fábrica coloca blocking (10' pelo IRC, ou antes por
-  prática)? — S10.
+- [ ] **P10 — Tabela IRC em vigor.** — **Resposta parcial (2026-10-01):** madeira **SPF No. 2 ou melhor**. Headers,
+  beams e casos estruturais especiais seguem o structural drawings (LVL, PSL ou o que o engenheiro especificar).
+  Continua aberto: Massachusetts 780 CMR 10ª edição tem emendas sobre R602.7? — Impacto: a S9 usa a coluna SPF;
+  a tabela IRC é fallback quando o projeto não especifica o header, e o motor precisa aceitar header vindo do
+  projeto (inclusive LVL/PSL, que hoje não existem em `Section`) — S9.
+- [x] **P11 — Fire blocking.** — **Resposta (2026-10-01):** paredes de 8' e 9' não levam fire blocking horizontal
+  só pela altura; quando a cavidade contínua passa de **~10'**, colocam conforme o código, além dos locais que o
+  projeto e o código exigirem. — Impacto: hipótese IRC confirmada; limite 120" — S10.
 
 ## Entrada de dados (Fase 4)
-- [ ] **P12 — DXF disponível?** Os arquitetos entregam DXF/DWG além do PDF? Se sim, importar DXF (linhas e
-  cotas vetoriais) é muito mais confiável que visão sobre PDF e deve vir antes da S15. Se só PDF, priorizar PDFs
-  vetoriais (texto extraível) sobre rasterizados. — decisão pendente — Fase 4.
+- [x] **P12 — DXF disponível?** — **Resposta (2026-10-01):** na maioria das vezes chega só PDF; DWG/DXF às vezes.
+  A fábrica recomenda pedir PDF + DWG/DXF. — Impacto: a Fase 4 não pode depender de DXF; PDF vetorial continua
+  sendo a entrada principal e DXF entra como caminho preferido quando existir. Decisão de ordem fica para o início
+  da Fase 4.
+
+## Novas (abertas em 2026-10-01, a partir das respostas)
+- [ ] **P13 — "Praticamente junto" ao jack.** Até quantas polegadas de distância entre a marca e o jack o cripple
+  é omitido? — hipótese: só quando encosta ou invade o jack (regra da S7) — S7.1/S8.
+- [ ] **P14 — Emenda de plate em painel > 16'.** O estoque vai até 16' e o painel até 20'. Como emendam bottom,
+  top e double top num painel de 20'? Emenda sempre sobre stud? Defasagem mínima entre top e double top
+  (IRC pede 24"; o Horace pede 48")? — hipótese: emenda sobre stud de layout, defasagem ≥ 48" — S12, S14.
+- [ ] **P15 — Peso máximo do painel.** Capacidade do equipamento de içamento/transporte, em lb. — hipótese:
+  sem limite de peso até a resposta; só comprimento (240") — S12.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

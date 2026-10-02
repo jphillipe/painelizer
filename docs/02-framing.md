@@ -26,13 +26,16 @@
   Studs de layout cujo intervalo [x, x+1.5] se sobreponha à zona são removidos; o que só encosta no king fica.
 - Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas.
 - Base do header: `config.headerHeight` (y) se definido; senão, encostado na face inferior da top plate.
-  Topo do RO = base do header. Altura padrão da fábrica é pendência P2.
+  Topo do RO = base do header. **Padrão da fábrica: 82.5"** do subfloor (= y) à face inferior do header, igual
+  para portas e janelas; o projeto pode indicar outra (P2, respondida em 2026-10-01).
 - Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
 - Cripples abaixo do sill nas marcas de layout que caem dentro do RO, exceto a marca que fica colada ao jack
-  (ex.: marca 48 com jack em 46.5–48) — hipótese, pendência P3.
+  (ex.: marca 48 com jack em 46.5–48) — confirmado pela fábrica (P3); a tolerância de "praticamente junto" é P13.
 - Cripples acima do header: mesmas marcas dos cripples abaixo do sill (inclusive a omissão da marca colada
   ao jack), só se houver espaço ≥ 1.5" entre header e top plate. Abaixo do sill vale o mesmo mínimo de 1.5".
-- Porta: `roughHeight` é entrada; se `1.5 + roughHeight` ≠ base do header, aviso (pendência P4).
+- Porta: RO medido a partir do subfloor (y=0), porque a bottom plate é cortada na obra; `roughHeight` é entrada
+  e, se ≠ base do header, aviso (P4). Porta 6'-8" padrão: RO 82.5, header em 82.5, jack 81.
+- Porta: bottom plate sai inteira no painel; a folha indica o corte na obra.
 
 ## Regras e referências (IRC 2021/2024)
 | Regra | Ref. | Comportamento |
@@ -44,8 +47,8 @@
 | Headers internos portantes | Tabela R602.7(2) | Idem sem neve |
 | Headers não portantes | R602.7.4 | Single flat até 8' |
 | King studs | Nota R602.7(1) | Metade dos studs interrompidos vira king (arredondar p/ cima) |
-| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura |
-| Cantos e T | Prática da equipe | Configurável: California corner vs 3-stud; ladder vs stud de encosto |
+| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11) |
+| Cantos e T | Prática da equipe | Default California corner + ladder (P5); 3-stud e stud de encosto configuráveis |
 
 As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em `src/data/irc-headers.json`
 é a tarefa da sessão S9, a partir da edição em vigor no estado (Massachusetts adota o IRC com emendas — ver P10).
@@ -65,4 +68,6 @@ Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
 9. Cripples acima do header: header toca a top plate → nenhum.
 
 Total: 18 peças. Fixture: `test/fixtures/wall-144-window.json`.
+Este exemplo usa o header encostado (sem `headerHeight`). O caso típico da fábrica é `headerHeight: 82.5`:
+jacks de 81, base do RO em 34.5, sill em 33, cripples de 31.5 abaixo e de 2.375 acima do header (20 peças).
 A seção do header (2x10) neste exemplo é **hipótese** até a tabela estar carregada — o fixture marca isso.

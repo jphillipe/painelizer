@@ -49,7 +49,8 @@ Uma sessão do Claude Code = um item. Ritual:
   Saída: comando roda de ponta a ponta com um JSON de exemplo.
 
 - [ ] **Checkpoint — painéis reais (sem Claude)**
-  Resolver P1, P2, P3 e P4 de `docs/05-pendencias.md` com a fábrica. Transcrever ao menos um painel real para
+  Resolver P1, P2, P3 e P4 de `docs/05-pendencias.md` com a fábrica. (2026-10-01: P2, P3 e P4 respondidas;
+  falta P1.) Transcrever ao menos um painel real para
   `test/fixtures/real-*.json`. Se ainda não for possível, seguir com as hipóteses e voltar aqui antes da Fase 3.
 
 ## Fase 2 — Aberturas
@@ -63,10 +64,19 @@ Uma sessão do Claude Code = um item. Ritual:
   e adicione um teste com `headerHeight: 82.5` conferindo cripples acima."
   Saída: 18 peças, fixture verde, SVG conferido visualmente nos dois casos.
 
+- [ ] **S7.1 — Ajustes pelas respostas da fábrica (2026-10-01)**
+  Prompt: "Aplique as respostas P2, P7 e P9 de `05-pendencias.md`: (a) `Opening.headerHeight` opcional sobrescreve
+  `config.headerHeight` (o projeto manda, P2); (b) `config.studLength` vira lista de pré-cortes
+  (`[92.625, 104.625]`) e `STUD_LENGTH_MISMATCH` só dispara se o stud derivado não estiver na lista (P7);
+  (c) a BOM ganha os pré-cortes como estoque, usados só por peça de comprimento igual ao pré-corte (P9);
+  (d) fixture novo `wall-144-window-82.5.json` (o caso típico da fábrica, 20 peças) e o exemplo do CLI com
+  `headerHeight: 82.5`." Proposta de abordagem e mudança de fixtures/defaults confirmadas pelo humano antes.
+
 - [ ] **S8 — Porta e aberturas vizinhas**
   Prompt: "Estenda `framingForOpening` para `type: 'door'`: sem sill, sem cripples abaixo, jack até o header.
-  `roughHeight` da porta é entrada; se a base do header resultante não bater com `1.5 + roughHeight`, emitir
-  aviso `DOOR_RO_HEIGHT_MISMATCH` (ver P4). Fixture novo: parede 120\" com porta RO 38 × 82 em offset 40.
+  RO da porta medido do subfloor (y=0): se `roughHeight` não bater com a base do header, emitir aviso
+  `DOOR_RO_HEIGHT_MISMATCH` (P4, respondida). Bottom plate continua inteira (cortada na obra); a folha marca o
+  corte. Fixture novo: parede 120\" com porta RO 38 × 82.5 em offset 40 e `headerHeight: 82.5` (jacks de 81\").
   Depois: quando duas zonas de abertura se sobrepõem ou se tocam (janela ao lado de porta), fundir em uma zona
   e compartilhar o king entre elas; fixture com janela 36 e porta 38 separadas por 4\"."
 
@@ -85,11 +95,13 @@ Uma sessão do Claude Code = um item. Ritual:
 
 ## Fase 3 — Casa inteira
 
-Prompts a escrever ao chegar aqui, já com as respostas de `05-pendencias.md` (P5, P6, P8).
+Prompts a escrever ao chegar aqui, já com as respostas de `05-pendencias.md` (P5, P6 respondidas; P8, P14, P15
+abertas).
 
-- [ ] **S11 — Cantos L e interseções T** (P5)
-- [ ] **S12 — Divisão em painéis (comprimento/peso máximo)** — nunca dentro de zona de abertura; preferir
-  quebra em stud de layout múltiplo de 48"; depois qualquer stud de layout; peso por `src/data/lumber.json` (P6, P8).
+- [ ] **S11 — Cantos L e interseções T** (P5: default California corner + ladder)
+- [ ] **S12 — Divisão em painéis (comprimento/peso máximo)** — máx. 240" (P6); nunca dentro de zona de abertura;
+  preferir quebra em stud de layout múltiplo de 48"; depois qualquer stud de layout; plates > 192" emendadas
+  (P14); peso por `src/data/lumber.json` (P8, P15).
 - [ ] **S13 — Numeração e planta de painéis**
 - [ ] **S14 — Laps de plate entre painéis**
 
