@@ -70,7 +70,10 @@ export function buildProject(project: Project): BuildResult {
     try {
       files.unshift(
         { path: 'cutlist.csv', content: cutListCsv(panels) },
-        { path: 'bom.csv', content: bomCsv(projectBom(panels, project.stockLengths)) },
+        {
+          path: 'bom.csv',
+          content: bomCsv(projectBom(panels, project.config.studLength, project.stockLengths)),
+        },
       );
     } catch (e) {
       problems.push(`lista de material: ${(e as Error).message}`);

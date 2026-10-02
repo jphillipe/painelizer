@@ -1,14 +1,15 @@
 /**
  * Monta o `Panel` de uma parede reta a partir das regras de framing.
  *
- * Escopo atual (S7): 3 plates + studs de layout + janelas (`rules/openings.ts`).
+ * Escopo atual (S7.1): 3 plates + studs de layout + janelas (`rules/openings.ts`).
  * Porta e zonas de abertura que se tocam ou se sobrepõem chegam na S8; até lá lançam erro
  * em vez de gerar um painel silenciosamente errado.
  *
  * Geometria (docs/02-framing.md):
  * - Studs em y = plateThickness (sobre a bottom plate), comprimento = height − 3·plateThickness.
- * - `config.studLength` é o pré-corte esperado; se divergir do comprimento derivado da altura,
- *   o painel sai com o comprimento derivado e um aviso `STUD_LENGTH_MISMATCH`.
+ * - `config.studLength` é a lista de pré-cortes (P7); se o comprimento derivado da altura não for
+ *   nenhum deles, o painel sai com o comprimento derivado e um aviso `STUD_LENGTH_MISMATCH`.
+ *   Lista vazia lança `RangeError`.
  * - Studs de layout que se sobrepõem a uma zona de abertura são removidos; o que só encosta
  *   no king fica.
  */
@@ -17,9 +18,7 @@ import type { Config, Member, Panel, Wall, Warning } from '../types';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, openingZone, type OpeningZone } from '../rules/openings';
-
-/** Diferença acima da qual dois comprimentos são considerados distintos (1/64"). */
-const LENGTH_TOLERANCE = 1 / 64;
+import { matchPrecut } from '../rules/precuts';
 
 /** Folga numérica para comparações de geometria. */
 const EPS = 1e-9;
@@ -31,12 +30,16 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
   const plates = layoutPlates(wall.length, wall.height, wall.section, plateThickness);
 
   const studLength = wall.height - 3 * plateThickness;
-  if (Math.abs(studLength - config.studLength) > LENGTH_TOLERANCE) {
+  if (config.studLength.length === 0) {
+    throw new RangeError('config.studLength: lista de pré-cortes vazia');
+  }
+  if (matchPrecut(studLength, config.studLength) === undefined) {
     warnings.push({
       code: 'STUD_LENGTH_MISMATCH',
       message:
         `parede ${wall.id}: altura ${wall.height}" menos 3 plates de ${plateThickness}" exige stud de ` +
-        `${studLength}", mas config.studLength é ${config.studLength}"`,
+        `${studLength}", que não é nenhum dos pré-cortes de config.studLength ` +
+        `(${config.studLength.map((p) => `${p}"`).join(', ')})`,
     });
   }
 

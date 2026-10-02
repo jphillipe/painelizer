@@ -37,17 +37,23 @@ describe('cutListCsv', () => {
 });
 
 describe('bomCsv', () => {
-  it('fixture plain: 10 studs em 8\' e 3 plates em 12\'', () => {
-    expect(bomCsv(projectBom([panel]))).toBe(
-      'section,stock_length_in,stock_length,qty,cut_total_in,waste_in,waste_percent\n' +
-        `2x6,96,"8'-0""",10,926.25,33.75,3.5\n` +
-        `2x6,144,"12'-0""",3,432,0,0\n`,
+  it('fixture plain: 10 studs no pré-corte 92 5/8" e 3 plates em 12\'', () => {
+    expect(bomCsv(projectBom([panel], plain.config.studLength))).toBe(
+      'section,stock_type,stock_length_in,stock_length,qty,cut_total_in,waste_in,waste_percent\n' +
+        `2x6,precut,92.625,"92 5/8""",10,926.25,0,0\n` +
+        `2x6,commercial,144,"12'-0""",3,432,0,0\n`,
     );
   });
 
+  it('pré-cortes vêm do projeto: sem o de 8\', os studs voltam ao 8\' comercial', () => {
+    const csv = bomCsv(projectBom([panel], [104.625]));
+    expect(csv).toContain(`2x6,commercial,96,"8'-0""",10,926.25,33.75,3.5\n`);
+    expect(csv).not.toContain('precut');
+  });
+
   it('stockLengths do projeto substituem o default do core', () => {
-    const csv = bomCsv(projectBom([panel], [144]));
+    const csv = bomCsv(projectBom([panel], [104.625], [144]));
     expect(csv.trimEnd().split('\n')).toHaveLength(2);
-    expect(csv).toContain(`2x6,144,"12'-0""",13,`);
+    expect(csv).toContain(`2x6,commercial,144,"12'-0""",13,`);
   });
 });

@@ -7,22 +7,32 @@
  * gerando duas de corte) — isso é otimização de corte, fora do escopo v1; por
  * isso a sobra reportada é um teto, não a real.
  *
- * Comprimentos comerciais default: 8', 10', 12', 14', 16' (hipótese P9 em
- * `docs/05-pendencias.md`). Peça mais longa que o maior comercial lança
- * `RangeError`: até a S12 dividir painéis, uma parede de 20' não tem plate
- * em estoque, e é melhor falhar do que omitir material.
+ * Pré-cortes (S7.1, P9): 92 5/8" e 104 5/8" também são estoque, mas só atendem
+ * peça 2x4/2x6 de comprimento igual ao pré-corte (stud, king…), com sobra zero.
+ * Peça mais curta (jack, cripple) não sai de pré-corte: vai para o comercial.
+ *
+ * Comprimentos comerciais default: 8', 10', 12', 14', 16' (P9, confirmado em
+ * 2026-10-01). Peça mais longa que o maior comercial lança `RangeError`: até a
+ * S12 dividir painéis, uma parede de 20' não tem plate em estoque, e é melhor
+ * falhar do que omitir material.
  */
 
 import type { Panel, Section } from '../types';
+import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, SECTION_ORDER } from './cutlist';
 
-/** Comprimentos comerciais em polegadas (hipótese P9). */
+/** Comprimentos comerciais em polegadas (P9). */
 export const DEFAULT_STOCK_LENGTHS: readonly number[] = [96, 120, 144, 168, 192];
+
+/** Seções em que existe pré-corte de stud (P7: iguais para 2x4 e 2x6). */
+const PRECUT_SECTIONS: readonly Section[] = ['2x4', '2x6'];
 
 export interface BomLine {
   section: Section;
-  /** Comprimento comercial (polegadas). */
+  /** Comprimento comercial ou do pré-corte (polegadas). */
   stockLength: number;
+  /** `true` quando a linha é de pré-corte de stud, não de comprimento comercial. */
+  precut: boolean;
   /** Peças comerciais a comprar. */
   qty: number;
   /** Soma dos comprimentos de corte atendidos por estas peças. */
@@ -56,22 +66,30 @@ export function stockLengthFor(
 }
 
 /**
- * BOM consolidada de um conjunto de painéis, por (seção, comprimento comercial),
- * ordenada por seção e comprimento comercial crescente.
+ * BOM consolidada de um conjunto de painéis, por (seção, estoque), ordenada por
+ * seção e comprimento de estoque crescente (pré-corte de 92 5/8" antes do 8').
+ *
+ * @param precuts pré-cortes de stud em estoque; lista vazia = sem pré-corte.
  */
 export function bom(
   panels: readonly Pick<Panel, 'members'>[],
   stockLengths: readonly number[] = DEFAULT_STOCK_LENGTHS,
+  precuts: readonly number[] = DEFAULT_PRECUTS,
 ): BomLine[] {
   const lines = new Map<string, BomLine>();
 
   for (const panel of panels) {
     for (const cut of cutList(panel)) {
-      const stockLength = stockLengthFor(cut.length, stockLengths);
-      const key = `${cut.section}|${stockLength}`;
+      const precutLength = PRECUT_SECTIONS.includes(cut.section)
+        ? matchPrecut(cut.length, precuts)
+        : undefined;
+      const precut = precutLength !== undefined;
+      const stockLength = precutLength ?? stockLengthFor(cut.length, stockLengths);
+      const key = `${cut.section}|${stockLength}|${precut}`;
       const line = lines.get(key) ?? {
         section: cut.section,
         stockLength,
+        precut,
         qty: 0,
         cutTotal: 0,
         waste: 0,

@@ -4,6 +4,7 @@ import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { expectSameMembers } from '../helpers/members';
 import plain from '../fixtures/wall-144-plain.json';
 import window from '../fixtures/wall-144-window.json';
+import low from '../fixtures/wall-144-window-82.5.json';
 
 const wall = plain.wall as Wall;
 const config = plain.config as Config;
@@ -40,12 +41,30 @@ describe('panelizeWall — parede sem abertura', () => {
     expect(xs).toEqual([0, 24, 48, 72, 96, 120, 142.5]);
   });
 
-  it('altura fora do pré-corte: stud segue a altura e sai aviso STUD_LENGTH_MISMATCH', () => {
+  it("parede de 9' (109.125): stud 104.625 é o segundo pré-corte da lista — sem aviso (P7)", () => {
     const panel = panelizeWall({ ...wall, height: 109.125 }, config);
     const studs = panel.members.filter((m) => m.role === 'stud');
     expect(studs).toHaveLength(10);
     for (const s of studs) expect(s.length).toBe(104.625);
+    expect(panel.warnings).toEqual([]);
+  });
+
+  it('altura fora dos pré-cortes: stud segue a altura e sai aviso STUD_LENGTH_MISMATCH', () => {
+    const panel = panelizeWall({ ...wall, height: 103.125 }, config);
+    const studs = panel.members.filter((m) => m.role === 'stud');
+    for (const s of studs) expect(s.length).toBe(98.625);
     expect(panel.warnings.map((w) => w.code)).toEqual(['STUD_LENGTH_MISMATCH']);
+    expect(panel.warnings[0]!.message).toMatch(/98\.625.*92\.625", 104\.625"/);
+  });
+
+  it("só o pré-corte de 9' na lista: parede de 8' avisa", () => {
+    const panel = panelizeWall(wall, { ...config, studLength: [104.625] });
+    expect(panel.warnings.map((w) => w.code)).toEqual(['STUD_LENGTH_MISMATCH']);
+  });
+
+  it('lista de pré-cortes vazia ou inválida lança RangeError', () => {
+    expect(() => panelizeWall(wall, { ...config, studLength: [] })).toThrow(RangeError);
+    expect(() => panelizeWall(wall, { ...config, studLength: [0] })).toThrow(RangeError);
   });
 
   it('altura que não comporta stud lança RangeError', () => {
@@ -81,15 +100,30 @@ describe('panelizeWall — janela', () => {
     expectNoVerticalOverlap(panel.members);
   });
 
-  it('headerHeight 82.5: 20 peças, cripples acima e abaixo, sem sobreposição', () => {
-    const panel = panelizeWall(wWall, { ...wConfig, headerHeight: 82.5 });
+  it('fixture wall-144-window-82.5 passa exatamente (20 peças, caso típico da fábrica)', () => {
+    const panel = panelizeWall(low.wall as Wall, low.config as Config);
+    expectSameMembers(panel.members, low.expected.members as Member[]);
     expect(panel.members).toHaveLength(20);
-    const cripples = panel.members.filter((m) => m.role === 'cripple');
-    expect(cripples.map((c) => [c.x, c.y, c.length])).toEqual([
-      [64, 1.5, 31.5],
-      [80, 1.5, 31.5],
-      [64, 91.75, 2.375],
-      [80, 91.75, 2.375],
+    expect(panel.warnings).toEqual(low.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('Opening.headerHeight sobrescreve config.headerHeight só na própria abertura', () => {
+    const panel = panelizeWall(
+      {
+        ...wWall,
+        length: 192,
+        openings: [
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 },
+          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, headerHeight: 80 },
+        ],
+      },
+      low.config as Config,
+    );
+    const headers = panel.members.filter((m) => m.role === 'header').map((h) => [h.x, h.y]);
+    expect(headers).toEqual([
+      [18.5, 82.5],
+      [98.5, 80],
     ]);
     expectNoVerticalOverlap(panel.members);
   });

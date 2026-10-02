@@ -7,7 +7,15 @@
  * (para quem lê na serra). Nenhuma conta é feita aqui — os números vêm do core.
  */
 
-import { bom, cutList, formatFeetInches, formatInches, type BomLine, type Panel } from 'core';
+import {
+  bom,
+  cutList,
+  DEFAULT_STOCK_LENGTHS,
+  formatFeetInches,
+  formatInches,
+  type BomLine,
+  type Panel,
+} from 'core';
 
 export function csvCell(value: string | number): string {
   const s = typeof value === 'number' ? String(value) : value;
@@ -33,6 +41,7 @@ export function cutListCsv(panels: readonly Panel[]): string {
 
 export const BOM_HEADER = [
   'section',
+  'stock_type',
   'stock_length_in',
   'stock_length',
   'qty',
@@ -41,13 +50,18 @@ export const BOM_HEADER = [
   'waste_percent',
 ] as const;
 
+/**
+ * `stock_type` é `precut` (pré-corte de stud, P9) ou `commercial`. O pré-corte sai formatado só em
+ * polegadas (`92 5/8"`, como a fábrica o chama); o comercial, em pés (`8'-0"`).
+ */
 export function bomCsv(lines: readonly BomLine[]): string {
   const rows: (string | number)[][] = [[...BOM_HEADER]];
   for (const l of lines) {
     rows.push([
       l.section,
+      l.precut ? 'precut' : 'commercial',
       l.stockLength,
-      formatFeetInches(l.stockLength),
+      l.precut ? formatInches(l.stockLength) : formatFeetInches(l.stockLength),
       l.qty,
       l.cutTotal,
       l.waste,
@@ -57,7 +71,15 @@ export function bomCsv(lines: readonly BomLine[]): string {
   return toCsv(rows);
 }
 
-/** BOM consolidada de todos os painéis do projeto. */
-export function projectBom(panels: readonly Panel[], stockLengths?: readonly number[]): BomLine[] {
-  return stockLengths ? bom(panels, stockLengths) : bom(panels);
+/**
+ * BOM consolidada de todos os painéis do projeto. Os pré-cortes vêm de `config.studLength`
+ * (o que o projeto declara como pré-corte é o que se compra pré-cortado); `stockLengths` ausente
+ * = comerciais default do core.
+ */
+export function projectBom(
+  panels: readonly Panel[],
+  precuts: readonly number[],
+  stockLengths: readonly number[] = DEFAULT_STOCK_LENGTHS,
+): BomLine[] {
+  return bom(panels, stockLengths, precuts);
 }

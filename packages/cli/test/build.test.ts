@@ -10,7 +10,7 @@ describe('buildProject', () => {
   const result = buildProject(example());
 
   it('um painel por parede, na ordem do projeto', () => {
-    expect(result.panels.map((p) => p.id)).toEqual(['W01', 'W02', 'W03', 'W04']);
+    expect(result.panels.map((p) => p.id)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W06']);
   });
 
   it('gera cutlist.csv, bom.csv e um SVG por painel', () => {
@@ -21,6 +21,8 @@ describe('buildProject', () => {
       'panels/W02.svg',
       'panels/W03.svg',
       'panels/W04.svg',
+      'panels/W05.svg',
+      'panels/W06.svg',
     ]);
     for (const f of result.files.filter((f) => f.path.endsWith('.svg'))) {
       expect(f.content.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
@@ -36,26 +38,42 @@ describe('buildProject', () => {
     expect(svg).not.toContain('>16&quot;</text>');
   });
 
-  it('sem avisos no exemplo; aviso do core aparece com o id do painel', () => {
+  it("sem avisos no exemplo (paredes de 8' e 9' nos dois pré-cortes); aviso do core vem com o id do painel", () => {
     expect(result.warnings).toEqual([]);
     const p = example();
-    p.config.studLength = 104.625;
+    p.config.studLength = [104.625];
     const { warnings } = buildProject(p);
-    expect(warnings).toHaveLength(4);
+    // só a W06 (9') tem stud de 104 5/8"
+    expect(warnings.map((w) => w.panelId)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05']);
     expect(warnings[0]).toMatchObject({ panelId: 'W01', warning: { code: 'STUD_LENGTH_MISMATCH' } });
   });
 
-  it('janela gera kings, jacks, header, sill e cripples no painel e na lista de corte', () => {
-    const p = example();
-    p.config.defaultHeaderSection = '2x10';
-    p.config.defaultHeaderPlies = 2;
-    p.walls[0]!.openings.push({ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
-    const r = buildProject(p);
-    expect(r.panels[0]!.members).toHaveLength(18);
-    const csv = r.files.find((f) => f.path === 'cutlist.csv')!.content;
-    expect(csv).toContain('W01,header,2x10,39,"39""",2');
-    expect(csv).toContain('W01,sill,2x6,36,"36""",1');
-    expect(csv).toContain('W01,cripple,2x6,33.875,"33 7/8""",2');
+  it('W05: janela com header a 82.5 do config — 20 peças, como o fixture wall-144-window-82.5', () => {
+    const w05 = result.panels.find((p) => p.id === 'W05')!;
+    expect(w05.members).toHaveLength(20);
+    const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
+    expect(csv).toContain('W05,header,2x10,39,"39""",2');
+    expect(csv).toContain('W05,jackStud,2x6,81,"81""",2');
+    expect(csv).toContain('W05,sill,2x6,36,"36""",1');
+    expect(csv).toContain('W05,cripple,2x6,31.5,"31 1/2""",2');
+    expect(csv).toContain('W05,cripple,2x6,2.375,"2 3/8""",2');
+  });
+
+  it("W06: headerHeight da abertura (7'-6\") sobrescreve o do config numa parede de 9'", () => {
+    const w06 = result.panels.find((p) => p.id === 'W06')!;
+    expect(w06.members.find((m) => m.role === 'header')).toMatchObject({ y: 90 });
+    expect(w06.members.filter((m) => m.role === 'jackStud').map((j) => j.length)).toEqual([88.5, 88.5]);
+    expect(w06.members.filter((m) => m.role === 'stud').every((s) => s.length === 104.625)).toBe(true);
+  });
+
+  it('bom.csv usa os pré-cortes do projeto: 92 5/8" e 104 5/8" como estoque', () => {
+    const csv = result.files.find((f) => f.path === 'bom.csv')!.content;
+    expect(csv.split('\n')[0]).toBe(
+      'section,stock_type,stock_length_in,stock_length,qty,cut_total_in,waste_in,waste_percent',
+    );
+    expect(csv).toContain('2x6,precut,92.625,"92 5/8""",');
+    expect(csv).toContain('2x6,precut,104.625,"104 5/8""",');
+    expect(csv).toContain('2x4,precut,92.625,"92 5/8""",');
   });
 
   it('porta (S8 pendente) e plate sem comprimento comercial viram problemas, sem arquivos', () => {

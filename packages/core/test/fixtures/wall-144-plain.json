@@ -4,7 +4,7 @@
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
-    "studLength": 92.625
+    "studLength": [92.625, 104.625]
   },
   "wall": {
     "id": "W-plain",

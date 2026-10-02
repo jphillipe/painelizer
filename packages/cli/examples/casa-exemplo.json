@@ -1,16 +1,31 @@
 {
-  "$comment": "Exemplo de entrada do CLI. Paredes retas sem abertura (janelas exigem config.defaultHeaderSection e defaultHeaderPlies até a S9; portas chegam na S8) e até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
+  "$comment": "Exemplo de entrada do CLI. config.studLength = pré-cortes da fábrica (P7); headerHeight 82.5 = altura padrão de header da fábrica (P2), sobrescrita por abertura quando o projeto indica outra (W06). Header 2x10 de 2 plies é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC (S9). Sem porta (S8) e paredes até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
   "name": "casa-exemplo",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
-    "studLength": "92 5/8\""
+    "studLength": ["92 5/8\"", "104 5/8\""],
+    "headerHeight": "6'-10 1/2\"",
+    "defaultHeaderSection": "2x10",
+    "defaultHeaderPlies": 2
   },
   "walls": [
     { "id": "W01", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "openings": [] },
     { "id": "W02", "length": "16'", "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "openings": [] },
     { "id": "W03", "length": 120, "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "openings": [] },
-    { "id": "W04", "length": "10'-9 1/2\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+    { "id": "W04", "length": "10'-9 1/2\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] },
+    {
+      "id": "W05", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true,
+      "openings": [
+        { "id": "J1", "type": "window", "offset": "4'", "roughWidth": 36, "roughHeight": 48 }
+      ]
+    },
+    {
+      "id": "W06", "length": "10'", "height": "9'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true,
+      "openings": [
+        { "id": "J2", "type": "window", "offset": 42, "roughWidth": 36, "roughHeight": 60, "headerHeight": "7'-6\"" }
+      ]
+    }
   ]
 }

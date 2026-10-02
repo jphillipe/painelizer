@@ -14,7 +14,7 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
 - [x] **P2 — Altura de header.** — **Resposta (2026-10-01):** altura padrão; topo dos RO na mesma altura sempre que
   possível, **82 1/2" do subfloor até a face inferior do header**. Nunca encostam automaticamente na top plate.
   Se o projeto estrutural ou arquitetônico indicar outra altura, segue o projeto. — Impacto: `headerHeight: 82.5`
-  é o caso normal (subfloor = y=0, então o valor entra direto); precisa de sobrescrita por abertura (S7.1).
+  é o caso normal (subfloor = y=0, então o valor entra direto); sobrescrita por abertura feita na S7.1.
 - [ ] **P3 — Cripple encostado no jack.** — **Resposta (2026-10-01):** confirmada a hipótese: se a marca de 16"
   cai "praticamente junto" ao jack, não colocam cripple; o jack serve de layout, desde que o espaçamento máximo e
   a fixação do sheathing sejam respeitados. Fica aberta só a tolerância — ver P13. — S7 (feita com a hipótese).
@@ -33,12 +33,12 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   peça de estoque (ver P14) — S12, S14.
 - [x] **P7 — Pré-corte de stud.** — **Resposta (2026-10-01):** 8' → **92 5/8"**; 9' → **104 5/8"**; iguais para 2x4
   e 2x6. — Impacto: hipótese confirmada; um projeto com paredes de 8' e 9' precisa de mais de um pré-corte no
-  config (S7.1).
+  config — feito na S7.1 (`config.studLength` é lista).
 - [ ] **P8 — Peso por peça.** Densidade usada para estimar peso do painel (SPF ~ 1.3 lb/pé linear para 2x4,
   ~2.0 para 2x6?). Madeira confirmada: SPF No. 2 (P10). — hipótese: tabela fixa em `src/data/lumber.json` — S12.
 - [x] **P9 — Comprimentos comerciais em estoque.** — **Resposta (2026-10-01):** 2x4 e 2x6 em **8', 10', 12', 14' e
   16'**, mais os pré-cortes **92 5/8" e 104 5/8"**. — Impacto: default da BOM confirmado; falta incluir os
-  pré-cortes (S7.1). Preço por comprimento não informado (orçamento continua sem tabela).
+  pré-cortes — feito na S7.1. Preço por comprimento não informado (orçamento continua sem tabela).
 
 ## Normativo
 - [ ] **P10 — Tabela IRC em vigor.** — **Resposta parcial (2026-10-01):** madeira **SPF No. 2 ou melhor**. Headers,

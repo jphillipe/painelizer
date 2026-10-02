@@ -8,6 +8,8 @@
  * Medidas (`length`, `height`, `offset`, `roughWidth`, `roughHeight`, `studLength`, `headerHeight`)
  * aceitam número em polegadas decimais ou string em pés-pol-fração (`12'-0"`, `92 5/8"`), convertida
  * por `parseFeetInches` do core — o JSON pode vir de humano ou de IA, e a fábrica pensa em pés-pol.
+ * `config.studLength` é a lista de pré-cortes (`[92.625, 104.625]`); uma medida só vira lista de um.
+ * `headerHeight` vale no `config` e em cada abertura; a da abertura sobrescreve (P2).
  *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
@@ -86,7 +88,7 @@ function configFrom(raw: unknown, path: string): Config {
     studSpacing: positive(c['studSpacing'], `${path}.studSpacing`),
     studThickness: positive(c['studThickness'] ?? 1.5, `${path}.studThickness`),
     plateThickness: positive(c['plateThickness'] ?? 1.5, `${path}.plateThickness`),
-    studLength: positive(c['studLength'], `${path}.studLength`),
+    studLength: precuts(c['studLength'], `${path}.studLength`),
   };
   if (c['headerHeight'] !== undefined) {
     config.headerHeight = positive(c['headerHeight'], `${path}.headerHeight`);
@@ -126,7 +128,17 @@ function openingFrom(raw: unknown, path: string): Opening {
   };
   if (o['kingStuds'] !== undefined) opening.kingStuds = count(o['kingStuds'], `${path}.kingStuds`);
   if (o['jackStuds'] !== undefined) opening.jackStuds = count(o['jackStuds'], `${path}.jackStuds`);
+  if (o['headerHeight'] !== undefined) {
+    opening.headerHeight = positive(o['headerHeight'], `${path}.headerHeight`);
+  }
   return opening;
+}
+
+/** Pré-cortes de stud: lista não vazia de medidas, ou uma medida só (vira lista de um). */
+function precuts(v: unknown, path: string): number[] {
+  if (!Array.isArray(v)) return [positive(v, path)];
+  if (v.length === 0) throw new ProjectError(`${path}: esperado ao menos um pré-corte`);
+  return v.map((p, i) => positive(p, `${path}[${i}]`));
 }
 
 // ---- primitivos -------------------------------------------------------------

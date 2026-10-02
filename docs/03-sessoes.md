@@ -64,7 +64,7 @@ Uma sessão do Claude Code = um item. Ritual:
   e adicione um teste com `headerHeight: 82.5` conferindo cripples acima."
   Saída: 18 peças, fixture verde, SVG conferido visualmente nos dois casos.
 
-- [ ] **S7.1 — Ajustes pelas respostas da fábrica (2026-10-01)**
+- [x] **S7.1 — Ajustes pelas respostas da fábrica (2026-10-01)**
   Prompt: "Aplique as respostas P2, P7 e P9 de `05-pendencias.md`: (a) `Opening.headerHeight` opcional sobrescreve
   `config.headerHeight` (o projeto manda, P2); (b) `config.studLength` vira lista de pré-cortes
   (`[92.625, 104.625]`) e `STUD_LENGTH_MISMATCH` só dispara se o stud derivado não estiver na lista (P7);

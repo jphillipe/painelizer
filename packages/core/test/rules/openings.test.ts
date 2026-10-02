@@ -3,6 +3,7 @@ import type { Config, Member, Opening, Wall } from '../../src/types';
 import { framingForOpening, openingStudCounts, openingZone } from '../../src/rules/openings';
 import { expectSameMembers } from '../helpers/members';
 import window from '../fixtures/wall-144-window.json';
+import low from '../fixtures/wall-144-window-82.5.json';
 
 const wall = window.wall as Wall;
 const config = window.config as Config;
@@ -10,6 +11,7 @@ const win = wall.openings[0] as Opening;
 
 const OPENING_ROLES = new Set(['kingStud', 'jackStud', 'header', 'sill', 'cripple']);
 const expectedOpening = (window.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
+const expectedLowOpening = (low.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
 
 const byRole = (members: Member[], role: Member['role']) => members.filter((m) => m.role === role);
 const xs = (members: Member[]) => members.map((m) => m.x).sort((a, b) => a - b);
@@ -60,22 +62,37 @@ describe('framingForOpening — janela', () => {
     }
   });
 
-  it('headerHeight 82.5: header baixo, cripples acima nas marcas 64 e 80 (vão de 2.375)', () => {
-    const members = framingForOpening(win, wall, { ...config, headerHeight: 82.5 });
-    expectSameMembers(members, [
-      { role: 'kingStud', section: '2x6', length: 92.625, x: 45, y: 1.5 },
-      { role: 'kingStud', section: '2x6', length: 92.625, x: 85.5, y: 1.5 },
-      { role: 'jackStud', section: '2x6', length: 81, x: 46.5, y: 1.5 },
-      { role: 'jackStud', section: '2x6', length: 81, x: 84, y: 1.5 },
-      { role: 'header', section: '2x10', length: 39, x: 46.5, y: 82.5 },
-      // base do RO = 82.5 − 48 = 34.5; sill em 33
-      { role: 'sill', section: '2x6', length: 36, x: 48, y: 33 },
-      { role: 'cripple', section: '2x6', length: 31.5, x: 64, y: 1.5 },
-      { role: 'cripple', section: '2x6', length: 31.5, x: 80, y: 1.5 },
-      // topo do header = 91.75; top plate em 94.125
-      { role: 'cripple', section: '2x6', length: 2.375, x: 64, y: 91.75 },
-      { role: 'cripple', section: '2x6', length: 2.375, x: 80, y: 91.75 },
-    ]);
+  it('fixture wall-144-window-82.5: header baixo, cripples acima nas marcas 64 e 80 (vão de 2.375)', () => {
+    const members = framingForOpening(
+      low.wall.openings[0] as Opening,
+      low.wall as Wall,
+      low.config as Config,
+    );
+    expectSameMembers(members, expectedLowOpening);
+  });
+
+  it('Opening.headerHeight sem config.headerHeight dá o mesmo resultado do fixture 82.5', () => {
+    const members = framingForOpening({ ...win, headerHeight: 82.5 }, wall, config);
+    expectSameMembers(members, expectedLowOpening);
+  });
+
+  it('Opening.headerHeight sobrescreve config.headerHeight (o projeto manda, P2)', () => {
+    const lowConfig = low.config as Config;
+    const members = framingForOpening({ ...win, headerHeight: 80 }, wall, lowConfig);
+    expect(byRole(members, 'header')[0]?.y).toBe(80);
+    expect(byRole(members, 'jackStud').map((j) => j.length)).toEqual([78.5, 78.5]);
+    // base do RO 32, sill em 30.5
+    expect(byRole(members, 'sill')[0]?.y).toBe(30.5);
+    // topo do header 89.25 → cripples acima de 4.875
+    expect(byRole(members, 'cripple').filter((c) => c.y > 1.5).map((c) => c.length)).toEqual([4.875, 4.875]);
+    // sem headerHeight na abertura, vale o config
+    expect(byRole(framingForOpening(win, wall, lowConfig), 'header')[0]?.y).toBe(82.5);
+  });
+
+  it('Opening.headerHeight também é validado (header invadindo a top plate)', () => {
+    expect(() => framingForOpening({ ...win, headerHeight: 90 }, wall, low.config as Config)).toThrow(
+      RangeError,
+    );
   });
 
   it('vão acima do header < 1.5: sem cripples acima', () => {

@@ -107,7 +107,7 @@ describe('run (I/O em memória)', () => {
     expect(m.dirs).toEqual([]);
   });
 
-  it('sucesso: grava 6 arquivos sob --out e resume no stdout', () => {
+  it('sucesso: grava 8 arquivos sob --out e resume no stdout', () => {
     const m = memoryIo({ 'p.json': exampleText });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     const outDir = resolve('saida');
@@ -118,10 +118,12 @@ describe('run (I/O em memória)', () => {
       join(outDir, 'panels', 'W02.svg'),
       join(outDir, 'panels', 'W03.svg'),
       join(outDir, 'panels', 'W04.svg'),
+      join(outDir, 'panels', 'W05.svg'),
+      join(outDir, 'panels', 'W06.svg'),
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
-    expect(m.out[0]).toBe(`4 painel(is), 53 peças → ${outDir}`);
+    expect(m.out[0]).toBe(`6 painel(is), 92 peças → ${outDir}`);
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
@@ -129,16 +131,18 @@ describe('run (I/O em memória)', () => {
       '  panels/W02.svg',
       '  panels/W03.svg',
       '  panels/W04.svg',
+      '  panels/W05.svg',
+      '  panels/W06.svg',
     ]);
     expect(m.err).toEqual([]);
   });
 
   it('avisos do core vão para o stderr sem mudar o código de saída', () => {
-    const project = JSON.parse(exampleText) as { config: { studLength: number } };
-    project.config.studLength = 104.625;
+    const project = JSON.parse(exampleText) as { config: { studLength: number[] } };
+    project.config.studLength = [104.625];
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
-    expect(m.err).toHaveLength(4);
+    expect(m.err).toHaveLength(5);
     expect(m.err[0]).toMatch(/^aviso W01 STUD_LENGTH_MISMATCH: /);
   });
 
@@ -184,7 +188,7 @@ describe('ponta a ponta (disco)', () => {
     expect(code).toBe(0);
     expect(err).toEqual([]);
     expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels']);
-    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg']);
+    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg']);
     expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,129.5,"129 1/2""",3');
     expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>16'-0&quot;</text>`);
   });
@@ -199,7 +203,7 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
-    expect(r.stdout.split('\n')[0]).toBe(`4 painel(is), 53 peças → ${outDir}`);
+    expect(r.stdout.split('\n')[0]).toBe(`6 painel(is), 92 peças → ${outDir}`);
     expect(existsSync(join(outDir, 'panels', 'W01.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });

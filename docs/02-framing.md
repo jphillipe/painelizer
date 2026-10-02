@@ -1,7 +1,8 @@
 # 02 — Framing: glossário, convenções e regras
 
 ## Glossário
-- **Stud** — peça vertical comum. Espaçada a 16" ou 24" OC. Pré-corte padrão 92 5/8" (92.625").
+- **Stud** — peça vertical comum. Espaçada a 16" ou 24" OC. Pré-cortes da fábrica: 92 5/8" (parede de 8') e
+  104 5/8" (9'), iguais em 2x4 e 2x6 (P7). `config.studLength` é a lista de pré-cortes do projeto.
 - **Plate** — peça horizontal. Bottom plate (base), top plate e double top plate (topo). 1.5" de espessura cada.
 - **Rough opening (RO)** — abertura bruta para porta/janela. Maior que a esquadria.
 - **King stud** — stud inteiro de cada lado da abertura, do lado de fora do jack.
@@ -25,7 +26,8 @@
   ao RO; o header apoia em todos os jacks (comprimento = roughWidth + 2·jacks·1.5).
   Studs de layout cujo intervalo [x, x+1.5] se sobreponha à zona são removidos; o que só encosta no king fica.
 - Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas.
-- Base do header: `config.headerHeight` (y) se definido; senão, encostado na face inferior da top plate.
+- Base do header: `opening.headerHeight` (y) se definido — o projeto manda; senão `config.headerHeight`;
+  senão, encostado na face inferior da top plate.
   Topo do RO = base do header. **Padrão da fábrica: 82.5"** do subfloor (= y) à face inferior do header, igual
   para portas e janelas; o projeto pode indicar outra (P2, respondida em 2026-10-01).
 - Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
@@ -69,5 +71,6 @@ Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
 
 Total: 18 peças. Fixture: `test/fixtures/wall-144-window.json`.
 Este exemplo usa o header encostado (sem `headerHeight`). O caso típico da fábrica é `headerHeight: 82.5`:
-jacks de 81, base do RO em 34.5, sill em 33, cripples de 31.5 abaixo e de 2.375 acima do header (20 peças).
+jacks de 81, base do RO em 34.5, sill em 33, cripples de 31.5 abaixo e de 2.375 acima do header (20 peças) —
+fixture `test/fixtures/wall-144-window-82.5.json`.
 A seção do header (2x10) neste exemplo é **hipótese** até a tabela estar carregada — o fixture marca isso.

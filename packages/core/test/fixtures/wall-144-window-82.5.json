@@ -1,15 +1,16 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). Conferir com a equipe de produção antes de tratar como referência.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48 e header a 82.5\" do subfloor — o caso típico da fábrica (P2, respondida em 2026-10-01). Alvo da sessão S7.1. Mesma parede de wall-144-window.json; muda só config.headerHeight. Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). Jacks 81; base do RO 34.5; sill em 33; cripples de 31.5 abaixo e de 2.375 acima (topo do header 91.75, top plate em 94.125). 20 peças.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
+    "headerHeight": 82.5,
     "defaultHeaderSection": "2x10",
     "defaultHeaderPlies": 2
   },
   "wall": {
-    "id": "W-window",
+    "id": "W-window-82.5",
     "length": 144,
     "height": 97.125,
     "section": "2x6",
@@ -33,12 +34,14 @@
       { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
       { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 45,   "y": 1.5, "orientation": "vertical" },
       { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 85.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 46.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 84,   "y": 1.5, "orientation": "vertical" },
-      { "role": "header",  "section": "2x10", "length": 39, "x": 46.5, "y": 84.875, "orientation": "horizontal", "plies": 2 },
-      { "role": "sill",    "section": "2x6",  "length": 36, "x": 48,   "y": 35.375, "orientation": "horizontal" },
-      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 64, "y": 1.5, "orientation": "vertical" },
-      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 80, "y": 1.5, "orientation": "vertical" }
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 46.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 84,   "y": 1.5, "orientation": "vertical" },
+      { "role": "header",  "section": "2x10", "length": 39, "x": 46.5, "y": 82.5, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill",    "section": "2x6",  "length": 36, "x": 48,   "y": 33,   "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6",  "length": 31.5,  "x": 64, "y": 1.5,   "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 31.5,  "x": 80, "y": 1.5,   "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 64, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 80, "y": 91.75, "orientation": "vertical" }
     ],
     "warnings": []
   }

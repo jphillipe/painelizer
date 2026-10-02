@@ -47,6 +47,11 @@ export interface Opening {
   kingStuds?: number;
   /** Jack studs de cada lado (inteiro ≥ 1). Ausente = 1. O header apoia em todos. */
   jackStuds?: number;
+  /**
+   * y da base do header desta abertura, medido da base da bottom plate (= subfloor).
+   * Sobrescreve `config.headerHeight` — o projeto manda (P2).
+   */
+  headerHeight?: number;
 }
 
 export interface Wall {
@@ -109,11 +114,15 @@ export interface Config {
   studThickness: number;
   /** Espessura de cada plate (1.5). */
   plateThickness: number;
-  /** Comprimento de pré-corte do stud (92.625 para parede de 97.125). */
-  studLength: number;
   /**
-   * y da base do header, medido da base da bottom plate.
-   * Ausente = header encostado na face inferior da top plate (pendência P2).
+   * Pré-cortes de stud do projeto (P7): 92.625 para parede de 8' (97.125), 104.625 para 9' (109.125).
+   * O stud derivado da altura deve estar na lista; senão, aviso `STUD_LENGTH_MISMATCH`.
+   * A BOM usa a mesma lista como estoque pré-cortado (P9).
+   */
+  studLength: number[];
+  /**
+   * y da base do header, medido da base da bottom plate (= subfloor). Padrão da fábrica: 82.5 (P2).
+   * `Opening.headerHeight` sobrescreve. Ausente nos dois = header encostado sob a top plate.
    */
   headerHeight?: number;
   /** Seção do header enquanto a tabela IRC (S9) não existe. */

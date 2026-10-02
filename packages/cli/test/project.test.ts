@@ -18,12 +18,15 @@ describe('parseProject', () => {
   it('lê o exemplo e converte medidas em pés-pol para polegadas decimais', () => {
     const p = parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa-exemplo.json');
     expect(p.name).toBe('casa-exemplo');
-    expect(p.config.studLength).toBe(92.625);
+    expect(p.config.studLength).toEqual([92.625, 104.625]);
+    expect(p.config.headerHeight).toBe(82.5);
     expect(p.walls.map((w) => [w.id, w.length, w.height])).toEqual([
       ['W01', 144, 97.125],
       ['W02', 192, 97.125],
       ['W03', 120, 97.125],
       ['W04', 129.5, 97.125],
+      ['W05', 144, 97.125],
+      ['W06', 120, 109.125],
     ]);
     expect(p.stockLengths).toBeUndefined();
   });
@@ -39,7 +42,7 @@ describe('parseProject', () => {
       'casa.json',
     );
     expect(p.name).toBe('casa.json');
-    expect(p.config).toEqual({ studSpacing: 24, studThickness: 1.5, plateThickness: 1.5, studLength: 92.625 });
+    expect(p.config).toEqual({ studSpacing: 24, studThickness: 1.5, plateThickness: 1.5, studLength: [92.625] });
   });
 
   it('config opcional: headerHeight, defaultHeaderSection e defaultHeaderPlies', () => {
@@ -81,6 +84,32 @@ describe('parseProject', () => {
     expect(p.walls[0]?.openings).toEqual([
       { id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 },
     ]);
+  });
+
+  it('studLength: lista de pré-cortes em pés-pol; uma medida só vira lista de um', () => {
+    const cfg = (studLength: unknown) => valid({ config: { studSpacing: 16, studLength } });
+    expect(projectFrom(cfg([`92 5/8"`, 104.625])).config.studLength).toEqual([92.625, 104.625]);
+    expect(projectFrom(cfg(`92 5/8"`)).config.studLength).toEqual([92.625]);
+    expect(() => projectFrom(cfg([]), 'projeto')).toThrow(/projeto\.config\.studLength: esperado ao menos um pré-corte/);
+    expect(() => projectFrom(cfg([92.625, 0]), 'projeto')).toThrow(/config\.studLength\[1\]: esperado medida > 0/);
+    expect(() => projectFrom(cfg(undefined), 'projeto')).toThrow(/config\.studLength/);
+  });
+
+  it('headerHeight opcional por abertura, em pés-pol', () => {
+    const withOpening = (extra: Record<string, unknown>) =>
+      valid({
+        walls: [
+          {
+            ...(valid().walls as object[])[0],
+            openings: [{ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48, ...extra }],
+          },
+        ],
+      });
+    expect(projectFrom(withOpening({ headerHeight: `7'-6"` })).walls[0]?.openings[0]?.headerHeight).toBe(90);
+    expect(projectFrom(withOpening({})).walls[0]?.openings[0]).not.toHaveProperty('headerHeight');
+    expect(() => projectFrom(withOpening({ headerHeight: 0 }), 'projeto')).toThrow(
+      /openings\[0\]\.headerHeight: esperado medida > 0/,
+    );
   });
 
   it('kingStuds e jackStuds opcionais por abertura, inteiros ≥ 1', () => {

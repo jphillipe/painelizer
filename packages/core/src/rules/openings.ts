@@ -5,7 +5,8 @@
  * - Zona = [offset − (kings + jacks)·t, offset + roughWidth + (kings + jacks)·t]; com 1 king e 1 jack,
  *   RO ± 3". Kings encostados na borda externa da zona, jacks encostados no RO.
  * - Kings de altura cheia (como stud); jacks da bottom plate até a base do header.
- * - Base do header: `config.headerHeight` se definido; senão, encostada sob a top plate.
+ * - Base do header: `opening.headerHeight` (o projeto manda, P2); senão `config.headerHeight`;
+ *   senão, encostada sob a top plate.
  *   Header apoia em todos os jacks: comprimento = roughWidth + 2·jacks·t.
  * - Topo do RO = base do header; base do RO = topo − roughHeight; sill deitado logo abaixo,
  *   mesma seção da parede, comprimento = roughWidth.
@@ -103,7 +104,7 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
 
   const topPlateY = wall.height - 2 * p;
   const headerDepth = sectionDepth(headerSection);
-  const headerBase = config.headerHeight ?? topPlateY - headerDepth;
+  const headerBase = opening.headerHeight ?? config.headerHeight ?? topPlateY - headerDepth;
   const headerTop = headerBase + headerDepth;
   if (headerTop > topPlateY + EPS) {
     throw new RangeError(
