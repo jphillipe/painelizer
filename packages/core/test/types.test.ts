@@ -22,6 +22,7 @@ describe('types', () => {
         height: wall.height,
         section: wall.section,
         members: fx.expected.members as Panel['members'],
+        fieldCuts: [],
         warnings: fx.expected.warnings,
       };
       expect(config.studSpacing).toBe(16);

@@ -4,6 +4,8 @@ import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { esc, memberBox, panelSvg, px } from '../../src/output/svg';
 import plain from '../fixtures/wall-144-plain.json';
 import window from '../fixtures/wall-144-window.json';
+import door from '../fixtures/wall-120-door.json';
+import windowDoor from '../fixtures/wall-144-window-door.json';
 
 const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
 
@@ -164,6 +166,55 @@ describe('panelSvg', () => {
     await expect(panelSvg(lowHeaderPanel)).toMatchFileSnapshot(
       '../__snapshots__/wall-144-window-header-82.5.svg',
     );
+  });
+});
+
+describe('panelSvg — corte na obra', () => {
+  const doorPanel = panelizeWall(door.wall as Wall, door.config as Config);
+  const doorSvg = panelSvg(doorPanel);
+
+  it('trecho da bottom plate no vão da porta hachurado: x=40, 38" → 240 px, 152 px de largura', () => {
+    const cuts = doorSvg.match(/<rect class="field-cut"[^>]*>/g) ?? [];
+    expect(cuts).toHaveLength(1);
+    const cut = cuts[0]!;
+    expect(attr(cut, 'x')).toBe(px(X0 + 40 * 4));
+    expect(attr(cut, 'width')).toBe('152');
+    // topo da bottom plate (y=1.5) e 1.5" de altura
+    expect(attr(cut, 'y')).toBe(px(Y0 + (97.125 - 1.5) * 4));
+    expect(attr(cut, 'height')).toBe('6');
+    expect(attr(cut, 'fill')).toBe('url(#field-cut-hatch)');
+    expect(doorSvg).toContain('<pattern id="field-cut-hatch"');
+    expect(doorSvg).toContain('>cortar na obra 38&quot;</text>');
+  });
+
+  it('a bottom plate continua uma peça só, de ponta a ponta', () => {
+    const plates = rects(doorSvg).filter((r) => r.includes('bottomPlate'));
+    expect(plates).toHaveLength(1);
+    expect(attr(plates[0]!, 'width')).toBe('480');
+  });
+
+  it('painel sem corte não ganha <defs> nem hachura', () => {
+    expect(panelSvg(windowPanel)).not.toContain('field-cut');
+  });
+
+  it('corte fora de qualquer peça do papel → RangeError', () => {
+    const broken: Panel = {
+      ...doorPanel,
+      fieldCuts: [{ role: 'bottomPlate', openingId: 'x', x: 100, length: 38 }],
+    };
+    expect(() => panelSvg(broken)).toThrow(/abertura x .* bottomPlate/);
+  });
+
+  it('snapshot da porta em test/__snapshots__/wall-120-door.svg', async () => {
+    expect(rects(doorSvg)).toHaveLength(16);
+    await expect(doorSvg).toMatchFileSnapshot('../__snapshots__/wall-120-door.svg');
+  });
+
+  it('snapshot da janela + porta em test/__snapshots__/wall-144-window-door.svg', async () => {
+    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    const out = panelSvg(panel);
+    expect(rects(out)).toHaveLength(24);
+    await expect(out).toMatchFileSnapshot('../__snapshots__/wall-144-window-door.svg');
   });
 });
 

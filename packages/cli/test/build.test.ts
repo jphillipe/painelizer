@@ -10,7 +10,7 @@ describe('buildProject', () => {
   const result = buildProject(example());
 
   it('um painel por parede, na ordem do projeto', () => {
-    expect(result.panels.map((p) => p.id)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W06']);
+    expect(result.panels.map((p) => p.id)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W06', 'W07']);
   });
 
   it('gera cutlist.csv, bom.csv e um SVG por painel', () => {
@@ -23,6 +23,7 @@ describe('buildProject', () => {
       'panels/W04.svg',
       'panels/W05.svg',
       'panels/W06.svg',
+      'panels/W07.svg',
     ]);
     for (const f of result.files.filter((f) => f.path.endsWith('.svg'))) {
       expect(f.content.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
@@ -44,7 +45,7 @@ describe('buildProject', () => {
     p.config.studLength = [104.625];
     const { warnings } = buildProject(p);
     // só a W06 (9') tem stud de 104 5/8"
-    expect(warnings.map((w) => w.panelId)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05']);
+    expect(warnings.map((w) => w.panelId)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W07']);
     expect(warnings[0]).toMatchObject({ panelId: 'W01', warning: { code: 'STUD_LENGTH_MISMATCH' } });
   });
 
@@ -66,6 +67,19 @@ describe('buildProject', () => {
     expect(w06.members.filter((m) => m.role === 'stud').every((s) => s.length === 104.625)).toBe(true);
   });
 
+  it('W07: janela e porta com king compartilhado — 24 peças, como o fixture wall-144-window-door', () => {
+    const w07 = result.panels.find((p) => p.id === 'W07')!;
+    expect(w07.members).toHaveLength(24);
+    expect(w07.fieldCuts).toEqual([{ role: 'bottomPlate', openingId: 'P1', x: 64.5, length: 38 }]);
+    const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
+    expect(csv).toContain('W07,plates,2x6,144,"144""",3');
+    expect(csv).toContain('W07,kingStud,2x6,92.625,"92 5/8""",3');
+    expect(csv).toContain('W07,jackStud,2x6,81,"81""",4');
+    expect(csv).toContain('W07,header,2x10,41,"41""",2');
+    const svg = result.files.find((f) => f.path === 'panels/W07.svg')!.content;
+    expect(svg).toContain('>cortar na obra 38&quot;</text>');
+  });
+
   it('bom.csv usa os pré-cortes do projeto: 92 5/8" e 104 5/8" como estoque', () => {
     const csv = result.files.find((f) => f.path === 'bom.csv')!.content;
     expect(csv.split('\n')[0]).toBe(
@@ -76,9 +90,12 @@ describe('buildProject', () => {
     expect(csv).toContain('2x4,precut,92.625,"92 5/8""",');
   });
 
-  it('porta (S8 pendente) e plate sem comprimento comercial viram problemas, sem arquivos', () => {
+  it('aberturas próximas demais (P16) e plate sem comprimento comercial viram problemas, sem arquivos', () => {
     const p = example();
-    p.walls[0]!.openings.push({ id: 'P1', type: 'door', offset: 48, roughWidth: 36, roughHeight: 82 });
+    p.walls[0]!.openings.push(
+      { id: 'J8', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 },
+      { id: 'J9', type: 'window', offset: 48, roughWidth: 24, roughHeight: 48 },
+    );
     p.walls.push({ id: 'W99', length: 240, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] });
 
     let error: BuildError | undefined;
@@ -89,7 +106,7 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(1);
-    expect(error!.problems[0]).toMatch(/^parede W01: .*porta chega na S8/);
+    expect(error!.problems[0]).toMatch(/^parede W01: aberturas J8 e J9: 4" entre os RO/);
 
     // Sem a abertura, o erro da BOM (plate de 240") aparece.
     p.walls[0]!.openings = [];

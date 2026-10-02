@@ -64,6 +64,12 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   (IRC pede 24"; o Horace pede 48")? — hipótese: emenda sobre stud de layout, defasagem ≥ 48" — S12, S14.
 - [ ] **P15 — Peso máximo do painel.** Capacidade do equipamento de içamento/transporte, em lb. — hipótese:
   sem limite de peso até a resposta; só comprimento (240") — S12.
+- [ ] **P16 — Aberturas muito próximas.** Com 1 king + 1 jack, duas aberturas vizinhas compartilham um king e
+  precisam de 4.5" entre os RO (jack + king + jack). O que a fábrica faz quando o projeto traz menos que isso
+  (ex.: 4", sobra 1" entre os jacks)? Header contínuo sobre as duas com poste de jacks? Calço? Pede para mover
+  a abertura? E com folga entre 4.5" e 6": um king com folga, ou king colado ao jack e dois kings quando cabem?
+  Com 2 kings por lado, quantos kings ficam entre as aberturas? — hipótese: < 4.5" é erro; entre 4.5" e 6" um
+  king colado ao jack da esquerda; kings compartilhados = maior número das duas aberturas — S8.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="566.5" viewBox="0 0 680 566.5" font-family="Helvetica, Arial, sans-serif">
+<rect width="680" height="566.5" fill="#ffffff"/>
+<text x="24" y="42" font-size="18" font-weight="bold" fill="#000">W-window-door</text>
+<text x="24" y="58" font-size="12" fill="#333">12'-0&quot; × 8'-1 1/8&quot; · 2x6 · 24 peças</text>
+<rect x="80" y="68" width="576" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
+<g class="members" stroke="#5a4632" stroke-width="1">
+<rect class="member bottomPlate" x="80" y="450.5" width="576" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 144&quot; — x=0&quot; y=0&quot;</title></rect>
+<rect class="member topPlate" x="80" y="74" width="576" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 144&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
+<rect class="member doubleTopPlate" x="80" y="68" width="576" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 144&quot; — x=0&quot; y=95 5/8&quot;</title></rect>
+<rect class="member stud" x="80" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="144" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=16&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="528" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=112&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="592" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=128&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="650" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=142 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member kingStud" x="164" y="80" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=21&quot; y=1 1/2&quot;</title></rect>
+<rect class="member kingStud" x="326" y="80" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=61 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member kingStud" x="496" y="80" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=104&quot; y=1 1/2&quot;</title></rect>
+<rect class="member jackStud" x="170" y="126.5" width="6" height="324" fill="#d2b072"><title>jackStud 2x6 × 81&quot; — x=22 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member jackStud" x="320" y="126.5" width="6" height="324" fill="#d2b072"><title>jackStud 2x6 × 81&quot; — x=60&quot; y=1 1/2&quot;</title></rect>
+<rect class="member header" x="170" y="89.5" width="156" height="37" fill="#c49a5c"><title>header 2x10 × 39&quot; (2 plies) — x=22 1/2&quot; y=82 1/2&quot;</title></rect>
+<text x="248" y="108" font-size="10" fill="#000" text-anchor="middle" dominant-baseline="middle">2x10 × 39&quot; (2 plies)</text>
+<rect class="member sill" x="176" y="318.5" width="144" height="6" fill="#d9c9a8"><title>sill 2x6 × 36&quot; — x=24&quot; y=33&quot;</title></rect>
+<rect class="member cripple" x="208" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=32&quot; y=1 1/2&quot;</title></rect>
+<rect class="member cripple" x="272" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=48&quot; y=1 1/2&quot;</title></rect>
+<rect class="member cripple" x="208" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=32&quot; y=91 3/4&quot;</title></rect>
+<rect class="member cripple" x="272" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=48&quot; y=91 3/4&quot;</title></rect>
+<rect class="member jackStud" x="332" y="126.5" width="6" height="324" fill="#d2b072"><title>jackStud 2x6 × 81&quot; — x=63&quot; y=1 1/2&quot;</title></rect>
+<rect class="member jackStud" x="490" y="126.5" width="6" height="324" fill="#d2b072"><title>jackStud 2x6 × 81&quot; — x=102 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member header" x="332" y="89.5" width="164" height="37" fill="#c49a5c"><title>header 2x10 × 41&quot; (2 plies) — x=63&quot; y=82 1/2&quot;</title></rect>
+<text x="414" y="108" font-size="10" fill="#000" text-anchor="middle" dominant-baseline="middle">2x10 × 41&quot; (2 plies)</text>
+<rect class="member cripple" x="400" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=80&quot; y=91 3/4&quot;</title></rect>
+<rect class="member cripple" x="464" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=96&quot; y=91 3/4&quot;</title></rect>
+</g>
+<defs><pattern id="field-cut-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#c0392b" stroke-width="2"/></pattern></defs>
+<rect class="field-cut" x="338" y="450.5" width="152" height="6" fill="url(#field-cut-hatch)" stroke="#c0392b" stroke-width="1" stroke-dasharray="3 2"><title>cortar na obra 38&quot; — bottomPlate, abertura door1, x=64 1/2&quot;</title></rect>
+<text x="414" y="446.5" font-size="10" fill="#c0392b" text-anchor="middle">cortar na obra 38&quot;</text>
+<g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="80" y1="456.5" x2="80" y2="488.5"/>
+<line x1="656" y1="456.5" x2="656" y2="488.5"/>
+<line x1="80" y1="484.5" x2="656" y2="484.5"/>
+<line x1="77" y1="487.5" x2="83" y2="481.5"/>
+<line x1="653" y1="487.5" x2="659" y2="481.5"/>
+</g>
+<text x="368" y="480.5" font-size="12" fill="#1f4e79" text-anchor="middle">12'-0&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="80" y1="68" x2="40" y2="68"/>
+<line x1="80" y1="456.5" x2="40" y2="456.5"/>
+<line x1="44" y1="68" x2="44" y2="456.5"/>
+<line x1="41" y1="71" x2="47" y2="65"/>
+<line x1="41" y1="459.5" x2="47" y2="453.5"/>
+</g>
+<text x="40" y="262.25" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 262.25)">8'-1 1/8&quot;</text>
+<g class="layout" stroke="#666" stroke-width="0.75">
+<line x1="80" y1="518.5" x2="656" y2="518.5"/>
+<line x1="80" y1="510.5" x2="80" y2="518.5"/>
+<line x1="144" y1="510.5" x2="144" y2="518.5"/>
+<line x1="208" y1="510.5" x2="208" y2="518.5"/>
+<line x1="272" y1="510.5" x2="272" y2="518.5"/>
+<line x1="336" y1="510.5" x2="336" y2="518.5"/>
+<line x1="400" y1="510.5" x2="400" y2="518.5"/>
+<line x1="464" y1="510.5" x2="464" y2="518.5"/>
+<line x1="528" y1="510.5" x2="528" y2="518.5"/>
+<line x1="592" y1="510.5" x2="592" y2="518.5"/>
+<line x1="650" y1="510.5" x2="650" y2="518.5"/>
+</g>
+<text x="80" y="529.5" font-size="9" fill="#666" text-anchor="middle">0&quot;</text>
+<text x="144" y="529.5" font-size="9" fill="#666" text-anchor="middle">16&quot;</text>
+<text x="208" y="529.5" font-size="9" fill="#666" text-anchor="middle">32&quot;</text>
+<text x="272" y="529.5" font-size="9" fill="#666" text-anchor="middle">48&quot;</text>
+<text x="336" y="529.5" font-size="9" fill="#666" text-anchor="middle">64&quot;</text>
+<text x="400" y="529.5" font-size="9" fill="#666" text-anchor="middle">80&quot;</text>
+<text x="464" y="529.5" font-size="9" fill="#666" text-anchor="middle">96&quot;</text>
+<text x="528" y="529.5" font-size="9" fill="#666" text-anchor="middle">112&quot;</text>
+<text x="592" y="529.5" font-size="9" fill="#666" text-anchor="middle">128&quot;</text>
+<text x="650" y="529.5" font-size="9" fill="#666" text-anchor="middle">142 1/2&quot;</text>
+</svg>

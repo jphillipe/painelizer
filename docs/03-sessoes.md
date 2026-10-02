@@ -72,13 +72,15 @@ Uma sessão do Claude Code = um item. Ritual:
   (d) fixture novo `wall-144-window-82.5.json` (o caso típico da fábrica, 20 peças) e o exemplo do CLI com
   `headerHeight: 82.5`." Proposta de abordagem e mudança de fixtures/defaults confirmadas pelo humano antes.
 
-- [ ] **S8 — Porta e aberturas vizinhas**
+- [x] **S8 — Porta e aberturas vizinhas**
   Prompt: "Estenda `framingForOpening` para `type: 'door'`: sem sill, sem cripples abaixo, jack até o header.
   RO da porta medido do subfloor (y=0): se `roughHeight` não bater com a base do header, emitir aviso
   `DOOR_RO_HEIGHT_MISMATCH` (P4, respondida). Bottom plate continua inteira (cortada na obra); a folha marca o
   corte. Fixture novo: parede 120\" com porta RO 38 × 82.5 em offset 40 e `headerHeight: 82.5` (jacks de 81\").
   Depois: quando duas zonas de abertura se sobrepõem ou se tocam (janela ao lado de porta), fundir em uma zona
   e compartilhar o king entre elas; fixture com janela 36 e porta 38 separadas por 4\"."
+  Feito em 2026-10-02 com 4.5" entre os RO em vez de 4" (com 4" o king compartilhado não cabe — confirmado
+  pelo humano); RO mais próximos que jack + king + jack lançam erro e ficam em P16.
 
 - [ ] **S9 — Tabela de headers IRC**
   Prompt: "Crie `src/data/irc-headers.json` (estrutura proposta antes de digitar) e `src/rules/headers.ts`:

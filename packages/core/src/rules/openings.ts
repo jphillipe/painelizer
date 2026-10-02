@@ -1,5 +1,5 @@
 /**
- * Framing de abertura (janela) em parede reta.
+ * Framing de abertura (janela e porta) em parede reta.
  *
  * Regras (docs/02-framing.md, exemplo resolvido):
  * - Zona = [offset − (kings + jacks)·t, offset + roughWidth + (kings + jacks)·t]; com 1 king e 1 jack,
@@ -8,17 +8,22 @@
  * - Base do header: `opening.headerHeight` (o projeto manda, P2); senão `config.headerHeight`;
  *   senão, encostada sob a top plate.
  *   Header apoia em todos os jacks: comprimento = roughWidth + 2·jacks·t.
- * - Topo do RO = base do header; base do RO = topo − roughHeight; sill deitado logo abaixo,
+ * - Janela: topo do RO = base do header; base do RO = topo − roughHeight; sill deitado logo abaixo,
  *   mesma seção da parede, comprimento = roughWidth.
+ * - Porta (P4): RO medido do subfloor (y=0), sem sill e sem cripples abaixo. `roughHeight` não muda a
+ *   geometria; se diferir da base do header, aviso `DOOR_RO_HEIGHT_MISMATCH`. A bottom plate sai
+ *   inteira e o trecho do RO vira um `FieldCut` (corte na obra).
  * - Cripples nas marcas de layout que caem dentro do RO, exceto a marca colada ao jack (P3) —
  *   a mesma regra vale abaixo do sill e acima do header. Só entram se o vão for ≥ 1.5".
+ * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
+ *   é chamada com `{ kings: false }`.
  *
- * Fora do escopo da S7 (lançam `Error`): porta e seção do header sem tabela (S8, S9).
- * Geometria impossível lança `RangeError`.
+ * Seção do header sem tabela lança `Error` (S9). Geometria impossível lança `RangeError`.
  */
 
-import type { Config, Member, Opening, Wall } from '../types';
+import type { Config, FieldCut, Member, Opening, Wall, Warning } from '../types';
 import { sectionDepth } from '../types';
+import { LENGTH_TOLERANCE } from './precuts';
 import { layoutStuds } from './studs';
 
 /** Vão mínimo para entrar cripple (acima do header ou abaixo do sill). */
@@ -32,6 +37,18 @@ export interface OpeningZone {
   start: number;
   /** x da borda direita do king mais externo à direita. */
   end: number;
+}
+
+/** Peças, cortes na obra e avisos de uma abertura. */
+export interface OpeningFraming {
+  members: Member[];
+  fieldCuts: FieldCut[];
+  warnings: Warning[];
+}
+
+export interface FramingOptions {
+  /** Gerar os kings da própria abertura (padrão). `false` quando vêm da fusão de zonas. */
+  kings?: boolean;
 }
 
 /** Número de kings e jacks de cada lado, validado. */
@@ -67,19 +84,37 @@ export function openingZone(opening: Opening, studThickness: number): OpeningZon
   return { start: offset - side, end: offset + roughWidth + side };
 }
 
+/** x (borda esquerda) dos kings próprios da abertura de cada lado, em ordem crescente. */
+export function openingKingXs(
+  opening: Opening,
+  studThickness: number,
+): { left: number[]; right: number[] } {
+  const zone = openingZone(opening, studThickness);
+  const { kings } = openingStudCounts(opening);
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let i = 0; i < kings; i++) {
+    left.push(zone.start + i * studThickness);
+    right.push(zone.end - (kings - i) * studThickness);
+  }
+  return { left, right };
+}
+
 /**
- * Peças da abertura: kings, jacks, header, sill e cripples.
+ * Peças da abertura: kings (salvo `{ kings: false }`), jacks, header, sill e cripples; para porta,
+ * também o corte da bottom plate na obra e o aviso de RO incompatível com o header.
  * Não remove studs de layout — isso é papel de `panelizeWall`, que conhece todas as zonas.
  *
- * @throws Error      porta (S8) ou `config.defaultHeaderSection`/`defaultHeaderPlies` ausentes (S9)
- * @throws RangeError zona fora da parede, header invadindo a top plate, sill abaixo da bottom plate
+ * @throws Error      `config.defaultHeaderSection`/`defaultHeaderPlies` ausentes (S9)
+ * @throws RangeError zona fora da parede, header invadindo a top plate, sill abaixo da bottom plate,
+ *                    header de porta sem espaço para jack
  */
-export function framingForOpening(opening: Opening, wall: Wall, config: Config): Member[] {
-  if (opening.type !== 'window') {
-    throw new Error(
-      `abertura ${opening.id}: tipo "${opening.type}" ainda não é suportado (porta chega na S8)`,
-    );
-  }
+export function framingForOpening(
+  opening: Opening,
+  wall: Wall,
+  config: Config,
+  options: FramingOptions = {},
+): OpeningFraming {
   const headerSection = config.defaultHeaderSection;
   const plies = config.defaultHeaderPlies;
   if (headerSection === undefined || plies === undefined) {
@@ -92,7 +127,8 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
   const t = config.studThickness;
   const p = config.plateThickness;
   const { offset, roughWidth, roughHeight } = opening;
-  const { kings, jacks } = openingStudCounts(opening);
+  const isDoor = opening.type === 'door';
+  const { jacks } = openingStudCounts(opening);
   const zone = openingZone(opening, t);
 
   if (zone.start < -EPS || zone.end > wall.length + EPS) {
@@ -112,23 +148,33 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
         `${headerTop}", acima da top plate (${topPlateY}")`,
     );
   }
-
-  const roBase = headerBase - roughHeight;
-  const sillY = roBase - p;
-  if (sillY < p - EPS) {
+  if (headerBase <= p + EPS) {
     throw new RangeError(
-      `abertura ${opening.id}: base do RO em ${roBase}" não deixa espaço para o sill ` +
+      `abertura ${opening.id}: base do header em ${headerBase}" não deixa espaço para jack ` +
+        `sobre a bottom plate (topo em ${p}")`,
+    );
+  }
+
+  // Janela: sill logo abaixo da base do RO. Porta: RO desce até o subfloor, sem sill.
+  const sillY = isDoor ? undefined : headerBase - roughHeight - p;
+  if (sillY !== undefined && sillY < p - EPS) {
+    throw new RangeError(
+      `abertura ${opening.id}: base do RO em ${headerBase - roughHeight}" não deixa espaço para o sill ` +
         `sobre a bottom plate (topo em ${p}")`,
     );
   }
 
   const vertical = { section: wall.section, orientation: 'vertical' as const };
   const members: Member[] = [];
+  const fieldCuts: FieldCut[] = [];
+  const warnings: Warning[] = [];
 
-  const studLength = wall.height - 3 * p;
-  for (let i = 0; i < kings; i++) {
-    members.push({ role: 'kingStud', ...vertical, length: studLength, x: zone.start + i * t, y: p });
-    members.push({ role: 'kingStud', ...vertical, length: studLength, x: zone.end - (i + 1) * t, y: p });
+  if (options.kings ?? true) {
+    const studLength = wall.height - 3 * p;
+    const { left, right } = openingKingXs(opening, t);
+    for (const x of [...left, ...right]) {
+      members.push({ role: 'kingStud', ...vertical, length: studLength, x, y: p });
+    }
   }
 
   const jackLength = headerBase - p;
@@ -147,14 +193,16 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
     plies,
   });
 
-  members.push({
-    role: 'sill',
-    section: wall.section,
-    length: roughWidth,
-    x: offset,
-    y: sillY,
-    orientation: 'horizontal',
-  });
+  if (sillY !== undefined) {
+    members.push({
+      role: 'sill',
+      section: wall.section,
+      length: roughWidth,
+      x: offset,
+      y: sillY,
+      orientation: 'horizontal',
+    });
+  }
 
   // Marcas estritamente dentro do RO: a marca colada ao jack (x = offset, ou x + t = fim do RO)
   // e as que invadem o jack ficam de fora.
@@ -162,9 +210,11 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
     (x) => x > offset + EPS && x + t < offset + roughWidth - EPS,
   );
 
-  const below = sillY - p;
-  if (below >= MIN_CRIPPLE_LENGTH - EPS) {
-    for (const x of marks) members.push({ role: 'cripple', ...vertical, length: below, x, y: p });
+  if (sillY !== undefined) {
+    const below = sillY - p;
+    if (below >= MIN_CRIPPLE_LENGTH - EPS) {
+      for (const x of marks) members.push({ role: 'cripple', ...vertical, length: below, x, y: p });
+    }
   }
 
   const above = topPlateY - headerTop;
@@ -172,5 +222,17 @@ export function framingForOpening(opening: Opening, wall: Wall, config: Config):
     for (const x of marks) members.push({ role: 'cripple', ...vertical, length: above, x, y: headerTop });
   }
 
-  return members;
+  if (isDoor) {
+    fieldCuts.push({ role: 'bottomPlate', openingId: opening.id, x: offset, length: roughWidth });
+    if (Math.abs(roughHeight - headerBase) >= LENGTH_TOLERANCE) {
+      warnings.push({
+        code: 'DOOR_RO_HEIGHT_MISMATCH',
+        message:
+          `abertura ${opening.id}: RO da porta com ${roughHeight}" de altura (medido do subfloor) ` +
+          `não bate com a base do header em ${headerBase}"`,
+      });
+    }
+  }
+
+  return { members, fieldCuts, warnings };
 }

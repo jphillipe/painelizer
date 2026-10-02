@@ -8,7 +8,16 @@ export * from './units';
 export { layoutStuds } from './rules/studs';
 export { layoutPlates } from './rules/plates';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
-export { framingForOpening, openingStudCounts, openingZone, type OpeningZone } from './rules/openings';
+export {
+  framingForOpening,
+  openingKingXs,
+  openingStudCounts,
+  openingZone,
+  type FramingOptions,
+  type OpeningFraming,
+  type OpeningZone,
+} from './rules/openings';
+export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { panelizeWall } from './panelize/panelizeWall';
 export * from './output/cutlist';
 export * from './output/bom';

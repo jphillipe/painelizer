@@ -96,9 +96,12 @@ describe('run (I/O em memória)', () => {
     expect(m.written.size).toBe(0);
   });
 
-  it('parede com porta (S8 pendente): código 1, problemas listados, nada gravado', () => {
+  it('aberturas próximas demais (P16): código 1, problemas listados, nada gravado', () => {
     const project = JSON.parse(exampleText) as { walls: { openings: unknown[] }[] };
-    project.walls[0]!.openings.push({ id: 'P1', type: 'door', offset: 48, roughWidth: 36, roughHeight: 82 });
+    project.walls[0]!.openings.push(
+      { id: 'J8', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 },
+      { id: 'J9', type: 'window', offset: 48, roughWidth: 24, roughHeight: 48 },
+    );
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(1);
     expect(m.err[0]).toBe('erro: 1 problema(s) ao gerar os painéis — nenhum arquivo gravado');
@@ -107,7 +110,7 @@ describe('run (I/O em memória)', () => {
     expect(m.dirs).toEqual([]);
   });
 
-  it('sucesso: grava 8 arquivos sob --out e resume no stdout', () => {
+  it('sucesso: grava 9 arquivos sob --out e resume no stdout', () => {
     const m = memoryIo({ 'p.json': exampleText });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     const outDir = resolve('saida');
@@ -120,10 +123,11 @@ describe('run (I/O em memória)', () => {
       join(outDir, 'panels', 'W04.svg'),
       join(outDir, 'panels', 'W05.svg'),
       join(outDir, 'panels', 'W06.svg'),
+      join(outDir, 'panels', 'W07.svg'),
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
-    expect(m.out[0]).toBe(`6 painel(is), 92 peças → ${outDir}`);
+    expect(m.out[0]).toBe(`7 painel(is), 116 peças → ${outDir}`);
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
@@ -133,6 +137,7 @@ describe('run (I/O em memória)', () => {
       '  panels/W04.svg',
       '  panels/W05.svg',
       '  panels/W06.svg',
+      '  panels/W07.svg',
     ]);
     expect(m.err).toEqual([]);
   });
@@ -142,7 +147,7 @@ describe('run (I/O em memória)', () => {
     project.config.studLength = [104.625];
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
-    expect(m.err).toHaveLength(5);
+    expect(m.err).toHaveLength(6);
     expect(m.err[0]).toMatch(/^aviso W01 STUD_LENGTH_MISMATCH: /);
   });
 
@@ -188,7 +193,7 @@ describe('ponta a ponta (disco)', () => {
     expect(code).toBe(0);
     expect(err).toEqual([]);
     expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels']);
-    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg']);
+    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg', 'W07.svg']);
     expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,129.5,"129 1/2""",3');
     expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>16'-0&quot;</text>`);
   });
@@ -203,7 +208,7 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
-    expect(r.stdout.split('\n')[0]).toBe(`6 painel(is), 92 peças → ${outDir}`);
+    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 116 peças → ${outDir}`);
     expect(existsSync(join(outDir, 'panels', 'W01.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });

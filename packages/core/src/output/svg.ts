@@ -13,12 +13,15 @@
  *   altura (à esquerda), marcas de layout no rodapé (múltiplos de `studSpacing`
  *   mais o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
  *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição.
+ * - Cortes na obra (`panel.fieldCuts`, ex.: bottom plate no vão da porta) hachurados em vermelho
+ *   sobre a peça, com o rótulo "cortar na obra" e o comprimento logo acima.
  * - Saída determinística: mesma entrada → mesma string.
  */
 
 import {
   NOMINAL_2X_THICKNESS,
   sectionDepth,
+  type FieldCut,
   type Member,
   type MemberRole,
   type Panel,
@@ -67,6 +70,7 @@ const FILL: Readonly<Record<MemberRole, string>> = {
 
 const STROKE = '#5a4632';
 const DIM = '#1f4e79';
+const FIELD_CUT = '#c0392b';
 const FONT = 'Helvetica, Arial, sans-serif';
 
 const TITLE_HEIGHT = 44;
@@ -145,6 +149,18 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   }
   out.push('</g>');
 
+  // Cortes na obra, por cima das peças.
+  if (panel.fieldCuts.length > 0) {
+    out.push(
+      `<defs><pattern id="field-cut-hatch" width="6" height="6" patternUnits="userSpaceOnUse" ` +
+        `patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="${FIELD_CUT}" ` +
+        `stroke-width="2"/></pattern></defs>`,
+    );
+    for (const cut of panel.fieldCuts) {
+      out.push(fieldCutMark(cut, panel, scale, toPx, toPy));
+    }
+  }
+
   // Cota do comprimento (embaixo).
   out.push(dimensionH(toPx(0), toPx(panel.length), dimY, toPy(0), formatFeetInches(panel.length)));
   // Cota da altura (à esquerda).
@@ -193,6 +209,43 @@ function memberRect(
     );
   }
   return parts.join('\n');
+}
+
+/**
+ * Trecho hachurado sobre a peça a cortar na obra, com rótulo logo acima.
+ *
+ * @throws RangeError se nenhuma peça do papel indicado contém o trecho (painel inconsistente)
+ */
+function fieldCutMark(
+  cut: FieldCut,
+  panel: Panel,
+  scale: number,
+  toPx: (x: number) => number,
+  toPy: (yTop: number) => number,
+): string {
+  const eps = 1e-9;
+  const host = panel.members.find(
+    (m) => m.role === cut.role && m.x <= cut.x + eps && cut.x + cut.length <= m.x + m.length + eps,
+  );
+  if (host === undefined) {
+    throw new RangeError(
+      `panelSvg: painel ${panel.id}: corte na obra da abertura ${cut.openingId} ` +
+        `(x=${cut.x}, ${cut.length}") não cai em nenhuma peça ${cut.role}`,
+    );
+  }
+  const box = memberBox(host);
+  const x = toPx(cut.x);
+  const yTop = toPy(box.y + box.height);
+  const w = cut.length * scale;
+  const h = box.height * scale;
+  const label = `cortar na obra ${formatInches(cut.length)}`;
+  return [
+    `<rect class="field-cut" x="${px(x)}" y="${px(yTop)}" width="${px(w)}" height="${px(h)}" ` +
+      `fill="url(#field-cut-hatch)" stroke="${FIELD_CUT}" stroke-width="1" stroke-dasharray="3 2">` +
+      `<title>${esc(`${label} — ${cut.role}, abertura ${cut.openingId}, x=${formatInches(cut.x)}`)}</title></rect>`,
+    `<text x="${px(x + w / 2)}" y="${px(yTop - 4)}" font-size="10" fill="${FIELD_CUT}" ` +
+      `text-anchor="middle">${esc(label)}</text>`,
+  ].join('\n');
 }
 
 /** Cota horizontal em `y`, com linhas de chamada subindo até `fromY`. */

@@ -5,6 +5,8 @@ import { expectSameMembers } from '../helpers/members';
 import plain from '../fixtures/wall-144-plain.json';
 import window from '../fixtures/wall-144-window.json';
 import low from '../fixtures/wall-144-window-82.5.json';
+import door from '../fixtures/wall-120-door.json';
+import windowDoor from '../fixtures/wall-144-window-door.json';
 
 const wall = plain.wall as Wall;
 const config = plain.config as Config;
@@ -161,23 +163,70 @@ describe('panelizeWall — janela', () => {
     expectNoVerticalOverlap(panel.members);
   });
 
-  it('zonas que se tocam ou se sobrepõem: erro apontando a S8', () => {
-    const touching: Wall = {
-      ...wWall,
-      length: 192,
-      openings: [
-        { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
-        { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48 }, // zona [47, 77]
-      ],
-    };
-    expect(() => panelizeWall(touching, wConfig)).toThrow(/a e b .*S8/);
-    const overlapping = { ...touching, openings: [touching.openings[0]!, { ...touching.openings[1]!, offset: 45 }] };
-    expect(() => panelizeWall(overlapping, wConfig)).toThrow(/S8/);
+  it('janela não tem corte na obra', () => {
+    expect(panelizeWall(wWall, wConfig).fieldCuts).toEqual([]);
+  });
+});
+
+describe('panelizeWall — porta', () => {
+  it('fixture wall-120-door passa exatamente (16 peças, bottom plate inteira, corte na obra)', () => {
+    const panel = panelizeWall(door.wall as Wall, door.config as Config);
+    expectSameMembers(panel.members, door.expected.members as Member[]);
+    expect(panel.members).toHaveLength(16);
+    expect(panel.fieldCuts).toEqual(door.expected.fieldCuts);
+    expect(panel.warnings).toEqual(door.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+    const plates = panel.members.filter((m) => m.role === 'bottomPlate');
+    expect(plates).toEqual([expect.objectContaining({ x: 0, length: 120 })]);
   });
 
-  it('porta ainda não é suportada (S8)', () => {
-    expect(() =>
-      panelizeWall({ ...wWall, openings: [{ ...win, type: 'door', roughHeight: 82 }] }, wConfig),
-    ).toThrow(/S8/);
+  it('aviso DOOR_RO_HEIGHT_MISMATCH da abertura chega ao painel, depois dos avisos da parede', () => {
+    const dWall = door.wall as Wall;
+    const panel = panelizeWall(
+      { ...dWall, height: 103.125, openings: [{ ...dWall.openings[0]!, roughHeight: 80 }] },
+      door.config as Config,
+    );
+    expect(panel.warnings.map((w) => w.code)).toEqual(['STUD_LENGTH_MISMATCH', 'DOOR_RO_HEIGHT_MISMATCH']);
+  });
+});
+
+describe('panelizeWall — aberturas vizinhas', () => {
+  it('fixture wall-144-window-door passa exatamente (24 peças, king compartilhado em 61.5)', () => {
+    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    expectSameMembers(panel.members, windowDoor.expected.members as Member[]);
+    expect(panel.members).toHaveLength(24);
+    expect(panel.fieldCuts).toEqual(windowDoor.expected.fieldCuts);
+    expect(panel.warnings).toEqual(windowDoor.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('a ordem das aberturas na entrada não muda o painel', () => {
+    const wd = windowDoor.wall as Wall;
+    const panel = panelizeWall({ ...wd, openings: [...wd.openings].reverse() }, windowDoor.config as Config);
+    expectSameMembers(panel.members, windowDoor.expected.members as Member[]);
+  });
+
+  it('zonas que só se tocam fundem: um king entre as janelas, sem sobreposição', () => {
+    const panel = panelizeWall(
+      {
+        ...(window.wall as Wall),
+        length: 192,
+        openings: [
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
+          { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48 }, // zona [47, 77]
+        ],
+      },
+      window.config as Config,
+    );
+    const kings = panel.members.filter((m) => m.role === 'kingStud').map((m) => m.x);
+    expect(kings.sort((x, y) => x - y)).toEqual([17, 45.5, 75.5]);
+    expect(panel.members.filter((m) => m.role === 'header')).toHaveLength(2);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('RO vizinhos a menos de 4.5": RangeError (P16)', () => {
+    const wd = windowDoor.wall as Wall;
+    const tooClose = { ...wd, openings: [wd.openings[0]!, { ...wd.openings[1]!, offset: 64 }] };
+    expect(() => panelizeWall(tooClose, windowDoor.config as Config)).toThrow(RangeError);
   });
 });

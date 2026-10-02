@@ -25,7 +25,11 @@
   `jackStuds` são por abertura, default 1 e 1 (zona = RO ± 3"). Kings na borda externa da zona, jacks colados
   ao RO; o header apoia em todos os jacks (comprimento = roughWidth + 2·jacks·1.5).
   Studs de layout cujo intervalo [x, x+1.5] se sobreponha à zona são removidos; o que só encosta no king fica.
-- Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas.
+- Zonas que se sobrepõem ou se tocam são fundidas; as aberturas compartilham o king entre elas. Entre os dois RO
+  ficam os jacks da esquerda, os kings compartilhados (o maior número de kings das duas aberturas; 1 no default)
+  colados a esses jacks, eventual folga e os jacks da direita. Cada abertura mantém o próprio header. Com 1 king
+  e 1 jack: funde quando os RO distam ≤ 6"; abaixo de 4.5" (jack + king + jack) é erro — P16.
+  Fixture: `test/fixtures/wall-144-window-door.json` (janela e porta a 4.5", 24 peças).
 - Base do header: `opening.headerHeight` (y) se definido — o projeto manda; senão `config.headerHeight`;
   senão, encostado na face inferior da top plate.
   Topo do RO = base do header. **Padrão da fábrica: 82.5"** do subfloor (= y) à face inferior do header, igual
@@ -36,8 +40,11 @@
 - Cripples acima do header: mesmas marcas dos cripples abaixo do sill (inclusive a omissão da marca colada
   ao jack), só se houver espaço ≥ 1.5" entre header e top plate. Abaixo do sill vale o mesmo mínimo de 1.5".
 - Porta: RO medido a partir do subfloor (y=0), porque a bottom plate é cortada na obra; `roughHeight` é entrada
-  e, se ≠ base do header, aviso (P4). Porta 6'-8" padrão: RO 82.5, header em 82.5, jack 81.
-- Porta: bottom plate sai inteira no painel; a folha indica o corte na obra.
+  e, se diferir da base do header em 1/64" ou mais, aviso `DOOR_RO_HEIGHT_MISMATCH` sem mudar a geometria (P4).
+  Porta 6'-8" padrão: RO 82.5, header em 82.5, jack 81. Sem sill e sem cripples abaixo; cripples acima do header
+  com a mesma regra da janela.
+- Porta: bottom plate sai inteira no painel; o trecho do RO vai em `Panel.fieldCuts` e a folha (SVG) o desenha
+  hachurado com "cortar na obra". A lista de corte não muda. Fixture: `test/fixtures/wall-120-door.json` (16 peças).
 
 ## Regras e referências (IRC 2021/2024)
 | Regra | Ref. | Comportamento |

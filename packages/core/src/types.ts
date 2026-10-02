@@ -97,6 +97,18 @@ export interface Warning {
   message: string;
 }
 
+/**
+ * Corte a fazer na obra, marcado na folha do painel. Hoje só a bottom plate no vão da porta:
+ * a plate sai inteira e é cortada depois de o painel estar em pé (P4).
+ */
+export interface FieldCut {
+  role: MemberRole;
+  openingId: string;
+  /** Início do trecho a remover, medido de x=0. */
+  x: number;
+  length: number;
+}
+
 export interface Panel {
   id: string;
   wallId: string;
@@ -104,6 +116,7 @@ export interface Panel {
   height: number;
   section: WallSection;
   members: Member[];
+  fieldCuts: FieldCut[];
   warnings: Warning[];
 }
 

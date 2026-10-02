@@ -1,9 +1,8 @@
 /**
  * Monta o `Panel` de uma parede reta a partir das regras de framing.
  *
- * Escopo atual (S7.1): 3 plates + studs de layout + janelas (`rules/openings.ts`).
- * Porta e zonas de abertura que se tocam ou se sobrepõem chegam na S8; até lá lançam erro
- * em vez de gerar um painel silenciosamente errado.
+ * Escopo atual (S8): 3 plates + studs de layout + janelas e portas (`rules/openings.ts`), com
+ * zonas vizinhas fundidas e king compartilhado (`rules/zones.ts`).
  *
  * Geometria (docs/02-framing.md):
  * - Studs em y = plateThickness (sobre a bottom plate), comprimento = height − 3·plateThickness.
@@ -12,12 +11,16 @@
  *   Lista vazia lança `RangeError`.
  * - Studs de layout que se sobrepõem a uma zona de abertura são removidos; o que só encosta
  *   no king fica.
+ * - Kings vêm do plano de zonas (king compartilhado entre aberturas vizinhas); o resto de cada
+ *   abertura vem de `framingForOpening` sem kings. Cortes na obra e avisos das aberturas vão
+ *   para o painel.
  */
 
 import type { Config, Member, Panel, Wall, Warning } from '../types';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
-import { framingForOpening, openingZone, type OpeningZone } from '../rules/openings';
+import { framingForOpening, type OpeningZone } from '../rules/openings';
+import { mergeOpeningZones } from '../rules/zones';
 import { matchPrecut } from '../rules/precuts';
 
 /** Folga numérica para comparações de geometria. */
@@ -43,21 +46,22 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
     });
   }
 
-  const zones = wall.openings.map((o) => ({ id: o.id, ...openingZone(o, studThickness) }));
-  assertSeparateZones(wall, zones);
+  const plan = mergeOpeningZones(wall.openings, studThickness);
+  const fullHeight = {
+    section: wall.section,
+    length: studLength,
+    y: plateThickness,
+    orientation: 'vertical' as const,
+  };
 
   const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness)
-    .filter((x) => !zones.some((z) => overlaps(x, x + studThickness, z)))
-    .map((x) => ({
-      role: 'stud',
-      section: wall.section,
-      length: studLength,
-      x,
-      y: plateThickness,
-      orientation: 'vertical',
-    }));
+    .filter((x) => !plan.zones.some((z) => overlaps(x, x + studThickness, z)))
+    .map((x) => ({ role: 'stud', ...fullHeight, x }));
 
-  const openingMembers = wall.openings.flatMap((o) => framingForOpening(o, wall, config));
+  const kings: Member[] = plan.kings.map((x) => ({ role: 'kingStud', ...fullHeight, x }));
+
+  const framings = wall.openings.map((o) => framingForOpening(o, wall, config, { kings: false }));
+  for (const f of framings) warnings.push(...f.warnings);
 
   return {
     id: wall.id,
@@ -65,7 +69,8 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
     length: wall.length,
     height: wall.height,
     section: wall.section,
-    members: [...plates, ...studs, ...openingMembers],
+    members: [...plates, ...studs, ...kings, ...framings.flatMap((f) => f.members)],
+    fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
   };
 }
@@ -73,19 +78,4 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
 /** Sobreposição com área (encostar não conta). */
 function overlaps(start: number, end: number, zone: OpeningZone): boolean {
   return start < zone.end - EPS && end > zone.start + EPS;
-}
-
-/** Zonas que se tocam ou se sobrepõem compartilham king — fusão é a S8. */
-function assertSeparateZones(wall: Wall, zones: (OpeningZone & { id: string })[]): void {
-  const sorted = [...zones].sort((a, b) => a.start - b.start);
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1]!;
-    const cur = sorted[i]!;
-    if (cur.start <= prev.end + EPS) {
-      throw new Error(
-        `parede ${wall.id}: zonas das aberturas ${prev.id} e ${cur.id} se tocam ou se sobrepõem; ` +
-          'fusão de zonas chega na S8',
-      );
-    }
-  }
 }

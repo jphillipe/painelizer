@@ -1,0 +1,56 @@
+{
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 24 e porta RO 38x82.5 em offset 64.5 — 4.5\" entre os RO (jack + king + jack), header a 82.5\" nas duas. Alvo da sessão S8 (fusão de zonas). O plano pedia 4\", mas aí o king compartilhado não cabe (sobra 1\" entre os jacks); 4.5\" confirmado pelo humano em 2026-10-02, caso < 4.5\" fica em P16. Zonas [21, 63] e [61.5, 105.5] se sobrepõem → zona fundida [21, 105.5], kings em 21, 61.5 (compartilhado, colado ao jack da janela) e 104. Removidas as marcas 32–96. Janela: jacks 22.5 e 60, header 39 em 22.5, sill em 33, cripples 32 e 48 (31.5 abaixo, 2.375 acima). Porta: jacks 63 e 102.5, header 41 em 63, cripples acima em 80 e 96; bottom plate inteira, corte na obra de 64.5 a 102.5. Header 2x10 é HIPÓTESE até a S9. 24 peças.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5,
+    "defaultHeaderSection": "2x10",
+    "defaultHeaderPlies": 2
+  },
+  "wall": {
+    "id": "W-window-door",
+    "length": 144,
+    "height": 97.125,
+    "section": "2x6",
+    "exterior": true,
+    "bearing": true,
+    "openings": [
+      { "id": "win1",  "type": "window", "offset": 24,   "roughWidth": 36, "roughHeight": 48 },
+      { "id": "door1", "type": "door",   "offset": 64.5, "roughWidth": 38, "roughHeight": 82.5 }
+    ]
+  },
+  "expected": {
+    "members": [
+      { "role": "bottomPlate",    "section": "2x6",  "length": 144,    "x": 0,     "y": 0,      "orientation": "horizontal" },
+      { "role": "topPlate",       "section": "2x6",  "length": 144,    "x": 0,     "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6",  "length": 144,    "x": 0,     "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0,     "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 16,    "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 112,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 128,   "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 21,   "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 61.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 104,  "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 22.5,  "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 60,    "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 63,    "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 102.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "header",  "section": "2x10", "length": 39, "x": 22.5, "y": 82.5, "orientation": "horizontal", "plies": 2 },
+      { "role": "header",  "section": "2x10", "length": 41, "x": 63,   "y": 82.5, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill",    "section": "2x6",  "length": 36, "x": 24,   "y": 33,   "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6",  "length": 31.5,  "x": 32, "y": 1.5,   "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 31.5,  "x": 48, "y": 1.5,   "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 32, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 48, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 80, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 96, "y": 91.75, "orientation": "vertical" }
+    ],
+    "fieldCuts": [
+      { "role": "bottomPlate", "openingId": "door1", "x": 64.5, "length": 38 }
+    ],
+    "warnings": []
+  }
+}

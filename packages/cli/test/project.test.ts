@@ -27,6 +27,7 @@ describe('parseProject', () => {
       ['W04', 129.5, 97.125],
       ['W05', 144, 97.125],
       ['W06', 120, 109.125],
+      ['W07', 144, 97.125],
     ]);
     expect(p.stockLengths).toBeUndefined();
   });
