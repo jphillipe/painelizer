@@ -32,6 +32,31 @@ export function sectionDepth(section: Section): number {
 
 export type OpeningType = 'window' | 'door';
 
+/** Piso suportado pela parede: apoiado no centro (center-bearing) ou vão livre (clear span). */
+export type FloorSpan = 'center' | 'clear';
+
+/**
+ * De onde veio o header de uma abertura: `'project'` (structural drawings, `Opening.header`),
+ * `'default'` (`config.defaultHeader*`, parede não portante) ou o id da tabela (`'R602.7(1)'`, `'R602.7(2)'`).
+ */
+export type HeaderSource = string;
+
+/** Header especificado no projeto (structural drawings / header schedule). Manda sobre a tabela (P10). */
+export interface OpeningHeader {
+  section: Section;
+  plies: number;
+  /** Jacks de cada lado pedidos pelo projeto. `Opening.jackStuds`, se presente, prevalece. */
+  jackStuds?: number;
+}
+
+/** Dados da edificação para a tabela de headers. Vêm das notas estruturais do projeto. */
+export interface Building {
+  /** Carga de neve no solo, psf. */
+  groundSnowLoad: number;
+  /** Largura da edificação, em polegadas. */
+  buildingWidth: number;
+}
+
 /**
  * Abertura bruta (rough opening) na parede.
  * `offset` é a distância do início da parede (x=0) até a borda esquerda do RO.
@@ -45,13 +70,19 @@ export interface Opening {
   roughHeight: number;
   /** King studs de cada lado (inteiro ≥ 1). Ausente = 1. */
   kingStuds?: number;
-  /** Jack studs de cada lado (inteiro ≥ 1). Ausente = 1. O header apoia em todos. */
+  /**
+   * Jack studs de cada lado (inteiro ≥ 1). O header apoia em todos. Ausente = os do header
+   * (`header.jackStuds` do projeto ou NJ da tabela) ou 1. Menor que o NJ da tabela gera aviso
+   * `HEADER_JACKS_BELOW_TABLE`.
+   */
   jackStuds?: number;
   /**
    * y da base do header desta abertura, medido da base da bottom plate (= subfloor).
    * Sobrescreve `config.headerHeight` — o projeto manda (P2).
    */
   headerHeight?: number;
+  /** Header do projeto. Ausente = tabela IRC (parede portante) ou padrão do config (não portante). */
+  header?: OpeningHeader;
 }
 
 export interface Wall {
@@ -63,6 +94,12 @@ export interface Wall {
   exterior: boolean;
   bearing: boolean;
   openings: Opening[];
+  /** Largura da edificação para esta parede, em polegadas; sobrescreve `config.building` (casa em L). */
+  buildingWidth?: number;
+  /** Pavimentos acima da parede que ela suporta (0 = só telhado e forro). Obrigatório para usar a tabela. */
+  floorsSupported?: number;
+  /** Ausente = pior caso entre center-bearing e clear span. */
+  floorSpan?: FloorSpan;
 }
 
 export type MemberRole =
@@ -89,6 +126,8 @@ export interface Member {
   orientation: Orientation;
   /** Número de camadas lado a lado (header). Ausente = 1. */
   plies?: number;
+  /** Só no header: de onde veio a seção. */
+  headerSource?: HeaderSource;
 }
 
 /** Aviso de validação. Nunca interrompe a geração. */
@@ -138,7 +177,9 @@ export interface Config {
    * `Opening.headerHeight` sobrescreve. Ausente nos dois = header encostado sob a top plate.
    */
   headerHeight?: number;
-  /** Seção do header enquanto a tabela IRC (S9) não existe. */
+  /** Header de abertura em parede NÃO portante sem `Opening.header` (hipótese P17; muda na S9.3). */
   defaultHeaderSection?: Section;
   defaultHeaderPlies?: number;
+  /** Dados da casa, uma vez por projeto. Obrigatório para escolher header pela tabela. */
+  building?: Building;
 }

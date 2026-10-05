@@ -5,6 +5,7 @@
  * - Zona = [offset − (kings + jacks)·t, offset + roughWidth + (kings + jacks)·t]; com 1 king e 1 jack,
  *   RO ± 3". Kings encostados na borda externa da zona, jacks encostados no RO.
  * - Kings de altura cheia (como stud); jacks da bottom plate até a base do header.
+ * - Jacks de cada lado = os do header resolvido (`opening.jackStuds`, senão projeto/tabela, senão 1).
  * - Base do header: `opening.headerHeight` (o projeto manda, P2); senão `config.headerHeight`;
  *   senão, encostada sob a top plate.
  *   Header apoia em todos os jacks: comprimento = roughWidth + 2·jacks·t.
@@ -18,11 +19,13 @@
  * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
  *   é chamada com `{ kings: false }`.
  *
- * Seção do header sem tabela lança `Error` (S9). Geometria impossível lança `RangeError`.
+ * Seção, plies e jacks do header vêm de `rules/openingHeader.ts` (projeto → tabela → padrão do config);
+ * sem header possível lança `Error`. Geometria impossível lança `RangeError`.
  */
 
 import type { Config, FieldCut, Member, Opening, Wall, Warning } from '../types';
 import { sectionDepth } from '../types';
+import { resolveOpeningHeader, type ResolvedHeader } from './openingHeader';
 import { LENGTH_TOLERANCE } from './precuts';
 import { layoutStuds } from './studs';
 
@@ -49,6 +52,8 @@ export interface OpeningFraming {
 export interface FramingOptions {
   /** Gerar os kings da própria abertura (padrão). `false` quando vêm da fusão de zonas. */
   kings?: boolean;
+  /** Header já resolvido por quem chama (`panelizeWall`). Ausente = `resolveOpeningHeader`. */
+  header?: ResolvedHeader;
 }
 
 /** Número de kings e jacks de cada lado, validado. */
@@ -105,7 +110,7 @@ export function openingKingXs(
  * também o corte da bottom plate na obra e o aviso de RO incompatível com o header.
  * Não remove studs de layout — isso é papel de `panelizeWall`, que conhece todas as zonas.
  *
- * @throws Error      `config.defaultHeaderSection`/`defaultHeaderPlies` ausentes (S9)
+ * @throws Error      header sem como escolher (ver `resolveOpeningHeader`)
  * @throws RangeError zona fora da parede, header invadindo a top plate, sill abaixo da bottom plate,
  *                    header de porta sem espaço para jack
  */
@@ -115,14 +120,11 @@ export function framingForOpening(
   config: Config,
   options: FramingOptions = {},
 ): OpeningFraming {
-  const headerSection = config.defaultHeaderSection;
-  const plies = config.defaultHeaderPlies;
-  if (headerSection === undefined || plies === undefined) {
-    throw new Error(
-      `abertura ${opening.id}: config.defaultHeaderSection e config.defaultHeaderPlies são ` +
-        'obrigatórios até a tabela de headers existir (S9)',
-    );
-  }
+  const header = options.header ?? resolveOpeningHeader(opening, wall, config);
+  const headerSection = header.section;
+  const plies = header.plies;
+  // Os jacks do header (NJ da tabela ou do projeto) valem para a zona e para os kings.
+  opening = { ...opening, jackStuds: header.jackStuds };
 
   const t = config.studThickness;
   const p = config.plateThickness;
@@ -167,7 +169,7 @@ export function framingForOpening(
   const vertical = { section: wall.section, orientation: 'vertical' as const };
   const members: Member[] = [];
   const fieldCuts: FieldCut[] = [];
-  const warnings: Warning[] = [];
+  const warnings: Warning[] = [...header.warnings];
 
   if (options.kings ?? true) {
     const studLength = wall.height - 3 * p;
@@ -191,6 +193,7 @@ export function framingForOpening(
     y: headerBase,
     orientation: 'horizontal',
     plies,
+    headerSource: header.source,
   });
 
   if (sillY !== undefined) {

@@ -77,6 +77,20 @@ describe('mergeOpeningZones', () => {
     expect(() => mergeOpeningZones([a, { ...b, offset: 51 }], 1.5)).toThrow(RangeError);
   });
 
+  it('NJ 2 nas duas aberturas (header pela tabela): mínimo de 7.5" entre os RO, funde até 9"', () => {
+    const a = w('a', 20, 24, { jackStuds: 2 }); // RO [20, 44], zona [15.5, 48.5]
+    const b = (offset: number) => w('b', offset, 24, { jackStuds: 2 });
+    // 7.5": jacks 44–47, king 47–48.5, jacks 48.5–51.5 — sem folga
+    expect(mergeOpeningZones([a, b(51.5)], 1.5)).toEqual({
+      zones: [{ start: 15.5, end: 80, openingIds: ['a', 'b'] }],
+      kings: [15.5, 47, 78.5],
+    });
+    // 9": zonas só se tocam; um king, 1.5" de folga à direita dele
+    expect(mergeOpeningZones([a, b(53)], 1.5).kings).toEqual([15.5, 47, 80]);
+    expect(mergeOpeningZones([a, b(53 + 1 / 64)], 1.5).zones).toHaveLength(2);
+    expect(() => mergeOpeningZones([a, b(51)], 1.5)).toThrow(/\(mínimo 7\.5"\)/);
+  });
+
   it.each([
     ['4" (plano original: king não cabe)', 48],
     ['RO encostados', 44],

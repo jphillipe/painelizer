@@ -1,8 +1,9 @@
 /**
  * Monta o `Panel` de uma parede reta a partir das regras de framing.
  *
- * Escopo atual (S8): 3 plates + studs de layout + janelas e portas (`rules/openings.ts`), com
- * zonas vizinhas fundidas e king compartilhado (`rules/zones.ts`).
+ * Escopo atual (S9.2): 3 plates + studs de layout + janelas e portas (`rules/openings.ts`), com
+ * zonas vizinhas fundidas e king compartilhado (`rules/zones.ts`) e o header de cada abertura
+ * escolhido por `rules/openingHeader.ts` (projeto → tabela IRC → padrão do config; sem header, erro).
  *
  * Geometria (docs/02-framing.md):
  * - Studs em y = plateThickness (sobre a bottom plate), comprimento = height − 3·plateThickness.
@@ -21,12 +22,15 @@ import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
 import { mergeOpeningZones } from '../rules/zones';
+import { resolveOpeningHeader } from '../rules/openingHeader';
+import type { HeaderTable } from '../rules/headers';
 import { matchPrecut } from '../rules/precuts';
 
 /** Folga numérica para comparações de geometria. */
 const EPS = 1e-9;
 
-export function panelizeWall(wall: Wall, config: Config): Panel {
+/** @param tables tabela de headers injetada (testes); ausente = IRC de `src/data/irc-headers.json` */
+export function panelizeWall(wall: Wall, config: Config, tables?: readonly HeaderTable[]): Panel {
   const { plateThickness, studThickness, studSpacing } = config;
   const warnings: Warning[] = [];
 
@@ -46,7 +50,11 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
     });
   }
 
-  const plan = mergeOpeningZones(wall.openings, studThickness);
+  // O header vem antes da geometria: os jacks dele (NJ) definem a largura de cada zona.
+  const headers = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
+  const openings = wall.openings.map((o, i) => ({ ...o, jackStuds: headers[i]!.jackStuds }));
+
+  const plan = mergeOpeningZones(openings, studThickness);
   const fullHeight = {
     section: wall.section,
     length: studLength,
@@ -60,7 +68,9 @@ export function panelizeWall(wall: Wall, config: Config): Panel {
 
   const kings: Member[] = plan.kings.map((x) => ({ role: 'kingStud', ...fullHeight, x }));
 
-  const framings = wall.openings.map((o) => framingForOpening(o, wall, config, { kings: false }));
+  const framings = openings.map((o, i) =>
+    framingForOpening(o, wall, config, { kings: false, header: headers[i]! }),
+  );
   for (const f of framings) warnings.push(...f.warnings);
 
   return {

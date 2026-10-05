@@ -1,5 +1,5 @@
 {
-  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove as marcas 48, 64 e 80. Cripples acima do header nas marcas 48 e 64 (2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). 16 peças.",
+  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove as marcas 48, 64 e 80. Cripples acima do header nas marcas 48 e 64 (2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento; config.defaultHeader* só vale em parede não portante. 16 peças.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -17,7 +17,7 @@
     "exterior": true,
     "bearing": true,
     "openings": [
-      { "id": "door1", "type": "door", "offset": 40, "roughWidth": 38, "roughHeight": 82.5 }
+      { "id": "door1", "type": "door", "offset": 40, "roughWidth": 38, "roughHeight": 82.5, "header": { "section": "2x10", "plies": 2 } }
     ]
   },
   "expected": {

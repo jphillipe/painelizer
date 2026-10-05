@@ -1,5 +1,5 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48 e header a 82.5\" do subfloor — o caso típico da fábrica (P2, respondida em 2026-10-01). Alvo da sessão S7.1. Mesma parede de wall-144-window.json; muda só config.headerHeight. Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). Jacks 81; base do RO 34.5; sill em 33; cripples de 31.5 abaixo e de 2.375 acima (topo do header 91.75, top plate em 94.125). 20 peças.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48 e header a 82.5\" do subfloor — o caso típico da fábrica (P2, respondida em 2026-10-01). Alvo da sessão S7.1. Mesma parede de wall-144-window.json; muda só config.headerHeight. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento; config.defaultHeader* só vale em parede não portante. Jacks 81; base do RO 34.5; sill em 33; cripples de 31.5 abaixo e de 2.375 acima (topo do header 91.75, top plate em 94.125). 20 peças.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -17,7 +17,7 @@
     "exterior": true,
     "bearing": true,
     "openings": [
-      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48 }
+      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
     ]
   },
   "expected": {

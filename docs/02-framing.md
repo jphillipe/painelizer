@@ -72,10 +72,23 @@ A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeir
   coluna, pavimentos sem grupo ou vão acima de todos os headers → `requiresEngineer`.
 - Sem `floorSpan` ('center' | 'clear'): pior caso entre os grupos com aquele número de pavimentos (menor vão,
   maior NJ).
-- Entre os headers que atendem: menor altura de seção, depois menos plies (P17). Com `wallSection`, descarta
-  header com plies·1.5 maior que a profundidade da parede (2x4: até 2 plies; 2x6: até 3).
+- Entre os headers que atendem: 2 plies de menor seção; sem 2 plies que atenda, 3 plies, depois 4; 1 ply nunca
+  (P17, respondida em 2026-10-05). Com `wallSection`, descarta header com plies·1.5 maior que a profundidade da
+  parede (2x4: até 2 plies; 2x6: até 3).
 - JSON: vão digitado como no livro, com apóstrofo (`"3'-6"`); célula `[vão, NJ]` ou `null` ("—"). Estrutura
   conferida por `validateHeaderTables`; coerência dos valores por `test/rules/headers-data.test.ts`.
+
+### Header de cada abertura no painel (S9.2, `rules/openingHeader.ts`)
+- Ordem: `opening.header` do projeto (`{ section, plies, jackStuds? }`, origem `project`) → parede portante:
+  `headerFor` com `config.building` (neve, largura), `wall.buildingWidth` (sobrescreve a largura),
+  `wall.floorsSupported`, `wall.floorSpan` e a seção da parede (origem = id da tabela) → parede não portante:
+  `config.defaultHeaderSection`/`defaultHeaderPlies` (origem `default`; vira peça deitada na S9.3).
+- Fora da tabela ou dado faltando: `Error` com parede, abertura e motivo. Nunca header chutado.
+- Jacks por lado: `opening.jackStuds` → `opening.header.jackStuds` → NJ da tabela → 1. `opening.jackStuds`
+  menor que o NJ: aviso `HEADER_JACKS_BELOW_TABLE`. O número de jacks entra na zona e na fusão de zonas
+  (com NJ 2: zona = RO ± 4.5", mínimo de 7.5" entre RO vizinhos).
+- A origem vai em `Member.headerSource` e aparece no `<title>` do header no SVG.
+- Fixture: `test/fixtures/wall-144-window-irc.json` (50 psf, 28', só telhado → 2-2x6, NJ 2, 22 peças).
 
 ## Exemplo resolvido — parede 144" com janela
 Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
@@ -94,4 +107,5 @@ Total: 18 peças. Fixture: `test/fixtures/wall-144-window.json`.
 Este exemplo usa o header encostado (sem `headerHeight`). O caso típico da fábrica é `headerHeight: 82.5`:
 jacks de 81, base do RO em 34.5, sill em 33, cripples de 31.5 abaixo e de 2.375 acima do header (20 peças) —
 fixture `test/fixtures/wall-144-window-82.5.json`.
-A seção do header (2x10) neste exemplo é **hipótese** até a tabela estar carregada — o fixture marca isso.
+A seção do header (2x10) neste exemplo entra como header do projeto (`opening.header`); é exemplo, não
+dimensionamento. Pela tabela (fixture `wall-144-window-irc.json`) a mesma janela leva 2-2x6 com 2 jacks.

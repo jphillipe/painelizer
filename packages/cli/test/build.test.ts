@@ -49,21 +49,23 @@ describe('buildProject', () => {
     expect(warnings[0]).toMatchObject({ panelId: 'W01', warning: { code: 'STUD_LENGTH_MISMATCH' } });
   });
 
-  it('W05: janela com header a 82.5 do config — 20 peças, como o fixture wall-144-window-82.5', () => {
+  it('W05: header pela tabela IRC (2-2x6, 2 jacks) a 82.5 — 22 peças, como o fixture wall-144-window-irc', () => {
     const w05 = result.panels.find((p) => p.id === 'W05')!;
-    expect(w05.members).toHaveLength(20);
+    expect(w05.members).toHaveLength(22);
     const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
-    expect(csv).toContain('W05,header,2x10,39,"39""",2');
-    expect(csv).toContain('W05,jackStud,2x6,81,"81""",2');
+    expect(csv).toContain('W05,header,2x6,42,"42""",2');
+    expect(csv).toContain('W05,jackStud,2x6,81,"81""",4');
     expect(csv).toContain('W05,sill,2x6,36,"36""",1');
     expect(csv).toContain('W05,cripple,2x6,31.5,"31 1/2""",2');
-    expect(csv).toContain('W05,cripple,2x6,2.375,"2 3/8""",2');
+    expect(csv).toContain('W05,cripple,2x6,6.125,"6 1/8""",2');
+    const svg = result.files.find((f) => f.path === 'panels/W05.svg')!.content;
+    expect(svg).toContain('<title>header 2x6 × 42&quot; (2 plies) [R602.7(1)] — ');
   });
 
   it("W06: headerHeight da abertura (7'-6\") sobrescreve o do config numa parede de 9'", () => {
     const w06 = result.panels.find((p) => p.id === 'W06')!;
-    expect(w06.members.find((m) => m.role === 'header')).toMatchObject({ y: 90 });
-    expect(w06.members.filter((m) => m.role === 'jackStud').map((j) => j.length)).toEqual([88.5, 88.5]);
+    expect(w06.members.find((m) => m.role === 'header')).toMatchObject({ y: 90, section: '2x6' });
+    expect(w06.members.filter((m) => m.role === 'jackStud').map((j) => j.length)).toEqual([88.5, 88.5, 88.5, 88.5]);
     expect(w06.members.filter((m) => m.role === 'stud').every((s) => s.length === 104.625)).toBe(true);
   });
 
@@ -78,6 +80,33 @@ describe('buildProject', () => {
     expect(csv).toContain('W07,header,2x10,41,"41""",2');
     const svg = result.files.find((f) => f.path === 'panels/W07.svg')!.content;
     expect(svg).toContain('>cortar na obra 38&quot;</text>');
+    expect(svg).toContain('<title>header 2x10 × 41&quot; (2 plies) [project] — ');
+  });
+
+  it('header sem como escolher vira problema com parede, abertura e motivo, sem repetir o id da parede', () => {
+    const p = example();
+    delete p.config.building;
+    delete p.walls.find((w) => w.id === 'W06')!.floorsSupported;
+    let error: BuildError | undefined;
+    try {
+      buildProject(p);
+    } catch (e) {
+      error = e as BuildError;
+    }
+    expect(error).toBeInstanceOf(BuildError);
+    expect(error!.problems).toHaveLength(2);
+    expect(error!.problems[0]).toMatch(/^parede W05, abertura J1: .*config\.building/);
+    expect(error!.problems[1]).toMatch(/^parede W06, abertura J2: /);
+  });
+
+  it('parede interna portante sem pavimento acima não está na R602.7(2): pede engenheiro ou header do projeto', () => {
+    const p = example();
+    const w03 = p.walls.find((w) => w.id === 'W03')!;
+    w03.floorsSupported = 0;
+    w03.openings.push({ id: 'P9', type: 'door', offset: 40, roughWidth: 38, roughHeight: 82.5 });
+    expect(() => buildProject(p)).toThrow(/parede W03, abertura P9: header fora da tabela \(0 pavimento/);
+    w03.openings[0]!.header = { section: '2x6', plies: 2 };
+    expect(buildProject(p).panels.find((x) => x.id === 'W03')!.members.some((m) => m.role === 'header')).toBe(true);
   });
 
   it('bom.csv usa os pré-cortes do projeto: 92 5/8" e 104 5/8" como estoque', () => {

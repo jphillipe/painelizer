@@ -1,5 +1,5 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2x10 é HIPÓTESE (config.defaultHeaderSection) até a tabela IRC existir (S9). Conferir com a equipe de produção antes de tratar como referência.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento; config.defaultHeader* só vale em parede não portante. Conferir com a equipe de produção antes de tratar como referência.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -16,7 +16,7 @@
     "exterior": true,
     "bearing": true,
     "openings": [
-      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48 }
+      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
     ]
   },
   "expected": {

@@ -12,7 +12,8 @@
  * - Conteúdo: ID do painel no topo, cota do comprimento total (embaixo) e da
  *   altura (à esquerda), marcas de layout no rodapé (múltiplos de `studSpacing`
  *   mais o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
- *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição.
+ *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição; no header, também
+ *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[default]`).
  * - Cortes na obra (`panel.fieldCuts`, ex.: bottom plate no vão da porta) hachurados em vermelho
  *   sobre a peça, com o rótulo "cortar na obra" e o comprimento logo acima.
  * - Saída determinística: mesma entrada → mesma string.
@@ -191,8 +192,9 @@ function memberRect(
   const h = box.height * scale;
   const plies = m.plies ?? 1;
   const pliesNote = plies > 1 ? ` (${plies} plies)` : '';
+  const sourceNote = m.headerSource === undefined ? '' : ` [${m.headerSource}]`;
   const title =
-    `${m.role} ${m.section} × ${formatInches(m.length)}${pliesNote} — ` +
+    `${m.role} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote} — ` +
     `x=${formatInches(m.x)} y=${formatInches(m.y)}`;
 
   const parts: string[] = [];

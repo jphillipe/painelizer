@@ -6,6 +6,7 @@ import plain from '../fixtures/wall-144-plain.json';
 import window from '../fixtures/wall-144-window.json';
 import door from '../fixtures/wall-120-door.json';
 import windowDoor from '../fixtures/wall-144-window-door.json';
+import irc from '../fixtures/wall-144-window-irc.json';
 
 const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
 
@@ -124,8 +125,17 @@ describe('panelSvg', () => {
     const w = panelSvg(windowPanel);
     expect(w).toContain('2x10 × 39&quot; (2 plies)</text>');
     expect(w).toContain(
-      '<title>header 2x10 × 39&quot; (2 plies) — x=46 1/2&quot; y=84 7/8&quot;</title>',
+      '<title>header 2x10 × 39&quot; (2 plies) [project] — x=46 1/2&quot; y=84 7/8&quot;</title>',
     );
+  });
+
+  it('header escolhido pela tabela: seção, plies e a tabela de origem no <title>', async () => {
+    const out = panelSvg(panelizeWall(irc.wall as Wall, irc.config as Config));
+    expect(out).toContain(
+      '<title>header 2x6 × 42&quot; (2 plies) [R602.7(1)] — x=45&quot; y=82 1/2&quot;</title>',
+    );
+    expect(rects(out)).toHaveLength(22);
+    await expect(out).toMatchFileSnapshot('../__snapshots__/wall-144-window-irc.svg');
   });
 
   it('avisos do painel aparecem no rodapé, com texto escapado', () => {

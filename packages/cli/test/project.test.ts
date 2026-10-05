@@ -113,6 +113,69 @@ describe('parseProject', () => {
     );
   });
 
+  it('exemplo: building em pés-pol, floorsSupported nas externas portantes, header do projeto na W07', () => {
+    const p = parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa-exemplo.json');
+    expect(p.config.building).toEqual({ groundSnowLoad: 50, buildingWidth: 336 });
+    expect(p.walls.map((w) => w.floorsSupported)).toEqual([0, 0, undefined, undefined, 0, 0, 0]);
+    expect(p.walls[4]?.openings[0]).not.toHaveProperty('header');
+    expect(p.walls[6]?.openings.map((o) => o.header)).toEqual([
+      { section: '2x10', plies: 2 },
+      { section: '2x10', plies: 2 },
+    ]);
+  });
+
+  it('config.building: neve em psf (número) e largura como medida', () => {
+    const cfg = (building: unknown) => valid({ config: { studSpacing: 16, studLength: 92.625, building } });
+    expect(projectFrom(cfg({ groundSnowLoad: 0, buildingWidth: 336 })).config.building).toEqual({
+      groundSnowLoad: 0,
+      buildingWidth: 336,
+    });
+    expect(() => projectFrom(cfg({ groundSnowLoad: '50', buildingWidth: `28'` }), 'projeto')).toThrow(
+      /projeto\.config\.building\.groundSnowLoad: esperado carga em psf/,
+    );
+    expect(() => projectFrom(cfg({ groundSnowLoad: -1, buildingWidth: `28'` }))).toThrow(/groundSnowLoad/);
+    expect(() => projectFrom(cfg({ groundSnowLoad: 50 }), 'projeto')).toThrow(/config\.building\.buildingWidth/);
+    expect(() => projectFrom(cfg({ groundSnowLoad: 50, buildingWidth: 0 }))).toThrow(/buildingWidth: esperado medida > 0/);
+    expect(() => projectFrom(cfg('28'), 'projeto')).toThrow(/projeto\.config\.building: esperado objeto/);
+  });
+
+  it('parede: buildingWidth, floorsSupported e floorSpan opcionais', () => {
+    const withWall = (extra: Record<string, unknown>) =>
+      valid({ walls: [{ ...(valid().walls as object[])[0], ...extra }] });
+    const w = projectFrom(withWall({ buildingWidth: `24'`, floorsSupported: 1, floorSpan: 'clear' })).walls[0];
+    expect(w).toMatchObject({ buildingWidth: 288, floorsSupported: 1, floorSpan: 'clear' });
+    expect(projectFrom(withWall({ floorsSupported: 0 })).walls[0]?.floorsSupported).toBe(0);
+    const plain = projectFrom(withWall({})).walls[0];
+    for (const key of ['buildingWidth', 'floorsSupported', 'floorSpan']) expect(plain).not.toHaveProperty(key);
+    expect(() => projectFrom(withWall({ floorsSupported: -1 }), 'projeto')).toThrow(
+      /projeto\.walls\[0\]\.floorsSupported: esperado inteiro ≥ 0/,
+    );
+    expect(() => projectFrom(withWall({ floorsSupported: 1.5 }))).toThrow(/floorsSupported/);
+    expect(() => projectFrom(withWall({ floorSpan: 'centre' }))).toThrow(/floorSpan: esperado um de center, clear/);
+    expect(() => projectFrom(withWall({ buildingWidth: 0 }))).toThrow(/walls\[0\]\.buildingWidth/);
+  });
+
+  it('abertura: header do projeto { section, plies, jackStuds? }', () => {
+    const withHeader = (header: unknown) =>
+      valid({
+        walls: [
+          {
+            ...(valid().walls as object[])[0],
+            openings: [{ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48, header }],
+          },
+        ],
+      });
+    const header = (h: unknown) => projectFrom(withHeader(h), 'projeto').walls[0]?.openings[0]?.header;
+    expect(header({ section: '2x12', plies: 3 })).toEqual({ section: '2x12', plies: 3 });
+    expect(header({ section: '2x10', plies: 2, jackStuds: 2 })).toEqual({ section: '2x10', plies: 2, jackStuds: 2 });
+    expect(() => header({ section: 'LVL', plies: 2 })).toThrow(
+      /projeto\.walls\[0\]\.openings\[0\]\.header\.section: esperado um de 2x4, 2x6, 2x8, 2x10, 2x12/,
+    );
+    expect(() => header({ section: '2x10' })).toThrow(/header\.plies: esperado inteiro ≥ 1/);
+    expect(() => header({ section: '2x10', plies: 2, jackStuds: 0 })).toThrow(/header\.jackStuds/);
+    expect(() => header('2-2x10')).toThrow(/openings\[0\]\.header: esperado objeto/);
+  });
+
   it('kingStuds e jackStuds opcionais por abertura, inteiros ≥ 1', () => {
     const withOpening = (extra: Record<string, unknown>) =>
       valid({

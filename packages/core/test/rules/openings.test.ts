@@ -56,10 +56,10 @@ describe('framingForOpening — janela', () => {
     expectSameMembers(frame(win, wall, config), expectedOpening);
   });
 
-  it('header leva seção e plies do config; orientação por papel', () => {
+  it('header leva seção, plies e origem do header resolvido (aqui, o do projeto); orientação por papel', () => {
     const members = frame(win, wall, config);
     const [header] = byRole(members, 'header');
-    expect(header).toMatchObject({ section: '2x10', plies: 2, orientation: 'horizontal' });
+    expect(header).toMatchObject({ section: '2x10', plies: 2, orientation: 'horizontal', headerSource: 'project' });
     expect(byRole(members, 'sill')[0]?.orientation).toBe('horizontal');
     for (const role of ['kingStud', 'jackStud', 'cripple'] as const) {
       for (const m of byRole(members, role)) expect(m.orientation).toBe('vertical');
@@ -155,11 +155,33 @@ describe('framingForOpening — janela', () => {
     expectSameMembers(noKings, all.filter((m) => m.role !== 'kingStud'));
   });
 
-  it('sem seção ou plies de header no config: erro apontando a S9', () => {
-    const { defaultHeaderSection: _s, ...noSection } = config;
-    const { defaultHeaderPlies: _p, ...noPlies } = config;
-    expect(() => frame(win, wall, noSection)).toThrow(/S9/);
-    expect(() => frame(win, wall, noPlies)).toThrow(/S9/);
+  it('sem header possível (parede portante, sem header do projeto nem dados da casa): erro, nenhuma peça', () => {
+    const { header: _h, ...noHeader } = win;
+    expect(() => frame(noHeader, wall, config)).toThrow(/parede W-window, abertura win1: .*config\.building/);
+  });
+
+  it('options.header: usa o header recebido — jacks dele definem zona, kings e comprimento; avisos repassados', () => {
+    const { header: _h, ...noHeader } = win;
+    const warning = { code: 'HEADER_JACKS_BELOW_TABLE', message: 'x' };
+    const { members, warnings } = framingForOpening(noHeader, wall, config, {
+      header: { section: '2x6', plies: 2, jackStuds: 2, source: 'R602.7(1)', warnings: [warning] },
+    });
+    expect(xs(byRole(members, 'kingStud'))).toEqual([43.5, 87]);
+    expect(xs(byRole(members, 'jackStud'))).toEqual([45, 46.5, 84, 85.5]);
+    expect(byRole(members, 'header')[0]).toMatchObject({
+      section: '2x6',
+      plies: 2,
+      x: 45,
+      length: 42,
+      headerSource: 'R602.7(1)',
+    });
+    expect(warnings).toEqual([warning]);
+  });
+
+  it('parede não portante sem header do projeto: padrão do config, origem default', () => {
+    const { header: _h, ...noHeader } = win;
+    const members = frame(noHeader, { ...wall, bearing: false }, config);
+    expect(byRole(members, 'header')[0]).toMatchObject({ section: '2x10', plies: 2, headerSource: 'default' });
   });
 
   it.each([

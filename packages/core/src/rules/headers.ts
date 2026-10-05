@@ -9,13 +9,14 @@
  *   pavimentos sem grupo ou vão acima de todos os headers → `{ requiresEngineer: true }`.
  * - Sem `floorSpan`, vale o pior caso: o header precisa atender todos os grupos com aquele número de
  *   pavimentos; vão máximo = o menor, jacks = o maior.
- * - Entre os headers que atendem: menor altura de seção, depois menos plies (P17). Com `wallSection`,
- *   header mais espesso que a parede (plies·1.5 > profundidade) é descartado.
+ * - Entre os headers que atendem: 2 plies de menor altura de seção; se nenhum de 2 plies atende, 3 plies,
+ *   depois 4 — padrão de fabricação (P17, respondida em 2026-10-05). Header de 1 ply nunca é escolhido.
+ *   Com `wallSection`, header mais espesso que a parede (plies·1.5 > profundidade) é descartado.
  *
  * Entrada inválida lança `RangeError`. Tabela digitada com erro de estrutura também (`loadHeaderTables`).
  */
 
-import type { Section, WallSection } from '../types';
+import type { FloorSpan, Section, WallSection } from '../types';
 import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
 import { parseFeetInches } from '../units';
 import rawIrcHeaders from '../data/irc-headers.json';
@@ -23,8 +24,8 @@ import rawIrcHeaders from '../data/irc-headers.json';
 /** Folga numérica para comparar vão pedido com vão de tabela. */
 const EPS = 1e-9;
 
-/** Tipo de piso suportado: center-bearing ou clear span. */
-export type FloorSpan = 'center' | 'clear';
+/** Header escolhido pela tabela tem ao menos 2 plies (padrão de fabricação, P17). */
+const MIN_PLIES = 2;
 
 export interface HeaderCell {
   /** Vão máximo do header, em polegadas. */
@@ -136,7 +137,7 @@ export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = i
     wallSection === undefined ? Infinity : Math.floor(sectionDepth(wallSection) / NOMINAL_2X_THICKNESS + EPS);
   const candidates: HeaderSpec[] = [];
   for (const row of groups[0]!.rows) {
-    if (row.plies > maxPlies) continue;
+    if (row.plies < MIN_PLIES || row.plies > maxPlies) continue;
     let maxSpan = Infinity;
     let jackStuds = 0;
     for (const g of groups) {
@@ -152,7 +153,7 @@ export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = i
       candidates.push({ section: row.section, plies: row.plies, jackStuds, maxSpan, table: table.id });
     }
   }
-  candidates.sort((a, b) => SECTION_DEPTH[a.section] - SECTION_DEPTH[b.section] || a.plies - b.plies);
+  candidates.sort((a, b) => a.plies - b.plies || SECTION_DEPTH[a.section] - SECTION_DEPTH[b.section]);
   const best = candidates[0];
   if (!best) {
     return engineer(

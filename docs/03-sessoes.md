@@ -101,7 +101,7 @@ Uma sessão do Claude Code = um item. Ritual:
   conferida por hash contra a página. As duas passam em todas as conferências de coerência; 6 casos em `KNOWN`.
   Pendente fora da sessão: emendas de MA sobre R602.7 (P10) e integração com `panelizeWall` (S9.2).
 
-- [ ] **S9.2 — Header da abertura no painel (projeto → tabela → erro)**
+- [x] **S9.2 — Header da abertura no painel (projeto → tabela → erro)**
   Prompt: "Integre `headerFor` em `panelizeWall`. Antes de escrever código, proponha os tipos e as mudanças de
   fixture. (a) `Config.building?: { groundSnowLoad, buildingWidth }`: dados da casa, uma vez por projeto;
   `Wall.buildingWidth?` sobrescreve (casa em L). (b) `Wall.floorsSupported?` (pavimentos acima da parede) e
@@ -125,6 +125,25 @@ Uma sessão do Claude Code = um item. Ritual:
   Neve, largura, pavimentos e header vêm dos desenhos de cada projeto (notas estruturais, plantas, header
   schedule — ver `06-referencias-projetos.md`), não de pergunta à fábrica. Não depende de resposta pendente:
   P10 (edição do IRC) e P17 (parede não portante) seguem com a hipótese.
+  Atualização (2026-10-05, respostas da fábrica): P17(a) respondida — padrão de 2 plies pela tabela, aplicado
+  em `headerFor` nesta sessão. P17(b) respondida — 2x4 deitado; nesta sessão a parede não portante continua
+  com `config.defaultHeader*` (origem `default`) e a S9.3 troca.
+  Feita em 2026-10-05 com as decisões delegadas pelo humano ("aja como engenheiro"): fixtures atuais com
+  `header` 2-2x10 nas aberturas (members inalterados); fixture novo `wall-144-window-irc.json` com
+  `floorsSupported: 0` (2-2x6, NJ 2, 22 peças); regra em `rules/openingHeader.ts`. Janela + porta com NJ 2
+  testada inline (o fixture de 4.5" não comporta: mínimo 7.5"). SVG novo `wall-144-window-irc.svg` ainda sem
+  conferência visual do humano.
+
+- [ ] **S9.3 — Header deitado em parede não portante (R602.7.4)**
+  Parede não portante sem `opening.header`: uma peça deitada sobre a abertura (P17b), válida para RO ≤ 96" e
+  ≤ 24" entre a peça e a top plate; nesses limites, sem cripples acima. Fora dos limites: erro pedindo o header
+  do projeto. Remove `config.defaultHeaderSection`/`defaultHeaderPlies`. Usa as hipóteses de P18 (seção, jack).
+  Exige orientação "deitado" para o header no desenho (`memberBox`) e fixture novo (confirmação do humano).
+
+- [ ] **S9.4 — Cripple a até 2" do jack (P13)**
+  Marca de layout com folga ≤ 2" até o jack não ganha cripple, salvo se a omissão deixar vão maior que o
+  espaçamento máximo; vale abaixo do sill e acima do header. Conferir os fixtures atuais (a marca 80 fica a 2.5"
+  do jack em 84 — não deve mudar) e criar um caso que dispare a regra.
 
 - [ ] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,

@@ -52,7 +52,7 @@ const KNOWN: { note: string; query: HeaderQuery; expected: HeaderChoice }[] = [
     expected: { section: '2x6', plies: 2, jackStuds: 2, maxSpan: 42, table: 'R602.7(1)' },
   },
   {
-    note: "R602.7(1), 1 pavimento sem floorSpan (pior caso), 30 psf, 36', vão 4'-0, parede 2x6 → 3-2x8 (clear 4-5, NJ 2)",
+    note: "R602.7(1), 1 pavimento sem floorSpan (pior caso), 30 psf, 36', vão 4'-0, parede 2x6 → 2-2x10 (clear 4-2, NJ 2); 2 plies antes do 3-2x8 (P17)",
     query: {
       span: 48,
       exterior: true,
@@ -62,7 +62,7 @@ const KNOWN: { note: string; query: HeaderQuery; expected: HeaderChoice }[] = [
       floorsSupported: 1,
       wallSection: '2x6',
     },
-    expected: { section: '2x8', plies: 3, jackStuds: 2, maxSpan: 53, table: 'R602.7(1)' },
+    expected: { section: '2x10', plies: 2, jackStuds: 2, maxSpan: 50, table: 'R602.7(1)' },
   },
 ];
 

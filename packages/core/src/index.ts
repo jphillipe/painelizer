@@ -22,7 +22,6 @@ export {
   ircHeaders,
   loadHeaderTables,
   validateHeaderTables,
-  type FloorSpan,
   type HeaderCell,
   type HeaderChoice,
   type HeaderColumn,
@@ -32,6 +31,7 @@ export {
   type HeaderSpec,
   type HeaderTable,
 } from './rules/headers';
+export { resolveOpeningHeader, type ResolvedHeader } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { panelizeWall } from './panelize/panelizeWall';
 export * from './output/cutlist';

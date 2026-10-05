@@ -11,6 +11,11 @@
  * `config.studLength` é a lista de pré-cortes (`[92.625, 104.625]`); uma medida só vira lista de um.
  * `headerHeight` vale no `config` e em cada abertura; a da abertura sobrescreve (P2).
  *
+ * Header de abertura (S9.2): `config.building = { groundSnowLoad (psf), buildingWidth (medida) }` são os
+ * dados da casa para a tabela IRC; cada parede portante declara `floorsSupported` (pavimentos acima) e,
+ * se quiser, `floorSpan` ('center' | 'clear') e `buildingWidth` próprio (casa em L). O header do
+ * structural drawings entra na abertura: `header: { section, plies, jackStuds? }`, e manda sobre a tabela.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
@@ -18,6 +23,7 @@
 import {
   parseFeetInches,
   type Config,
+  type FloorSpan,
   type Opening,
   type OpeningType,
   type Section,
@@ -43,6 +49,7 @@ export class ProjectError extends Error {
 const WALL_SECTIONS: readonly WallSection[] = ['2x4', '2x6'];
 const SECTIONS: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
 const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
+const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
 
 /** Converte o texto do arquivo em `Project` validado. */
 export function parseProject(text: string, source = 'projeto'): Project {
@@ -99,6 +106,13 @@ function configFrom(raw: unknown, path: string): Config {
   if (c['defaultHeaderPlies'] !== undefined) {
     config.defaultHeaderPlies = count(c['defaultHeaderPlies'], `${path}.defaultHeaderPlies`);
   }
+  if (c['building'] !== undefined) {
+    const b = obj(c['building'], `${path}.building`);
+    config.building = {
+      groundSnowLoad: psf(b['groundSnowLoad'], `${path}.building.groundSnowLoad`),
+      buildingWidth: positive(b['buildingWidth'], `${path}.building.buildingWidth`),
+    };
+  }
   return config;
 }
 
@@ -106,7 +120,7 @@ function wallFrom(raw: unknown, path: string): Wall {
   const w = obj(raw, path);
   const openingsRaw = w['openings'] ?? [];
   if (!Array.isArray(openingsRaw)) throw new ProjectError(`${path}.openings: esperado array`);
-  return {
+  const wall: Wall = {
     id: str(w['id'], `${path}.id`),
     length: positive(w['length'], `${path}.length`),
     height: positive(w['height'], `${path}.height`),
@@ -115,6 +129,18 @@ function wallFrom(raw: unknown, path: string): Wall {
     bearing: bool(w['bearing'], `${path}.bearing`),
     openings: openingsRaw.map((o, i) => openingFrom(o, `${path}.openings[${i}]`)),
   };
+  if (w['buildingWidth'] !== undefined) {
+    wall.buildingWidth = positive(w['buildingWidth'], `${path}.buildingWidth`);
+  }
+  if (w['floorsSupported'] !== undefined) {
+    const n = w['floorsSupported'];
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
+      throw new ProjectError(`${path}.floorsSupported: esperado inteiro ≥ 0, recebido ${show(n)}`);
+    }
+    wall.floorsSupported = n;
+  }
+  if (w['floorSpan'] !== undefined) wall.floorSpan = oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`);
+  return wall;
 }
 
 function openingFrom(raw: unknown, path: string): Opening {
@@ -130,6 +156,16 @@ function openingFrom(raw: unknown, path: string): Opening {
   if (o['jackStuds'] !== undefined) opening.jackStuds = count(o['jackStuds'], `${path}.jackStuds`);
   if (o['headerHeight'] !== undefined) {
     opening.headerHeight = positive(o['headerHeight'], `${path}.headerHeight`);
+  }
+  if (o['header'] !== undefined) {
+    const h = obj(o['header'], `${path}.header`);
+    opening.header = {
+      section: oneOf(h['section'], SECTIONS, `${path}.header.section`),
+      plies: count(h['plies'], `${path}.header.plies`),
+    };
+    if (h['jackStuds'] !== undefined) {
+      opening.header.jackStuds = count(h['jackStuds'], `${path}.header.jackStuds`);
+    }
   }
   return opening;
 }
@@ -189,6 +225,14 @@ function positive(v: unknown, path: string): number {
   const n = measure(v, path);
   if (n <= 0) throw new ProjectError(`${path}: esperado medida > 0, recebido ${show(v)}`);
   return n;
+}
+
+/** Carga em psf: número ≥ 0, sem conversão de unidade. */
+function psf(v: unknown, path: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+    throw new ProjectError(`${path}: esperado carga em psf (número ≥ 0), recebido ${show(v)}`);
+  }
+  return v;
 }
 
 /** Inteiro ≥ 1 (plies, kings, jacks). */

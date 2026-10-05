@@ -7,6 +7,12 @@ import window from '../fixtures/wall-144-window.json';
 import low from '../fixtures/wall-144-window-82.5.json';
 import door from '../fixtures/wall-120-door.json';
 import windowDoor from '../fixtures/wall-144-window-door.json';
+import irc from '../fixtures/wall-144-window-irc.json';
+import { loadHeaderTables } from '../../src/rules/headers';
+import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
+
+/** Header do projeto usado nas aberturas montadas à mão (o mesmo dos fixtures). */
+const H = { section: '2x10', plies: 2 } as const;
 
 const wall = plain.wall as Wall;
 const config = plain.config as Config;
@@ -116,8 +122,8 @@ describe('panelizeWall — janela', () => {
         ...wWall,
         length: 192,
         openings: [
-          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 },
-          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, headerHeight: 80 },
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48, header: H },
+          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, headerHeight: 80, header: H },
         ],
       },
       low.config as Config,
@@ -145,8 +151,8 @@ describe('panelizeWall — janela', () => {
         ...wWall,
         length: 192,
         openings: [
-          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
-          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48 }, // zona [97, 139]
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48, header: H }, // zona [17, 47]
+          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, header: H }, // zona [97, 139]
         ],
       },
       wConfig,
@@ -212,8 +218,8 @@ describe('panelizeWall — aberturas vizinhas', () => {
         ...(window.wall as Wall),
         length: 192,
         openings: [
-          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48 }, // zona [17, 47]
-          { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48 }, // zona [47, 77]
+          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48, header: H }, // zona [17, 47]
+          { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48, header: H }, // zona [47, 77]
         ],
       },
       window.config as Config,
@@ -228,5 +234,100 @@ describe('panelizeWall — aberturas vizinhas', () => {
     const wd = windowDoor.wall as Wall;
     const tooClose = { ...wd, openings: [wd.openings[0]!, { ...wd.openings[1]!, offset: 64 }] };
     expect(() => panelizeWall(tooClose, windowDoor.config as Config)).toThrow(RangeError);
+  });
+});
+
+describe('panelizeWall — header pela tabela (S9.2)', () => {
+  const iWall = irc.wall as Wall;
+  const iConfig = irc.config as Config;
+
+  it('fixture wall-144-window-irc passa exatamente (22 peças, 2-2x6 com 2 jacks pela R602.7(1))', () => {
+    const panel = panelizeWall(iWall, iConfig);
+    expectSameMembers(panel.members, irc.expected.members as Member[]);
+    expect(panel.members).toHaveLength(22);
+    expect(panel.warnings).toEqual(irc.expected.warnings);
+    expect(panel.members.find((m) => m.role === 'header')).toMatchObject({ plies: 2, headerSource: 'R602.7(1)' });
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('header do projeto na mesma parede manda sobre a tabela: volta ao painel do fixture 82.5', () => {
+    const panel = panelizeWall({ ...iWall, openings: [{ ...iWall.openings[0]!, header: H }] }, iConfig);
+    expectSameMembers(panel.members, low.expected.members as Member[]);
+    expect(panel.members.find((m) => m.role === 'header')?.headerSource).toBe('project');
+  });
+
+  it('jackStuds da abertura abaixo do NJ: painel com 1 jack e aviso HEADER_JACKS_BELOW_TABLE', () => {
+    const panel = panelizeWall({ ...iWall, openings: [{ ...iWall.openings[0]!, jackStuds: 1 }] }, iConfig);
+    expect(panel.members.filter((m) => m.role === 'jackStud')).toHaveLength(2);
+    expect(panel.members.find((m) => m.role === 'header')).toMatchObject({ section: '2x6', x: 46.5, length: 39 });
+    expect(panel.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE']);
+  });
+
+  it('sem header possível: Error com parede, abertura e motivo', () => {
+    const { building: _b, ...noBuilding } = iConfig;
+    const { floorsSupported: _f, ...noFloors } = iWall;
+    expect(() => panelizeWall(iWall, noBuilding)).toThrow(/parede W-window-irc, abertura win1: .*config\.building/);
+    expect(() => panelizeWall(noFloors, iConfig)).toThrow(/parede W-window-irc, abertura win1: .*floorsSupported/);
+    // 2 pavimentos, RO de 11': nenhum header de madeira serrada atende em parede 2x6
+    const wide = { ...iWall, floorsSupported: 2, openings: [{ ...iWall.openings[0]!, offset: 6, roughWidth: 132 }] };
+    expect(() => panelizeWall(wide, iConfig)).toThrow(/parede W-window-irc, abertura win1: header fora da tabela/);
+  });
+
+  it('parede não portante sem header do projeto: padrão do config, origem default', () => {
+    const panel = panelizeWall(
+      { ...iWall, bearing: false },
+      { ...iConfig, defaultHeaderSection: '2x4', defaultHeaderPlies: 2 },
+    );
+    expect(panel.members.find((m) => m.role === 'header')).toMatchObject({ section: '2x4', headerSource: 'default' });
+    expect(panel.members.filter((m) => m.role === 'jackStud')).toHaveLength(2);
+  });
+
+  describe("janela + porta com NJ 2 (tabela FALSA: 20 psf, 30', 1 pavimento clear span → 2-2x6, NJ 2)", () => {
+    const FAKE = loadHeaderTables(fakeHeaderJson());
+    const fConfig: Config = { ...iConfig, building: { groundSnowLoad: 20, buildingWidth: 360 } };
+    const fWall = (doorOffset: number): Wall => ({
+      ...iWall,
+      floorsSupported: 1,
+      floorSpan: 'clear',
+      openings: [
+        { id: 'win1', type: 'window', offset: 24, roughWidth: 36, roughHeight: 48 },
+        { id: 'door1', type: 'door', offset: doorOffset, roughWidth: 36, roughHeight: 82.5 },
+      ],
+    });
+    const xsOf = (p: Panel, role: Member['role']) =>
+      p.members
+        .filter((m) => m.role === role)
+        .map((m) => m.x)
+        .sort((a, b) => a - b);
+
+    it('7.5" entre os RO (2 jacks + king + 2 jacks): zona fundida, king compartilhado em 63, sem folga', () => {
+      const panel = panelizeWall(fWall(67.5), fConfig, FAKE);
+      expect(xsOf(panel, 'kingStud')).toEqual([19.5, 63, 106.5]);
+      expect(xsOf(panel, 'jackStud')).toEqual([21, 22.5, 60, 61.5, 64.5, 66, 103.5, 105]);
+      expect(panel.members.filter((m) => m.role === 'header').map((h) => [h.section, h.x, h.length])).toEqual([
+        ['2x6', 21, 42],
+        ['2x6', 64.5, 42],
+      ]);
+      // zona [19.5, 108] remove as marcas 32–96; 16 (até 17.5) e 112 ficam
+      expect(xsOf(panel, 'stud')).toEqual([0, 16, 112, 128, 142.5]);
+      expect(panel.warnings).toEqual([]);
+      expectNoVerticalOverlap(panel.members);
+    });
+
+    it('9" entre os RO: zonas só se tocam e fundem; um king, 1.5" de folga antes dos jacks da porta', () => {
+      const panel = panelizeWall(fWall(69), fConfig, FAKE);
+      expect(xsOf(panel, 'kingStud')).toEqual([19.5, 63, 108]);
+      expect(xsOf(panel, 'jackStud')).toEqual([21, 22.5, 60, 61.5, 66, 67.5, 105, 106.5]);
+      expectNoVerticalOverlap(panel.members);
+    });
+
+    it('menos de 7.5" entre os RO: RangeError; os mesmos 6" cabem com 1 jack pedido na abertura (com aviso)', () => {
+      expect(() => panelizeWall(fWall(66), fConfig, FAKE)).toThrow(/mínimo 7\.5"/);
+      const oneJack = fWall(66);
+      oneJack.openings = oneJack.openings.map((o) => ({ ...o, jackStuds: 1 }));
+      const panel = panelizeWall(oneJack, fConfig, FAKE);
+      expect(panel.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
+      expectNoVerticalOverlap(panel.members);
+    });
   });
 });

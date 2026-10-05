@@ -11,6 +11,11 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   e o critério de sucesso de `01-escopo` não pode ser verificado. — hipótese: fixtures sintéticos — S7 em diante.
   Em 2026-09-30 chegou só um pacote ilustrativo (`docs/examples/Exemplos_Paineis_Prefabricados.pdf`), que não
   serve como fixture (contagens não fecham com o desenho). Pedido refeito; as perguntas P2–P12 foram respondidas.
+  **Resposta (2026-10-05):** a fábrica não tem painel real — nunca fabricou esse tipo de construção; vai começar
+  agora. Consequências: (a) não haverá `real-*.json` vindo da fábrica antes da primeira produção; (b) as respostas
+  P2–P18 são intenção e leitura do código, não prática consolidada — podem mudar quando a produção começar;
+  (c) o critério de sucesso de `01-escopo` precisa de outro caminho (decisão do humano): folhas geradas pelo
+  motor revisadas pela fábrica antes de produzir, e/ou painéis transcritos dos projetos de `06-referencias`.
 - [x] **P2 — Altura de header.** — **Resposta (2026-10-01):** altura padrão; topo dos RO na mesma altura sempre que
   possível, **82 1/2" do subfloor até a face inferior do header**. Nunca encostam automaticamente na top plate.
   Se o projeto estrutural ou arquitetônico indicar outra altura, segue o projeto. — Impacto: `headerHeight: 82.5`
@@ -46,6 +51,9 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   Continua aberto: Massachusetts 780 CMR 10ª edição tem emendas sobre R602.7? — Impacto: a S9 usa a coluna SPF;
   a tabela IRC é fallback quando o projeto não especifica o header, e o motor precisa aceitar header vindo do
   projeto (inclusive LVL/PSL, que hoje não existem em `Section`) — S9.
+  **Resposta (2026-10-05):** vale a 10ª edição do 780 CMR, baseada no **IRC 2021** com emendas de MA (em vigor
+  desde 11/10/2024; única edição desde 30/06/2025). A tabela carregada está na edição certa. Continua aberto, e
+  não é mais pergunta à fábrica: ler as emendas de MA ao capítulo 6 e conferir se alteram R602.7.
   Em 2026-10-05 a S9 carregou as tabelas do **IRC 2021** (a página do ICC marca essa edição como histórica, e já
   existe a de 2024). Perguntar à fábrica: qual edição do IRC o 780 CMR em vigor adota e se há emenda em R602.7.
   Se mudar, basta trocar o JSON e rodar `headers-data.test.ts`.
@@ -60,13 +68,19 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   da Fase 4.
 
 ## Novas (abertas em 2026-10-01, a partir das respostas)
-- [ ] **P13 — "Praticamente junto" ao jack.** Até quantas polegadas de distância entre a marca e o jack o cripple
-  é omitido? — hipótese: só quando encosta ou invade o jack (regra da S7) — S7.1/S8.
-- [ ] **P14 — Emenda de plate em painel > 16'.** O estoque vai até 16' e o painel até 20'. Como emendam bottom,
-  top e double top num painel de 20'? Emenda sempre sobre stud? Defasagem mínima entre top e double top
-  (IRC pede 24"; o Horace pede 48")? — hipótese: emenda sobre stud de layout, defasagem ≥ 48" — S12, S14.
+- [x] **P13 — "Praticamente junto" ao jack.** — **Resposta (2026-10-05):** marca de 16" a até **~2"** do jack não
+  ganha cripple, **desde que** a omissão não ultrapasse o espaçamento máximo entre apoios; se ultrapassar, o
+  cripple fica. — Impacto: substitui a regra da S7 (só omite quando encosta ou invade o jack) — S9.4. Hipótese de
+  medida até alguém dizer outra coisa: 2" de folga livre entre a face do cripple e a face do jack; "espaçamento
+  máximo" = vão livre entre apoios vizinhos ≤ `studSpacing` OC. Fecha também o que restava de P3.
+- [x] **P14 — Emenda de plate em painel > 16'.** — **Resposta (2026-10-05):** emenda da bottom e da top plate de
+  preferência **sobre stud**; emenda da double top defasada da top em **≥ 24"** (mínimo do IRC), 48" quando
+  possível. — Impacto: hipótese confirmada, com mínimo 24" e preferência 48" — S12, S14.
 - [ ] **P15 — Peso máximo do painel.** Capacidade do equipamento de içamento/transporte, em lb. — hipótese:
   sem limite de peso até a resposta; só comprimento (240") — S12.
+  **Resposta parcial (2026-10-05):** sem número até confirmarem a capacidade nominal do equipamento. Pedem o
+  **peso estimado de cada painel na folha** (shop drawing) e divisão quando peso ou comprimento se aproximar do
+  limite — o peso estimado entra na folha (S12/S13) mesmo sem limite; depende de P8.
 - [ ] **P16 — Aberturas muito próximas.** Com 1 king + 1 jack, duas aberturas vizinhas compartilham um king e
   precisam de 4.5" entre os RO (jack + king + jack). O que a fábrica faz quando o projeto traz menos que isso
   (ex.: 4", sobra 1" entre os jacks)? Header contínuo sobre as duas com poste de jacks? Calço? Pede para mover
@@ -80,6 +94,19 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   externa? (b) O que vai sobre abertura em parede não portante: o mesmo header da portante, 2x4 deitado
   (R602.7.4), só plate? Com jack? — hipótese: (a) menor altura de seção, depois menos plies, respeitando a
   espessura da parede; (b) `headerFor` devolve `{ nonBearing: true }` e quem chama decide — S9, S10.
+  **Resposta (2026-10-05):** (a) header dimensionado pela tabela, abertura por abertura (nunca um header fixo);
+  padrão de fabricação = **2 plies** pela tabela, completando a parede 2x6 com filler/isolamento; 3 plies, LVL
+  etc. só quando a tabela ou o engenheiro exigir. — Impacto: a escolha em `headerFor` passa a preferir 2 plies
+  (feito na S9.2); o filler do 2x6 não é peça do motor. (b) Parede não portante: **um 2x4
+  deitado** (R602.7.4 do IRC 2021): abertura até 8'-0" e no máximo 24" entre a peça e a top plate; nesses limites,
+  sem cripples acima. Fora dos limites, header dimensionado caso a caso. — Impacto: substitui a hipótese
+  `config.defaultHeader*` em parede não portante — S9.3. Detalhes em aberto: P18.
+
+## Novas (abertas em 2026-10-05)
+- [ ] **P18 — Header deitado em parede não portante: detalhes.** (a) Em parede 2x6 não portante a peça deitada é
+  2x4 ou da seção da parede? (b) Leva jack de cada lado, ou a peça é pregada entre os kings/studs? (c) Sem
+  cripples acima, onde pregam drywall/sheathing no vão de até 24"? — hipótese: (a) seção da parede; (b) 1 king +
+  1 jack como na portante, a peça apoiada nos jacks; (c) sem cripples, como respondido — S9.3.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

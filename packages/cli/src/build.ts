@@ -46,7 +46,10 @@ export function buildProject(project: Project): BuildResult {
     try {
       panels.push(panelizeWall(wall, project.config));
     } catch (e) {
-      problems.push(`parede ${wall.id}: ${(e as Error).message}`);
+      // Erros de header já vêm com "parede <id>, abertura <id>: …".
+      const message = (e as Error).message;
+      const prefix = `parede ${wall.id}`;
+      problems.push(message.startsWith(prefix) ? message : `${prefix}: ${message}`);
     }
   }
 

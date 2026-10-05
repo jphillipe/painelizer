@@ -32,7 +32,7 @@ const q = (span: number, extra: Partial<HeaderQuery> = {}): HeaderQuery => ({
 });
 
 describe('headerFor — escolha', () => {
-  it('menor altura de seção primeiro, mesmo com mais plies: 2-2x6 antes de 1-2x8', () => {
+  it('2 plies de menor seção: 2-2x6, não o 1-2x8 que também atende', () => {
     expect(headerFor(q(ft(4)), FAKE)).toEqual({
       section: '2x6',
       plies: 2,
@@ -42,7 +42,7 @@ describe('headerFor — escolha', () => {
     });
   });
 
-  it('mesma seção: menos plies primeiro; vão igual ao da tabela atende', () => {
+  it('sem 2 plies que atenda, passa a 3 plies; vão igual ao da tabela atende', () => {
     expect(headerFor(q(ft(8)), FAKE)).toMatchObject({ section: '2x10', plies: 2, jackStuds: 2, maxSpan: ft(8) });
     expect(headerFor(q(ft(8) + 0.01), FAKE)).toMatchObject({ section: '2x10', plies: 3, maxSpan: ft(10) });
   });
@@ -62,6 +62,32 @@ describe('headerFor — escolha', () => {
   it('célula "—" não é permitida: na coluna D o 4-2x12 não existe', () => {
     const r = headerFor(q(ft(8) + 1, { groundSnowLoad: 40, buildingWidth: ft(30) }), FAKE);
     expect(r).toMatchObject({ requiresEngineer: true });
+  });
+});
+
+describe('headerFor — padrão de 2 plies (P17, respondida em 2026-10-05)', () => {
+  type Json = ReturnType<typeof fakeHeaderJson>;
+  const tables = (mutate: (j: Json) => void) => {
+    const j = fakeHeaderJson();
+    mutate(j);
+    return loadHeaderTables(j);
+  };
+
+  it('2 plies de seção maior ganha de 3 plies de seção menor', () => {
+    const cell: [string, number] = ["9'-0", 1];
+    const withThreePly = tables((j) =>
+      j.tables[0]!.groups[0]!.headers.push({ plies: 3, section: '2x6', cells: [cell, cell, cell, cell] }),
+    );
+    expect(headerFor(q(ft(8)), withThreePly)).toMatchObject({ section: '2x10', plies: 2 });
+    // acima dos 8' do 2-2x10 não há 2 plies: aí entra o de 3 plies de menor seção
+    expect(headerFor(q(ft(8, 6)), withThreePly)).toMatchObject({ section: '2x6', plies: 3 });
+  });
+
+  it('header de 1 ply nunca é escolhido, mesmo sendo o único que atende', () => {
+    const cell: [string, number] = ["20'-0", 1];
+    const bigOnePly = tables((j) => (j.tables[0]!.groups[0]!.headers[0]!.cells = [cell, cell, cell, cell]));
+    expect(headerFor(q(ft(3)), bigOnePly)).toMatchObject({ section: '2x6', plies: 2 });
+    expect(headerFor(q(ft(15)), bigOnePly)).toMatchObject({ requiresEngineer: true });
   });
 });
 
