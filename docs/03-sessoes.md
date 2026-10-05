@@ -82,7 +82,7 @@ Uma sessão do Claude Code = um item. Ritual:
   Feito em 2026-10-02 com 4.5" entre os RO em vez de 4" (com 4" o king compartilhado não cabe — confirmado
   pelo humano); RO mais próximos que jack + king + jack lançam erro e ficam em P16.
 
-- [ ] **S9 — Tabela de headers IRC**
+- [x] **S9 — Tabela de headers IRC**
   Prompt: "Crie `src/data/irc-headers.json` (estrutura proposta antes de digitar) e `src/rules/headers.ts`:
   `headerFor({ span, exterior, bearing, buildingWidth, groundSnowLoad, floorsSupported })` →
   `{ section, plies, jackStuds } | { requiresEngineer: true }`. Nunca extrapolar. Testes com 3 linhas conhecidas."
@@ -90,6 +90,40 @@ Uma sessão do Claude Code = um item. Ritual:
   Duas passadas: (1) Claude cria o schema e testes de consistência interna (vão cresce com a seção, cai com carga
   de neve e com pavimentos suportados; jacks nunca diminuem com o vão); (2) humano digita; (3) Claude roda os
   testes para pegar erro de digitação. A função escolhe a menor seção cujo vão máximo ≥ span.
+  Passada 1 feita em 2026-10-02: `src/data/irc-headers.json` só com estrutura (colunas e linhas vazias; grupos
+  de carga pré-criados com os nomes do livro, a conferir), `headerFor`, validação de estrutura, testes de lógica
+  com tabela falsa e `test/rules/headers-data.test.ts` com as conferências de coerência e as 3 linhas conhecidas
+  em `todo`. Falta: humano digitar a tabela, preencher `source` e os 3 casos em `KNOWN` (passada 2); Claude roda
+  os testes e aponta erros (passada 3). Só então marcar `[x]`.
+  Mudança (2026-10-02, pedido do humano): o Claude transcreve das capturas de tela e o humano confere.
+  R602.7(2) transcrita e coerente, com conferência humana pendente; R602.7(1) (externa) ainda vazia.
+  Concluída em 2026-10-05: R602.7(2) conferida pelo humano; R602.7(1) extraída do texto da página do ICC e
+  conferida por hash contra a página. As duas passam em todas as conferências de coerência; 6 casos em `KNOWN`.
+  Pendente fora da sessão: emendas de MA sobre R602.7 (P10) e integração com `panelizeWall` (S9.2).
+
+- [ ] **S9.2 — Header da abertura no painel (projeto → tabela → erro)**
+  Prompt: "Integre `headerFor` em `panelizeWall`. Antes de escrever código, proponha os tipos e as mudanças de
+  fixture. (a) `Config.building?: { groundSnowLoad, buildingWidth }`: dados da casa, uma vez por projeto;
+  `Wall.buildingWidth?` sobrescreve (casa em L). (b) `Wall.floorsSupported?` (pavimentos acima da parede) e
+  `Wall.floorSpan?` ('center' | 'clear'; ausente = pior caso, como na S9). (c) `Opening.header?: { section, plies,
+  jackStuds? }`: header do structural drawings, que manda sobre a tabela (P10). (d) Ordem por abertura: header
+  do projeto → parede portante: `headerFor` pela tabela → parede não portante: `config.defaultHeaderSection`/
+  `defaultHeaderPlies` (hipótese P17). `requiresEngineer` ou dado faltando (parede portante sem `floorsSupported`
+  ou sem `config.building`, abertura sem `header`) lança `Error` com o id da parede e da abertura e o motivo —
+  sem header não há geometria (cripples, jacks), então não se fabrica com header chutado. (e) Jacks: se
+  `opening.jackStuds` estiver ausente, usar o NJ da tabela; se for menor que o NJ, aviso
+  `HEADER_JACKS_BELOW_TABLE`. O NJ muda a largura da zona e a fusão de zonas — testar janela + porta com NJ 2.
+  (f) `wallSection` vai para `headerFor` (4 plies não cabem em 2x6). (g) O header escolhido e a origem
+  (`project` | `R602.7(1)` | `R602.7(2)` | `default`) aparecem no `<title>` do SVG. (h) CLI: bloco `building`
+  no JSON (largura aceita pés-pol), campos novos na validação estrutural e no exemplo `casa-exemplo.json`."
+  Fixtures: os atuais usam o header fixo 2-2x10 do config em parede externa portante. Proposta: dar
+  `header: { section: '2x10', plies: 2 }` às aberturas (members inalterados) e criar
+  `wall-144-window-irc.json` com header vindo da tabela (`building` 50 psf / 28', 1 pavimento) — fixture novo e
+  mudança nos atuais exigem confirmação do humano.
+  Fora desta sessão: LVL/PSL em `opening.header` (exige seção com largura e altura reais, não só `Section`
+  nominal) e king studs pela R602.7.5 (exige velocidade de vento).
+  Depende das respostas do arquiteto em `docs/07-perguntas-arquiteto.md` (notação do header no estrutural, de
+  onde vêm neve e largura); se não chegarem, seguir com as hipóteses deste item.
 
 - [ ] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,

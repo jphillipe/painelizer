@@ -46,6 +46,9 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   Continua aberto: Massachusetts 780 CMR 10ª edição tem emendas sobre R602.7? — Impacto: a S9 usa a coluna SPF;
   a tabela IRC é fallback quando o projeto não especifica o header, e o motor precisa aceitar header vindo do
   projeto (inclusive LVL/PSL, que hoje não existem em `Section`) — S9.
+  Em 2026-10-05 a S9 carregou as tabelas do **IRC 2021** (a página do ICC marca essa edição como histórica, e já
+  existe a de 2024). Perguntar à fábrica: qual edição do IRC o 780 CMR em vigor adota e se há emenda em R602.7.
+  Se mudar, basta trocar o JSON e rodar `headers-data.test.ts`.
 - [x] **P11 — Fire blocking.** — **Resposta (2026-10-01):** paredes de 8' e 9' não levam fire blocking horizontal
   só pela altura; quando a cavidade contínua passa de **~10'**, colocam conforme o código, além dos locais que o
   projeto e o código exigirem. — Impacto: hipótese IRC confirmada; limite 120" — S10.
@@ -70,6 +73,13 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   a abertura? E com folga entre 4.5" e 6": um king com folga, ou king colado ao jack e dois kings quando cabem?
   Com 2 kings por lado, quantos kings ficam entre as aberturas? — hipótese: < 4.5" é erro; entre 4.5" e 6" um
   king colado ao jack da esquerda; kings compartilhados = maior número das duas aberturas — S8.
+
+## Novas (abertas em 2026-10-02)
+- [ ] **P17 — Escolha de header pela tabela e parede não portante.** (a) Quando vários headers da tabela IRC
+  atendem o vão, qual a fábrica usa? Ex.: 2-2x6 ou 1-2x8; 2-2x10 ou 3-2x8. Usam header de 1 ply em parede
+  externa? (b) O que vai sobre abertura em parede não portante: o mesmo header da portante, 2x4 deitado
+  (R602.7.4), só plate? Com jack? — hipótese: (a) menor altura de seção, depois menos plies, respeitando a
+  espessura da parede; (b) `headerFor` devolve `{ nonBearing: true }` e quem chama decide — S9, S10.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

@@ -63,6 +63,20 @@ As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em 
 é a tarefa da sessão S9, a partir da edição em vigor no estado (Massachusetts adota o IRC com emendas — ver P10).
 A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeira comprada.
 
+### Escolha do header pela tabela (S9, `rules/headers.ts`)
+`headerFor({ span, exterior, bearing, buildingWidth, groundSnowLoad?, floorsSupported, floorSpan?, wallSection? })`
+→ `{ section, plies, jackStuds, maxSpan, table }` | `{ requiresEngineer: true, reason }` | `{ nonBearing: true }`.
+- `span` = largura do RO; `buildingWidth` em polegadas, como toda medida do core; neve em psf.
+- Não portante: `{ nonBearing: true }`, sem consultar tabela (P17).
+- Coluna: menor neve ≥ a pedida e, entre essas, menor largura ≥ a pedida. Nunca interpola. Acima da última
+  coluna, pavimentos sem grupo ou vão acima de todos os headers → `requiresEngineer`.
+- Sem `floorSpan` ('center' | 'clear'): pior caso entre os grupos com aquele número de pavimentos (menor vão,
+  maior NJ).
+- Entre os headers que atendem: menor altura de seção, depois menos plies (P17). Com `wallSection`, descarta
+  header com plies·1.5 maior que a profundidade da parede (2x4: até 2 plies; 2x6: até 3).
+- JSON: vão digitado como no livro, com apóstrofo (`"3'-6"`); célula `[vão, NJ]` ou `null` ("—"). Estrutura
+  conferida por `validateHeaderTables`; coerência dos valores por `test/rules/headers-data.test.ts`.
+
 ## Exemplo resolvido — parede 144" com janela
 Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
 

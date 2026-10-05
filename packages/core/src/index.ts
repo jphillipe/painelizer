@@ -17,6 +17,21 @@ export {
   type OpeningFraming,
   type OpeningZone,
 } from './rules/openings';
+export {
+  headerFor,
+  ircHeaders,
+  loadHeaderTables,
+  validateHeaderTables,
+  type FloorSpan,
+  type HeaderCell,
+  type HeaderChoice,
+  type HeaderColumn,
+  type HeaderGroup,
+  type HeaderQuery,
+  type HeaderRow,
+  type HeaderSpec,
+  type HeaderTable,
+} from './rules/headers';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { panelizeWall } from './panelize/panelizeWall';
 export * from './output/cutlist';
