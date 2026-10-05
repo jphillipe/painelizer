@@ -122,8 +122,9 @@ Uma sessão do Claude Code = um item. Ritual:
   mudança nos atuais exigem confirmação do humano.
   Fora desta sessão: LVL/PSL em `opening.header` (exige seção com largura e altura reais, não só `Section`
   nominal) e king studs pela R602.7.5 (exige velocidade de vento).
-  Depende das respostas do arquiteto em `docs/07-perguntas-arquiteto.md` (notação do header no estrutural, de
-  onde vêm neve e largura); se não chegarem, seguir com as hipóteses deste item.
+  Neve, largura, pavimentos e header vêm dos desenhos de cada projeto (notas estruturais, plantas, header
+  schedule — ver `06-referencias-projetos.md`), não de pergunta à fábrica. Não depende de resposta pendente:
+  P10 (edição do IRC) e P17 (parede não portante) seguem com a hipótese.
 
 - [ ] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,
