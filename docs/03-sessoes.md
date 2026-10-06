@@ -152,9 +152,14 @@ Uma sessão do Claude Code = um item. Ritual:
   inalterados; casos novos inline em `openings.test.ts` (1", 2", 2.5", lado direito, 24" OC, RO estreito, acima
   do header).
 
-- [ ] **S10 — Validações**
+- [x] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,
   studs sobrepostos, altura de stud acima do limite. Cada aviso tem código e mensagem."
+  Feita em 2026-10-05 (decisões delegadas ao Claude): `validatePanel(panel, wall, config)` chamada no fim de
+  `panelizeWall`, avisos `OPENING_NEAR_CORNER`, `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT` e
+  `FIRE_BLOCKING_REQUIRED` (P11). "Header fora da tabela" ficou como `Error` (decisão da S9.2). Limites de stud
+  não portante (2x4 168", 2x6 240") são leitura do Claude da R602.3(5) — conferir. Fixtures e exemplo do CLI
+  sem avisos novos; testes em `test/panelize/validate.test.ts`.
 
 ## Fase 3 — Casa inteira
 

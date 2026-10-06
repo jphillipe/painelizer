@@ -15,6 +15,7 @@
  * - Kings vêm do plano de zonas (king compartilhado entre aberturas vizinhas); o resto de cada
  *   abertura vem de `framingForOpening` sem kings. Cortes na obra e avisos das aberturas vão
  *   para o painel.
+ * - Avisos: os da parede, depois os das aberturas, depois os de `validate.ts` (S10).
  */
 
 import type { Config, Member, Panel, Wall, Warning } from '../types';
@@ -25,6 +26,7 @@ import { mergeOpeningZones } from '../rules/zones';
 import { resolveOpeningHeader } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
 import { matchPrecut } from '../rules/precuts';
+import { validatePanel } from './validate';
 
 /** Folga numérica para comparações de geometria. */
 const EPS = 1e-9;
@@ -73,7 +75,7 @@ export function panelizeWall(wall: Wall, config: Config, tables?: readonly Heade
   );
   for (const f of framings) warnings.push(...f.warnings);
 
-  return {
+  const panel: Panel = {
     id: wall.id,
     wallId: wall.id,
     length: wall.length,
@@ -83,6 +85,10 @@ export function panelizeWall(wall: Wall, config: Config, tables?: readonly Heade
     fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
   };
+
+  // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.
+  warnings.push(...validatePanel(panel, { ...wall, openings }, config));
+  return panel;
 }
 
 /** Sobreposição com área (encostar não conta). */

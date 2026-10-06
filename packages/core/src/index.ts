@@ -39,6 +39,7 @@ export {
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { panelizeWall } from './panelize/panelizeWall';
+export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';
 export * from './output/bom';
 export * from './output/svg';

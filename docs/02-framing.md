@@ -52,13 +52,13 @@
 | Regra | Ref. | Comportamento |
 |---|---|---|
 | Espaçamento de studs | R602.3, Tabela R602.3(5) | 16" OC padrão; 24" configurável |
-| Altura máx. de stud | Tabela R602.3.1 | 2x4 portante 16" OC: 10'. Acima → aviso |
+| Altura máx. de stud | R602.3.1, Tabela R602.3(5) | Portante: 10'; não portante: 2x4 14', 2x6 20' (conferir). Acima → aviso `STUD_HEIGHT_ABOVE_LIMIT` |
 | Top plate dupla, emendas | R602.3.2 | Emendas defasadas ≥ 24"; lap em cantos e T |
 | Headers externos portantes | Tabela R602.7(1) | Entrada: largura da edificação, neve, pavimentos → seção, plies, nº de jacks |
 | Headers internos portantes | Tabela R602.7(2) | Idem sem neve |
 | Headers não portantes | R602.7.4 | Single flat até 8' |
 | King studs | Nota R602.7(1) | Metade dos studs interrompidos vira king (arredondar p/ cima) |
-| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11) |
+| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11) → aviso `FIRE_BLOCKING_REQUIRED`; o painel ainda não desenha a peça |
 | Cantos e T | Prática da equipe | Default California corner + ladder (P5); 3-stud e stud de encosto configuráveis |
 
 As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em `src/data/irc-headers.json`
