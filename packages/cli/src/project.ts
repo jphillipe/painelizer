@@ -15,6 +15,7 @@
  * dados da casa para a tabela IRC; cada parede portante declara `floorsSupported` (pavimentos acima) e,
  * se quiser, `floorSpan` ('center' | 'clear') e `buildingWidth` próprio (casa em L). O header do
  * structural drawings entra na abertura: `header: { section, plies, jackStuds? }`, e manda sobre a tabela.
+ * Parede não portante sem `header` leva a peça deitada da R602.7.4 (S9.3); `defaultHeader*` não existe mais.
  *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
@@ -100,11 +101,13 @@ function configFrom(raw: unknown, path: string): Config {
   if (c['headerHeight'] !== undefined) {
     config.headerHeight = positive(c['headerHeight'], `${path}.headerHeight`);
   }
-  if (c['defaultHeaderSection'] !== undefined) {
-    config.defaultHeaderSection = oneOf(c['defaultHeaderSection'], SECTIONS, `${path}.defaultHeaderSection`);
-  }
-  if (c['defaultHeaderPlies'] !== undefined) {
-    config.defaultHeaderPlies = count(c['defaultHeaderPlies'], `${path}.defaultHeaderPlies`);
+  for (const removed of ['defaultHeaderSection', 'defaultHeaderPlies']) {
+    if (c[removed] !== undefined) {
+      throw new ProjectError(
+        `${path}.${removed}: campo removido na S9.3 — parede não portante leva peça deitada (R602.7.4); ` +
+          'header específico vai em openings[].header',
+      );
+    }
   }
   if (c['building'] !== undefined) {
     const b = obj(c['building'], `${path}.building`);

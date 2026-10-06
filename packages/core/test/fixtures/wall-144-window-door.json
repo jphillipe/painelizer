@@ -1,13 +1,11 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 24 e porta RO 38x82.5 em offset 64.5 — 4.5\" entre os RO (jack + king + jack), header a 82.5\" nas duas. Alvo da sessão S8 (fusão de zonas). O plano pedia 4\", mas aí o king compartilhado não cabe (sobra 1\" entre os jacks); 4.5\" confirmado pelo humano em 2026-10-02, caso < 4.5\" fica em P16. Zonas [21, 63] e [61.5, 105.5] se sobrepõem → zona fundida [21, 105.5], kings em 21, 61.5 (compartilhado, colado ao jack da janela) e 104. Removidas as marcas 32–96. Janela: jacks 22.5 e 60, header 39 em 22.5, sill em 33, cripples 32 e 48 (31.5 abaixo, 2.375 acima). Porta: jacks 63 e 102.5, header 41 em 63, cripples acima em 80 e 96; bottom plate inteira, corte na obra de 64.5 a 102.5. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento; config.defaultHeader* só vale em parede não portante. 24 peças.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 24 e porta RO 38x82.5 em offset 64.5 — 4.5\" entre os RO (jack + king + jack), header a 82.5\" nas duas. Alvo da sessão S8 (fusão de zonas). O plano pedia 4\", mas aí o king compartilhado não cabe (sobra 1\" entre os jacks); 4.5\" confirmado pelo humano em 2026-10-02, caso < 4.5\" fica em P16. Zonas [21, 63] e [61.5, 105.5] se sobrepõem → zona fundida [21, 105.5], kings em 21, 61.5 (compartilhado, colado ao jack da janela) e 104. Removidas as marcas 32–96. Janela: jacks 22.5 e 60, header 39 em 22.5, sill em 33, cripples 32 e 48 (31.5 abaixo, 2.375 acima). Porta: jacks 63 e 102.5, header 41 em 63, cripples acima em 80 e 96; bottom plate inteira, corte na obra de 64.5 a 102.5. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. 24 peças.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
-    "headerHeight": 82.5,
-    "defaultHeaderSection": "2x10",
-    "defaultHeaderPlies": 2
+    "headerHeight": 82.5
   },
   "wall": {
     "id": "W-window-door",

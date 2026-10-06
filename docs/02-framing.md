@@ -82,7 +82,10 @@ A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeir
 - Ordem: `opening.header` do projeto (`{ section, plies, jackStuds? }`, origem `project`) → parede portante:
   `headerFor` com `config.building` (neve, largura), `wall.buildingWidth` (sobrescreve a largura),
   `wall.floorsSupported`, `wall.floorSpan` e a seção da parede (origem = id da tabela) → parede não portante:
-  `config.defaultHeaderSection`/`defaultHeaderPlies` (origem `default`; vira peça deitada na S9.3).
+  peça deitada da seção da parede, 1 ply, `Member.flat`, apoiada em 1 jack por lado (origem `R602.7.4`;
+  seção e jacks são hipóteses P18). Vale para RO ≤ 96" e ≤ 24" entre o topo da peça e a top plate; fora
+  disso, erro pedindo `opening.header`. Sem cripples acima da peça deitada.
+  Fixture: `test/fixtures/wall-120-door-nonbearing.json` (porta interna 2x4, 14 peças).
 - Fora da tabela ou dado faltando: `Error` com parede, abertura e motivo. Nunca header chutado.
 - Jacks por lado: `opening.jackStuds` → `opening.header.jackStuds` → NJ da tabela → 1. `opening.jackStuds`
   menor que o NJ: aviso `HEADER_JACKS_BELOW_TABLE`. O número de jacks entra na zona e na fusão de zonas

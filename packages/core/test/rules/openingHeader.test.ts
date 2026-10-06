@@ -4,6 +4,7 @@ import { loadHeaderTables } from '../../src/rules/headers';
 import { resolveOpeningHeader } from '../../src/rules/openingHeader';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 import irc from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
 
 // Tabela FALSA (ver helper): colunas A = 20 psf/10', B = 20 psf/30', C = 40 psf/10', D = 40 psf/30'.
 const FAKE = loadHeaderTables(fakeHeaderJson());
@@ -47,6 +48,7 @@ describe('resolveOpeningHeader — header do projeto', () => {
       plies: 2,
       jackStuds: 1,
       source: 'project',
+      flat: false,
       warnings: [],
     });
   });
@@ -86,8 +88,9 @@ describe('resolveOpeningHeader — header do projeto', () => {
 
 describe('resolveOpeningHeader — parede portante, pela tabela', () => {
   it('externa: neve e largura de config.building, vão = largura do RO; origem = id da tabela', () => {
-    expect(resolve(op(36))).toEqual({ section: '2x6', plies: 2, jackStuds: 1, source: 'FAKE-EXT', warnings: [] });
-    expect(resolve(op(72))).toEqual({ section: '2x10', plies: 2, jackStuds: 2, source: 'FAKE-EXT', warnings: [] });
+    const ext = { source: 'FAKE-EXT', flat: false, warnings: [] };
+    expect(resolve(op(36))).toEqual({ section: '2x6', plies: 2, jackStuds: 1, ...ext });
+    expect(resolve(op(72))).toEqual({ section: '2x10', plies: 2, jackStuds: 2, ...ext });
   });
 
   it('wall.buildingWidth sobrescreve a largura do projeto (casa em L)', () => {
@@ -117,6 +120,7 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
       plies: 2,
       jackStuds: 1,
       source: 'FAKE-INT',
+      flat: false,
       warnings: [],
     });
   });
@@ -151,33 +155,37 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
     expect(() => resolve(op(36), { ...wall, buildingWidth: -1 })).toThrow(/parede W1, abertura o1: buildingWidth/);
   });
 
-  it('padrão do config não é usado em parede portante', () => {
-    const withDefault: Config = { ...config, defaultHeaderSection: '2x12', defaultHeaderPlies: 2 };
-    expect(resolve(op(36), wall, withDefault)).toMatchObject({ section: '2x6', source: 'FAKE-EXT' });
+  it('header da tabela não é deitado', () => {
+    expect(resolve(op(36))).toMatchObject({ flat: false });
   });
 });
 
-describe('resolveOpeningHeader — parede não portante', () => {
+describe('resolveOpeningHeader — parede não portante (R602.7.4)', () => {
   const nonBearing: Wall = { ...wall, bearing: false };
-  const withDefault: Config = { ...config, defaultHeaderSection: '2x4', defaultHeaderPlies: 2 };
 
-  it('usa config.defaultHeader* (hipótese P17), origem default, sem consultar tabela nem dados da casa', () => {
-    const { building: _b, ...noBuilding } = withDefault;
+  it('peça deitada da seção da parede, 1 ply, 1 jack; sem tabela nem dados da casa', () => {
+    const { building: _b, ...noBuilding } = config;
     expect(resolveOpeningHeader(op(36), nonBearing, noBuilding, [])).toEqual({
-      section: '2x4',
-      plies: 2,
+      section: '2x6',
+      plies: 1,
       jackStuds: 1,
-      source: 'default',
+      source: 'R602.7.4',
+      flat: true,
       warnings: [],
     });
-    expect(resolve(op(36, { jackStuds: 2 }), nonBearing, withDefault)).toMatchObject({ jackStuds: 2 });
+    expect(resolve(op(36), { ...nonBearing, section: '2x4' })).toMatchObject({ section: '2x4', flat: true });
+    expect(resolve(op(36, { jackStuds: 2 }), nonBearing)).toMatchObject({ jackStuds: 2 });
   });
 
-  it('sem padrão no config → Error', () => {
-    expect(() => resolve(op(36), nonBearing)).toThrow(
-      /parede W1, abertura o1: parede não portante .*defaultHeaderSection/,
+  it('vale até RO de 96"; acima, Error pedindo o header da abertura', () => {
+    expect(resolve(op(96), nonBearing)).toMatchObject({ flat: true });
+    expect(() => resolve(op(96.5), nonBearing)).toThrow(
+      /parede W1, abertura o1: parede não portante com RO de 96\.5".*até 96".*header da abertura/,
     );
-    expect(() => resolve(op(36), nonBearing, { ...config, defaultHeaderSection: '2x4' })).toThrow(Error);
+    expect(resolve(op(120, { header: { section: '2x10', plies: 2 } }), nonBearing)).toMatchObject({
+      source: 'project',
+      flat: false,
+    });
   });
 });
 
@@ -186,6 +194,15 @@ describe('resolveOpeningHeader — tabela IRC real', () => {
     const w = irc.wall as Wall;
     expect(resolveOpeningHeader(w.openings[0]!, w, irc.config as Config)).toEqual({
       ...irc.expected.header,
+      flat: false,
+      warnings: [],
+    });
+  });
+
+  it('fixture wall-120-door-nonbearing: 2x4 deitado pela R602.7.4', () => {
+    const w = nonBearingDoor.wall as Wall;
+    expect(resolveOpeningHeader(w.openings[0]!, w, nonBearingDoor.config as Config)).toEqual({
+      ...nonBearingDoor.expected.header,
       warnings: [],
     });
   });

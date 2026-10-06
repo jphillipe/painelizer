@@ -37,7 +37,7 @@ export type FloorSpan = 'center' | 'clear';
 
 /**
  * De onde veio o header de uma abertura: `'project'` (structural drawings, `Opening.header`),
- * `'default'` (`config.defaultHeader*`, parede não portante) ou o id da tabela (`'R602.7(1)'`, `'R602.7(2)'`).
+ * o id da tabela (`'R602.7(1)'`, `'R602.7(2)'`) ou `'R602.7.4'` (peça deitada em parede não portante).
  */
 export type HeaderSource = string;
 
@@ -81,7 +81,7 @@ export interface Opening {
    * Sobrescreve `config.headerHeight` — o projeto manda (P2).
    */
   headerHeight?: number;
-  /** Header do projeto. Ausente = tabela IRC (parede portante) ou padrão do config (não portante). */
+  /** Header do projeto. Ausente = tabela IRC (parede portante) ou peça deitada R602.7.4 (não portante). */
   header?: OpeningHeader;
 }
 
@@ -128,6 +128,8 @@ export interface Member {
   plies?: number;
   /** Só no header: de onde veio a seção. */
   headerSource?: HeaderSource;
+  /** Só no header: peça deitada (1.5" de altura na elevação, como o sill), não em pé. Ausente = em pé. */
+  flat?: boolean;
 }
 
 /** Aviso de validação. Nunca interrompe a geração. */
@@ -177,9 +179,6 @@ export interface Config {
    * `Opening.headerHeight` sobrescreve. Ausente nos dois = header encostado sob a top plate.
    */
   headerHeight?: number;
-  /** Header de abertura em parede NÃO portante sem `Opening.header` (hipótese P17; muda na S9.3). */
-  defaultHeaderSection?: Section;
-  defaultHeaderPlies?: number;
   /** Dados da casa, uma vez por projeto. Obrigatório para escolher header pela tabela. */
   building?: Building;
 }

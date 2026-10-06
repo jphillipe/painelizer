@@ -134,11 +134,14 @@ Uma sessão do Claude Code = um item. Ritual:
   testada inline (o fixture de 4.5" não comporta: mínimo 7.5"). SVG novo `wall-144-window-irc.svg` ainda sem
   conferência visual do humano.
 
-- [ ] **S9.3 — Header deitado em parede não portante (R602.7.4)**
+- [x] **S9.3 — Header deitado em parede não portante (R602.7.4)**
   Parede não portante sem `opening.header`: uma peça deitada sobre a abertura (P17b), válida para RO ≤ 96" e
   ≤ 24" entre a peça e a top plate; nesses limites, sem cripples acima. Fora dos limites: erro pedindo o header
   do projeto. Remove `config.defaultHeaderSection`/`defaultHeaderPlies`. Usa as hipóteses de P18 (seção, jack).
   Exige orientação "deitado" para o header no desenho (`memberBox`) e fixture novo (confirmação do humano).
+  Feita em 2026-10-05 (abordagem e fixture confirmados pelo humano): `Member.flat` no header, origem `R602.7.4`,
+  fixture `wall-120-door-nonbearing.json` (porta interna 2x4, 14 peças), porta na W04 do exemplo do CLI.
+  SVG `wall-120-door-nonbearing.svg` sem conferência visual do humano.
 
 - [ ] **S9.4 — Cripple a até 2" do jack (P13)**
   Marca de layout com folga ≤ 2" até o jack não ganha cripple, salvo se a omissão deixar vão maior que o

@@ -8,6 +8,7 @@ import low from '../fixtures/wall-144-window-82.5.json';
 import door from '../fixtures/wall-120-door.json';
 import windowDoor from '../fixtures/wall-144-window-door.json';
 import irc from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 
@@ -273,13 +274,29 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
     expect(() => panelizeWall(wide, iConfig)).toThrow(/parede W-window-irc, abertura win1: header fora da tabela/);
   });
 
-  it('parede não portante sem header do projeto: padrão do config, origem default', () => {
-    const panel = panelizeWall(
-      { ...iWall, bearing: false },
-      { ...iConfig, defaultHeaderSection: '2x4', defaultHeaderPlies: 2 },
-    );
-    expect(panel.members.find((m) => m.role === 'header')).toMatchObject({ section: '2x4', headerSource: 'default' });
+  it('parede não portante sem header do projeto: peça deitada R602.7.4, 1 jack, sem cripples acima (20 peças)', () => {
+    const panel = panelizeWall({ ...iWall, bearing: false }, iConfig);
+    expect(panel.members.find((m) => m.role === 'header')).toMatchObject({
+      section: '2x6',
+      plies: 1,
+      flat: true,
+      headerSource: 'R602.7.4',
+      x: 46.5,
+      length: 39,
+    });
     expect(panel.members.filter((m) => m.role === 'jackStud')).toHaveLength(2);
+    expect(panel.members.filter((m) => m.role === 'cripple').every((c) => c.y === 1.5)).toBe(true);
+    expect(panel.members).toHaveLength(18);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('fixture wall-120-door-nonbearing passa exatamente (14 peças)', () => {
+    const panel = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
+    expectSameMembers(panel.members, nonBearingDoor.expected.members as Member[]);
+    expect(panel.members).toHaveLength(14);
+    expect(panel.fieldCuts).toEqual(nonBearingDoor.expected.fieldCuts);
+    expect(panel.warnings).toEqual(nonBearingDoor.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
   });
 
   describe("janela + porta com NJ 2 (tabela FALSA: 20 psf, 30', 1 pavimento clear span → 2-2x6, NJ 2)", () => {

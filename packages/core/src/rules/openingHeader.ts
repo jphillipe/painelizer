@@ -6,7 +6,10 @@
  * 2. Parede portante: `headerFor` pela tabela IRC, com os dados da casa (`config.building`,
  *    `wall.buildingWidth` sobrescreve a largura), `wall.floorsSupported`, `wall.floorSpan` e a seção da
  *    parede. Origem = id da tabela.
- * 3. Parede não portante: `config.defaultHeaderSection` / `defaultHeaderPlies` (hipótese P17). Origem `default`.
+ * 3. Parede não portante: uma peça deitada da seção da parede, 1 ply (R602.7.4 do IRC 2021; resposta P17b
+ *    e hipóteses P18), válida para RO até 96". Origem `R602.7.4`. RO maior: `Error` pedindo o header do
+ *    projeto (a fábrica dimensiona caso a caso). O limite de 24" até a top plate é conferido em
+ *    `framingForOpening`, que conhece a altura do header.
  *
  * Jacks de cada lado: `opening.jackStuds` → `opening.header.jackStuds` → NJ da tabela → 1.
  * `opening.jackStuds` menor que o NJ da tabela gera aviso `HEADER_JACKS_BELOW_TABLE` (o painel sai com o
@@ -29,12 +32,20 @@ export interface ResolvedHeader {
   /** Jacks de cada lado que o painel vai levar. */
   jackStuds: number;
   source: HeaderSource;
+  /** Peça deitada (parede não portante): 1.5" de altura, sem cripples acima. */
+  flat: boolean;
   warnings: Warning[];
 }
 
+/** R602.7.4: a peça deitada vale para aberturas de até 8'-0". */
+export const FLAT_HEADER_MAX_SPAN = 96;
+
+/** R602.7.4: e até 24" entre a peça e a superfície de pregação paralela acima (top plate). */
+export const FLAT_HEADER_MAX_GAP = 24;
+
 /**
  * @param tables tabela injetada (testes); ausente = IRC de `src/data/irc-headers.json`
- * @throws Error      header fora da tabela, dado da casa ou da parede faltando, padrão do config ausente,
+ * @throws Error      header fora da tabela, dado da casa ou da parede faltando, RO não portante acima de 96",
  *                    header do projeto mais espesso que a parede
  * @throws RangeError número inválido (plies, jacks, largura, neve, pavimentos)
  */
@@ -66,20 +77,26 @@ export function resolveOpeningHeader(
       plies: project.plies,
       jackStuds: explicitJacks ?? project.jackStuds ?? 1,
       source: 'project',
+      flat: false,
       warnings: [],
     };
   }
 
   if (!wall.bearing) {
-    const section = config.defaultHeaderSection;
-    const plies = config.defaultHeaderPlies;
-    if (section === undefined || plies === undefined) {
+    if (opening.roughWidth > FLAT_HEADER_MAX_SPAN + EPS) {
       throw new Error(
-        `${where}: parede não portante sem header no projeto exige config.defaultHeaderSection e ` +
-          'config.defaultHeaderPlies',
+        `${where}: parede não portante com RO de ${opening.roughWidth}" — a peça deitada (R602.7.4) vale até ` +
+          `${FLAT_HEADER_MAX_SPAN}"; informe o header da abertura`,
       );
     }
-    return { section, plies, jackStuds: explicitJacks ?? 1, source: 'default', warnings: [] };
+    return {
+      section: wall.section,
+      plies: 1,
+      jackStuds: explicitJacks ?? 1,
+      source: 'R602.7.4',
+      flat: true,
+      warnings: [],
+    };
   }
 
   const missing = (what: string) =>
@@ -129,6 +146,7 @@ export function resolveOpeningHeader(
     plies: choice.plies,
     jackStuds: explicitJacks ?? choice.jackStuds,
     source: choice.table,
+    flat: false,
     warnings,
   };
 }

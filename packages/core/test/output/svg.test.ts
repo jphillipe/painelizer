@@ -7,8 +7,10 @@ import window from '../fixtures/wall-144-window.json';
 import door from '../fixtures/wall-120-door.json';
 import windowDoor from '../fixtures/wall-144-window-door.json';
 import irc from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
 
 const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
+const nonBearingDoorPanel = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
 
 const windowPanel = panelizeWall(window.wall as Wall, window.config as Config);
 const lowHeaderPanel = panelizeWall(window.wall as Wall, {
@@ -54,6 +56,11 @@ describe('memberBox', () => {
     const box = memberBox(header);
     expect(box).toEqual({ x: 46.5, y: 84.875, width: 39, height: 9.25 });
     expect(box.y + box.height).toBe(94.125);
+  });
+
+  it('header deitado (parede não portante): comprimento × 1.5, como o sill', () => {
+    const header = nonBearingDoorPanel.members.find((m) => m.role === 'header')!;
+    expect(memberBox(header)).toEqual({ x: 38.5, y: 82.5, width: 41, height: 1.5 });
   });
 });
 
@@ -218,6 +225,17 @@ describe('panelSvg — corte na obra', () => {
   it('snapshot da porta em test/__snapshots__/wall-120-door.svg', async () => {
     expect(rects(doorSvg)).toHaveLength(16);
     await expect(doorSvg).toMatchFileSnapshot('../__snapshots__/wall-120-door.svg');
+  });
+
+  it('porta não portante: peça deitada com 6 px de altura, sem rótulo interno, origem R602.7.4 no <title>', async () => {
+    const out = panelSvg(nonBearingDoorPanel);
+    const header = rects(out).find((r) => r.includes('class="member header"'))!;
+    expect(attr(header, 'height')).toBe('6');
+    expect(attr(header, 'y')).toBe(px(Y0 + (97.125 - 84) * 4));
+    expect(out).toContain('<title>header 2x4 × 41&quot; [R602.7.4] — x=38 1/2&quot; y=82 1/2&quot;</title>');
+    expect(out).not.toContain('plies');
+    expect(rects(out)).toHaveLength(14);
+    await expect(out).toMatchFileSnapshot('../__snapshots__/wall-120-door-nonbearing.svg');
   });
 
   it('snapshot da janela + porta em test/__snapshots__/wall-144-window-door.svg', async () => {

@@ -127,7 +127,7 @@ describe('run (I/O em memória)', () => {
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
-    expect(m.out[0]).toBe(`7 painel(is), 120 peças → ${outDir}`);
+    expect(m.out[0]).toBe(`7 painel(is), 123 peças → ${outDir}`);
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
@@ -208,7 +208,7 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
-    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 120 peças → ${outDir}`);
+    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 123 peças → ${outDir}`);
     expect(existsSync(join(outDir, 'panels', 'W01.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });

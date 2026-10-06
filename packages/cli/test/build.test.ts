@@ -83,6 +83,25 @@ describe('buildProject', () => {
     expect(svg).toContain('<title>header 2x10 × 41&quot; (2 plies) [project] — ');
   });
 
+  it('W04: porta em parede interna não portante leva 2x4 deitado (R602.7.4), sem cripples acima', () => {
+    const w04 = result.panels.find((p) => p.id === 'W04')!;
+    expect(w04.members.find((m) => m.role === 'header')).toMatchObject({
+      section: '2x4',
+      plies: 1,
+      flat: true,
+      headerSource: 'R602.7.4',
+      length: 35,
+      x: 38.5,
+      y: 82.5,
+    });
+    expect(w04.members.filter((m) => m.role === 'cripple')).toEqual([]);
+    expect(w04.fieldCuts).toEqual([{ role: 'bottomPlate', openingId: 'P2', x: 40, length: 32 }]);
+    const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
+    expect(csv).toContain('W04,header,2x4,35,"35""",1');
+    const svg = result.files.find((f) => f.path === 'panels/W04.svg')!.content;
+    expect(svg).toContain('<title>header 2x4 × 35&quot; [R602.7.4] — ');
+  });
+
   it('header sem como escolher vira problema com parede, abertura e motivo, sem repetir o id da parede', () => {
     const p = example();
     delete p.config.building;

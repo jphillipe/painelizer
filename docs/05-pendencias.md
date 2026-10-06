@@ -106,7 +106,8 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
 - [ ] **P18 — Header deitado em parede não portante: detalhes.** (a) Em parede 2x6 não portante a peça deitada é
   2x4 ou da seção da parede? (b) Leva jack de cada lado, ou a peça é pregada entre os kings/studs? (c) Sem
   cripples acima, onde pregam drywall/sheathing no vão de até 24"? — hipótese: (a) seção da parede; (b) 1 king +
-  1 jack como na portante, a peça apoiada nos jacks; (c) sem cripples, como respondido — S9.3.
+  1 jack como na portante, a peça apoiada nos jacks; (c) sem cripples, como respondido — S9.3 (feita com essas
+  hipóteses em 2026-10-05; mudar é trocar `resolveOpeningHeader` e o fixture `wall-120-door-nonbearing`).
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

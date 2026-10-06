@@ -5,6 +5,7 @@ import { expectSameMembers } from '../helpers/members';
 import window from '../fixtures/wall-144-window.json';
 import low from '../fixtures/wall-144-window-82.5.json';
 import doorFx from '../fixtures/wall-120-door.json';
+import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
 
 const wall = window.wall as Wall;
 const config = window.config as Config;
@@ -164,7 +165,7 @@ describe('framingForOpening — janela', () => {
     const { header: _h, ...noHeader } = win;
     const warning = { code: 'HEADER_JACKS_BELOW_TABLE', message: 'x' };
     const { members, warnings } = framingForOpening(noHeader, wall, config, {
-      header: { section: '2x6', plies: 2, jackStuds: 2, source: 'R602.7(1)', warnings: [warning] },
+      header: { section: '2x6', plies: 2, jackStuds: 2, source: 'R602.7(1)', flat: false, warnings: [warning] },
     });
     expect(xs(byRole(members, 'kingStud'))).toEqual([43.5, 87]);
     expect(xs(byRole(members, 'jackStud'))).toEqual([45, 46.5, 84, 85.5]);
@@ -178,10 +179,74 @@ describe('framingForOpening — janela', () => {
     expect(warnings).toEqual([warning]);
   });
 
-  it('parede não portante sem header do projeto: padrão do config, origem default', () => {
+  it('options.header com warnings vazios e flat false: header em pé como sempre', () => {
     const { header: _h, ...noHeader } = win;
-    const members = frame(noHeader, { ...wall, bearing: false }, config);
-    expect(byRole(members, 'header')[0]).toMatchObject({ section: '2x10', plies: 2, headerSource: 'default' });
+    const members = frame(noHeader, wall, config, {
+      header: { section: '2x10', plies: 2, jackStuds: 1, source: 'project', flat: false, warnings: [] },
+    });
+    expectSameMembers(members, expectedOpening);
+  });
+});
+
+describe('framingForOpening — parede não portante (R602.7.4)', () => {
+  const nbWall: Wall = { ...wall, bearing: false };
+  const { header: _h, ...noHeader } = win;
+  const lowConfig = low.config as Config; // headerHeight 82.5
+
+  it('janela: peça deitada da seção da parede (1.5" de altura) sobre os jacks, sill e cripples abaixo como sempre', () => {
+    const members = frame(noHeader, nbWall, lowConfig);
+    expect(byRole(members, 'header')[0]).toEqual({
+      role: 'header',
+      section: '2x6',
+      length: 39,
+      x: 46.5,
+      y: 82.5,
+      orientation: 'horizontal',
+      plies: 1,
+      headerSource: 'R602.7.4',
+      flat: true,
+    });
+    expect(byRole(members, 'jackStud').map((j) => j.length)).toEqual([81, 81]);
+    expect(byRole(members, 'sill')[0]).toMatchObject({ y: 33 });
+    // 10.125" entre o topo da peça (84) e a top plate (94.125): dentro dos 24", e mesmo assim sem cripples acima
+    expect(byRole(members, 'cripple').map((c) => [c.x, c.y, c.length])).toEqual([
+      [64, 1.5, 31.5],
+      [80, 1.5, 31.5],
+    ]);
+  });
+
+  it('sem headerHeight: peça encostada sob a top plate (base em 92.625)', () => {
+    const members = frame(noHeader, nbWall, config);
+    expect(byRole(members, 'header')[0]).toMatchObject({ y: 92.625, flat: true });
+    expect(byRole(members, 'jackStud')[0]?.length).toBe(91.125);
+  });
+
+  it('topo da peça a exatamente 24" da top plate passa; a mais, Error pedindo o header do projeto', () => {
+    // top plate em 94.125; topo = base + 1.5 → base 68.625 dá 24"
+    expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.625 }, nbWall, config)).not.toThrow();
+    expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.5 }, nbWall, config)).toThrow(
+      /parede W-window, abertura win1: peça deitada \(R602\.7\.4\) com topo em 70".*24\.125" da top plate.*header da abertura/,
+    );
+    // com header do projeto a mesma abertura passa, em pé e com cripples acima
+    const members = frame({ ...win, roughHeight: 40, headerHeight: 68.5 }, nbWall, config);
+    expect(byRole(members, 'header')[0]).toMatchObject({ y: 68.5, section: '2x10' });
+    expect(byRole(members, 'cripple').some((c) => c.y > 1.5)).toBe(true);
+  });
+
+  it('RO acima de 96" em parede não portante: Error pedindo o header do projeto', () => {
+    const big = { ...noHeader, offset: 20, roughWidth: 100 };
+    expect(() => frame(big, { ...nbWall, length: 192 }, lowConfig)).toThrow(/até 96"/);
+  });
+
+  it('porta: fixture wall-120-door-nonbearing (14 peças, sem cripples acima, corte na obra)', () => {
+    const w = nonBearingDoor.wall as Wall;
+    const { members, fieldCuts, warnings } = framingForOpening(w.openings[0]!, w, nonBearingDoor.config as Config);
+    const expected = (nonBearingDoor.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
+    expectSameMembers(members, expected);
+    expect(byRole(members, 'cripple')).toEqual([]);
+    expect(byRole(members, 'header')[0]).toMatchObject({ flat: true, plies: 1 });
+    expect(fieldCuts).toEqual(nonBearingDoor.expected.fieldCuts);
+    expect(warnings).toEqual([]);
   });
 
   it.each([

@@ -16,6 +16,8 @@
  *   inteira e o trecho do RO vira um `FieldCut` (corte na obra).
  * - Cripples nas marcas de layout que caem dentro do RO, exceto a marca colada ao jack (P3) —
  *   a mesma regra vale abaixo do sill e acima do header. Só entram se o vão for ≥ 1.5".
+ * - Parede não portante (R602.7.4): header é uma peça deitada (`flat`, 1.5" de altura) a até 24" da top
+ *   plate — acima disso, `Error` pedindo o header do projeto; sem cripples acima da peça.
  * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
  *   é chamada com `{ kings: false }`.
  *
@@ -25,7 +27,7 @@
 
 import type { Config, FieldCut, Member, Opening, Wall, Warning } from '../types';
 import { sectionDepth } from '../types';
-import { resolveOpeningHeader, type ResolvedHeader } from './openingHeader';
+import { FLAT_HEADER_MAX_GAP, resolveOpeningHeader, type ResolvedHeader } from './openingHeader';
 import { LENGTH_TOLERANCE } from './precuts';
 import { layoutStuds } from './studs';
 
@@ -141,13 +143,20 @@ export function framingForOpening(
   }
 
   const topPlateY = wall.height - 2 * p;
-  const headerDepth = sectionDepth(headerSection);
+  const headerDepth = header.flat ? p : sectionDepth(headerSection);
   const headerBase = opening.headerHeight ?? config.headerHeight ?? topPlateY - headerDepth;
   const headerTop = headerBase + headerDepth;
   if (headerTop > topPlateY + EPS) {
     throw new RangeError(
       `abertura ${opening.id}: header ${headerSection} com base em ${headerBase}" vai até ` +
         `${headerTop}", acima da top plate (${topPlateY}")`,
+    );
+  }
+  if (header.flat && topPlateY - headerTop > FLAT_HEADER_MAX_GAP + EPS) {
+    throw new Error(
+      `parede ${wall.id}, abertura ${opening.id}: peça deitada (R602.7.4) com topo em ${headerTop}" fica a ` +
+        `${topPlateY - headerTop}" da top plate (${topPlateY}"), acima do limite de ${FLAT_HEADER_MAX_GAP}"; ` +
+        'informe o header da abertura',
     );
   }
   if (headerBase <= p + EPS) {
@@ -194,6 +203,7 @@ export function framingForOpening(
     orientation: 'horizontal',
     plies,
     headerSource: header.source,
+    ...(header.flat ? { flat: true } : {}),
   });
 
   if (sillY !== undefined) {
@@ -220,8 +230,9 @@ export function framingForOpening(
     }
   }
 
+  // R602.7.4: sobre a peça deitada não vão cripples.
   const above = topPlateY - headerTop;
-  if (above >= MIN_CRIPPLE_LENGTH - EPS) {
+  if (!header.flat && above >= MIN_CRIPPLE_LENGTH - EPS) {
     for (const x of marks) members.push({ role: 'cripple', ...vertical, length: above, x, y: headerTop });
   }
 

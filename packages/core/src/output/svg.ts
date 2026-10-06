@@ -13,7 +13,7 @@
  *   altura (à esquerda), marcas de layout no rodapé (múltiplos de `studSpacing`
  *   mais o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
  *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição; no header, também
- *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[default]`).
+ *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[R602.7.4]`).
  * - Cortes na obra (`panel.fieldCuts`, ex.: bottom plate no vão da porta) hachurados em vermelho
  *   sobre a peça, com o rótulo "cortar na obra" e o comprimento logo acima.
  * - Saída determinística: mesma entrada → mesma string.
@@ -52,7 +52,7 @@ export function memberBox(m: Member): MemberBox {
   if (m.orientation === 'vertical') {
     return { x: m.x, y: m.y, width: NOMINAL_2X_THICKNESS, height: m.length };
   }
-  const height = m.role === 'header' ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
+  const height = m.role === 'header' && !m.flat ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
   return { x: m.x, y: m.y, width: m.length, height };
 }
 
