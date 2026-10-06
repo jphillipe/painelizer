@@ -110,6 +110,32 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   1 jack como na portante, a peça apoiada nos jacks; (c) sem cripples, como respondido — S9.3 (feita com essas
   hipóteses em 2026-10-05; mudar é trocar `resolveOpeningHeader` e o fixture `wall-120-door-nonbearing`).
 
+## Novas (abertas em 2026-10-06, no planejamento da Fase 3)
+- [ ] **P19 — Layout: stud centrado na marca ou borda na marca?** O motor põe a borda esquerda do stud na marca
+  (16, 32, 48…), como em CLAUDE.md. Na prática americana a marca é 15 1/4", 31 1/4", 47 1/4" na borda, ou seja,
+  o **centro** do stud em 16, 32, 48: a emenda do OSB (48", 96") cai no meio do stud e cada chapa apoia 3/4".
+  Com a borda na marca, a chapa 0–48 termina na borda do stud e fica sem apoio. A fábrica mede como? —
+  hipótese: centrado (regra nova em S11, muda todos os fixtures com confirmação) — S11.
+- [ ] **P20 — Cripple curto acima do header.** Header 2-2x10 a 82.5" em parede de 8' deixa 2 3/8" até a top
+  plate e o motor gera cripples dessa altura (fixture `wall-144-window-82.5`, W07 do exemplo). O que a fábrica faz
+  com vão tão curto: cripple mesmo, filler deitado contínuo, bloco, ou header 2x12 padrão em parede de 8'
+  (11 1/4" quase fecha os 11 5/8")? — hipótese: cripple em pé para qualquer vão ≥ 1.5" (regra atual) — S17 (a
+  folha mostra; a regra muda quando responderem).
+- [ ] **P21 — Referência de medida das paredes e canto.** (a) A fábrica recebe/pensa a parede pelo eixo, pela face
+  externa ou pelo comprimento da plate? (b) No canto, qual parede atravessa (plate até a face externa da outra):
+  as mais longas, as da fachada, as paralelas ao vigamento? (c) O layout da parede que encosta começa na quina do
+  prédio (primeira marca a `t` da plate) ou na ponta da própria plate? — hipótese: eixo; a mais longa atravessa,
+  com sobrescrita por ponta; layout da quina do prédio — S11, S13.
+- [ ] **P22 — Ladder blocking no T.** Quantos blocos, em que alturas, de que seção; deitados ou em pé; a parede
+  que encosta leva stud de ponta comum? — hipótese: 3 blocos da seção da parede, deitados, centros em 24, 48 e 72
+  do subfloor (4 blocos em parede de 9'); stud de ponta comum — S14.
+- [ ] **P23 — Lap da double top plate entre painéis da mesma parede.** A double top sai da fábrica avançando
+  sobre o painel vizinho (quanto: 48"? 24"?) ou a peça de lap vai solta para pregar na obra? — hipótese: avança
+  48" presa ao painel, mínimo 24" — S15.
+- [ ] **P24 — Orientação da folha.** A elevação é vista de fora (como a elevação do arquiteto) ou de dentro (como
+  o montador vê na mesa)? Que lado do painel fica para cima na mesa? — hipótese: vista de fora, face externa
+  indicada no desenho — S17.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais
