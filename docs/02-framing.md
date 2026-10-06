@@ -35,10 +35,12 @@
   Topo do RO = base do header. **Padrão da fábrica: 82.5"** do subfloor (= y) à face inferior do header, igual
   para portas e janelas; o projeto pode indicar outra (P2, respondida em 2026-10-01).
 - Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
-- Cripples abaixo do sill nas marcas de layout que caem dentro do RO, exceto a marca que fica colada ao jack
-  (ex.: marca 48 com jack em 46.5–48) — confirmado pela fábrica (P3); a tolerância de "praticamente junto" é P13.
-- Cripples acima do header: mesmas marcas dos cripples abaixo do sill (inclusive a omissão da marca colada
-  ao jack), só se houver espaço ≥ 1.5" entre header e top plate. Abaixo do sill vale o mesmo mínimo de 1.5".
+- Cripples abaixo do sill nas marcas de layout que caem dentro do RO, exceto a marca colada ao jack
+  (ex.: marca 48 com jack em 46.5–48) ou a até 2" de folga livre dele — confirmado pela fábrica (P3, P13).
+  A omissão só vale se o vão livre entre a face do jack e o apoio seguinte (próximo cripple ou o jack oposto)
+  ficar ≤ 24"; se passar, o cripple fica. A 16" OC a marca a ≤ 2" sai sempre (vão ≤ 18"); a 24" OC fica sempre.
+- Cripples acima do header: mesmas marcas dos cripples abaixo do sill (inclusive as omissões junto ao jack),
+  só se houver espaço ≥ 1.5" entre header e top plate. Abaixo do sill vale o mesmo mínimo de 1.5".
 - Porta: RO medido a partir do subfloor (y=0), porque a bottom plate é cortada na obra; `roughHeight` é entrada
   e, se diferir da base do header em 1/64" ou mais, aviso `DOOR_RO_HEIGHT_MISMATCH` sem mudar a geometria (P4).
   Porta 6'-8" padrão: RO 82.5, header em 82.5, jack 81. Sem sill e sem cripples abaixo; cripples acima do header

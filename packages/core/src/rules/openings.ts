@@ -14,8 +14,9 @@
  * - Porta (P4): RO medido do subfloor (y=0), sem sill e sem cripples abaixo. `roughHeight` não muda a
  *   geometria; se diferir da base do header, aviso `DOOR_RO_HEIGHT_MISMATCH`. A bottom plate sai
  *   inteira e o trecho do RO vira um `FieldCut` (corte na obra).
- * - Cripples nas marcas de layout que caem dentro do RO, exceto a marca colada ao jack (P3) —
- *   a mesma regra vale abaixo do sill e acima do header. Só entram se o vão for ≥ 1.5".
+ * - Cripples nas marcas de layout que caem dentro do RO. Marca colada ao jack ou a até 2" de folga livre
+ *   dele não ganha cripple (P3/P13), salvo se sem ela o vão livre entre o jack e o apoio seguinte passar
+ *   de 24" — a mesma regra vale abaixo do sill e acima do header. Só entram se o vão for ≥ 1.5".
  * - Parede não portante (R602.7.4): header é uma peça deitada (`flat`, 1.5" de altura) a até 24" da top
  *   plate — acima disso, `Error` pedindo o header do projeto; sem cripples acima da peça.
  * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
@@ -33,6 +34,12 @@ import { layoutStuds } from './studs';
 
 /** Vão mínimo para entrar cripple (acima do header ou abaixo do sill). */
 const MIN_CRIPPLE_LENGTH = 1.5;
+
+/** P13: marca a até esta folga livre (face a face) do jack não ganha cripple… */
+const CRIPPLE_JACK_TOLERANCE = 2;
+
+/** …salvo se a omissão deixar vão livre entre apoios maior que isto (máximo do IRC para stud, R602.3(5)). */
+const MAX_SUPPORT_GAP = 24;
 
 /** Folga numérica para comparações de geometria. */
 const EPS = 1e-9;
@@ -217,11 +224,7 @@ export function framingForOpening(
     });
   }
 
-  // Marcas estritamente dentro do RO: a marca colada ao jack (x = offset, ou x + t = fim do RO)
-  // e as que invadem o jack ficam de fora.
-  const marks = layoutStuds(wall.length, config.studSpacing, t).filter(
-    (x) => x > offset + EPS && x + t < offset + roughWidth - EPS,
-  );
+  const marks = crippleMarks(layoutStuds(wall.length, config.studSpacing, t), offset, offset + roughWidth, t);
 
   if (sillY !== undefined) {
     const below = sillY - p;
@@ -249,4 +252,30 @@ export function framingForOpening(
   }
 
   return { members, fieldCuts, warnings };
+}
+
+/**
+ * Marcas de layout que ganham cripple no RO [start, end] (faces dos jacks).
+ * Ficam as marcas estritamente dentro do RO — a colada ao jack (x = start, ou x + t = end) e as que o
+ * invadem saem. Depois, P13: marca a até CRIPPLE_JACK_TOLERANCE de folga livre do jack sai, salvo se sem
+ * ela o vão livre entre a face do jack e o apoio seguinte (próxima marca mantida, ou o jack oposto)
+ * passar de MAX_SUPPORT_GAP.
+ */
+export function crippleMarks(layout: number[], start: number, end: number, t: number): number[] {
+  const inside = layout.filter((x) => x > start + EPS && x + t < end - EPS);
+  const kept: number[] = [];
+  for (const [i, x] of inside.entries()) {
+    let omit = false;
+    if (x - start <= CRIPPLE_JACK_TOLERANCE + EPS) {
+      // Apoio seguinte: a próxima marca (se ela também sair, o vão só diminui) ou o jack direito.
+      const next = inside[i + 1] ?? end;
+      omit = next - start <= MAX_SUPPORT_GAP + EPS;
+    } else if (end - (x + t) <= CRIPPLE_JACK_TOLERANCE + EPS) {
+      const last = kept[kept.length - 1];
+      const prev = last === undefined ? start : last + t;
+      omit = end - prev <= MAX_SUPPORT_GAP + EPS;
+    }
+    if (!omit) kept.push(x);
+  }
+  return kept;
 }

@@ -120,11 +120,54 @@ describe('framingForOpening — janela', () => {
     expect(xs(byRole(members, 'cripple'))).toEqual([64, 80]);
   });
 
-  it('marca que invade o jack fica de fora; marca afastada do jack entra', () => {
+  it('marca que invade o jack fica de fora', () => {
     // RO [49, 85]: jack esquerdo em 47.5–49 → marca 48 invade
     expect(xs(byRole(frame({ ...win, offset: 49 }, wall, config), 'cripple'))).toEqual([64, 80]);
-    // RO [47, 83]: jack esquerdo em 45.5–47 → marca 48 fica a 1" do jack e entra
-    expect(xs(byRole(frame({ ...win, offset: 47 }, wall, config), 'cripple'))).toEqual([48, 64, 80]);
+  });
+
+  describe('P13 — marca a até 2" do jack', () => {
+    const cripples = (patch: Partial<Opening>, cfg: Config = config) =>
+      xs(byRole(frame({ ...win, ...patch }, wall, cfg), 'cripple'));
+
+    it('fixture: marca 80 a 2.5" do jack em 84 continua com cripple', () => {
+      expect(cripples({})).toEqual([64, 80]);
+    });
+
+    it('1" do jack esquerdo: sai (vão jack→próxima marca 17 ≤ 24)', () => {
+      // RO [47, 83]: jack esquerdo em 45.5–47; marca 80 termina em 81.5, a 1.5" do jack direito → sai também
+      expect(cripples({ offset: 47 })).toEqual([64]);
+    });
+
+    it('exatamente 2" (limite): sai; 2.5": fica', () => {
+      // RO [46, 82]: marca 48 a 2" → sai; marca 80 termina em 81.5, a 0.5" → sai
+      expect(cripples({ offset: 46 })).toEqual([64]);
+      // RO [45.5, 81.5]: marca 48 a 2.5" → fica; marca 80 colada ao jack → sai
+      expect(cripples({ offset: 45.5 })).toEqual([48, 64]);
+    });
+
+    it('1.5" do jack direito: sai', () => {
+      // RO [36, 67]: marca 64 termina em 65.5; vão 48+1.5 → 67 = 17.5 ≤ 24
+      expect(cripples({ offset: 36, roughWidth: 31 })).toEqual([48]);
+    });
+
+    it('24" OC: omitir estouraria 24" de vão → cripple fica', () => {
+      // RO [46, 82]: marca 48 a 2"; sem ela, jack→marca 72 = 26 > 24
+      expect(cripples({ offset: 46 }, { ...config, studSpacing: 24 })).toEqual([48, 72]);
+    });
+
+    it('RO estreito sem outra marca: sai (apoio seguinte é o jack oposto)', () => {
+      // RO [46, 60]: marca 48 a 2"; vão jack→jack 14 ≤ 24
+      expect(cripples({ offset: 46, roughWidth: 14 })).toEqual([]);
+    });
+
+    it('vale também acima do header', () => {
+      // RO [47, 83], header em 82.5: acima e abaixo com as mesmas marcas
+      const members = frame({ ...win, offset: 47, headerHeight: 82.5 }, wall, config);
+      const above = byRole(members, 'cripple').filter((c) => c.y > 1.5);
+      const below = byRole(members, 'cripple').filter((c) => c.y === 1.5);
+      expect(xs(above)).toEqual([64]);
+      expect(xs(below)).toEqual([64]);
+    });
   });
 
   it('marca colada ao jack direito fica de fora (RO [36, 65.5]: stud da marca 64 termina em 65.5)', () => {

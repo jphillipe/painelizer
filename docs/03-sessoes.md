@@ -143,10 +143,14 @@ Uma sessão do Claude Code = um item. Ritual:
   fixture `wall-120-door-nonbearing.json` (porta interna 2x4, 14 peças), porta na W04 do exemplo do CLI.
   SVG `wall-120-door-nonbearing.svg` sem conferência visual do humano.
 
-- [ ] **S9.4 — Cripple a até 2" do jack (P13)**
+- [x] **S9.4 — Cripple a até 2" do jack (P13)**
   Marca de layout com folga ≤ 2" até o jack não ganha cripple, salvo se a omissão deixar vão maior que o
   espaçamento máximo; vale abaixo do sill e acima do header. Conferir os fixtures atuais (a marca 80 fica a 2.5"
   do jack em 84 — não deve mudar) e criar um caso que dispare a regra.
+  Feita em 2026-10-05: `crippleMarks` em `rules/openings.ts`; "espaçamento máximo" = 24" de vão livre
+  (decidido pelo humano — com `studSpacing` a regra nunca disparava a 16" OC). Fixtures e exemplo do CLI
+  inalterados; casos novos inline em `openings.test.ts` (1", 2", 2.5", lado direito, 24" OC, RO estreito, acima
+  do header).
 
 - [ ] **S10 — Validações**
   Prompt: "Crie `src/panelize/validate.ts` com avisos: header fora da tabela, abertura a < 1.5\" do canto,

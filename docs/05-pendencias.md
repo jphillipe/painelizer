@@ -72,7 +72,8 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   ganha cripple, **desde que** a omissão não ultrapasse o espaçamento máximo entre apoios; se ultrapassar, o
   cripple fica. — Impacto: substitui a regra da S7 (só omite quando encosta ou invade o jack) — S9.4. Hipótese de
   medida até alguém dizer outra coisa: 2" de folga livre entre a face do cripple e a face do jack; "espaçamento
-  máximo" = vão livre entre apoios vizinhos ≤ `studSpacing` OC. Fecha também o que restava de P3.
+  máximo" = vão livre entre apoios vizinhos ≤ **24"** (R602.3(5)) — `studSpacing` não serve: omitir a marca a `g`
+  do jack deixa `studSpacing + g`, sempre maior (S9.4, 2026-10-05). Fecha também o que restava de P3.
 - [x] **P14 — Emenda de plate em painel > 16'.** — **Resposta (2026-10-05):** emenda da bottom e da top plate de
   preferência **sobre stud**; emenda da double top defasada da top em **≥ 24"** (mínimo do IRC), 48" quando
   possível. — Impacto: hipótese confirmada, com mínimo 24" e preferência 48" — S12, S14.
