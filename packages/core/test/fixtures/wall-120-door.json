@@ -1,5 +1,5 @@
 {
-  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove as marcas 48, 64 e 80. Cripples acima do header nas marcas 48 e 64 (2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. 16 peças.",
+  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove os studs das marcas 48, 64 e 80 (47.25, 63.25, 79.25). Cripples acima do header nas marcas 48 e 64 (studs em 47.25 e 63.25; 2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. 16 peças. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -20,22 +20,22 @@
   },
   "expected": {
     "members": [
-      { "role": "bottomPlate",    "section": "2x6",  "length": 120,    "x": 0,     "y": 0,      "orientation": "horizontal" },
-      { "role": "topPlate",       "section": "2x6",  "length": 120,    "x": 0,     "y": 94.125, "orientation": "horizontal" },
-      { "role": "doubleTopPlate", "section": "2x6",  "length": 120,    "x": 0,     "y": 95.625, "orientation": "horizontal" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0,     "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 16,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 32,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 96,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 112,   "y": 1.5, "orientation": "vertical" },
+      { "role": "bottomPlate", "section": "2x6", "length": 120, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x6", "length": 120, "x": 0, "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 120, "x": 0, "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
       { "role": "stud", "section": "2x6", "length": 92.625, "x": 118.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 37,   "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 37, "y": 1.5, "orientation": "vertical" },
       { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 79.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 38.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "jackStud", "section": "2x6", "length": 81,     "x": 78,   "y": 1.5, "orientation": "vertical" },
-      { "role": "header",  "section": "2x10", "length": 41, "x": 38.5, "y": 82.5, "orientation": "horizontal", "plies": 2 },
-      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 48, "y": 91.75, "orientation": "vertical" },
-      { "role": "cripple", "section": "2x6",  "length": 2.375, "x": 64, "y": 91.75, "orientation": "vertical" }
+      { "role": "jackStud", "section": "2x6", "length": 81, "x": 38.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81, "x": 78, "y": 1.5, "orientation": "vertical" },
+      { "role": "header", "section": "2x10", "length": 41, "x": 38.5, "y": 82.5, "orientation": "horizontal", "plies": 2 },
+      { "role": "cripple", "section": "2x6", "length": 2.375, "x": 47.25, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 2.375, "x": 63.25, "y": 91.75, "orientation": "vertical" }
     ],
     "fieldCuts": [
       { "role": "bottomPlate", "openingId": "door1", "x": 40, "length": 38 }

@@ -47,7 +47,7 @@ describe('panelizeWall — parede sem abertura', () => {
   it('24" OC reduz os studs', () => {
     const panel = panelizeWall(wall, { ...config, studSpacing: 24 });
     const xs = panel.members.filter((m) => m.role === 'stud').map((m) => m.x);
-    expect(xs).toEqual([0, 24, 48, 72, 96, 120, 142.5]);
+    expect(xs).toEqual([0, 23.25, 47.25, 71.25, 95.25, 119.25, 142.5]);
   });
 
   it("parede de 9' (109.125): stud 104.625 é o segundo pré-corte da lista — sem aviso (P7)", () => {
@@ -137,12 +137,12 @@ describe('panelizeWall — janela', () => {
     expectNoVerticalOverlap(panel.members);
   });
 
-  it('2 kings + 2 jacks: zona [42, 90] remove as marcas 48, 64 e 80; 88.5 não colide com 96', () => {
+  it('2 kings + 2 jacks: zona [42, 90] remove os studs 47.25, 63.25 e 79.25; 88.5 não colide com 95.25', () => {
     const panel = panelizeWall(
       { ...wWall, openings: [{ ...win, kingStuds: 2, jackStuds: 2 }] },
       wConfig,
     );
-    expect(studXs(panel)).toEqual([0, 16, 32, 96, 112, 128, 142.5]);
+    expect(studXs(panel)).toEqual([0, 15.25, 31.25, 95.25, 111.25, 127.25, 142.5]);
     expectNoVerticalOverlap(panel.members);
   });
 
@@ -152,21 +152,21 @@ describe('panelizeWall — janela', () => {
         ...wWall,
         length: 192,
         openings: [
-          { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48, header: H }, // zona [17, 47]
-          { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, header: H }, // zona [97, 139]
+          { id: 'a', type: 'window', offset: 19.5, roughWidth: 24, roughHeight: 48, header: H }, // zona [16.5, 46.5]
+          { id: 'b', type: 'window', offset: 99.5, roughWidth: 36, roughHeight: 48, header: H }, // zona [96.5, 138.5]
         ],
       },
       wConfig,
     );
-    // 16 (16–17.5) invade a zona a por 0.5"; 96 (96–97.5) invade a zona b
-    expect(studXs(panel)).toEqual([0, 48, 64, 80, 144, 160, 176, 190.5]);
+    // 15.25 (até 16.75) invade a zona a por 0.25"; 95.25 (até 96.75) invade a zona b; 47.25 e 143.25 ficam
+    expect(studXs(panel)).toEqual([0, 47.25, 63.25, 79.25, 143.25, 159.25, 175.25, 190.5]);
     expect(panel.members.filter((m) => m.role === 'header')).toHaveLength(2);
     expectNoVerticalOverlap(panel.members);
   });
 
-  it('stud que só encosta no king fica (zona começa em 33.5, stud 32 termina em 33.5)', () => {
-    const panel = panelizeWall({ ...wWall, openings: [{ ...win, offset: 36.5 }] }, wConfig);
-    expect(studXs(panel)).toContain(32);
+  it('stud que só encosta no king fica (zona começa em 32.75, stud 31.25 termina em 32.75)', () => {
+    const panel = panelizeWall({ ...wWall, openings: [{ ...win, offset: 35.75 }] }, wConfig);
+    expect(studXs(panel)).toContain(31.25);
     expectNoVerticalOverlap(panel.members);
   });
 
@@ -325,8 +325,8 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
         ['2x6', 21, 42],
         ['2x6', 64.5, 42],
       ]);
-      // zona [19.5, 108] remove as marcas 32–96; 16 (até 17.5) e 112 ficam
-      expect(xsOf(panel, 'stud')).toEqual([0, 16, 112, 128, 142.5]);
+      // zona [19.5, 108] remove os studs 31.25–95.25; 15.25 (até 16.75) e 111.25 ficam
+      expect(xsOf(panel, 'stud')).toEqual([0, 15.25, 111.25, 127.25, 142.5]);
       expect(panel.warnings).toEqual([]);
       expectNoVerticalOverlap(panel.members);
     });

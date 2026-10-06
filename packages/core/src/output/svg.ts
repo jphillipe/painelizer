@@ -10,8 +10,8 @@
  *   - horizontal deitado (plates, sill): `length` × 1.5;
  *   - header (em pé): `length` × profundidade da seção (`sectionDepth`).
  * - Conteúdo: ID do painel no topo, cota do comprimento total (embaixo) e da
- *   altura (à esquerda), marcas de layout no rodapé (múltiplos de `studSpacing`
- *   mais o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
+ *   altura (à esquerda), marcas de layout no rodapé (`panel.layoutOrigin + k·studSpacing`, o centro
+ *   de cada stud de layout, mais o 0 e o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
  *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição; no header, também
  *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[R602.7.4]`).
  * - Cortes na obra (`panel.fieldCuts`, ex.: bottom plate no vão da porta) hachurados em vermelho
@@ -168,7 +168,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(dimensionV(margin + 20, toPy(panel.height), toPy(0), toPx(0), formatFeetInches(panel.height)));
 
   // Marcas de layout no rodapé.
-  out.push(layoutMarks(panel.length, studSpacing, layoutY, toPx));
+  out.push(layoutMarks(panel.length, studSpacing, panel.layoutOrigin ?? 0, layoutY, toPx));
 
   // Avisos.
   panel.warnings.forEach((w, i) => {
@@ -287,14 +287,26 @@ function tickSlash(x: number, y: number): string {
 }
 
 /**
- * Marcas de layout: múltiplos de `spacing` estritamente menores que o fechamento
- * (`length − 1.5`) mais o próprio fechamento, com o valor em polegadas.
+ * Marcas de layout: o início (0), as marcas `origin + k·spacing` estritamente entre 0 e o
+ * fechamento (`length − 1.5`) — centro de cada stud de layout (S11) — e o próprio fechamento,
+ * com o valor em polegadas medido da ponta do painel.
  */
-function layoutMarks(length: number, spacing: number, y: number, toPx: (x: number) => number): string {
+function layoutMarks(
+  length: number,
+  spacing: number,
+  origin: number,
+  y: number,
+  toPx: (x: number) => number,
+): string {
   const closing = length - NOMINAL_2X_THICKNESS;
-  const marks: number[] = [];
-  for (let x = 0; x < closing; x += spacing) marks.push(x);
-  if (closing >= 0) marks.push(closing);
+  const marks: number[] = [0];
+  const first = Math.ceil(-origin / spacing);
+  for (let k = first; ; k++) {
+    const x = origin + k * spacing;
+    if (x >= closing) break;
+    if (x > 0) marks.push(x);
+  }
+  if (closing > 0) marks.push(closing);
 
   const parts: string[] = [`<g class="layout" stroke="#666" stroke-width="0.75">`];
   parts.push(`<line x1="${px(toPx(0))}" y1="${px(y)}" x2="${px(toPx(length))}" y2="${px(y)}"/>`);

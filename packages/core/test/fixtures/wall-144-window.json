@@ -1,5 +1,5 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Conferir com a equipe de produção antes de tratar como referência.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Conferir com a equipe de produção antes de tratar como referência. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. Zona [45, 87] remove os studs 47.25, 63.25 e 79.25; cripples abaixo do sill em 63.25 e 79.25 (o stud da marca 48 começa antes do jack e sai).",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -19,24 +19,24 @@
   },
   "expected": {
     "members": [
-      { "role": "bottomPlate",    "section": "2x6",  "length": 144,    "x": 0,     "y": 0,      "orientation": "horizontal" },
-      { "role": "topPlate",       "section": "2x6",  "length": 144,    "x": 0,     "y": 94.125, "orientation": "horizontal" },
-      { "role": "doubleTopPlate", "section": "2x6",  "length": 144,    "x": 0,     "y": 95.625, "orientation": "horizontal" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0,     "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 16,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 32,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 96,    "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 112,   "y": 1.5, "orientation": "vertical" },
-      { "role": "stud", "section": "2x6", "length": 92.625, "x": 128,   "y": 1.5, "orientation": "vertical" },
+      { "role": "bottomPlate", "section": "2x6", "length": 144, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x6", "length": 144, "x": 0, "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 144, "x": 0, "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5, "orientation": "vertical" },
       { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 45,   "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 45, "y": 1.5, "orientation": "vertical" },
       { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 85.5, "y": 1.5, "orientation": "vertical" },
       { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 46.5, "y": 1.5, "orientation": "vertical" },
-      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 84,   "y": 1.5, "orientation": "vertical" },
-      { "role": "header",  "section": "2x10", "length": 39, "x": 46.5, "y": 84.875, "orientation": "horizontal", "plies": 2 },
-      { "role": "sill",    "section": "2x6",  "length": 36, "x": 48,   "y": 35.375, "orientation": "horizontal" },
-      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 64, "y": 1.5, "orientation": "vertical" },
-      { "role": "cripple", "section": "2x6",  "length": 33.875, "x": 80, "y": 1.5, "orientation": "vertical" }
+      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 84, "y": 1.5, "orientation": "vertical" },
+      { "role": "header", "section": "2x10", "length": 39, "x": 46.5, "y": 84.875, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill", "section": "2x6", "length": 36, "x": 48, "y": 35.375, "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6", "length": 33.875, "x": 63.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 33.875, "x": 79.25, "y": 1.5, "orientation": "vertical" }
     ],
     "warnings": []
   }

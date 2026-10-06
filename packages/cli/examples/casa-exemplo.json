@@ -13,7 +13,7 @@
     { "id": "W01", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
     { "id": "W02", "length": "16'", "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
     { "id": "W03", "length": 120, "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "openings": [] },
-    { "id": "W04", "length": "10'-9 1/2\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [
+    { "id": "W04", "length": "10'-6\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [
       { "id": "P2", "type": "door", "offset": 40, "roughWidth": 32, "roughHeight": "6'-10 1/2\"" }
     ] },
     {

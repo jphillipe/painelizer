@@ -176,19 +176,24 @@ depois S11 e S12, que não dependem uma da outra.
   e qual parede atravessa no canto, ladder, lap entre painéis, orientação da folha) e cobrar P8/P15 (peso).
   Sem isto, a Fase 3 inteira é hipótese sobre hipótese.
 
-- [ ] **S11 — Layout: stud centrado na marca e origem de layout**
+- [x] **S11 — Layout: stud centrado na marca e origem de layout**
   Depende de P19 (hipótese: centrado). Muda uma regra de CLAUDE.md ("borda esquerda do stud na marca") e todos os
   fixtures, então nada é editado sem confirmação. Prompt: "Mude `layoutStuds(length, spacing, studThickness,
   origin = 0)`: marcas em `origin + k·spacing`, stud **centrado** na marca (borda esquerda = marca − 0.75), com
   duas exceções: o primeiro stud fica sempre em x=0 e o fechamento sempre em `length − 1.5`. `origin` é a posição,
-  em x do painel, da marca 0 do prédio: negativa quando o painel começa no meio da parede (S15), igual à espessura
-  da parede que atravessa quando a parede encosta num canto (S13), 0 na parede solta. Marca cujo stud sobreporia o
-  primeiro stud ou o fechamento é descartada; registrar em 04-decisoes o que fazer com a marca entre 0.75" e 1.5"
-  (proposta: descartar — o stud de ponta já está lá). Atualize `crippleMarks`, a remoção de studs na zona, as
-  marcas de layout do SVG, `docs/02-framing.md` (exemplo resolvido) e CLAUDE.md. Antes de editar, liste os
-  valores novos de cada fixture (studs em 15.25, 31.25…, cripples idem) e aguarde confirmação."
+  em x do painel, da marca 0 do prédio: negativa quando o painel começa no meio da parede (S15) e quando a parede
+  encosta num canto (`−t` da parede que atravessa, S13), 0 na parede solta. Atualize `crippleMarks`, a remoção
+  de studs na zona, as marcas de layout do SVG, `docs/02-framing.md` (exemplo resolvido) e CLAUDE.md. Antes de
+  editar, liste os valores novos de cada fixture (studs em 15.25, 31.25…, cripples idem) e aguarde confirmação."
   Saída: fixtures confirmados verdes; `pnpm test` verde; CLAUDE.md e `02-framing` com a regra nova.
   Se P19 vier "borda na marca", a sessão só adiciona `origin` e nenhum fixture muda.
+  Feita em 2026-10-06 sem resposta da fábrica, por decisão do humano ("faz do jeito que achar melhor, depois a
+  gente corrige"): centrado (P19) e vão máximo de 24" (P13) ficam como hipótese. `Wall.layoutOrigin?` e
+  `Panel.layoutOrigin?` (o SVG marca a partir dele); `layoutStuds` aceita `origin` negativo ou positivo. Stud que
+  sobrepõe o de ponta ou o fechamento é mantido (decisão de 2026-09-28 estendida à ponta inicial). Os 7 fixtures
+  recalculados pelo motor (mesmas contagens; janela, janela+porta e porta conferidos à mão) e os `$comment`
+  atualizados; snapshots SVG regenerados. Se P19 vier "borda na marca": `layoutStuds` volta a `marca` em vez
+  de `marca − t/2` e os fixtures voltam pelo mesmo script.
 
 - [ ] **S12 — Dados do estrutural: studs extras, sill dupla e kings por vento**
   Os projetos de `06-referencias` exigem os três; sem eles nenhum projeto real passa inteiro pelo motor.
@@ -221,8 +226,9 @@ Convenções novas (propostas; confirmar na abertura da S13 e registrar em 04-de
 - No canto, a parede que **atravessa** tem a plate até a face externa da outra (+t/2 além do cruzamento dos
   eixos); a que **encosta** para na face interna da outra (−t/2). No T, a que encosta para na face. Ponta livre:
   a plate acaba no ponto. Qual atravessa: `ends` declarado > a mais longa > a primeira do arquivo (P21).
-- Layout de studs medido da origem do prédio, não da ponta da plate: parede que encosta num canto tem `origin = t`
-  da parede que atravessa; painel no meio da parede tem `origin` negativo (S11). Primeiro stud sempre em 0.
+- Layout de studs medido da origem do prédio, não da ponta da plate: parede que encosta num canto tem
+  `layoutOrigin = −t` da parede que atravessa (a marca 0 é a quina, antes da plate); painel no meio da parede
+  tem `layoutOrigin = −x` do seu início (S11). Primeiro stud sempre em 0.
 
 - [ ] **S13 — Planta: paredes por eixo, cantos e T**
   Prompt: "Crie `src/house/types.ts`: `Point { x; y }`; `HouseWall = Omit<Wall, 'length'> & { start: Point;

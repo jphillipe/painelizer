@@ -67,7 +67,7 @@ describe('framingForOpening — janela', () => {
     }
   });
 
-  it('fixture wall-144-window-82.5: header baixo, cripples acima nas marcas 64 e 80 (vão de 2.375)', () => {
+  it('fixture wall-144-window-82.5: header baixo, cripples acima nas marcas 64 e 80 (studs em 63.25 e 79.25; vão de 2.375)', () => {
     const members = frame(
       low.wall.openings[0] as Opening,
       low.wall as Wall,
@@ -117,67 +117,68 @@ describe('framingForOpening — janela', () => {
     expect(xs(byRole(members, 'kingStud'))).toEqual([42, 43.5, 87, 88.5]);
     expect(xs(byRole(members, 'jackStud'))).toEqual([45, 46.5, 84, 85.5]);
     expect(byRole(members, 'header')[0]).toMatchObject({ x: 45, length: 42 });
-    expect(xs(byRole(members, 'cripple'))).toEqual([64, 80]);
+    expect(xs(byRole(members, 'cripple'))).toEqual([63.25, 79.25]);
   });
 
-  it('marca que invade o jack fica de fora', () => {
-    // RO [49, 85]: jack esquerdo em 47.5–49 → marca 48 invade
-    expect(xs(byRole(frame({ ...win, offset: 49 }, wall, config), 'cripple'))).toEqual([64, 80]);
+  it('stud de marca que invade o jack fica de fora', () => {
+    // RO [47.5, 83.5]: jack esquerdo em 46–47.5 → stud da marca 48 (47.25–48.75) invade
+    expect(xs(byRole(frame({ ...win, offset: 47.5 }, wall, config), 'cripple'))).toEqual([63.25, 79.25]);
   });
 
   describe('P13 — marca a até 2" do jack', () => {
     const cripples = (patch: Partial<Opening>, cfg: Config = config) =>
       xs(byRole(frame({ ...win, ...patch }, wall, cfg), 'cripple'));
 
-    it('fixture: marca 80 a 2.5" do jack em 84 continua com cripple', () => {
-      expect(cripples({})).toEqual([64, 80]);
+    it('fixture: stud da marca 80 (79.25–80.75) a 3.25" do jack em 84 continua com cripple', () => {
+      expect(cripples({})).toEqual([63.25, 79.25]);
     });
 
-    it('1" do jack esquerdo: sai (vão jack→próxima marca 17 ≤ 24)', () => {
-      // RO [47, 83]: jack esquerdo em 45.5–47; marca 80 termina em 81.5, a 1.5" do jack direito → sai também
-      expect(cripples({ offset: 47 })).toEqual([64]);
+    it('1" do jack esquerdo: sai (vão jack→próximo stud 17 ≤ 24)', () => {
+      // RO [46.25, 82.25]: jack esquerdo em 44.75–46.25, stud 47.25 a 1"; stud 79.25 termina em 80.75,
+      // a 1.5" do jack direito → sai também
+      expect(cripples({ offset: 46.25 })).toEqual([63.25]);
     });
 
     it('exatamente 2" (limite): sai; 2.5": fica', () => {
-      // RO [46, 82]: marca 48 a 2" → sai; marca 80 termina em 81.5, a 0.5" → sai
-      expect(cripples({ offset: 46 })).toEqual([64]);
-      // RO [45.5, 81.5]: marca 48 a 2.5" → fica; marca 80 colada ao jack → sai
-      expect(cripples({ offset: 45.5 })).toEqual([48, 64]);
+      // RO [45.25, 81.25]: stud 47.25 a 2" → sai; stud 79.25 termina em 80.75, a 0.5" → sai
+      expect(cripples({ offset: 45.25 })).toEqual([63.25]);
+      // RO [44.75, 80.75]: stud 47.25 a 2.5" → fica; stud 79.25 colado ao jack → sai
+      expect(cripples({ offset: 44.75 })).toEqual([47.25, 63.25]);
     });
 
     it('1.5" do jack direito: sai', () => {
-      // RO [36, 67]: marca 64 termina em 65.5; vão 48+1.5 → 67 = 17.5 ≤ 24
-      expect(cripples({ offset: 36, roughWidth: 31 })).toEqual([48]);
+      // RO [36, 66.25]: stud 63.25 termina em 64.75; vão 48.75 → 66.25 = 17.5 ≤ 24
+      expect(cripples({ offset: 36, roughWidth: 30.25 })).toEqual([47.25]);
     });
 
     it('24" OC: omitir estouraria 24" de vão → cripple fica', () => {
-      // RO [46, 82]: marca 48 a 2"; sem ela, jack→marca 72 = 26 > 24
-      expect(cripples({ offset: 46 }, { ...config, studSpacing: 24 })).toEqual([48, 72]);
+      // RO [45.25, 81.25]: stud 47.25 a 2"; sem ele, jack→stud 71.25 = 26 > 24
+      expect(cripples({ offset: 45.25 }, { ...config, studSpacing: 24 })).toEqual([47.25, 71.25]);
     });
 
     it('RO estreito sem outra marca: sai (apoio seguinte é o jack oposto)', () => {
-      // RO [46, 60]: marca 48 a 2"; vão jack→jack 14 ≤ 24
-      expect(cripples({ offset: 46, roughWidth: 14 })).toEqual([]);
+      // RO [45.25, 59.25]: stud 47.25 a 2"; vão jack→jack 14 ≤ 24
+      expect(cripples({ offset: 45.25, roughWidth: 14 })).toEqual([]);
     });
 
     it('vale também acima do header', () => {
-      // RO [47, 83], header em 82.5: acima e abaixo com as mesmas marcas
-      const members = frame({ ...win, offset: 47, headerHeight: 82.5 }, wall, config);
+      // RO [46.25, 82.25], header em 82.5: acima e abaixo com as mesmas marcas
+      const members = frame({ ...win, offset: 46.25, headerHeight: 82.5 }, wall, config);
       const above = byRole(members, 'cripple').filter((c) => c.y > 1.5);
       const below = byRole(members, 'cripple').filter((c) => c.y === 1.5);
-      expect(xs(above)).toEqual([64]);
-      expect(xs(below)).toEqual([64]);
+      expect(xs(above)).toEqual([63.25]);
+      expect(xs(below)).toEqual([63.25]);
     });
   });
 
-  it('marca colada ao jack direito fica de fora (RO [36, 65.5]: stud da marca 64 termina em 65.5)', () => {
-    const members = frame({ ...win, offset: 36, roughWidth: 29.5 }, wall, config);
-    expect(xs(byRole(members, 'cripple'))).toEqual([48]);
+  it('stud colado ao jack direito fica de fora (RO [36, 64.75]: stud da marca 64 termina em 64.75)', () => {
+    const members = frame({ ...win, offset: 36, roughWidth: 28.75 }, wall, config);
+    expect(xs(byRole(members, 'cripple'))).toEqual([47.25]);
   });
 
-  it('24" OC usa as marcas de 24', () => {
+  it('24" OC usa as marcas de 24 (stud 71.25 dentro do RO [48, 84]; 47.25 começa antes do jack)', () => {
     const members = frame(win, wall, { ...config, studSpacing: 24 });
-    expect(xs(byRole(members, 'cripple'))).toEqual([72]);
+    expect(xs(byRole(members, 'cripple'))).toEqual([71.25]);
   });
 
   it('vão abaixo do sill < 1.5: sill sem cripples', () => {
@@ -253,8 +254,8 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
     expect(byRole(members, 'sill')[0]).toMatchObject({ y: 33 });
     // 10.125" entre o topo da peça (84) e a top plate (94.125): dentro dos 24", e mesmo assim sem cripples acima
     expect(byRole(members, 'cripple').map((c) => [c.x, c.y, c.length])).toEqual([
-      [64, 1.5, 31.5],
-      [80, 1.5, 31.5],
+      [63.25, 1.5, 31.5],
+      [79.25, 1.5, 31.5],
     ]);
   });
 

@@ -10,8 +10,8 @@
  * - `config.studLength` é a lista de pré-cortes (P7); se o comprimento derivado da altura não for
  *   nenhum deles, o painel sai com o comprimento derivado e um aviso `STUD_LENGTH_MISMATCH`.
  *   Lista vazia lança `RangeError`.
- * - Studs de layout que se sobrepõem a uma zona de abertura são removidos; o que só encosta
- *   no king fica.
+ * - Studs centrados nas marcas `wall.layoutOrigin + k·studSpacing` (S11; `layoutStuds`); os que se
+ *   sobrepõem a uma zona de abertura são removidos; o que só encosta no king fica.
  * - Kings vêm do plano de zonas (king compartilhado entre aberturas vizinhas); o resto de cada
  *   abertura vem de `framingForOpening` sem kings. Cortes na obra e avisos das aberturas vão
  *   para o painel.
@@ -64,7 +64,8 @@ export function panelizeWall(wall: Wall, config: Config, tables?: readonly Heade
     orientation: 'vertical' as const,
   };
 
-  const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness)
+  const layoutOrigin = wall.layoutOrigin ?? 0;
+  const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness, layoutOrigin)
     .filter((x) => !plan.zones.some((z) => overlaps(x, x + studThickness, z)))
     .map((x) => ({ role: 'stud', ...fullHeight, x }));
 
@@ -84,6 +85,7 @@ export function panelizeWall(wall: Wall, config: Config, tables?: readonly Heade
     members: [...plates, ...studs, ...kings, ...framings.flatMap((f) => f.members)],
     fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
+    layoutOrigin,
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.

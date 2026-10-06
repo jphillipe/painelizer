@@ -69,24 +69,24 @@ describe('OPENING_NEAR_CORNER', () => {
 });
 
 describe('STUDS_OVERLAP', () => {
-  it('parede de 130": marca 128 e fechamento 128.5 se sobrepõem em 1"', () => {
-    const panel = panelizeWall({ ...wall, length: 130 }, config);
-    expect(panel.warnings.map((w) => w.code)).toEqual(['STUDS_OVERLAP']);
-    expect(panel.warnings[0]!.message).toMatch(/stud em x=128 e stud em x=128\.5 se sobrepõem em 1"/);
-  });
-
-  it('parede de 131": marca 128 encosta no fechamento 129.5 — sem aviso', () => {
-    expect(codes({ ...wall, length: 131 })).toEqual([]);
-  });
-
-  it('parede de 129.5": marca coincide com o fechamento, um stud só — sem aviso', () => {
+  it('parede de 129.5": stud da marca 128 (em 127.25) e fechamento 128 se sobrepõem em 0.75"', () => {
     const panel = panelizeWall({ ...wall, length: 129.5 }, config);
-    expect(panel.members.filter((m) => m.role === 'stud' && m.x === 128)).toHaveLength(1);
+    expect(panel.warnings.map((w) => w.code)).toEqual(['STUDS_OVERLAP']);
+    expect(panel.warnings[0]!.message).toMatch(/stud em x=127\.25 e stud em x=128 se sobrepõem em 0\.75"/);
+  });
+
+  it('parede de 130.25": stud da marca 128 encosta no fechamento 128.75 — sem aviso', () => {
+    expect(codes({ ...wall, length: 130.25 })).toEqual([]);
+  });
+
+  it('parede de 128.75": stud da marca coincide com o fechamento, um stud só — sem aviso', () => {
+    const panel = panelizeWall({ ...wall, length: 128.75 }, config);
+    expect(panel.members.filter((m) => m.role === 'stud' && m.x === 127.25)).toHaveLength(1);
     expect(panel.warnings).toEqual([]);
   });
 
   it('um aviso por par', () => {
-    expect(codes({ ...wall, length: 130.75 })).toEqual(['STUDS_OVERLAP']);
+    expect(codes({ ...wall, length: 130 })).toEqual(['STUDS_OVERLAP']);
   });
 });
 

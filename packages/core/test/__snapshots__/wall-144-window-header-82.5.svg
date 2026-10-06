@@ -8,11 +8,11 @@
 <rect class="member topPlate" x="80" y="74" width="576" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 144&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
 <rect class="member doubleTopPlate" x="80" y="68" width="576" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 144&quot; — x=0&quot; y=95 5/8&quot;</title></rect>
 <rect class="member stud" x="80" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="144" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=16&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="208" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=32&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="464" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=96&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="528" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=112&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="592" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=128&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="141" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=15 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="205" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=31 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="461" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=95 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="525" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=111 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="589" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=127 1/4&quot; y=1 1/2&quot;</title></rect>
 <rect class="member stud" x="650" y="80" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=142 1/2&quot; y=1 1/2&quot;</title></rect>
 <rect class="member kingStud" x="260" y="80" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=45&quot; y=1 1/2&quot;</title></rect>
 <rect class="member kingStud" x="422" y="80" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=85 1/2&quot; y=1 1/2&quot;</title></rect>
@@ -21,10 +21,10 @@
 <rect class="member header" x="266" y="89.5" width="156" height="37" fill="#c49a5c"><title>header 2x10 × 39&quot; (2 plies) [project] — x=46 1/2&quot; y=82 1/2&quot;</title></rect>
 <text x="344" y="108" font-size="10" fill="#000" text-anchor="middle" dominant-baseline="middle">2x10 × 39&quot; (2 plies)</text>
 <rect class="member sill" x="272" y="318.5" width="144" height="6" fill="#d9c9a8"><title>sill 2x6 × 36&quot; — x=48&quot; y=33&quot;</title></rect>
-<rect class="member cripple" x="336" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=64&quot; y=1 1/2&quot;</title></rect>
-<rect class="member cripple" x="400" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=80&quot; y=1 1/2&quot;</title></rect>
-<rect class="member cripple" x="336" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=64&quot; y=91 3/4&quot;</title></rect>
-<rect class="member cripple" x="400" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=80&quot; y=91 3/4&quot;</title></rect>
+<rect class="member cripple" x="333" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=63 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member cripple" x="397" y="324.5" width="6" height="126" fill="#f2e6cc"><title>cripple 2x6 × 31 1/2&quot; — x=79 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member cripple" x="333" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=63 1/4&quot; y=91 3/4&quot;</title></rect>
+<rect class="member cripple" x="397" y="80" width="6" height="9.5" fill="#f2e6cc"><title>cripple 2x6 × 2 3/8&quot; — x=79 1/4&quot; y=91 3/4&quot;</title></rect>
 </g>
 <g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
 <line x1="80" y1="456.5" x2="80" y2="488.5"/>

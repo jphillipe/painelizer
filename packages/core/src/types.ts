@@ -100,6 +100,13 @@ export interface Wall {
   floorsSupported?: number;
   /** Ausente = pior caso entre center-bearing e clear span. */
   floorSpan?: FloorSpan;
+  /**
+   * x, nesta parede, da marca 0 do layout do prédio (S11). Ausente = 0 (parede solta). Negativo quando
+   * a marca 0 fica antes da plate: `−t` da parede que atravessa, para a parede que encosta num canto;
+   * `−x` do início do painel, para um painel no meio da parede. Os studs são centrados nas marcas
+   * `layoutOrigin + k·studSpacing`; o primeiro stud fica sempre em 0.
+   */
+  layoutOrigin?: number;
 }
 
 export type MemberRole =
@@ -159,6 +166,8 @@ export interface Panel {
   members: Member[];
   fieldCuts: FieldCut[];
   warnings: Warning[];
+  /** `Wall.layoutOrigin` da parede (0 quando ausente); o SVG desenha as marcas a partir dele. */
+  layoutOrigin?: number;
 }
 
 export interface Config {

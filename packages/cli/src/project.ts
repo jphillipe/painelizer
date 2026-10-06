@@ -143,6 +143,7 @@ function wallFrom(raw: unknown, path: string): Wall {
     wall.floorsSupported = n;
   }
   if (w['floorSpan'] !== undefined) wall.floorSpan = oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`);
+  if (w['layoutOrigin'] !== undefined) wall.layoutOrigin = signed(w['layoutOrigin'], `${path}.layoutOrigin`);
   return wall;
 }
 
@@ -222,6 +223,15 @@ export function measure(v: unknown, path: string): number {
     }
   }
   throw new ProjectError(`${path}: esperado medida (número ou texto), recebido ${show(v)}`);
+}
+
+/** Medida com sinal (ex.: `layoutOrigin`): número ou texto pés-pol, com `-` opcional na frente. */
+function signed(v: unknown, path: string): number {
+  if (typeof v === 'string' && v.trimStart().startsWith('-')) {
+    return -measure(v.trimStart().slice(1), path);
+  }
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  return measure(v, path);
 }
 
 function positive(v: unknown, path: string): number {

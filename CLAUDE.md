@@ -11,8 +11,9 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
 - Fixtures em `test/fixtures/*.json` são a verdade. Se um teste falhar, corrija o código, não o fixture —
   a menos que o humano confirme que o fixture estava errado.
 - Headers: só de `src/data/irc-headers.json`. Vão fora da tabela retorna `{ requiresEngineer: true }`. Nunca extrapolar.
-- Layout de studs: borda esquerda do stud na marca (0, 16, 32…), medida da esquerda da parede (x=0).
-  Último stud sempre encostado no fim da parede (x = comprimento − 1.5).
+- Layout de studs: marcas em `layoutOrigin + k·16` (origem 0 na parede solta), stud CENTRADO na marca
+  (borda esquerda em marca − 0.75: 15 1/4", 31 1/4"…). Primeiro stud sempre em x=0; último sempre encostado
+  no fim da parede (x = comprimento − 1.5). Hipótese P19 até a fábrica responder.
 - Coordenadas de peça (`x`, `y`) = canto inferior esquerdo. y=0 é a base da bottom plate.
 - Antes de implementar qualquer regra de framing, explique a abordagem em até 5 linhas e aguarde confirmação.
 - Uma sessão = um item de `docs/03-sessoes.md`. Ao terminar: marcar o item, registrar decisões novas em

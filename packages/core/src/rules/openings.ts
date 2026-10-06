@@ -224,7 +224,12 @@ export function framingForOpening(
     });
   }
 
-  const marks = crippleMarks(layoutStuds(wall.length, config.studSpacing, t), offset, offset + roughWidth, t);
+  const marks = crippleMarks(
+    layoutStuds(wall.length, config.studSpacing, t, wall.layoutOrigin ?? 0),
+    offset,
+    offset + roughWidth,
+    t,
+  );
 
   if (sillY !== undefined) {
     const below = sillY - p;

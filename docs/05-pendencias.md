@@ -116,6 +116,9 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   o **centro** do stud em 16, 32, 48: a emenda do OSB (48", 96") cai no meio do stud e cada chapa apoia 3/4".
   Com a borda na marca, a chapa 0–48 termina na borda do stud e fica sem apoio. A fábrica mede como? —
   hipótese: centrado (regra nova em S11, muda todos os fixtures com confirmação) — S11.
+  Perguntado em 2026-10-06, sem resposta; o humano mandou seguir com a hipótese e corrigir depois. S11 feita
+  com stud centrado; se vier "borda na marca", `layoutStuds` volta a `marca` e os fixtures são recalculados.
+  Perguntado junto: o "espaçamento máximo entre apoios" da P13 é 24" ou 16"? Segue 24".
 - [ ] **P20 — Cripple curto acima do header.** Header 2-2x10 a 82.5" em parede de 8' deixa 2 3/8" até a top
   plate e o motor gera cripples dessa altura (fixture `wall-144-window-82.5`, W07 do exemplo). O que a fábrica faz
   com vão tão curto: cripple mesmo, filler deitado contínuo, bloco, ou header 2x12 padrão em parede de 8'

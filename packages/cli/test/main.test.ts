@@ -194,7 +194,7 @@ describe('ponta a ponta (disco)', () => {
     expect(err).toEqual([]);
     expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels']);
     expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg', 'W07.svg']);
-    expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,129.5,"129 1/2""",3');
+    expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,126,"126""",3');
     expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>16'-0&quot;</text>`);
   });
 
