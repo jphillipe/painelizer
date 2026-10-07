@@ -15,6 +15,14 @@
  * `opening.jackStuds` menor que o NJ da tabela gera aviso `HEADER_JACKS_BELOW_TABLE` (o painel sai com o
  * número pedido). Com header do projeto a tabela não é consultada.
  *
+ * Kings de cada lado (S12, Tabela R602.7.5 — regra de vento, independente de quem escolheu o header):
+ * - Parede interna: `opening.kingStuds` → 1.
+ * - Parede externa com `opening.kingStuds`: o projeto manda; menor que a tabela (quando há vento) gera
+ *   aviso `HEADER_KINGS_BELOW_TABLE`.
+ * - Parede externa sem `kingStuds`: `kingsFor` com `config.building.windSpeed` e `exposure`; sem
+ *   `windSpeed`, 1 king e aviso `WIND_SPEED_MISSING`; `requiresEngineer` (vão > 18' ou vento fora da
+ *   tabela) lança `Error` pedindo `kingStuds`.
+ *
  * Sem header não há geometria (jacks, cripples), então nada aqui é chutado: tabela que devolve
  * `requiresEngineer` ou dado faltando lança `Error` com parede, abertura e motivo.
  */
@@ -22,6 +30,7 @@
 import type { Config, HeaderSource, Opening, Section, Wall, Warning } from '../types';
 import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
 import { headerFor, type HeaderQuery, type HeaderTable } from './headers';
+import { kingsFor, type KingTable } from './kings';
 
 /** Folga numérica para comparar espessura do header com a da parede. */
 const EPS = 1e-9;
@@ -31,10 +40,18 @@ export interface ResolvedHeader {
   plies: number;
   /** Jacks de cada lado que o painel vai levar. */
   jackStuds: number;
+  /** Kings de cada lado que o painel vai levar. */
+  kingStuds: number;
   source: HeaderSource;
   /** Peça deitada (parede não portante): 1.5" de altura, sem cripples acima. */
   flat: boolean;
   warnings: Warning[];
+}
+
+/** Tabelas injetáveis nos testes; ausentes = IRC de `src/data`. */
+export interface HeaderTables {
+  headers?: readonly HeaderTable[];
+  kings?: KingTable;
 }
 
 /** R602.7.4: a peça deitada vale para aberturas de até 8'-0". */
@@ -44,17 +61,93 @@ export const FLAT_HEADER_MAX_SPAN = 96;
 export const FLAT_HEADER_MAX_GAP = 24;
 
 /**
- * @param tables tabela injetada (testes); ausente = IRC de `src/data/irc-headers.json`
+ * @param tables tabelas injetadas (testes): lista de tabelas de header (forma antiga) ou
+ *               `{ headers?, kings? }`; ausentes = IRC de `src/data`
  * @throws Error      header fora da tabela, dado da casa ou da parede faltando, RO não portante acima de 96",
- *                    header do projeto mais espesso que a parede
- * @throws RangeError número inválido (plies, jacks, largura, neve, pavimentos)
+ *                    header do projeto mais espesso que a parede, kings fora da tabela sem `kingStuds`
+ * @throws RangeError número inválido (plies, jacks, kings, largura, neve, pavimentos, vento)
  */
 export function resolveOpeningHeader(
   opening: Opening,
   wall: Wall,
   config: Config,
-  tables?: readonly HeaderTable[],
+  tables?: readonly HeaderTable[] | HeaderTables,
 ): ResolvedHeader {
+  const injected: HeaderTables = isList(tables) ? { headers: tables } : (tables ?? {});
+  const header = resolveHeaderSpec(opening, wall, config, injected.headers);
+  const kings = resolveKings(opening, wall, config, injected.kings);
+  return { ...header, kingStuds: kings.kingStuds, warnings: [...header.warnings, ...kings.warnings] };
+}
+
+/** Kings de cada lado (ver regras no topo do arquivo). */
+function resolveKings(
+  opening: Opening,
+  wall: Wall,
+  config: Config,
+  table?: KingTable,
+): { kingStuds: number; warnings: Warning[] } {
+  const where = `parede ${wall.id}, abertura ${opening.id}`;
+  const explicit = opening.kingStuds;
+  if (explicit !== undefined) count(explicit, `${where}: kingStuds`);
+  if (!wall.exterior) return { kingStuds: explicit ?? 1, warnings: [] };
+
+  const windSpeed = config.building?.windSpeed;
+  if (windSpeed === undefined) {
+    if (explicit !== undefined) return { kingStuds: explicit, warnings: [] };
+    return {
+      kingStuds: 1,
+      warnings: [
+        {
+          code: 'WIND_SPEED_MISSING',
+          message:
+            `${where}: parede externa sem config.building.windSpeed — kings pela Tabela R602.7.5 não ` +
+            'conferidos; o painel sai com 1 king por lado',
+        },
+      ],
+    };
+  }
+
+  const query = {
+    span: opening.roughWidth,
+    windSpeed,
+    ...(config.building?.exposure === undefined ? {} : { exposure: config.building.exposure }),
+  };
+  let choice;
+  try {
+    choice = table === undefined ? kingsFor(query) : kingsFor(query, table);
+  } catch (e) {
+    if (e instanceof RangeError) throw new RangeError(`${where}: ${e.message}`);
+    throw e;
+  }
+  if ('requiresEngineer' in choice) {
+    if (explicit !== undefined) return { kingStuds: explicit, warnings: [] };
+    throw new Error(
+      `${where}: kings fora da tabela (${choice.reason}) — exige engenheiro; informe kingStuds na abertura`,
+    );
+  }
+  if (explicit !== undefined && explicit < choice.kings) {
+    return {
+      kingStuds: explicit,
+      warnings: [
+        {
+          code: 'HEADER_KINGS_BELOW_TABLE',
+          message:
+            `${where}: ${explicit} king(s) por lado, mas a tabela ${choice.table} pede ${choice.kings} ` +
+            `para vão de ${opening.roughWidth}" com vento de ${windSpeed} mph, exposição ` +
+            `${config.building?.exposure ?? 'B'}`,
+        },
+      ],
+    };
+  }
+  return { kingStuds: explicit ?? choice.kings, warnings: [] };
+}
+
+function resolveHeaderSpec(
+  opening: Opening,
+  wall: Wall,
+  config: Config,
+  tables?: readonly HeaderTable[],
+): Omit<ResolvedHeader, 'kingStuds'> {
   const where = `parede ${wall.id}, abertura ${opening.id}`;
   const explicitJacks = opening.jackStuds;
   if (explicitJacks !== undefined) count(explicitJacks, `${where}: jackStuds`);
@@ -149,6 +242,10 @@ export function resolveOpeningHeader(
     flat: false,
     warnings,
   };
+}
+
+function isList(t: readonly HeaderTable[] | HeaderTables | undefined): t is readonly HeaderTable[] {
+  return Array.isArray(t);
 }
 
 function count(n: number, what: string): void {

@@ -301,7 +301,7 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
 
   describe("janela + porta com NJ 2 (tabela FALSA: 20 psf, 30', 1 pavimento clear span → 2-2x6, NJ 2)", () => {
     const FAKE = loadHeaderTables(fakeHeaderJson());
-    const fConfig: Config = { ...iConfig, building: { groundSnowLoad: 20, buildingWidth: 360 } };
+    const fConfig: Config = { ...iConfig, building: { groundSnowLoad: 20, buildingWidth: 360, windSpeed: 120 } };
     const fWall = (doorOffset: number): Wall => ({
       ...iWall,
       floorsSupported: 1,
@@ -346,5 +346,79 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
       expect(panel.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
       expectNoVerticalOverlap(panel.members);
     });
+  });
+});
+
+describe('panelizeWall — studs extras do projeto (S12)', () => {
+  const studs = (w: Wall, c: Config = config) =>
+    panelizeWall(w, c)
+      .members.filter((m) => m.role === 'stud')
+      .map((m) => [m.x, m.label ?? ''] as const)
+      .sort((a, b) => a[0] - b[0]);
+
+  it('um extra em 40: entra como stud de altura inteira com o label; nenhum stud de layout o sobrepõe', () => {
+    const panel = panelizeWall({ ...wall, extraStuds: [{ x: 40, label: 'HDU2 post' }] }, config);
+    const extra = panel.members.find((m) => m.label === 'HDU2 post')!;
+    expect(extra).toMatchObject({ role: 'stud', section: '2x6', length: 92.625, x: 40, y: 1.5, orientation: 'vertical' });
+    expect(panel.members).toHaveLength(14);
+    expect(panel.warnings).toEqual([]);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('extra que sobrepõe um stud de layout: o de layout sai (como na zona de abertura)', () => {
+    // 31.25–32.75 sobrepõe 32–33.5
+    expect(studs({ ...wall, extraStuds: [{ x: 32 }] }).map(([x]) => x)).toEqual([
+      0, 15.25, 32, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5,
+    ]);
+  });
+
+  it('extra que só encosta no stud de layout fica ao lado dele (stud duplo)', () => {
+    const xs = studs({ ...wall, extraStuds: [{ x: 32.75 }] }).map(([x]) => x);
+    expect(xs).toContain(31.25);
+    expect(xs).toContain(32.75);
+  });
+
+  it('count: studs colados a partir de x para a direita, todos com o label', () => {
+    const list = studs({ ...wall, extraStuds: [{ x: 60, count: 3, label: 'studs to match above' }] });
+    expect(list.filter(([, l]) => l !== '')).toEqual([
+      [60, 'studs to match above'],
+      [61.5, 'studs to match above'],
+      [63, 'studs to match above'],
+    ]);
+    // 63.25–64.75 sobrepõe 63–64.5 e sai; 47.25 e 79.25 ficam
+    expect(list.map(([x]) => x)).toEqual([0, 15.25, 31.25, 47.25, 60, 61.5, 63, 79.25, 95.25, 111.25, 127.25, 142.5]);
+  });
+
+  it('extra em x=0 substitui o stud de ponta (mesma geometria, agora com label)', () => {
+    const list = studs({ ...wall, extraStuds: [{ x: 0, label: 'corner post' }] });
+    expect(list.filter(([x]) => x === 0)).toEqual([[0, 'corner post']]);
+    expect(list).toHaveLength(10);
+  });
+
+  it('extra junto a uma abertura: fora da zona passa; dentro da zona é RangeError', () => {
+    const wWall = window.wall as Wall;
+    const wConfig = window.config as Config;
+    // zona [45, 87]: 43.5–45 encosta no king e passa
+    const touching = panelizeWall({ ...wWall, extraStuds: [{ x: 43.5 }] }, wConfig);
+    expect(touching.members.some((m) => m.x === 43.5 && m.role === 'stud')).toBe(true);
+    expect(() => panelizeWall({ ...wWall, extraStuds: [{ x: 44 }] }, wConfig)).toThrow(
+      /parede W-window, extraStuds\[0\]: stud em x=44 cai na zona de abertura \[45, 87\]/,
+    );
+    expect(() => panelizeWall({ ...wWall, extraStuds: [{ x: 42, count: 3 }] }, wConfig)).toThrow(/x=45 cai na zona/);
+  });
+
+  it('extra fora da parede ou com count inválido: RangeError com a parede e o índice', () => {
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 143 }] }, config)).toThrow(
+      /parede W-plain, extraStuds\[0\].*saem da parede de 144"/,
+    );
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 141, count: 3 }] }, config)).toThrow(/3 stud\(s\) a partir de x=141 saem/);
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: -1 }] }, config)).toThrow(RangeError);
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 10 }, { x: 20, count: 0 }] }, config)).toThrow(/extraStuds\[1\]: count/);
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: NaN }] }, config)).toThrow(/x deve ser número finito/);
+  });
+
+  it('dois extras que se sobrepõem entre si ficam os dois e a validação avisa STUDS_OVERLAP', () => {
+    const panel = panelizeWall({ ...wall, extraStuds: [{ x: 40 }, { x: 41 }] }, config);
+    expect(panel.warnings.map((w) => w.code)).toEqual(['STUDS_OVERLAP']);
   });
 });

@@ -40,7 +40,12 @@
   senão, encostado na face inferior da top plate.
   Topo do RO = base do header. **Padrão da fábrica: 82.5"** do subfloor (= y) à face inferior do header, igual
   para portas e janelas; o projeto pode indicar outra (P2, respondida em 2026-10-01).
-- Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO.
+- Sill: mesma seção da parede, deitado (1.5" de altura), comprimento = largura do RO. Sill dupla (S12) quando o RO
+  passa de `config.doubleSillOver` (opt-in; o projeto diz — Horace S-507 usa 6'-0"): segunda peça igual em
+  `sillY − 1.5`; os cripples abaixo encurtam 1.5".
+- Studs extras do projeto (S12): `wall.extraStuds = [{ x, count?, label? }]` → studs de altura inteira
+  (`role: 'stud'`, `Member.label`) colados a partir de `x`; o stud de layout que os sobrepõe sai, o que só encosta
+  fica. Extra dentro de uma zona de abertura ou fora da parede é erro.
 - Cripples abaixo do sill nos studs de layout que caem inteiros dentro do RO, exceto o colado ao jack ou o que
   o invade (ex.: RO em 48 com jack em 46.5–48: o stud da marca 48, em 47.25–48.75, invade o jack e sai) ou a até
   2" de folga livre dele — confirmado pela fábrica (P3, P13).
@@ -65,7 +70,7 @@
 | Headers externos portantes | Tabela R602.7(1) | Entrada: largura da edificação, neve, pavimentos → seção, plies, nº de jacks |
 | Headers internos portantes | Tabela R602.7(2) | Idem sem neve |
 | Headers não portantes | R602.7.4 | Single flat até 8' |
-| King studs | Nota R602.7(1) | Metade dos studs interrompidos vira king (arredondar p/ cima) |
+| King studs | Tabela R602.7.5 | Parede externa: kings por lado pelo vão do header e vento (Vult, exposição B/C); 4' → 1 … 18' → 4; fora da tabela → engenheiro (`src/data/irc-kings.json`, S12) |
 | Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11) → aviso `FIRE_BLOCKING_REQUIRED`; o painel ainda não desenha a peça |
 | Cantos e T | Prática da equipe | Default California corner + ladder (P5); 3-stud e stud de encosto configuráveis |
 
@@ -102,6 +107,17 @@ A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeir
   (com NJ 2: zona = RO ± 4.5", mínimo de 7.5" entre RO vizinhos).
 - A origem vai em `Member.headerSource` e aparece no `<title>` do header no SVG.
 - Fixture: `test/fixtures/wall-144-window-irc.json` (50 psf, 28', só telhado → 2-2x6, NJ 2, 22 peças).
+
+### Kings de cada abertura (S12, `rules/kings.ts` + `resolveOpeningHeader`)
+`kingsFor({ span, windSpeed, exposure? })` → `{ kings, maxSpan, table }` | `{ requiresEngineer, reason }`, pela
+Tabela R602.7.5 (`src/data/irc-kings.json`): linha = menor vão máximo ≥ span (vão entre linhas usa a maior,
+nota a); coluna = a de menos kings entre as que cobrem o vento (coluna "< 140 mph B ou < 130 mph C" e coluna
+"≤ 115 mph B"). Vento ≥ 140 B, ≥ 130 C, exposição D ou vão > 18' → `requiresEngineer`; nunca extrapola.
+- Em **toda parede externa** (regra de vento, vale com header do projeto ou da tabela, portante ou não):
+  `opening.kingStuds` → tabela com `config.building.windSpeed`/`exposure` → sem vento: 1 e aviso
+  `WIND_SPEED_MISSING`. `kingStuds` do projeto abaixo da tabela: aviso `HEADER_KINGS_BELOW_TABLE`.
+  `requiresEngineer` sem `kingStuds`: erro pedindo `kingStuds` na abertura. Parede interna: `kingStuds ?? 1`.
+- O número de kings entra na zona (RO ± (kings + jacks)·1.5) e na fusão de zonas, como já acontecia.
 
 ## Exemplo resolvido — parede 144" com janela
 Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.

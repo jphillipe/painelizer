@@ -10,7 +10,10 @@
  *   senão, encostada sob a top plate.
  *   Header apoia em todos os jacks: comprimento = roughWidth + 2·jacks·t.
  * - Janela: topo do RO = base do header; base do RO = topo − roughHeight; sill deitado logo abaixo,
- *   mesma seção da parede, comprimento = roughWidth.
+ *   mesma seção da parede, comprimento = roughWidth. RO mais largo que `config.doubleSillOver` (S12,
+ *   hipótese 72") leva sill dupla: segunda peça igual em `sillY − 1.5`; os cripples abaixo encurtam 1.5".
+ * - Kings de cada lado = os do header resolvido (`opening.kingStuds`, senão Tabela R602.7.5 em parede
+ *   externa, senão 1).
  * - Porta (P4): RO medido do subfloor (y=0), sem sill e sem cripples abaixo. `roughHeight` não muda a
  *   geometria; se diferir da base do header, aviso `DOOR_RO_HEIGHT_MISMATCH`. A bottom plate sai
  *   inteira e o trecho do RO vira um `FieldCut` (corte na obra).
@@ -132,8 +135,8 @@ export function framingForOpening(
   const header = options.header ?? resolveOpeningHeader(opening, wall, config);
   const headerSection = header.section;
   const plies = header.plies;
-  // Os jacks do header (NJ da tabela ou do projeto) valem para a zona e para os kings.
-  opening = { ...opening, jackStuds: header.jackStuds };
+  // Jacks (NJ da tabela ou do projeto) e kings (R602.7.5 ou do projeto) resolvidos valem para a zona.
+  opening = { ...opening, jackStuds: header.jackStuds, kingStuds: header.kingStuds };
 
   const t = config.studThickness;
   const p = config.plateThickness;
@@ -174,11 +177,18 @@ export function framingForOpening(
   }
 
   // Janela: sill logo abaixo da base do RO. Porta: RO desce até o subfloor, sem sill.
+  // Sill dupla (S12): RO mais largo que `config.doubleSillOver` leva uma segunda peça sob a primeira.
   const sillY = isDoor ? undefined : headerBase - roughHeight - p;
-  if (sillY !== undefined && sillY < p - EPS) {
+  const doubleOver = config.doubleSillOver;
+  if (doubleOver !== undefined && (!Number.isFinite(doubleOver) || doubleOver <= 0)) {
+    throw new RangeError(`config.doubleSillOver inválido (${doubleOver}); esperado medida > 0`);
+  }
+  const doubleSill = sillY !== undefined && doubleOver !== undefined && roughWidth > doubleOver + EPS;
+  const sillBottom = sillY === undefined ? undefined : doubleSill ? sillY - p : sillY;
+  if (sillBottom !== undefined && sillBottom < p - EPS) {
     throw new RangeError(
-      `abertura ${opening.id}: base do RO em ${headerBase - roughHeight}" não deixa espaço para o sill ` +
-        `sobre a bottom plate (topo em ${p}")`,
+      `abertura ${opening.id}: base do RO em ${headerBase - roughHeight}" não deixa espaço para o sill` +
+        `${doubleSill ? ' duplo' : ''} sobre a bottom plate (topo em ${p}")`,
     );
   }
 
@@ -214,14 +224,9 @@ export function framingForOpening(
   });
 
   if (sillY !== undefined) {
-    members.push({
-      role: 'sill',
-      section: wall.section,
-      length: roughWidth,
-      x: offset,
-      y: sillY,
-      orientation: 'horizontal',
-    });
+    const sill = { role: 'sill' as const, section: wall.section, length: roughWidth, x: offset, orientation: 'horizontal' as const };
+    members.push({ ...sill, y: sillY });
+    if (doubleSill) members.push({ ...sill, y: sillY - p });
   }
 
   const marks = crippleMarks(
@@ -231,8 +236,8 @@ export function framingForOpening(
     t,
   );
 
-  if (sillY !== undefined) {
-    const below = sillY - p;
+  if (sillBottom !== undefined) {
+    const below = sillBottom - p;
     if (below >= MIN_CRIPPLE_LENGTH - EPS) {
       for (const x of marks) members.push({ role: 'cripple', ...vertical, length: below, x, y: p });
     }

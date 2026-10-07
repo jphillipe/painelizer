@@ -49,12 +49,35 @@ export interface OpeningHeader {
   jackStuds?: number;
 }
 
-/** Dados da edificação para a tabela de headers. Vêm das notas estruturais do projeto. */
+/** Categoria de exposição ao vento (ASCE 7). A Tabela R602.7.5 só cobre B e C. */
+export type Exposure = 'B' | 'C' | 'D';
+
+/** Dados da edificação para as tabelas de header e de kings. Vêm das notas estruturais do projeto. */
 export interface Building {
   /** Carga de neve no solo, psf. */
   groundSnowLoad: number;
   /** Largura da edificação, em polegadas. */
   buildingWidth: number;
+  /**
+   * Velocidade básica de vento Vult, mph (Tabela R602.7.5: kings em parede externa). Ausente = 1 king
+   * por lado e aviso `WIND_SPEED_MISSING` em cada abertura de parede externa.
+   */
+  windSpeed?: number;
+  /** Categoria de exposição ao vento. Ausente = B. */
+  exposure?: Exposure;
+}
+
+/**
+ * Stud de altura inteira adicional pedido pelo projeto (post de hold-down, carga pontual, "studs to match
+ * above"): `count` studs colados a partir de `x` para a direita (ausente = 1). Stud de layout que se
+ * sobrepõe a um extra sai; extra dentro de uma zona de abertura ou fora da parede é erro.
+ */
+export interface ExtraStud {
+  /** x da borda esquerda do primeiro stud. */
+  x: number;
+  count?: number;
+  /** Texto livre do projeto (ex.: "HDU2 post"); vai para o `<title>` da peça no SVG. */
+  label?: string;
 }
 
 /**
@@ -68,7 +91,11 @@ export interface Opening {
   offset: number;
   roughWidth: number;
   roughHeight: number;
-  /** King studs de cada lado (inteiro ≥ 1). Ausente = 1. */
+  /**
+   * King studs de cada lado (inteiro ≥ 1). Ausente = Tabela R602.7.5 em parede externa (vento de
+   * `config.building.windSpeed`; sem ele, 1 e aviso `WIND_SPEED_MISSING`), 1 em parede interna.
+   * Menor que a tabela gera aviso `HEADER_KINGS_BELOW_TABLE`.
+   */
   kingStuds?: number;
   /**
    * Jack studs de cada lado (inteiro ≥ 1). O header apoia em todos. Ausente = os do header
@@ -107,6 +134,8 @@ export interface Wall {
    * `layoutOrigin + k·studSpacing`; o primeiro stud fica sempre em 0.
    */
   layoutOrigin?: number;
+  /** Studs de altura inteira adicionais pedidos pelo projeto (S12). */
+  extraStuds?: ExtraStud[];
 }
 
 export type MemberRole =
@@ -137,6 +166,8 @@ export interface Member {
   headerSource?: HeaderSource;
   /** Só no header: peça deitada (1.5" de altura na elevação, como o sill), não em pé. Ausente = em pé. */
   flat?: boolean;
+  /** Texto do projeto para a peça (stud extra: `ExtraStud.label`); vai para o `<title>` no SVG. */
+  label?: string;
 }
 
 /** Aviso de validação. Nunca interrompe a geração. */
@@ -190,4 +221,9 @@ export interface Config {
   headerHeight?: number;
   /** Dados da casa, uma vez por projeto. Obrigatório para escolher header pela tabela. */
   building?: Building;
+  /**
+   * Janela com RO mais largo que isto (polegadas) leva sill dupla: duas peças deitadas, e os cripples
+   * abaixo encurtam 1.5". Ausente = sill simples sempre. Hipótese de projeto: 72" (Horace S-507).
+   */
+  doubleSillOver?: number;
 }

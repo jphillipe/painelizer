@@ -106,7 +106,8 @@ describe('parseProject', () => {
 
   it('exemplo: building em pés-pol, floorsSupported nas externas portantes, header do projeto na W07', () => {
     const p = parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa-exemplo.json');
-    expect(p.config.building).toEqual({ groundSnowLoad: 50, buildingWidth: 336 });
+    expect(p.config.building).toEqual({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120, exposure: 'B' });
+    expect(p.config.doubleSillOver).toBe(72);
     expect(p.walls.map((w) => w.floorsSupported)).toEqual([0, 0, undefined, undefined, 0, 0, 0]);
     expect(p.walls[4]?.openings[0]).not.toHaveProperty('header');
     expect(p.walls[6]?.openings.map((o) => o.header)).toEqual([
@@ -222,5 +223,42 @@ describe('measure', () => {
     expect(() => measure('abc', 'p')).toThrow(/p: medida inválida "abc"/);
     expect(() => measure(true, 'p')).toThrow(/p: esperado medida/);
     expect(() => measure(undefined, 'p')).toThrow(/recebido nada/);
+  });
+});
+
+describe('projectFrom — dados do estrutural (S12)', () => {
+  it('config.building: windSpeed em mph (número > 0) e exposure B/C/D', () => {
+    const cfg = (building: unknown) => valid({ config: { studSpacing: 16, studLength: 92.625, building } });
+    expect(
+      projectFrom(cfg({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: 130, exposure: 'C' })).config.building,
+    ).toEqual({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: 130, exposure: 'C' });
+    expect(() => projectFrom(cfg({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: '130' }), 'projeto')).toThrow(
+      /projeto\.config\.building\.windSpeed: esperado velocidade de vento em mph/,
+    );
+    expect(() => projectFrom(cfg({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: 0 }))).toThrow(/windSpeed/);
+    expect(() => projectFrom(cfg({ groundSnowLoad: 50, buildingWidth: 336, exposure: 'A' }), 'projeto')).toThrow(
+      /projeto\.config\.building\.exposure: esperado um de B, C, D/,
+    );
+  });
+
+  it('config.doubleSillOver: medida > 0, em pés-pol ou polegadas', () => {
+    const cfg = (doubleSillOver: unknown) => valid({ config: { studSpacing: 16, studLength: 92.625, doubleSillOver } });
+    expect(projectFrom(cfg(`6'`)).config.doubleSillOver).toBe(72);
+    expect(projectFrom(cfg(60)).config.doubleSillOver).toBe(60);
+    expect(projectFrom(valid()).config).not.toHaveProperty('doubleSillOver');
+    expect(() => projectFrom(cfg(0), 'projeto')).toThrow(/projeto\.config\.doubleSillOver: esperado medida > 0/);
+  });
+
+  it('wall.extraStuds: x como medida, count inteiro ≥ 1, label texto', () => {
+    const withExtras = (extraStuds: unknown) => valid({ walls: [{ ...(valid().walls as object[])[0], extraStuds }] });
+    expect(projectFrom(withExtras([{ x: `3'-4"` }, { x: 60, count: 2, label: 'HDU2 post' }])).walls[0]?.extraStuds).toEqual([
+      { x: 40 },
+      { x: 60, count: 2, label: 'HDU2 post' },
+    ]);
+    expect(projectFrom(valid()).walls[0]).not.toHaveProperty('extraStuds');
+    expect(() => projectFrom(withExtras({ x: 40 }), 'projeto')).toThrow(/projeto\.walls\[0\]\.extraStuds: esperado array/);
+    expect(() => projectFrom(withExtras([{}]), 'projeto')).toThrow(/walls\[0\]\.extraStuds\[0\]\.x: esperado medida/);
+    expect(() => projectFrom(withExtras([{ x: 40, count: 0 }]), 'projeto')).toThrow(/extraStuds\[0\]\.count: esperado inteiro ≥ 1/);
+    expect(() => projectFrom(withExtras([{ x: 40, label: '' }]), 'projeto')).toThrow(/extraStuds\[0\]\.label: esperado texto não vazio/);
   });
 });

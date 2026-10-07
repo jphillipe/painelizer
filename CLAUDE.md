@@ -10,7 +10,8 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
 - Toda função em `src/rules/` tem teste em `test/rules/`. Sem teste não faz commit.
 - Fixtures em `test/fixtures/*.json` são a verdade. Se um teste falhar, corrija o código, não o fixture —
   a menos que o humano confirme que o fixture estava errado.
-- Headers: só de `src/data/irc-headers.json`. Vão fora da tabela retorna `{ requiresEngineer: true }`. Nunca extrapolar.
+- Headers: só de `src/data/irc-headers.json`; kings em parede externa só de `src/data/irc-kings.json` (R602.7.5).
+  Fora da tabela retorna `{ requiresEngineer: true }`. Nunca extrapolar.
 - Layout de studs: marcas em `layoutOrigin + k·16` (origem 0 na parede solta), stud CENTRADO na marca
   (borda esquerda em marca − 0.75: 15 1/4", 31 1/4"…). Primeiro stud sempre em x=0; último sempre encostado
   no fim da parede (x = comprimento − 1.5). Hipótese P19 até a fábrica responder.

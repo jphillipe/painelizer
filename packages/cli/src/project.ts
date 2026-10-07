@@ -17,6 +17,10 @@
  * structural drawings entra na abertura: `header: { section, plies, jackStuds? }`, e manda sobre a tabela.
  * Parede não portante sem `header` leva a peça deitada da R602.7.4 (S9.3); `defaultHeader*` não existe mais.
  *
+ * Dados do estrutural (S12): `config.building.windSpeed` (mph, Vult) e `exposure` ('B' | 'C' | 'D') para os
+ * kings pela Tabela R602.7.5; `config.doubleSillOver` (medida) para a sill dupla; na parede,
+ * `extraStuds: [{ x (medida), count?, label? }]` para studs de altura inteira pedidos pelo projeto.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
@@ -24,6 +28,8 @@
 import {
   parseFeetInches,
   type Config,
+  type Exposure,
+  type ExtraStud,
   type FloorSpan,
   type Opening,
   type OpeningType,
@@ -51,6 +57,7 @@ const WALL_SECTIONS: readonly WallSection[] = ['2x4', '2x6'];
 const SECTIONS: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
 const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
 const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
+const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
 
 /** Converte o texto do arquivo em `Project` validado. */
 export function parseProject(text: string, source = 'projeto'): Project {
@@ -115,6 +122,15 @@ function configFrom(raw: unknown, path: string): Config {
       groundSnowLoad: psf(b['groundSnowLoad'], `${path}.building.groundSnowLoad`),
       buildingWidth: positive(b['buildingWidth'], `${path}.building.buildingWidth`),
     };
+    if (b['windSpeed'] !== undefined) {
+      config.building.windSpeed = mph(b['windSpeed'], `${path}.building.windSpeed`);
+    }
+    if (b['exposure'] !== undefined) {
+      config.building.exposure = oneOf(b['exposure'], EXPOSURES, `${path}.building.exposure`);
+    }
+  }
+  if (c['doubleSillOver'] !== undefined) {
+    config.doubleSillOver = positive(c['doubleSillOver'], `${path}.doubleSillOver`);
   }
   return config;
 }
@@ -144,7 +160,20 @@ function wallFrom(raw: unknown, path: string): Wall {
   }
   if (w['floorSpan'] !== undefined) wall.floorSpan = oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`);
   if (w['layoutOrigin'] !== undefined) wall.layoutOrigin = signed(w['layoutOrigin'], `${path}.layoutOrigin`);
+  if (w['extraStuds'] !== undefined) {
+    const list = w['extraStuds'];
+    if (!Array.isArray(list)) throw new ProjectError(`${path}.extraStuds: esperado array`);
+    wall.extraStuds = list.map((e, i) => extraStudFrom(e, `${path}.extraStuds[${i}]`));
+  }
   return wall;
+}
+
+function extraStudFrom(raw: unknown, path: string): ExtraStud {
+  const e = obj(raw, path);
+  const extra: ExtraStud = { x: measure(e['x'], `${path}.x`) };
+  if (e['count'] !== undefined) extra.count = count(e['count'], `${path}.count`);
+  if (e['label'] !== undefined) extra.label = str(e['label'], `${path}.label`);
+  return extra;
 }
 
 function openingFrom(raw: unknown, path: string): Opening {
@@ -244,6 +273,14 @@ function positive(v: unknown, path: string): number {
 function psf(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
     throw new ProjectError(`${path}: esperado carga em psf (número ≥ 0), recebido ${show(v)}`);
+  }
+  return v;
+}
+
+/** Velocidade de vento em mph: número > 0, sem conversão de unidade. */
+function mph(v: unknown, path: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
+    throw new ProjectError(`${path}: esperado velocidade de vento em mph (número > 0), recebido ${show(v)}`);
   }
   return v;
 }

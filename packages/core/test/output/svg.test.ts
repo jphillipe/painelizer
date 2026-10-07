@@ -257,3 +257,18 @@ describe('helpers', () => {
     expect(esc('a<b>&"c"')).toBe('a&lt;b&gt;&amp;&quot;c&quot;');
   });
 });
+
+describe('panelSvg — studs extras (S12)', () => {
+  it('label do projeto entre aspas no <title> do stud extra; stud comum sem aspas', () => {
+    const panel = panelizeWall(
+      { ...(plain.wall as Wall), extraStuds: [{ x: 40, label: 'HDU2 "post"' }] },
+      plain.config as Config,
+    );
+    const out = panelSvg(panel);
+    expect(out).toContain(
+      '<title>stud 2x6 × 92 5/8&quot; &quot;HDU2 &quot;post&quot;&quot; — x=40&quot; y=1 1/2&quot;</title>',
+    );
+    expect(out).toContain('<title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title>');
+    expect(rects(out)).toHaveLength(14);
+  });
+});

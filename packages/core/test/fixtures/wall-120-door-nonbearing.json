@@ -19,7 +19,7 @@
     ]
   },
   "expected": {
-    "header": { "section": "2x4", "plies": 1, "jackStuds": 1, "source": "R602.7.4", "flat": true },
+    "header": { "section": "2x4", "plies": 1, "jackStuds": 1, "kingStuds": 1, "source": "R602.7.4", "flat": true },
     "members": [
       { "role": "bottomPlate", "section": "2x4", "length": 120, "x": 0, "y": 0, "orientation": "horizontal" },
       { "role": "topPlate", "section": "2x4", "length": 120, "x": 0, "y": 94.125, "orientation": "horizontal" },

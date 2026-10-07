@@ -202,14 +202,15 @@ describe('framingForOpening — janela', () => {
 
   it('sem header possível (parede portante, sem header do projeto nem dados da casa): erro, nenhuma peça', () => {
     const { header: _h, ...noHeader } = win;
-    expect(() => frame(noHeader, wall, config)).toThrow(/parede W-window, abertura win1: .*config\.building/);
+    const { building: _b, ...noBuilding } = config;
+    expect(() => frame(noHeader, wall, noBuilding)).toThrow(/parede W-window, abertura win1: .*config\.building/);
   });
 
   it('options.header: usa o header recebido — jacks dele definem zona, kings e comprimento; avisos repassados', () => {
     const { header: _h, ...noHeader } = win;
     const warning = { code: 'HEADER_JACKS_BELOW_TABLE', message: 'x' };
     const { members, warnings } = framingForOpening(noHeader, wall, config, {
-      header: { section: '2x6', plies: 2, jackStuds: 2, source: 'R602.7(1)', flat: false, warnings: [warning] },
+      header: { section: '2x6', plies: 2, jackStuds: 2, kingStuds: 1, source: 'R602.7(1)', flat: false, warnings: [warning] },
     });
     expect(xs(byRole(members, 'kingStud'))).toEqual([43.5, 87]);
     expect(xs(byRole(members, 'jackStud'))).toEqual([45, 46.5, 84, 85.5]);
@@ -226,7 +227,7 @@ describe('framingForOpening — janela', () => {
   it('options.header com warnings vazios e flat false: header em pé como sempre', () => {
     const { header: _h, ...noHeader } = win;
     const members = frame(noHeader, wall, config, {
-      header: { section: '2x10', plies: 2, jackStuds: 1, source: 'project', flat: false, warnings: [] },
+      header: { section: '2x10', plies: 2, jackStuds: 1, kingStuds: 1, source: 'project', flat: false, warnings: [] },
     });
     expectSameMembers(members, expectedOpening);
   });
@@ -375,5 +376,55 @@ describe('framingForOpening — porta', () => {
 
   it('header de porta sem espaço para jack → RangeError', () => {
     expect(() => framingForOpening({ ...door, headerHeight: 1.5 }, dWall, dConfig)).toThrow(RangeError);
+  });
+});
+
+describe('framingForOpening — sill dupla (S12, config.doubleSillOver)', () => {
+  const lowConfig: Config = { ...config, headerHeight: 82.5 };
+  const wide = (roughWidth: number, over?: number) =>
+    framingForOpening({ ...win, offset: 24, roughWidth }, { ...wall, length: 192 }, {
+      ...lowConfig,
+      ...(over === undefined ? {} : { doubleSillOver: over }),
+    }).members;
+
+  it('RO 84" > 72": duas peças de sill (33 e 31.5), cripples abaixo de 30" em vez de 31.5"', () => {
+    const members = wide(84, 72);
+    expect(byRole(members, 'sill').map((s) => [s.x, s.y, s.length])).toEqual([
+      [24, 33, 84],
+      [24, 31.5, 84],
+    ]);
+    const below = byRole(members, 'cripple').filter((c) => c.y === 1.5);
+    expect(below.map((c) => c.length)).toEqual(below.map(() => 30));
+    expect(below.map((c) => c.x)).toEqual([31.25, 47.25, 63.25, 79.25, 95.25]);
+  });
+
+  it('RO igual ao limite (72") ou abaixo: sill simples; sem doubleSillOver: simples sempre', () => {
+    expect(byRole(wide(72, 72), 'sill')).toHaveLength(1);
+    expect(byRole(wide(84), 'sill')).toHaveLength(1);
+    expect(byRole(wide(84), 'cripple').filter((c) => c.y === 1.5).every((c) => c.length === 31.5)).toBe(true);
+  });
+
+  it('porta não tem sill, dupla ou simples', () => {
+    const dWall = doorFx.wall as Wall;
+    const members = framingForOpening({ ...dWall.openings[0]!, roughWidth: 84 }, { ...dWall, length: 192 }, {
+      ...(doorFx.config as Config),
+      doubleSillOver: 72,
+    }).members;
+    expect(byRole(members, 'sill')).toEqual([]);
+  });
+
+  it('segunda peça sem espaço sobre a bottom plate: RangeError "sill duplo"', () => {
+    // base do RO em 3.5: sill em 2, a segunda ficaria em 0.5 (< 1.5)
+    const run = () =>
+      framingForOpening({ ...win, offset: 24, roughWidth: 84, roughHeight: 79 }, { ...wall, length: 192 }, {
+        ...lowConfig,
+        doubleSillOver: 72,
+      });
+    expect(run).toThrow(/sill duplo sobre a bottom plate/);
+  });
+
+  it('doubleSillOver inválido lança RangeError', () => {
+    expect(() => wide(84, 0)).toThrow(/config\.doubleSillOver inválido/);
+    expect(() => wide(84, NaN)).toThrow(RangeError);
   });
 });

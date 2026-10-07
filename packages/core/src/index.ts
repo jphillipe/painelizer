@@ -32,9 +32,23 @@ export {
   type HeaderTable,
 } from './rules/headers';
 export {
+  ircKings,
+  kingsFor,
+  loadKingTable,
+  validateKingTable,
+  type KingChoice,
+  type KingColumn,
+  type KingQuery,
+  type KingRow,
+  type KingSpec,
+  type KingTable,
+  type WindCondition,
+} from './rules/kings';
+export {
   FLAT_HEADER_MAX_GAP,
   FLAT_HEADER_MAX_SPAN,
   resolveOpeningHeader,
+  type HeaderTables,
   type ResolvedHeader,
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';

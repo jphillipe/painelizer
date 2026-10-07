@@ -13,7 +13,8 @@
  *   altura (à esquerda), marcas de layout no rodapé (`panel.layoutOrigin + k·studSpacing`, o centro
  *   de cada stud de layout, mais o 0 e o fechamento em `length − 1.5`), rótulo "(N plies)" no header e um
  *   `<title>` por peça para o navegador mostrar papel/seção/comprimento/posição; no header, também
- *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[R602.7.4]`).
+ *   a origem entre colchetes (`[project]`, `[R602.7(1)]`, `[R602.7.4]`); no stud extra, o `label` do
+ *   projeto entre aspas.
  * - Cortes na obra (`panel.fieldCuts`, ex.: bottom plate no vão da porta) hachurados em vermelho
  *   sobre a peça, com o rótulo "cortar na obra" e o comprimento logo acima.
  * - Saída determinística: mesma entrada → mesma string.
@@ -193,8 +194,9 @@ function memberRect(
   const plies = m.plies ?? 1;
   const pliesNote = plies > 1 ? ` (${plies} plies)` : '';
   const sourceNote = m.headerSource === undefined ? '' : ` [${m.headerSource}]`;
+  const labelNote = m.label === undefined ? '' : ` "${m.label}"`;
   const title =
-    `${m.role} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote} — ` +
+    `${m.role} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote}${labelNote} — ` +
     `x=${formatInches(m.x)} y=${formatInches(m.y)}`;
 
   const parts: string[] = [];

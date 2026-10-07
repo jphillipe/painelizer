@@ -11,7 +11,11 @@ import irc from '../fixtures/wall-144-window-irc.json';
 import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
 
 const wall = plain.wall as Wall;
-const config = plain.config as Config;
+/** Config do fixture plain com vento (S12): paredes externas montadas à mão não avisam WIND_SPEED_MISSING. */
+const config: Config = {
+  ...(plain.config as Config),
+  building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 },
+};
 const wWall = window.wall as Wall;
 const win = wWall.openings[0] as Opening;
 

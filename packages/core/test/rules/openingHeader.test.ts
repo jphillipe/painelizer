@@ -14,7 +14,7 @@ const config: Config = {
   studThickness: 1.5,
   plateThickness: 1.5,
   studLength: [92.625],
-  building: { groundSnowLoad: 20, buildingWidth: 120 },
+  building: { groundSnowLoad: 20, buildingWidth: 120, windSpeed: 120 },
 };
 
 const wall: Wall = {
@@ -47,9 +47,10 @@ describe('resolveOpeningHeader — header do projeto', () => {
       section: '2x12',
       plies: 2,
       jackStuds: 1,
+      kingStuds: 1,
       source: 'project',
       flat: false,
-      warnings: [],
+      warnings: [expect.objectContaining({ code: 'WIND_SPEED_MISSING' })],
     });
   });
 
@@ -88,9 +89,10 @@ describe('resolveOpeningHeader — header do projeto', () => {
 
 describe('resolveOpeningHeader — parede portante, pela tabela', () => {
   it('externa: neve e largura de config.building, vão = largura do RO; origem = id da tabela', () => {
+    // Kings pela R602.7.5 real (120 mph B): 3' → 1, 6' → 2.
     const ext = { source: 'FAKE-EXT', flat: false, warnings: [] };
-    expect(resolve(op(36))).toEqual({ section: '2x6', plies: 2, jackStuds: 1, ...ext });
-    expect(resolve(op(72))).toEqual({ section: '2x10', plies: 2, jackStuds: 2, ...ext });
+    expect(resolve(op(36))).toEqual({ section: '2x6', plies: 2, jackStuds: 1, kingStuds: 1, ...ext });
+    expect(resolve(op(72))).toEqual({ section: '2x10', plies: 2, jackStuds: 2, kingStuds: 2, ...ext });
   });
 
   it('wall.buildingWidth sobrescreve a largura do projeto (casa em L)', () => {
@@ -119,6 +121,7 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
       section: '2x6',
       plies: 2,
       jackStuds: 1,
+      kingStuds: 1,
       source: 'FAKE-INT',
       flat: false,
       warnings: [],
@@ -169,9 +172,10 @@ describe('resolveOpeningHeader — parede não portante (R602.7.4)', () => {
       section: '2x6',
       plies: 1,
       jackStuds: 1,
+      kingStuds: 1,
       source: 'R602.7.4',
       flat: true,
-      warnings: [],
+      warnings: [expect.objectContaining({ code: 'WIND_SPEED_MISSING' })],
     });
     expect(resolve(op(36), { ...nonBearing, section: '2x4' })).toMatchObject({ section: '2x4', flat: true });
     expect(resolve(op(36, { jackStuds: 2 }), nonBearing)).toMatchObject({ jackStuds: 2 });
@@ -205,5 +209,88 @@ describe('resolveOpeningHeader — tabela IRC real', () => {
       ...nonBearingDoor.expected.header,
       warnings: [],
     });
+  });
+});
+
+describe('resolveOpeningHeader — kings pela Tabela R602.7.5 (S12)', () => {
+  // Header do projeto para não depender da tabela de headers; a tabela de kings é a REAL (120 mph B).
+  const H = { section: '2x10', plies: 2 } as const;
+  const kings = (o: Opening, w: Wall = wall, c: Config = config) => {
+    const r = resolve(o, w, c);
+    return { kingStuds: r.kingStuds, codes: r.warnings.map((x) => x.code) };
+  };
+
+  it("parede externa sem kingStuds: tabela pelo vão do RO e pelo vento (3' → 1, 6' → 2, 10' → 3)", () => {
+    expect(kings(op(36, { header: H }))).toEqual({ kingStuds: 1, codes: [] });
+    expect(kings(op(72, { header: H }))).toEqual({ kingStuds: 2, codes: [] });
+    expect(kings(op(120, { header: H }))).toEqual({ kingStuds: 3, codes: [] });
+  });
+
+  it("exposição C muda a coluna: 110 mph C → coluna de mais vento (6' → 2); 110 mph B → 1", () => {
+    const at = (exposure: 'B' | 'C') => ({ ...config, building: { ...config.building!, windSpeed: 110, exposure } });
+    expect(kings(op(72, { header: H }), wall, at('C'))).toEqual({ kingStuds: 2, codes: [] });
+    expect(kings(op(72, { header: H }), wall, at('B'))).toEqual({ kingStuds: 1, codes: [] });
+  });
+
+  it('kingStuds do projeto manda; abaixo da tabela avisa HEADER_KINGS_BELOW_TABLE', () => {
+    expect(kings(op(72, { header: H, kingStuds: 3 }))).toEqual({ kingStuds: 3, codes: [] });
+    const r = resolve(op(72, { header: H, kingStuds: 1 }));
+    expect(r.kingStuds).toBe(1);
+    expect(r.warnings.map((w) => w.code)).toEqual(['HEADER_KINGS_BELOW_TABLE']);
+    expect(r.warnings[0]!.message).toMatch(/parede W1, abertura o1: 1 king.*R602\.7\.5 pede 2.*72".*120 mph.*B/);
+  });
+
+  it('avisos de jacks vêm antes dos de kings', () => {
+    const r = resolve(op(72, { jackStuds: 1, kingStuds: 1 }));
+    expect(r.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_KINGS_BELOW_TABLE']);
+  });
+
+  it('sem windSpeed: 1 king e aviso WIND_SPEED_MISSING; com kingStuds do projeto, nem aviso', () => {
+    const { windSpeed: _w, ...noWind } = config.building!;
+    const c = { ...config, building: noWind };
+    expect(kings(op(72, { header: H }), wall, c)).toEqual({ kingStuds: 1, codes: ['WIND_SPEED_MISSING'] });
+    expect(kings(op(72, { header: H, kingStuds: 2 }), wall, c)).toEqual({ kingStuds: 2, codes: [] });
+    const { building: _b, ...noBuilding } = config;
+    expect(kings(op(72, { header: H }), wall, noBuilding)).toEqual({ kingStuds: 1, codes: ['WIND_SPEED_MISSING'] });
+  });
+
+  it('parede interna: kingStuds ou 1, sem tabela nem aviso, mesmo sem vento', () => {
+    const interior: Wall = { ...wall, exterior: false, floorsSupported: 1 };
+    const { building: _b, ...noBuilding } = config;
+    expect(kings(op(120, { header: H }), interior, noBuilding)).toEqual({ kingStuds: 1, codes: [] });
+    expect(kings(op(120, { header: H, kingStuds: 2 }), interior, noBuilding)).toEqual({ kingStuds: 2, codes: [] });
+  });
+
+  it('parede externa não portante também segue a tabela (regra de vento, não de carga)', () => {
+    const nonBearing: Wall = { ...wall, bearing: false };
+    expect(kings(op(72), nonBearing)).toEqual({ kingStuds: 2, codes: [] });
+  });
+
+  it("fora da tabela (vento ≥ 140 B, RO > 18') sem kingStuds → Error; com kingStuds, o projeto manda", () => {
+    const windy = { ...config, building: { ...config.building!, windSpeed: 140 } };
+    expect(() => resolve(op(36, { header: H }), wall, windy)).toThrow(
+      /parede W1, abertura o1: kings fora da tabela \(vento 140 mph.*engenheiro; informe kingStuds/,
+    );
+    expect(kings(op(36, { header: H, kingStuds: 2 }), wall, windy)).toEqual({ kingStuds: 2, codes: [] });
+    expect(() => resolve(op(220, { header: H }))).toThrow(/vão 220" acima da última linha/);
+  });
+
+  it('kingStuds ou vento inválidos → RangeError com parede e abertura', () => {
+    expect(() => resolve(op(36, { header: H, kingStuds: 0 }))).toThrow(/parede W1, abertura o1: kingStuds/);
+    const bad = { ...config, building: { ...config.building!, windSpeed: -5 } };
+    expect(() => resolve(op(36, { header: H }), wall, bad)).toThrow(/parede W1, abertura o1: windSpeed/);
+  });
+
+  it('tabelas injetadas por { headers, kings }; a lista de headers continua aceita', () => {
+    const tiny = {
+      id: 'T',
+      columns: [{ covers: [{ exposure: 'B' as const, below: 999 }] }],
+      rows: [{ maxSpan: 48, kings: [5] }],
+    };
+    expect(resolveOpeningHeader(op(36), wall, config, { headers: FAKE, kings: tiny })).toMatchObject({
+      section: '2x6',
+      kingStuds: 5,
+    });
+    expect(resolveOpeningHeader(op(36), wall, config, { headers: FAKE })).toMatchObject({ kingStuds: 1 });
   });
 });

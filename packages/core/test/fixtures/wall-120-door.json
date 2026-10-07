@@ -1,11 +1,12 @@
 {
-  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove os studs das marcas 48, 64 e 80 (47.25, 63.25, 79.25). Cripples acima do header nas marcas 48 e 64 (studs em 47.25 e 63.25; 2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. 16 peças. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos.",
+  "$comment": "Parede 10' 2x6 com porta RO 38x82.5 em offset 40 e header a 82.5\" do subfloor (P2, P4). Alvo da sessão S8. RO de porta medido do subfloor (y=0): roughHeight = base do header, sem aviso. Sem sill e sem cripples abaixo; jacks de 81 (82.5 − 1.5) sobre a bottom plate. Zona [37, 81] remove os studs das marcas 48, 64 e 80 (47.25, 63.25, 79.25). Cripples acima do header nas marcas 48 e 64 (studs em 47.25 e 63.25; 2.375, topo do header 91.75). Bottom plate inteira; corte na obra de 40 a 78 (fieldCuts). Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. 16 peças. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. S12 (2026-10-06): `building` com `windSpeed: 120` (Vult, exposição B) para os kings pela Tabela R602.7.5 — RO ≤ 4' → 1 king por lado, members inalterados; neve e largura são inertes com header do projeto, mas o tipo exige os dois.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
-    "headerHeight": 82.5
+    "headerHeight": 82.5,
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
   },
   "wall": {
     "id": "W-door",

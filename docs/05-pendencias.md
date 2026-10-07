@@ -139,6 +139,16 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   o montador vê na mesa)? Que lado do painel fica para cima na mesa? — hipótese: vista de fora, face externa
   indicada no desenho — S17.
 
+## Novas (abertas em 2026-10-06, S12)
+- [ ] **P25 — Sill dupla: limite e montagem.** O Horace pede "double sill plate for openings larger than 6'-0"";
+  os outros projetos não dizem nada. A fábrica adota um limite próprio quando o projeto não fala (6'? nunca?),
+  e a segunda peça fica sob a primeira (cripples encurtam 1.5") ou lado a lado? — hipótese: só quando o projeto
+  pede (`config.doubleSillOver`, ausente = simples), segunda peça sob a primeira — S12 (feita com essa hipótese).
+- [ ] **P26 — Studs extras agrupados.** Post de hold-down "(2) 2x" / "(3) 2x" sai do motor como 2 ou 3 studs
+  colados (`extraStuds.count`), cada um na lista de corte; 4x6 e 6x6 não existem no motor. A fábrica prega o
+  post na mesa ou recebe solto? Aceita 2 studs colados no lugar de um 4x? — hipótese: colados na mesa, 2x
+  apenas; 4x/6x fica para o engenheiro — S12.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais

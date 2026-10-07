@@ -1,11 +1,12 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48 e header a 82.5\" do subfloor — o caso típico da fábrica (P2, respondida em 2026-10-01). Alvo da sessão S7.1. Mesma parede de wall-144-window.json; muda só config.headerHeight. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Jacks 81; base do RO 34.5; sill em 33; cripples de 31.5 abaixo e de 2.375 acima (topo do header 91.75, top plate em 94.125), nas marcas 64 e 80 (studs em 63.25 e 79.25). 20 peças. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos.",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48 e header a 82.5\" do subfloor — o caso típico da fábrica (P2, respondida em 2026-10-01). Alvo da sessão S7.1. Mesma parede de wall-144-window.json; muda só config.headerHeight. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Jacks 81; base do RO 34.5; sill em 33; cripples de 31.5 abaixo e de 2.375 acima (topo do header 91.75, top plate em 94.125), nas marcas 64 e 80 (studs em 63.25 e 79.25). 20 peças. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. S12 (2026-10-06): `building` com `windSpeed: 120` (Vult, exposição B) para os kings pela Tabela R602.7.5 — RO ≤ 4' → 1 king por lado, members inalterados; neve e largura são inertes com header do projeto, mas o tipo exige os dois.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
-    "headerHeight": 82.5
+    "headerHeight": 82.5,
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
   },
   "wall": {
     "id": "W-window-82.5",

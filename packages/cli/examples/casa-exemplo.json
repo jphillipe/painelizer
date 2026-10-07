@@ -1,5 +1,5 @@
 {
-  "$comment": "Exemplo de entrada do CLI. config.studLength = pré-cortes da fábrica (P7); headerHeight 82.5 = altura padrão de header da fábrica (P2), sobrescrita por abertura quando o projeto indica outra (W06). Header (S9.2): `building` traz neve e largura da casa; W05 e W06 (externas portantes, floorsSupported 0 = só telhado) pegam o header da tabela IRC R602.7(1) — 2-2x6 com 2 jacks; W07 traz o header do projeto (`header` 2-2x10) nas duas aberturas, que manda sobre a tabela. W04 (interna não portante) tem porta com a peça deitada da R602.7.4 (origem `R602.7.4`, sem cripples acima). W07 = janela e porta a 4.5\" (jack + king compartilhado + jack), como o fixture wall-144-window-door (com os 2 jacks da tabela os RO precisariam de 7.5\"); a bottom plate da porta sai inteira e o SVG marca o corte na obra. Paredes até 16' (divisão em painéis chega na S12). Medidas em polegadas decimais ou pés-pol-fração.",
+  "$comment": "Exemplo de entrada do CLI. config.studLength = pré-cortes da fábrica (P7); headerHeight 82.5 = altura padrão de header da fábrica (P2), sobrescrita por abertura quando o projeto indica outra (W06). Header (S9.2): `building` traz neve e largura da casa; W05 e W06 (externas portantes, floorsSupported 0 = só telhado) pegam o header da tabela IRC R602.7(1) — 2-2x6 com 2 jacks; W07 traz o header do projeto (`header` 2-2x10) nas duas aberturas, que manda sobre a tabela. W04 (interna não portante) tem porta com a peça deitada da R602.7.4 (origem `R602.7.4`, sem cripples acima). W07 = janela e porta a 4.5\" (jack + king compartilhado + jack), como o fixture wall-144-window-door (com os 2 jacks da tabela os RO precisariam de 7.5\"); a bottom plate da porta sai inteira e o SVG marca o corte na obra. Paredes até 16' (divisão em painéis chega na S15). S12: `building.windSpeed` 120 mph / exposição B → kings pela Tabela R602.7.5 (todas as aberturas ≤ 4' → 1 king); `doubleSillOver` 6' → nenhuma janela do exemplo leva sill dupla. Medidas em polegadas decimais ou pés-pol-fração.",
   "name": "casa-exemplo",
   "config": {
     "studSpacing": 16,
@@ -7,7 +7,8 @@
     "plateThickness": 1.5,
     "studLength": ["92 5/8\"", "104 5/8\""],
     "headerHeight": "6'-10 1/2\"",
-    "building": { "groundSnowLoad": 50, "buildingWidth": "28'" }
+    "building": { "groundSnowLoad": 50, "buildingWidth": "28'", "windSpeed": 120, "exposure": "B" },
+    "doubleSillOver": "6'"
   },
   "walls": [
     { "id": "W01", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },

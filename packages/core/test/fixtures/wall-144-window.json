@@ -1,10 +1,11 @@
 {
-  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Conferir com a equipe de produção antes de tratar como referência. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. Zona [45, 87] remove os studs 47.25, 63.25 e 79.25; cripples abaixo do sill em 63.25 e 79.25 (o stud da marca 48 começa antes do jack e sai).",
+  "$comment": "Parede 12' 2x6 com janela RO 36x48 em offset 48. Alvo da sessão S7. Header 2-2x10 vem da abertura (`header`, origem `project`) desde a S9.2 — é exemplo de header do projeto, não dimensionamento. Conferir com a equipe de produção antes de tratar como referência. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. Zona [45, 87] remove os studs 47.25, 63.25 e 79.25; cripples abaixo do sill em 63.25 e 79.25 (o stud da marca 48 começa antes do jack e sai). S12 (2026-10-06): `building` com `windSpeed: 120` (Vult, exposição B) para os kings pela Tabela R602.7.5 — RO ≤ 4' → 1 king por lado, members inalterados; neve e largura são inertes com header do projeto, mas o tipo exige os dois.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
-    "studLength": [92.625, 104.625]
+    "studLength": [92.625, 104.625],
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
   },
   "wall": {
     "id": "W-window",

@@ -1,0 +1,46 @@
+{
+  "$comment": [
+    "Tabela R602.7.5 do IRC 2021: número mínimo de studs de altura inteira (kings) em cada lado do header em",
+    "parede externa, por vão do header e velocidade de vento (Vult) / categoria de exposição.",
+    "Regras de digitação (conferidas por test/rules/kings-data.test.ts):",
+    "- columns: na ordem do livro. Cada coluna lista as condições de vento que atende (`covers`): a coluna vale",
+    "  para a exposição indicada quando windSpeed < `below` ou ≤ `upTo` (como no cabeçalho do livro).",
+    "- rows: uma por linha do livro: maxSpan em pés como \"4'\" e `kings` com um valor por coluna.",
+    "- Nota a do livro: vão entre duas linhas usa a linha do vão maior. Nota b: a coluna ≤ 115 mph B só vale",
+    "  com jack studs sob o header (o motor sempre põe jacks; framing anchor fica fora do escopo).",
+    "- Chaves que começam com $ são ignoradas."
+  ],
+  "source": {
+    "code": "IRC",
+    "edition": "2021 (codes.iccsafe.org, versão Nov 2021)",
+    "amendments": "MA 780 CMR 10ª ed.: a confirmar (P10)",
+    "typedBy": "Extraída por Claude do texto da tabela em codes.iccsafe.org em 2026-10-06, conferida contra a página por hash SHA-256 das 10 linhas (664b33a7…741e6c)",
+    "typedOn": "2026-10-06"
+  },
+  "table": {
+    "id": "R602.7.5",
+    "columns": [
+      {
+        "$comment": "< 140 mph, Exposure B or < 130 mph, Exposure C",
+        "covers": [
+          { "exposure": "B", "below": 140 },
+          { "exposure": "C", "below": 130 }
+        ]
+      },
+      {
+        "$comment": "≤ 115 mph, Exposure B (nota b)",
+        "covers": [{ "exposure": "B", "upTo": 115 }]
+      }
+    ],
+    "rows": [
+      { "maxSpan": "4'", "kings": [1, 1] },
+      { "maxSpan": "6'", "kings": [2, 1] },
+      { "maxSpan": "8'", "kings": [2, 1] },
+      { "maxSpan": "10'", "kings": [3, 2] },
+      { "maxSpan": "12'", "kings": [3, 2] },
+      { "maxSpan": "14'", "kings": [3, 2] },
+      { "maxSpan": "16'", "kings": [4, 2] },
+      { "maxSpan": "18'", "kings": [4, 2] }
+    ]
+  }
+}

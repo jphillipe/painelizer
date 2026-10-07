@@ -1,12 +1,12 @@
 {
-  "$comment": "Parede 12' 2x6 externa portante com janela RO 36x48 em offset 48 e header a 82.5\", como wall-144-window-82.5.json, mas SEM header na abertura: o header vem da tabela IRC R602.7(1). Alvo da sessão S9.2. Casa térrea (floorsSupported 0 = só telhado e forro), neve 50 psf, largura 28' (336\") → coluna 50 psf / 36' → 2-2x6 (vão máx. 3'-3\", NJ 2). NJ 2 alarga a zona para RO ± 4.5 = [43.5, 88.5]: kings em 43.5 e 87, jacks de 81 em 45, 46.5, 84 e 85.5, header 2x6 de 42 (36 + 4×1.5) em x=45, topo em 88; cripples de 6.125 acima (top plate em 94.125) e de 31.5 abaixo do sill. Studs de layout: os mesmos do fixture 82.5 (o stud da marca 32 termina em 32.75, antes de 43.5; o da marca 96 começa em 95.25, depois de 88.5); cripples em 63.25 e 79.25. 22 peças. Criado com as decisões delegadas pelo humano em 2026-10-05; depende dos valores do IRC 2021 em src/data/irc-headers.json. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos.",
+  "$comment": "Parede 12' 2x6 externa portante com janela RO 36x48 em offset 48 e header a 82.5\", como wall-144-window-82.5.json, mas SEM header na abertura: o header vem da tabela IRC R602.7(1). Alvo da sessão S9.2. Casa térrea (floorsSupported 0 = só telhado e forro), neve 50 psf, largura 28' (336\") → coluna 50 psf / 36' → 2-2x6 (vão máx. 3'-3\", NJ 2). NJ 2 alarga a zona para RO ± 4.5 = [43.5, 88.5]: kings em 43.5 e 87, jacks de 81 em 45, 46.5, 84 e 85.5, header 2x6 de 42 (36 + 4×1.5) em x=45, topo em 88; cripples de 6.125 acima (top plate em 94.125) e de 31.5 abaixo do sill. Studs de layout: os mesmos do fixture 82.5 (o stud da marca 32 termina em 32.75, antes de 43.5; o da marca 96 começa em 95.25, depois de 88.5); cripples em 63.25 e 79.25. 22 peças. Criado com as decisões delegadas pelo humano em 2026-10-05; depende dos valores do IRC 2021 em src/data/irc-headers.json. S11 (2026-10-06, hipótese P19): studs centrados nas marcas de layout — borda esquerda em marca − 0.75 (15.25, 31.25…); primeiro stud em 0 e fechamento em comprimento − 1.5 continuam fixos. S12 (2026-10-06): `windSpeed: 120` (exposição B) → Tabela R602.7.5, vão 3' ≤ 4' → 1 king por lado, como antes.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
     "headerHeight": 82.5,
-    "building": { "groundSnowLoad": 50, "buildingWidth": 336 }
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
   },
   "wall": {
     "id": "W-window-irc",
@@ -21,7 +21,7 @@
     ]
   },
   "expected": {
-    "header": { "section": "2x6", "plies": 2, "jackStuds": 2, "source": "R602.7(1)" },
+    "header": { "section": "2x6", "plies": 2, "jackStuds": 2, "kingStuds": 1, "source": "R602.7(1)" },
     "members": [
       { "role": "bottomPlate", "section": "2x6", "length": 144, "x": 0, "y": 0, "orientation": "horizontal" },
       { "role": "topPlate", "section": "2x6", "length": 144, "x": 0, "y": 94.125, "orientation": "horizontal" },

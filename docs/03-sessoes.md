@@ -195,7 +195,7 @@ depois S11 e S12, que não dependem uma da outra.
   atualizados; snapshots SVG regenerados. Se P19 vier "borda na marca": `layoutStuds` volta a `marca` em vez
   de `marca − t/2` e os fixtures voltam pelo mesmo script.
 
-- [ ] **S12 — Dados do estrutural: studs extras, sill dupla e kings por vento**
+- [x] **S12 — Dados do estrutural: studs extras, sill dupla e kings por vento**
   Os projetos de `06-referencias` exigem os três; sem eles nenhum projeto real passa inteiro pelo motor.
   Prompt: "(a) `Wall.extraStuds?: { x: number; count?: number; label?: string }[]`: studs de altura inteira
   adicionais (post de hold-down, carga pontual, 'studs to match above'), `count` colados a partir de `x` para a
@@ -210,6 +210,13 @@ depois S11 e S12, que não dependem uma da outra.
   O número de kings entra na zona e na fusão (já suportado). Fixtures: `wall-144-window-irc` ganha `windSpeed`
   (conferir se muda os kings — se mudar, confirmar); casos inline para (a) e (b); `casa-exemplo.json` com
   `windSpeed`." Saída: testes de coerência da tabela R602.7.5 verdes; exemplo do CLI gerando.
+  Feita em 2026-10-06 (abordagem confirmada pelo humano). R602.7.5 extraída por Claude do texto da página do
+  ICC (IRC 2021) e conferida por hash, como a R602.7(1): 8 linhas (4' a 18') × 2 colunas de vento
+  (`src/data/irc-kings.json`, `rules/kings.ts`). Kings resolvidos em `resolveOpeningHeader` para toda parede
+  externa, portante ou não, com header do projeto ou da tabela (regra de vento). `doubleSillOver` é opt-in
+  (ausente = sill simples); o exemplo do CLI usa 72". Fixtures: os 5 externos com abertura ganharam
+  `building.windSpeed: 120` (RO ≤ 4' → 1 king, members iguais; os 4 com header do projeto ganharam o bloco
+  `building` inteiro, inerte). Casos de (a) e (b) inline. Exemplo do CLI: 123 peças, sem avisos.
 
 ## Fase 3 — Casa inteira
 
