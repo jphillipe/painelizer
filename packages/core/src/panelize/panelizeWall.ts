@@ -15,7 +15,7 @@
  * - Kings vêm do plano de zonas (king compartilhado entre aberturas vizinhas); o resto de cada
  *   abertura vem de `framingForOpening` sem kings. Cortes na obra e avisos das aberturas vão
  *   para o painel.
- * - Studs extras do projeto (`wall.extraStuds`, S12) entram como `role: 'stud'` de altura inteira,
+ * - Studs extras do projeto (`wall.extraStuds`, S12, hipótese P26) entram como `role: 'stud'` de altura inteira,
  *   com `label`; o stud de layout que os sobrepõe sai (como na zona de abertura). Extra fora da
  *   parede ou dentro de uma zona é `RangeError`.
  * - Avisos: os da parede, depois os das aberturas, depois os de `validate.ts` (S10).

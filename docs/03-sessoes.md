@@ -5,8 +5,10 @@ Uma sessão do Claude Code = um item. Ritual:
 2. Critério de saída = `pnpm test` e `pnpm typecheck` verdes (rodam na raiz) + critério do item.
 3. Fechar: marcar `[x]`, registrar decisões em `docs/04-decisoes.md`. O Claude sugere a mensagem de commit;
    quem commita é o humano. `/clear` antes da próxima.
-4. Se a sessão esbarrar numa pergunta que só a fábrica responde, anotar em `docs/05-pendencias.md` e seguir
-   com a hipótese registrada lá. Não inventar convenção de framing.
+4. Se a sessão esbarrar numa pergunta que só a fábrica responde, não parar e não perguntar ao humano: escolher a
+   hipótese mais comum na prática americana / IRC, registrar em `docs/05-pendencias.md` com número P novo, citar
+   `(Pn)` no código e no fixture, rodar `pnpm hipoteses` (regenera `docs/08-revisar.md`) e seguir. Decisão de
+   2026-10-13: entrega primeiro, revisão com a fábrica depois, pela lista de `08-revisar.md`.
 
 ## Fase 1 — Motor: parede reta
 
@@ -175,6 +177,13 @@ depois S11 e S12, que não dependem uma da outra.
   Levar as perguntas P19–P24 de `05-pendencias.md` (layout centrado na marca, cripple curto, referência de medida
   e qual parede atravessa no canto, ladder, lap entre painéis, orientação da folha) e cobrar P8/P15 (peso).
   Sem isto, a Fase 3 inteira é hipótese sobre hipótese.
+  Preparação feita em 2026-10-06: PDF do arquiteto (A-100 1º pav., A-800 tipos de parede, A-400 cortes) lido;
+  entrada `packages/cli/examples/ringgold-checkpoint.json` com 4 painéis (N1 16' e S1 12' com par de janelas,
+  S2 12' com porta + janela a 8 1/4", I1 2x4 com porta a 3" do canto); folhas em `out/ringgold-checkpoint/`
+  (90 peças, 2 avisos de jacks). Hipóteses P27–P31 em `05-pendencias`. Falta: o estrutural da SAB e a visita.
+  Perguntas gerais para a reunião de 2026-10-12 em `docs/07-perguntas-fabrica.md` (27 itens, com a hipótese atual).
+  **Adiado em 2026-10-13** (sem tempo para a fábrica agora): o motor segue com as hipóteses; `docs/08-revisar.md`
+  (gerado por `pnpm hipoteses`) é a lista do que revisar quando a fábrica responder. A Fase 3 não espera este item.
 
 - [x] **S11 — Layout: stud centrado na marca e origem de layout**
   Depende de P19 (hipótese: centrado). Muda uma regra de CLAUDE.md ("borda esquerda do stud na marca") e todos os

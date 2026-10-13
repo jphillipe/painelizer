@@ -5,6 +5,10 @@ Perguntas que só a equipe de produção responde. O motor avança com hipótese
 com confirmação humana. Formato: `- [ ] Pn — pergunta — hipótese atual — sessão que depende`.
 Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`.
 
+Desde 2026-10-13 a regra é: **pendência aberta = hipótese em vigor**. Nenhuma pergunta daqui bloqueia o trabalho nem
+vai ao humano; toda pendência aberta precisa ter uma `hipótese:` registrada. `pnpm hipoteses` cruza esta lista com os
+comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que mexer quando a fábrica responder.
+
 ## Bloqueia o critério de sucesso
 - [ ] **P1 — Painéis reais.** Obter 2 ou 3 painéis já fabricados (folha + lista de corte, de preferência um com
   janela e um com porta) e transcrever para `test/fixtures/real-*.json`. Sem isso, todos os fixtures são hipótese
@@ -20,7 +24,7 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   possível, **82 1/2" do subfloor até a face inferior do header**. Nunca encostam automaticamente na top plate.
   Se o projeto estrutural ou arquitetônico indicar outra altura, segue o projeto. — Impacto: `headerHeight: 82.5`
   é o caso normal (subfloor = y=0, então o valor entra direto); sobrescrita por abertura feita na S7.1.
-- [ ] **P3 — Cripple encostado no jack.** — **Resposta (2026-10-01):** confirmada a hipótese: se a marca de 16"
+- [x] **P3 — Cripple encostado no jack.** — **Resposta (2026-10-01):** confirmada a hipótese: se a marca de 16"
   cai "praticamente junto" ao jack, não colocam cripple; o jack serve de layout, desde que o espaçamento máximo e
   a fixação do sheathing sejam respeitados. Fica aberta só a tolerância — ver P13. — S7 (feita com a hipótese).
 - [x] **P4 — Porta: RO altura.** — **Resposta (2026-10-01):** porta padrão 6'-8" (80") usa **RO de 82 1/2"** de
@@ -56,7 +60,7 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   não é mais pergunta à fábrica: ler as emendas de MA ao capítulo 6 e conferir se alteram R602.7.
   Em 2026-10-05 a S9 carregou as tabelas do **IRC 2021** (a página do ICC marca essa edição como histórica, e já
   existe a de 2024). Perguntar à fábrica: qual edição do IRC o 780 CMR em vigor adota e se há emenda em R602.7.
-  Se mudar, basta trocar o JSON e rodar `headers-data.test.ts`.
+  Se mudar, basta trocar o JSON e rodar `headers-data.test.ts`. — hipótese: IRC 2021 sem emenda local em R602.7 — S9.
 - [x] **P11 — Fire blocking.** — **Resposta (2026-10-01):** paredes de 8' e 9' não levam fire blocking horizontal
   só pela altura; quando a cavidade contínua passa de **~10'**, colocam conforme o código, além dos locais que o
   projeto e o código exigirem. — Impacto: hipótese IRC confirmada; limite 120" — S10.
@@ -148,6 +152,24 @@ Respondidas: `- [x] Pn — pergunta — **Resposta (data):** resumo — impacto`
   colados (`extraStuds.count`), cada um na lista de corte; 4x6 e 6x6 não existem no motor. A fábrica prega o
   post na mesa ou recebe solto? Aceita 2 studs colados no lugar de um 4x? — hipótese: colados na mesa, 2x
   apenas; 4x/6x fica para o engenheiro — S12.
+
+## Novas (abertas em 2026-10-06, preparação do Checkpoint 2 com o 26 Ringgold)
+Entrada em `packages/cli/examples/ringgold-checkpoint.json` (4 painéis do 1º pavimento, lidos de A-100, A-200,
+A-400 e A-800). O estrutural da SAB (5 pág.) não está no repositório; tudo abaixo vale até ele chegar.
+- [ ] **P27 — Altura da parede do Ringgold.** A-400 cota 10'-0" entre pisos; a espessura do piso (vigas + subfloor
+  + 3/4" de gypcrete) está só no estrutural. — hipótese: parede 9'-1 1/8" (stud pré-cortado 104 5/8", piso ~10 7/8").
+- [ ] **P28 — RO do par de janelas tipo A.** Duas casement 2'-5" x 6'-0" com transom, instaladas em par (A-200);
+  a planta cota o eixo do par (nota 10). RO do conjunto = 2 x 29" + 1/2"? Com mullion do fabricante? Peitoril a
+  2'-0" do piso (A-200). — hipótese: RO 58 1/2" x 72 1/2", topo do RO a 96 1/4" do subfloor.
+- [ ] **P29 — RO da porta 1 (36x80 com batente metálico, 45 min).** Batente metálico costuma pedir RO maior que
+  o de madeira. — hipótese: 38" x 82 1/2", igual à porta de madeira (P4).
+- [ ] **P30 — Porta 1 e janela vizinhas na parede sul com 8 1/4" entre os RO.** A Tabela R602.7(1) pede 2 jacks por
+  lado (2 + king + 2 = 9"), que não cabem. O estrutural resolve com header do projeto e 1 jack, ou a fábrica move
+  a abertura? — hipótese: 1 jack por lado nas duas (aviso `HEADER_JACKS_BELOW_TABLE`). O motor põe 1 king da
+  porta e 2 kings da janela com 3/4" de ar entre eles, em vez de king compartilhado — perguntar o que a fábrica faz.
+- [ ] **P31 — Cargas do Ringgold para as tabelas.** Neve no solo, largura e vento vêm das notas estruturais.
+  — hipótese: 30 psf, 29'-0" (profundidade do prédio), 130 mph exposição B; parede do 1º pavimento suporta
+  2 pavimentos (`floorsSupported: 2`, center-bearing). Se a I1 for portante (direção das vigas), muda o header.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

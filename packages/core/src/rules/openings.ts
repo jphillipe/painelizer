@@ -11,7 +11,7 @@
  *   Header apoia em todos os jacks: comprimento = roughWidth + 2·jacks·t.
  * - Janela: topo do RO = base do header; base do RO = topo − roughHeight; sill deitado logo abaixo,
  *   mesma seção da parede, comprimento = roughWidth. RO mais largo que `config.doubleSillOver` (S12,
- *   hipótese 72") leva sill dupla: segunda peça igual em `sillY − 1.5`; os cripples abaixo encurtam 1.5".
+ *   hipótese 72", P25) leva sill dupla: segunda peça sob a primeira em `sillY − 1.5`; os cripples abaixo encurtam 1.5".
  * - Kings de cada lado = os do header resolvido (`opening.kingStuds`, senão Tabela R602.7.5 em parede
  *   externa, senão 1).
  * - Porta (P4): RO medido do subfloor (y=0), sem sill e sem cripples abaixo. `roughHeight` não muda a
@@ -35,7 +35,7 @@ import { FLAT_HEADER_MAX_GAP, resolveOpeningHeader, type ResolvedHeader } from '
 import { LENGTH_TOLERANCE } from './precuts';
 import { layoutStuds } from './studs';
 
-/** Vão mínimo para entrar cripple (acima do header ou abaixo do sill). */
+/** Vão mínimo para entrar cripple (acima do header ou abaixo do sill). Vão curto acima do header: P20. */
 const MIN_CRIPPLE_LENGTH = 1.5;
 
 /** P13: marca a até esta folga livre (face a face) do jack não ganha cripple… */

@@ -1,0 +1,115 @@
+{
+  "$comment": "Checkpoint 2 — 26 Ringgold St (SOL and Associates, A-100 1º pavimento, A-800 tipos de parede, A-400 cortes). Quatro painéis de até 16' lidos da planta do arquiteto; o estrutural da SAB (headers, altura de parede, espécie) NÃO está no PDF — tudo que depende dele está marcado como hipótese. Cotas externas são da face externa do stud (nota 8); cotas de janela e porta são ao eixo (notas 9 e 10). Hipóteses (P27–P31): (1) altura de parede 9'-1 1/8\" (10'-0\" entre pisos menos ~10 7/8\" de piso; stud pré-cortado 104 5/8\"); (2) par de janelas tipo A (2x 2'-5\" x 6'-0\", casement com transom) com RO 58 1/2\" x 72 1/2\" e topo do RO a 96 1/4\" do subfloor (peitoril a 2'-0\" na elevação A-200); (3) porta 36x80 com RO 38\" x 82 1/2\"; (4) header pela Tabela IRC R602.7(1): neve 30 psf, largura 29', 2 pavimentos acima (parede do 1º pav. de um prédio de 3), vento 130 mph exposição B — o estrutural da SAB manda quando chegar; (5) a parede mais longa atravessa no canto (norte e sul atravessam a oeste), logo x=0 = quina externa do prédio; (6) I1 é não portante (divisória entre quartos, tipo 1, 2x4). S2 é o segundo painel da parede sul (começa a 12' da quina), por isso layoutOrigin -12'.",
+  "name": "ringgold-checkpoint",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [
+      "92 5/8\"",
+      "104 5/8\""
+    ],
+    "headerHeight": "8'-0 1/4\"",
+    "building": {
+      "groundSnowLoad": 30,
+      "buildingWidth": "29'",
+      "windSpeed": 130,
+      "exposure": "B"
+    },
+    "doubleSillOver": "6'"
+  },
+  "walls": [
+    {
+      "id": "N1",
+      "$comment": "Parede norte, primeiros 16' a partir da quina noroeste. Par de janelas A com eixo a 8'-5 7/8\" da quina (A-100).",
+      "length": "16'",
+      "height": "9'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "layoutOrigin": 0,
+      "openings": [
+        {
+          "id": "N1-A",
+          "type": "window",
+          "offset": "6'-0 5/8\"",
+          "roughWidth": "4'-10 1/2\"",
+          "roughHeight": "6'-0 1/2\""
+        }
+      ]
+    },
+    {
+      "id": "S1",
+      "$comment": "Parede sul, primeiros 12' a partir da quina sudoeste. Par de janelas A com eixo a 8'-7\" da quina.",
+      "length": "12'",
+      "height": "9'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "layoutOrigin": 0,
+      "openings": [
+        {
+          "id": "S1-A",
+          "type": "window",
+          "offset": "6'-1 3/4\"",
+          "roughWidth": "4'-10 1/2\"",
+          "roughHeight": "6'-0 1/2\""
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "$comment": "Parede sul, de 12' a 24' da quina sudoeste. Porta 1 (36x80, WD/GLASS, 45 min) com eixo a 14'-4 1/2\" da quina e par de janelas A com eixo a 19'-1\" (8'-7\" + 5'-9 1/2\" + 4'-8 1/2\"). Entre o RO da porta e o da janela há 8 1/4\": a tabela R602.7(1) pede 2 jacks por lado (2+1.5+2 = 9\" com king compartilhado), que não cabem — jackStuds 1 nas duas aberturas (aviso HEADER_JACKS_BELOW_TABLE) até o estrutural da SAB dizer o header e os jacks.",
+      "length": "12'",
+      "height": "9'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "layoutOrigin": "-12'",
+      "openings": [
+        {
+          "id": "S2-D1",
+          "type": "door",
+          "offset": "9 1/2\"",
+          "roughWidth": "3'-2\"",
+          "roughHeight": "6'-10 1/2\"",
+          "headerHeight": "6'-10 1/2\"",
+          "jackStuds": 1
+        },
+        {
+          "id": "S2-A",
+          "type": "window",
+          "offset": "4'-7 3/4\"",
+          "roughWidth": "4'-10 1/2\"",
+          "roughHeight": "6'-0 1/2\"",
+          "jackStuds": 1
+        }
+      ]
+    },
+    {
+      "id": "I1",
+      "$comment": "Divisória entre o 1º e o 2º quarto da Unit 3 (tipo 1, 2x4), encostada na parede norte (x=0) e na parede do banheiro/hall. 15'-2 3/4\" entre faces de GWB + 5/8\" de cada lado = 15'-4\". Porta U2 (36x80) com eixo a 1'-10\" da parede sul — jamb a 3\" do canto.",
+      "length": "15'-4\"",
+      "height": "9'-1 1/8\"",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "openings": [
+        {
+          "id": "I1-U2",
+          "type": "door",
+          "offset": "11'-11\"",
+          "roughWidth": "3'-2\"",
+          "roughHeight": "6'-10 1/2\"",
+          "headerHeight": "6'-10 1/2\""
+        }
+      ]
+    }
+  ]
+}

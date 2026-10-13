@@ -2,6 +2,7 @@
  * Elevação de um painel em SVG, sem dependências.
  *
  * Convenções:
+ * - Elevação vista de fora (face externa para o observador), hipótese P24.
  * - Escala padrão 4 px por polegada (`opts.scale`).
  * - O eixo y do painel cresce para cima (y=0 na base da bottom plate); o do SVG
  *   cresce para baixo. `toPy` converte o topo de cada caixa.
