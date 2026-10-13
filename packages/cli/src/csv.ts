@@ -51,17 +51,18 @@ export const BOM_HEADER = [
 ] as const;
 
 /**
- * `stock_type` é `precut` (pré-corte de stud, P9) ou `commercial`. O pré-corte sai formatado só em
- * polegadas (`92 5/8"`, como a fábrica o chama); o comercial, em pés (`8'-0"`).
+ * `stock_type` é `precut` (pré-corte de stud, P9), `commercial` ou `engineered` (LVL/PSL comprado no
+ * comprimento da peça, S12.5). Pré-corte e engenheirado saem formatados só em polegadas (`92 5/8"`, como a
+ * fábrica os chama); o comercial, em pés (`8'-0"`).
  */
 export function bomCsv(lines: readonly BomLine[]): string {
   const rows: (string | number)[][] = [[...BOM_HEADER]];
   for (const l of lines) {
     rows.push([
       l.section,
-      l.precut ? 'precut' : 'commercial',
+      l.engineered ? 'engineered' : l.precut ? 'precut' : 'commercial',
       l.stockLength,
-      l.precut ? formatInches(l.stockLength) : formatFeetInches(l.stockLength),
+      l.precut || l.engineered ? formatInches(l.stockLength) : formatFeetInches(l.stockLength),
       l.qty,
       l.cutTotal,
       l.waste,

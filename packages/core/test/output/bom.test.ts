@@ -39,8 +39,8 @@ describe('stockLengthFor', () => {
 describe('bom', () => {
   it('fixture wall-144-plain: 10 studs no pré-corte 92 5/8" (sem sobra) e 3 plates em 12\'', () => {
     expect(bom([plainPanel])).toEqual([
-      { section: '2x6', stockLength: 92.625, precut: true, qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
-      { section: '2x6', stockLength: 144, precut: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 92.625, precut: true, engineered: false, qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 144, precut: false, engineered: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 
@@ -67,6 +67,29 @@ describe('bom', () => {
       waste: 114,
       wastePercent: 59.4,
     });
+  });
+
+  it('header LVL (S12.5): linha engineered comprada no comprimento da peça, sem sobra, depois das serradas', () => {
+    const wall = window.wall as Wall;
+    const lvl: Wall = {
+      ...wall,
+      openings: [{ ...wall.openings[0]!, header: { section: 'LVL 1.75x9.25', plies: 2 } }],
+    };
+    const panel = panelizeWall(lvl, window.config as Config);
+    const lines = bom([panel], DEFAULT_STOCK_LENGTHS, window.config.studLength);
+    const last = lines[lines.length - 1]!;
+    // header = RO 36" + 1 jack de cada lado = 39" (como o 2-2x10 do fixture)
+    expect(last).toEqual({
+      section: 'LVL 1.75x9.25',
+      stockLength: 39,
+      precut: false,
+      engineered: true,
+      qty: 2,
+      cutTotal: 78,
+      waste: 0,
+      wastePercent: 0,
+    });
+    expect(lines.slice(0, -1).every((l) => l.engineered === false)).toBe(true);
   });
 
   it('fixture wall-144-window-82.5: jacks de 81 e cripples curtos vão para o 8\', não para o pré-corte', () => {
@@ -98,8 +121,8 @@ describe('bom', () => {
 
   it('sem pré-cortes ([]) os studs voltam ao 8\' comercial, com sobra', () => {
     expect(bom([plainPanel], DEFAULT_STOCK_LENGTHS, [])).toEqual([
-      { section: '2x6', stockLength: 96, precut: false, qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
-      { section: '2x6', stockLength: 144, precut: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 96, precut: false, engineered: false, qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
+      { section: '2x6', stockLength: 144, precut: false, engineered: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 

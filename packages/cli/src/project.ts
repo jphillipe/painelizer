@@ -21,17 +21,32 @@
  * kings pela Tabela R602.7.5; `config.doubleSillOver` (medida) para a sill dupla; na parede,
  * `extraStuds: [{ x (medida), count?, label? }]` para studs de altura inteira pedidos pelo projeto.
  *
+ * Catálogo do projeto (S12.5): `config.openingTypes = { W41: { kind, width, height, frame?, sillHeight?,
+ * roughWidth?, roughHeight?, description? } }` (window/door schedule) e `config.headerSchedule = { HDR2:
+ * { section, plies, jackStuds, kingStuds, description? } }` (wood header schedule). A abertura pode então
+ * vir como `{ id, tag, center, headerMark }`; os campos diretos continuam valendo e sobrescrevem o
+ * catálogo. `header.section` aceita `"LVL 1.75x9.25"` ou `{ material, width, depth }`;
+ * `config.building.species` ('SPF' | 'Hem-Fir' | 'DF' | 'SP') guarda a espécie das notas estruturais.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
 
 import {
+  engineeredSection,
+  parseEngineeredSection,
   parseFeetInches,
+  resolveOpenings,
   type Config,
+  type DoorFrame,
   type Exposure,
   type ExtraStud,
   type FloorSpan,
-  type Opening,
+  type HeaderScheduleEntry,
+  type LumberSpecies,
+  type OpeningCatalogEntry,
+  type OpeningHeader,
+  type OpeningSpec,
   type OpeningType,
   type Section,
   type Wall,
@@ -58,6 +73,8 @@ const SECTIONS: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
 const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
 const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
 const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
+const SPECIES: readonly LumberSpecies[] = ['SPF', 'Hem-Fir', 'DF', 'SP'];
+const DOOR_FRAMES: readonly DoorFrame[] = ['wood', 'hm', 'al'];
 
 /** Converte o texto do arquivo em `Project` validado. */
 export function parseProject(text: string, source = 'projeto'): Project {
@@ -78,7 +95,7 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   const wallsRaw = root['walls'];
   if (!Array.isArray(wallsRaw)) throw new ProjectError(`${source}.walls: esperado array de paredes`);
   if (wallsRaw.length === 0) throw new ProjectError(`${source}.walls: nenhuma parede`);
-  const walls = wallsRaw.map((w, i) => wallFrom(w, `${source}.walls[${i}]`));
+  const walls = wallsRaw.map((w, i) => wallFrom(w, `${source}.walls[${i}]`, config));
 
   const ids = new Set<string>();
   for (const w of walls) {
@@ -128,25 +145,101 @@ function configFrom(raw: unknown, path: string): Config {
     if (b['exposure'] !== undefined) {
       config.building.exposure = oneOf(b['exposure'], EXPOSURES, `${path}.building.exposure`);
     }
+    if (b['species'] !== undefined) {
+      config.building.species = oneOf(b['species'], SPECIES, `${path}.building.species`);
+    }
   }
   if (c['doubleSillOver'] !== undefined) {
     config.doubleSillOver = positive(c['doubleSillOver'], `${path}.doubleSillOver`);
   }
+  if (c['openingTypes'] !== undefined) {
+    config.openingTypes = record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom);
+  }
+  if (c['headerSchedule'] !== undefined) {
+    config.headerSchedule = record(c['headerSchedule'], `${path}.headerSchedule`, headerScheduleFrom);
+  }
   return config;
 }
 
-function wallFrom(raw: unknown, path: string): Wall {
+/** Objeto chave → valor, cada valor validado por `item`; chave vazia é erro. */
+function record<T>(raw: unknown, path: string, item: (v: unknown, p: string) => T): Record<string, T> {
+  const o = obj(raw, path);
+  const out: Record<string, T> = {};
+  for (const [key, value] of Object.entries(o)) {
+    if (key.trim() === '') throw new ProjectError(`${path}: chave vazia`);
+    out[key] = item(value, `${path}.${key}`);
+  }
+  return out;
+}
+
+/** Linha do window/door schedule (S12.5). */
+function openingTypeFrom(raw: unknown, path: string): OpeningCatalogEntry {
+  const e = obj(raw, path);
+  const entry: OpeningCatalogEntry = {
+    kind: oneOf(e['kind'], OPENING_TYPES, `${path}.kind`),
+    width: positive(e['width'], `${path}.width`),
+    height: positive(e['height'], `${path}.height`),
+  };
+  if (e['frame'] !== undefined) entry.frame = oneOf(e['frame'], DOOR_FRAMES, `${path}.frame`);
+  if (e['sillHeight'] !== undefined) entry.sillHeight = measure(e['sillHeight'], `${path}.sillHeight`);
+  if (e['roughWidth'] !== undefined) entry.roughWidth = positive(e['roughWidth'], `${path}.roughWidth`);
+  if (e['roughHeight'] !== undefined) entry.roughHeight = positive(e['roughHeight'], `${path}.roughHeight`);
+  if (e['description'] !== undefined) entry.description = str(e['description'], `${path}.description`);
+  return entry;
+}
+
+/** Linha do wood header schedule (S12.5). */
+function headerScheduleFrom(raw: unknown, path: string): HeaderScheduleEntry {
+  const h = obj(raw, path);
+  const entry: HeaderScheduleEntry = {
+    section: headerSectionFrom(h['section'], `${path}.section`),
+    plies: count(h['plies'], `${path}.plies`),
+    jackStuds: count(h['jackStuds'], `${path}.jackStuds`),
+    kingStuds: count(h['kingStuds'], `${path}.kingStuds`),
+  };
+  if (h['description'] !== undefined) entry.description = str(h['description'], `${path}.description`);
+  return entry;
+}
+
+/**
+ * Seção de header: serrada (`"2x10"`), engenheirada em texto (`"LVL 1.75x9.25"`) ou em objeto
+ * (`{ material: "LVL", width: "1 3/4\"", depth: "9 1/4\"" }`, medidas em pés-pol aceitas).
+ */
+function headerSectionFrom(v: unknown, path: string): Section {
+  if (typeof v === 'string' && parseEngineeredSection(v) !== undefined) return v as Section;
+  if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    const material = oneOf(o['material'], ['LVL', 'PSL'] as const, `${path}.material`);
+    return engineeredSection(material, positive(o['width'], `${path}.width`), positive(o['depth'], `${path}.depth`));
+  }
+  if (typeof v === 'string' && (SECTIONS as readonly string[]).includes(v)) return v as Section;
+  throw new ProjectError(
+    `${path}: esperado um de ${SECTIONS.join(', ')}, "LVL <esp>x<prof>", "PSL <esp>x<prof>" ou ` +
+      `{ material, width, depth }, recebido ${show(v)}`,
+  );
+}
+
+function wallFrom(raw: unknown, path: string, config: Config): Wall {
   const w = obj(raw, path);
   const openingsRaw = w['openings'] ?? [];
   if (!Array.isArray(openingsRaw)) throw new ProjectError(`${path}.openings: esperado array`);
+  const id = str(w['id'], `${path}.id`);
+  const specs = openingsRaw.map((o, i) => openingSpecFrom(o, `${path}.openings[${i}]`));
+  let openings;
+  try {
+    openings = resolveOpenings(specs, config, `parede ${id}`);
+  } catch (e) {
+    // Erros do catálogo (tag ou marca inexistente, RO ou posição sem como resolver) viram erro de projeto.
+    throw new ProjectError(`${path}.openings: ${(e as Error).message}`);
+  }
   const wall: Wall = {
-    id: str(w['id'], `${path}.id`),
+    id,
     length: positive(w['length'], `${path}.length`),
     height: positive(w['height'], `${path}.height`),
     section: oneOf(w['section'], WALL_SECTIONS, `${path}.section`),
     exterior: bool(w['exterior'], `${path}.exterior`),
     bearing: bool(w['bearing'], `${path}.bearing`),
-    openings: openingsRaw.map((o, i) => openingFrom(o, `${path}.openings[${i}]`)),
+    openings,
   };
   if (w['buildingWidth'] !== undefined) {
     wall.buildingWidth = positive(w['buildingWidth'], `${path}.buildingWidth`);
@@ -176,31 +269,35 @@ function extraStudFrom(raw: unknown, path: string): ExtraStud {
   return extra;
 }
 
-function openingFrom(raw: unknown, path: string): Opening {
+/**
+ * Abertura como o projeto a escreve (S12.5): `tag` + `center` + `headerMark` do catálogo, ou os campos
+ * diretos `type`/`offset`/`roughWidth`/`roughHeight`/`header`. Quem resolve é `resolveOpenings` do core;
+ * aqui só se valida o tipo de cada campo.
+ */
+function openingSpecFrom(raw: unknown, path: string): OpeningSpec {
   const o = obj(raw, path);
-  const opening: Opening = {
-    id: str(o['id'], `${path}.id`),
-    type: oneOf(o['type'], OPENING_TYPES, `${path}.type`),
-    offset: measure(o['offset'], `${path}.offset`),
-    roughWidth: positive(o['roughWidth'], `${path}.roughWidth`),
-    roughHeight: positive(o['roughHeight'], `${path}.roughHeight`),
-  };
-  if (o['kingStuds'] !== undefined) opening.kingStuds = count(o['kingStuds'], `${path}.kingStuds`);
-  if (o['jackStuds'] !== undefined) opening.jackStuds = count(o['jackStuds'], `${path}.jackStuds`);
-  if (o['headerHeight'] !== undefined) {
-    opening.headerHeight = positive(o['headerHeight'], `${path}.headerHeight`);
-  }
+  const spec: OpeningSpec = { id: str(o['id'], `${path}.id`) };
+  if (o['tag'] !== undefined) spec.tag = str(o['tag'], `${path}.tag`);
+  if (o['type'] !== undefined) spec.type = oneOf(o['type'], OPENING_TYPES, `${path}.type`);
+  if (o['center'] !== undefined) spec.center = measure(o['center'], `${path}.center`);
+  if (o['offset'] !== undefined) spec.offset = measure(o['offset'], `${path}.offset`);
+  if (o['roughWidth'] !== undefined) spec.roughWidth = positive(o['roughWidth'], `${path}.roughWidth`);
+  if (o['roughHeight'] !== undefined) spec.roughHeight = positive(o['roughHeight'], `${path}.roughHeight`);
+  if (o['headerMark'] !== undefined) spec.headerMark = str(o['headerMark'], `${path}.headerMark`);
+  if (o['sillHeight'] !== undefined) spec.sillHeight = measure(o['sillHeight'], `${path}.sillHeight`);
+  if (o['kingStuds'] !== undefined) spec.kingStuds = count(o['kingStuds'], `${path}.kingStuds`);
+  if (o['jackStuds'] !== undefined) spec.jackStuds = count(o['jackStuds'], `${path}.jackStuds`);
+  if (o['headerHeight'] !== undefined) spec.headerHeight = positive(o['headerHeight'], `${path}.headerHeight`);
   if (o['header'] !== undefined) {
     const h = obj(o['header'], `${path}.header`);
-    opening.header = {
-      section: oneOf(h['section'], SECTIONS, `${path}.header.section`),
+    const header: OpeningHeader = {
+      section: headerSectionFrom(h['section'], `${path}.header.section`),
       plies: count(h['plies'], `${path}.header.plies`),
     };
-    if (h['jackStuds'] !== undefined) {
-      opening.header.jackStuds = count(h['jackStuds'], `${path}.header.jackStuds`);
-    }
+    if (h['jackStuds'] !== undefined) header.jackStuds = count(h['jackStuds'], `${path}.header.jackStuds`);
+    spec.header = header;
   }
-  return opening;
+  return spec;
 }
 
 /** Pré-cortes de stud: lista não vazia de medidas, ou uma medida só (vira lista de um). */

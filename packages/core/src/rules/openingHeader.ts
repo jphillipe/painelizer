@@ -28,7 +28,7 @@
  */
 
 import type { Config, HeaderSource, Opening, Section, Wall, Warning } from '../types';
-import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
+import { sectionDepth, sectionThickness } from '../types';
 import { headerFor, type HeaderQuery, type HeaderTable } from './headers';
 import { kingsFor, type KingTable } from './kings';
 
@@ -154,14 +154,18 @@ function resolveHeaderSpec(
 
   const project = opening.header;
   if (project !== undefined) {
-    if (!(project.section in SECTION_DEPTH)) {
+    let plyThickness: number;
+    try {
+      plyThickness = sectionThickness(project.section);
+    } catch {
       throw new RangeError(`${where}: header.section desconhecida (${String(project.section)})`);
     }
     count(project.plies, `${where}: header.plies`);
     if (project.jackStuds !== undefined) count(project.jackStuds, `${where}: header.jackStuds`);
-    if (project.plies * NOMINAL_2X_THICKNESS > sectionDepth(wall.section) + EPS) {
+    const thickness = project.plies * plyThickness;
+    if (thickness > sectionDepth(wall.section) + EPS) {
       throw new Error(
-        `${where}: header do projeto com ${project.plies} plies (${project.plies * NOMINAL_2X_THICKNESS}") ` +
+        `${where}: header do projeto com ${project.plies} plies de ${project.section} (${thickness}") ` +
           `não cabe em parede ${wall.section} (${sectionDepth(wall.section)}")`,
       );
     }
@@ -226,6 +230,15 @@ function resolveHeaderSpec(
   if ('nonBearing' in choice) throw new Error(`${where}: tabela de headers não se aplica`);
 
   const warnings: Warning[] = [];
+  const species = building.species;
+  if (species !== undefined && species !== 'SPF') {
+    warnings.push({
+      code: 'SPECIES_NOT_IN_TABLE',
+      message:
+        `${where}: header pela tabela ${choice.table}, que é de SPF No. 2; o projeto especifica ${species} — ` +
+        'conferir o vão com a tabela da espécie ou usar o header schedule do projeto',
+    });
+  }
   if (explicitJacks !== undefined && explicitJacks < choice.jackStuds) {
     warnings.push({
       code: 'HEADER_JACKS_BELOW_TABLE',

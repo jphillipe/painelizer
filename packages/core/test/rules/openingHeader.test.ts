@@ -68,12 +68,28 @@ describe('resolveOpeningHeader — header do projeto', () => {
 
   it('mais espesso que a parede: erro (4 plies em 2x6, 3 plies em 2x4)', () => {
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 4 } }))).toThrow(
-      /parede W1, abertura o1: header do projeto com 4 plies \(6"\) não cabe em parede 2x6/,
+      /parede W1, abertura o1: header do projeto com 4 plies de 2x12 \(6"\) não cabe em parede 2x6/,
     );
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 3 } }), { ...wall, section: '2x4' })).toThrow(
       /não cabe em parede 2x4/,
     );
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 3 } }))).not.toThrow();
+  });
+
+  it('header LVL/PSL (S12.5): espessura declarada conta na parede; sai com a seção engenheirada', () => {
+    expect(resolve(op(72, { header: { section: 'LVL 1.75x9.25', plies: 2, jackStuds: 2 } }))).toMatchObject({
+      section: 'LVL 1.75x9.25',
+      plies: 2,
+      jackStuds: 2,
+      source: 'project',
+      flat: false,
+    });
+    expect(() => resolve(op(72, { header: { section: 'LVL 1.75x9.25', plies: 2 } }), { ...wall, section: '2x4' })).not.toThrow();
+    expect(() => resolve(op(72, { header: { section: 'LVL 1.75x9.25', plies: 4 } }))).toThrow(
+      /4 plies de LVL 1.75x9.25 \(7"\) não cabe em parede 2x6/,
+    );
+    expect(() => resolve(op(72, { header: { section: 'PSL 5.25x7', plies: 2 } }))).toThrow(/não cabe em parede 2x6/);
+    expect(() => resolve(op(72, { header: { section: 'LVL 1.75' as never, plies: 2 } }))).toThrow(RangeError);
   });
 
   it.each([
@@ -126,6 +142,17 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
       flat: false,
       warnings: [],
     });
+  });
+
+  it('espécie diferente de SPF no projeto: header pela tabela sai com aviso SPECIES_NOT_IN_TABLE', () => {
+    const hemFir: Config = { ...config, building: { ...config.building!, species: 'Hem-Fir' } };
+    const r = resolve(op(36), wall, hemFir);
+    expect(r.warnings.map((w) => w.code)).toEqual(['SPECIES_NOT_IN_TABLE']);
+    expect(r.warnings[0]!.message).toMatch(/Hem-Fir/);
+    const spf: Config = { ...config, building: { ...config.building!, species: 'SPF' } };
+    expect(resolve(op(36), wall, spf).warnings).toEqual([]);
+    // header do projeto não consulta a tabela: sem aviso
+    expect(resolve(op(36, { header: { section: '2x10', plies: 2 } }), wall, hemFir).warnings).toEqual([]);
   });
 
   it('opening.jackStuds abaixo do NJ: painel sai com o pedido e aviso HEADER_JACKS_BELOW_TABLE', () => {

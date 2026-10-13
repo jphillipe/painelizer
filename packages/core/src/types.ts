@@ -8,16 +8,28 @@
  */
 
 /** Seção nominal de madeira serrada. */
-export type Section = '2x4' | '2x6' | '2x8' | '2x10' | '2x12';
+export type LumberSection = '2x4' | '2x6' | '2x8' | '2x10' | '2x12';
+
+/** Madeira engenheirada de header (S12.5): LVL e PSL, com dimensões reais no nome. */
+export type EngineeredMaterial = 'LVL' | 'PSL';
+
+/**
+ * Seção de madeira engenheirada, no formato `"LVL 1.75x9.25"` (material, espessura x profundidade em
+ * polegadas decimais). Só aparece em header; studs e plates são sempre serrados.
+ */
+export type EngineeredSection = `${EngineeredMaterial} ${number}x${number}`;
+
+/** Qualquer seção de peça: serrada ou engenheirada. */
+export type Section = LumberSection | EngineeredSection;
 
 /** Seções admitidas para studs e plates de parede. */
-export type WallSection = Extract<Section, '2x4' | '2x6'>;
+export type WallSection = Extract<LumberSection, '2x4' | '2x6'>;
 
 /** Espessura real de qualquer peça "2x" (polegadas). */
 export const NOMINAL_2X_THICKNESS = 1.5;
 
 /** Profundidade real (largura da face) de cada seção nominal, em polegadas. */
-export const SECTION_DEPTH: Readonly<Record<Section, number>> = {
+export const SECTION_DEPTH: Readonly<Record<LumberSection, number>> = {
   '2x4': 3.5,
   '2x6': 5.5,
   '2x8': 7.25,
@@ -25,9 +37,44 @@ export const SECTION_DEPTH: Readonly<Record<Section, number>> = {
   '2x12': 11.25,
 };
 
+export function isLumberSection(section: string): section is LumberSection {
+  return section in SECTION_DEPTH;
+}
+
+const ENGINEERED_RE = /^(LVL|PSL) (\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/;
+
+/** Decompõe `"LVL 1.75x9.25"`; `undefined` quando a string não é seção engenheirada. */
+export function parseEngineeredSection(
+  section: string,
+): { material: EngineeredMaterial; width: number; depth: number } | undefined {
+  const m = ENGINEERED_RE.exec(section);
+  if (m === null) return undefined;
+  const width = Number(m[2]);
+  const depth = Number(m[3]);
+  if (!(width > 0) || !(depth > 0)) return undefined;
+  return { material: m[1] as EngineeredMaterial, width, depth };
+}
+
+/** Monta a string canônica de uma seção engenheirada. */
+export function engineeredSection(material: EngineeredMaterial, width: number, depth: number): EngineeredSection {
+  if (!(width > 0) || !(depth > 0)) throw new RangeError(`seção ${material} com dimensão inválida (${width}x${depth})`);
+  return `${material} ${width}x${depth}` as EngineeredSection;
+}
+
 /** Profundidade real da seção. Sempre derivada; nunca é entrada. */
 export function sectionDepth(section: Section): number {
-  return SECTION_DEPTH[section];
+  if (isLumberSection(section)) return SECTION_DEPTH[section];
+  const e = parseEngineeredSection(section);
+  if (e === undefined) throw new RangeError(`seção desconhecida (${String(section)})`);
+  return e.depth;
+}
+
+/** Espessura real de uma peça da seção: 1.5" para serrada, a largura declarada para LVL/PSL. */
+export function sectionThickness(section: Section): number {
+  if (isLumberSection(section)) return NOMINAL_2X_THICKNESS;
+  const e = parseEngineeredSection(section);
+  if (e === undefined) throw new RangeError(`seção desconhecida (${String(section)})`);
+  return e.width;
 }
 
 export type OpeningType = 'window' | 'door';
@@ -41,7 +88,11 @@ export type FloorSpan = 'center' | 'clear';
  */
 export type HeaderSource = string;
 
-/** Header especificado no projeto (structural drawings / header schedule). Manda sobre a tabela (P10). */
+/**
+ * Header especificado no projeto (structural drawings / header schedule). Manda sobre a tabela (P10).
+ * `section` pode ser engenheirada (`"LVL 1.75x9.25"`, S12.5); a espessura total `plies × espessura`
+ * precisa caber na parede.
+ */
 export interface OpeningHeader {
   section: Section;
   plies: number;
@@ -65,6 +116,70 @@ export interface Building {
   windSpeed?: number;
   /** Categoria de exposição ao vento. Ausente = B. */
   exposure?: Exposure;
+  /**
+   * Espécie da madeira de framing nas notas estruturais (S12.5). As tabelas IRC carregadas são de SPF;
+   * outra espécie gera aviso `SPECIES_NOT_IN_TABLE` quando o header vem da tabela. Guardada para a UI.
+   */
+  species?: LumberSpecies;
+}
+
+/** Espécies comuns nas notas estruturais americanas. */
+export type LumberSpecies = 'SPF' | 'Hem-Fir' | 'DF' | 'SP';
+
+/** Tipo de batente de porta; define a folga do RO quando o projeto não a dá (S12.5). */
+export type DoorFrame = 'wood' | 'hm' | 'al';
+
+/**
+ * Uma linha do window/door schedule do projeto (S12.5): o que a tag (W41, porta 114) significa.
+ * `width`/`height` são o tamanho nominal do caixilho ou da folha, como na tabela do arquiteto.
+ * O RO sai de `roughWidth`/`roughHeight` quando dados; senão de `width + folga` (ver `rules/catalog.ts`).
+ */
+export interface OpeningCatalogEntry {
+  kind: OpeningType;
+  width: number;
+  height: number;
+  /** Só porta. Ausente = `wood`. */
+  frame?: DoorFrame;
+  /** Só janela: altura do peitoril (base do RO) acima do subfloor, como no schedule. */
+  sillHeight?: number;
+  /** RO explícito do fabricante; manda sobre a folga default. */
+  roughWidth?: number;
+  roughHeight?: number;
+  /** Texto livre do schedule (ex.: "vinyl double-hung"); vai para a UI. */
+  description?: string;
+}
+
+/** Uma linha do wood header schedule do estrutural (S12.5): marca → header, jacks e kings. */
+export interface HeaderScheduleEntry {
+  section: Section;
+  plies: number;
+  jackStuds: number;
+  kingStuds: number;
+  description?: string;
+}
+
+/**
+ * Abertura como o projeto a descreve (S12.5), antes de `resolveOpening` virar `Opening`:
+ * tag do schedule, eixo do RO e marca de header, com os campos diretos de `Opening` como sobrescrita.
+ */
+export interface OpeningSpec {
+  id: string;
+  /** Tag do `Config.openingTypes` (W41, "114"). Ausente = `type`, `roughWidth` e `roughHeight` obrigatórios. */
+  tag?: string;
+  type?: OpeningType;
+  /** x do eixo do RO (como a planta cota). Alternativa a `offset`. */
+  center?: number;
+  offset?: number;
+  roughWidth?: number;
+  roughHeight?: number;
+  /** Marca do `Config.headerSchedule` (HDR2). Alternativa a `header`. */
+  headerMark?: string;
+  header?: OpeningHeader;
+  /** Base do RO acima do subfloor (janela); deriva `headerHeight = sillHeight + roughHeight`. */
+  sillHeight?: number;
+  headerHeight?: number;
+  kingStuds?: number;
+  jackStuds?: number;
 }
 
 /**
@@ -226,4 +341,8 @@ export interface Config {
    * abaixo encurtam 1.5". Ausente = sill simples sempre. Hipótese de projeto: 72" (Horace S-507).
    */
   doubleSillOver?: number;
+  /** Window/door schedule do projeto, por tag (S12.5). */
+  openingTypes?: Record<string, OpeningCatalogEntry>;
+  /** Wood header schedule do estrutural, por marca (S12.5). */
+  headerSchedule?: Record<string, HeaderScheduleEntry>;
 }

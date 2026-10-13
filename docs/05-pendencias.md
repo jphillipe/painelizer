@@ -171,6 +171,16 @@ A-400 e A-800). O estrutural da SAB (5 pág.) não está no repositório; tudo a
   — hipótese: 30 psf, 29'-0" (profundidade do prédio), 130 mph exposição B; parede do 1º pavimento suporta
   2 pavimentos (`floorsSupported: 2`, center-bearing). Se a I1 for portante (direção das vigas), muda o header.
 
+## Novas (abertas em 2026-10-13, S12.5 — folga default do RO)
+Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` em `rules/catalog.ts`).
+- [ ] **P32 — Folga de RO de janela.** Horace A-604 cota 1/4" por lado na largura e 3/8" de selante no
+  peitoril; a cabeça não é cotada. Quaker, Andersen, Pella variam. — hipótese: +1/2" na largura e +3/4" na
+  altura sobre o tamanho nominal do caixilho — S12.5.
+- [ ] **P33 — Folga de RO de porta com batente de madeira.** A-608 det. 7: jamb 3/4" + shim 1/4" por lado
+  (+2" na largura); na altura, a resposta P4 (porta 80" → RO 82 1/2" do subfloor). — hipótese: +2" x +2 1/2" — S12.5.
+- [ ] **P34 — Folga de RO de porta com batente metálico (HM) ou alumínio.** Batente HM de 2" de face por
+  lado mais folga de instalação; a spec 081113 remete ao fabricante. — hipótese: +4 1/2" x +3" — S12.5.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais

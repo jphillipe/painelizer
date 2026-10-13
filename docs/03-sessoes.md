@@ -227,6 +227,27 @@ depois S11 e S12, que não dependem uma da outra.
   `building.windSpeed: 120` (RO ≤ 4' → 1 king, members iguais; os 4 com header do projeto ganharam o bloco
   `building` inteiro, inerte). Casos de (a) e (b) inline. Exemplo do CLI: 123 peças, sem avisos.
 
+- [x] **S12.5 — Catálogo de aberturas e header schedule do projeto** (proposta de 2026-10-13, ver
+  `06-referencias` "Aberturas: onde a informação mora"). Os projetos reais descrevem a abertura por **tag** (W41,
+  porta 114), **eixo** do RO na planta e **marca de header** (HDR2) numa tabela do estrutural; o motor hoje só
+  aceita a abertura já resolvida. Prompt: "(a) `Config.openingTypes?: Record<tag, { kind: 'window' | 'door';
+  width; height; frame?: 'wood' | 'hm' | 'al'; sillHeight?; roughOffset?: { width; height } }>` com regra de
+  RO default: janela +1/2" na largura e +3/4" na altura (Horace A-604); porta de madeira +2" x +1"; batente HM
+  +4 1/2" x +2 1/4" (hipótese, registrar P). (b) `Config.headerSchedule?: Record<mark, { plies; section | lvl:
+  { width; depth } | psl; jackStuds; kingStuds }>`; `OpeningHeader` ganha `material: 'lumber' | 'lvl' | 'psl'`
+  com dimensões reais (a lista de corte lista LVL como peça própria). (c) `Opening` aceita `type` (tag) e
+  `center` (eixo) como alternativa a `roughWidth`/`roughHeight`/`offset`, e `headerMark` como alternativa a
+  `header`; o motor resolve e os campos diretos continuam valendo como sobrescrita. (d) `sillHeight` por
+  abertura ou por tipo deriva `headerHeight` = sill + RO. (e) `config.building.species?: 'SPF' | 'Hem-Fir'`
+  guardado para a tabela (hoje só SPF; Hem-Fir fora da tabela = aviso). Fixtures: janela por tag com RO derivado
+  igual ao fixture atual; porta por tag; header por marca com LVL." Saída: exemplo `casa-exemplo.json` com
+  catálogo; Ringgold reescrito com tags A e portas 1/U2. Fazer **antes da S13**, para o formato da casa nascer
+  com o catálogo.
+  Feita em 2026-10-13 (abordagem confirmada pelo humano). `rules/catalog.ts` (`resolveOpening`) resolve o
+  `OpeningSpec` antes do motor; `Section` ganhou LVL/PSL com dimensões reais; BOM lista engenheirado à parte;
+  `building.species` só avisa. Folgas default = P32–P34. Os dois exemplos reescritos geram a mesma saída
+  (123 e 90 peças). Decisões em `04-decisoes` (2026-10-13).
+
 ## Fase 3 — Casa inteira
 
 A entrada passa a descrever a casa em planta. `panelizeWall(wall, config)` e os fixtures `wall-*.json` continuam

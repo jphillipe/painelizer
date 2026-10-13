@@ -16,7 +16,7 @@
  * Entrada inválida lança `RangeError`. Tabela digitada com erro de estrutura também (`loadHeaderTables`).
  */
 
-import type { FloorSpan, Section, WallSection } from '../types';
+import type { FloorSpan, LumberSection, WallSection } from '../types';
 import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
 import { parseFeetInches } from '../units';
 import rawIrcHeaders from '../data/irc-headers.json';
@@ -42,7 +42,8 @@ export interface HeaderColumn {
 }
 
 export interface HeaderRow {
-  section: Section;
+  /** A tabela IRC só tem madeira serrada. */
+  section: LumberSection;
   plies: number;
   /** Uma por coluna; `null` = não permitido ("—" no livro). */
   cells: (HeaderCell | null)[];
@@ -79,7 +80,7 @@ export interface HeaderQuery {
 }
 
 export interface HeaderSpec {
-  section: Section;
+  section: LumberSection;
   plies: number;
   jackStuds: number;
   /** Vão máximo da tabela para o header escolhido, em polegadas. */
@@ -296,7 +297,7 @@ export function loadHeaderTables(json: unknown): HeaderTable[] {
     columns: { groundSnowLoad?: number; buildingWidth: string }[];
     groups: {
       supports: { floors: number; floorSpan?: FloorSpan };
-      headers: { plies: number; section: Section; cells: ([string, number] | null)[] }[];
+      headers: { plies: number; section: LumberSection; cells: ([string, number] | null)[] }[];
     }[];
   };
   return (json as { tables: Raw[] }).tables.map((t) => ({

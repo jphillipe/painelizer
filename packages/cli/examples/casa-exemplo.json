@@ -1,39 +1,152 @@
 {
-  "$comment": "Exemplo de entrada do CLI. config.studLength = pré-cortes da fábrica (P7); headerHeight 82.5 = altura padrão de header da fábrica (P2), sobrescrita por abertura quando o projeto indica outra (W06). Header (S9.2): `building` traz neve e largura da casa; W05 e W06 (externas portantes, floorsSupported 0 = só telhado) pegam o header da tabela IRC R602.7(1) — 2-2x6 com 2 jacks; W07 traz o header do projeto (`header` 2-2x10) nas duas aberturas, que manda sobre a tabela. W04 (interna não portante) tem porta com a peça deitada da R602.7.4 (origem `R602.7.4`, sem cripples acima). W07 = janela e porta a 4.5\" (jack + king compartilhado + jack), como o fixture wall-144-window-door (com os 2 jacks da tabela os RO precisariam de 7.5\"); a bottom plate da porta sai inteira e o SVG marca o corte na obra. Paredes até 16' (divisão em painéis chega na S15). S12: `building.windSpeed` 120 mph / exposição B → kings pela Tabela R602.7.5 (todas as aberturas ≤ 4' → 1 king); `doubleSillOver` 6' → nenhuma janela do exemplo leva sill dupla. Medidas em polegadas decimais ou pés-pol-fração.",
+  "$comment": "Exemplo de entrada do CLI. config.studLength = pré-cortes da fábrica (P7); headerHeight 82.5 = altura padrão de header da fábrica (P2), sobrescrita por abertura quando o projeto indica outra (W06). Header (S9.2): `building` traz neve e largura da casa; W05 e W06 (externas portantes, floorsSupported 0 = só telhado) pegam o header da tabela IRC R602.7(1) — 2-2x6 com 2 jacks; W07 traz o header do projeto (`header` 2-2x10) nas duas aberturas, que manda sobre a tabela. W04 (interna não portante) tem porta com a peça deitada da R602.7.4 (origem `R602.7.4`, sem cripples acima). W07 = janela e porta a 4.5\" (jack + king compartilhado + jack), como o fixture wall-144-window-door (com os 2 jacks da tabela os RO precisariam de 7.5\"); a bottom plate da porta sai inteira e o SVG marca o corte na obra. Paredes até 16' (divisão em painéis chega na S15). S12: `building.windSpeed` 120 mph / exposição B → kings pela Tabela R602.7.5 (todas as aberturas ≤ 4' → 1 king); `doubleSillOver` 6' → nenhuma janela do exemplo leva sill dupla. Medidas em polegadas decimais ou pés-pol-fração. S12.5: catálogo do projeto — `openingTypes` (J36 = janela 35 1/2\" x 47 1/4\", RO 36x48 pela folga default +1/2\" x +3/4\", P32; P30 = porta 30x80 de madeira, RO 32 x 82 1/2\" pela folga +2\" x +2 1/2\", P33) e `headerSchedule` (HDR1 = 2-2x10, 1 jack, 1 king). W04 e W05 descrevem a abertura por `tag` + `center` (eixo, como a planta cota); W07 usa `headerMark` nas duas aberturas. Mesmas 123 peças.",
   "name": "casa-exemplo",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
-    "studLength": ["92 5/8\"", "104 5/8\""],
+    "studLength": [
+      "92 5/8\"",
+      "104 5/8\""
+    ],
     "headerHeight": "6'-10 1/2\"",
-    "building": { "groundSnowLoad": 50, "buildingWidth": "28'", "windSpeed": 120, "exposure": "B" },
-    "doubleSillOver": "6'"
+    "building": {
+      "groundSnowLoad": 50,
+      "buildingWidth": "28'",
+      "windSpeed": 120,
+      "exposure": "B"
+    },
+    "doubleSillOver": "6'",
+    "openingTypes": {
+      "J36": {
+        "kind": "window",
+        "width": "2'-11 1/2\"",
+        "height": "3'-11 1/4\"",
+        "description": "janela 36x48 de RO"
+      },
+      "P30": {
+        "kind": "door",
+        "width": "2'-6\"",
+        "height": "6'-8\"",
+        "frame": "wood"
+      }
+    },
+    "headerSchedule": {
+      "HDR1": {
+        "section": "2x10",
+        "plies": 2,
+        "jackStuds": 1,
+        "kingStuds": 1,
+        "description": "(2) 2x10"
+      }
+    }
   },
   "walls": [
-    { "id": "W01", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
-    { "id": "W02", "length": "16'", "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
-    { "id": "W03", "length": 120, "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "openings": [] },
-    { "id": "W04", "length": "10'-6\"", "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [
-      { "id": "P2", "type": "door", "offset": 40, "roughWidth": 32, "roughHeight": "6'-10 1/2\"" }
-    ] },
     {
-      "id": "W05", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+      "id": "W01",
+      "length": "12'-0\"",
+      "height": "8'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": []
+    },
+    {
+      "id": "W02",
+      "length": "16'",
+      "height": 97.125,
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": []
+    },
+    {
+      "id": "W03",
+      "length": 120,
+      "height": 97.125,
+      "section": "2x4",
+      "exterior": false,
+      "bearing": true,
+      "openings": []
+    },
+    {
+      "id": "W04",
+      "length": "10'-6\"",
+      "height": 97.125,
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
       "openings": [
-        { "id": "J1", "type": "window", "offset": "4'", "roughWidth": 36, "roughHeight": 48 }
+        {
+          "id": "P2",
+          "tag": "P30",
+          "center": 56,
+          "roughHeight": "6'-10 1/2\""
+        }
       ]
     },
     {
-      "id": "W06", "length": "10'", "height": "9'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+      "id": "W05",
+      "length": "12'-0\"",
+      "height": "8'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
       "openings": [
-        { "id": "J2", "type": "window", "offset": 42, "roughWidth": 36, "roughHeight": 60, "headerHeight": "7'-6\"" }
+        {
+          "id": "J1",
+          "tag": "J36",
+          "center": "5'-6\""
+        }
       ]
     },
     {
-      "id": "W07", "length": "12'-0\"", "height": "8'-1 1/8\"", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+      "id": "W06",
+      "length": "10'",
+      "height": "9'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
       "openings": [
-        { "id": "J3", "type": "window", "offset": 24, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } },
-        { "id": "P1", "type": "door", "offset": "5'-4 1/2\"", "roughWidth": "3'-2\"", "roughHeight": "6'-10 1/2\"", "header": { "section": "2x10", "plies": 2 } }
+        {
+          "id": "J2",
+          "type": "window",
+          "offset": 42,
+          "roughWidth": 36,
+          "roughHeight": 60,
+          "headerHeight": "7'-6\""
+        }
+      ]
+    },
+    {
+      "id": "W07",
+      "length": "12'-0\"",
+      "height": "8'-1 1/8\"",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "J3",
+          "type": "window",
+          "offset": 24,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "headerMark": "HDR1"
+        },
+        {
+          "id": "P1",
+          "type": "door",
+          "offset": "5'-4 1/2\"",
+          "roughWidth": "3'-2\"",
+          "roughHeight": "6'-10 1/2\"",
+          "headerMark": "HDR1"
+        }
       ]
     }
   ]

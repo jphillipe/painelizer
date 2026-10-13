@@ -52,6 +52,7 @@ export {
   type ResolvedHeader,
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
+export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
 export { panelizeWall } from './panelize/panelizeWall';
 export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';

@@ -12,7 +12,7 @@
  *   dentro do papel, comprimento decrescente; empate desfeito pela seção.
  */
 
-import type { Member, MemberRole, Panel, Section } from '../types';
+import { sectionDepth, type Member, type MemberRole, type Panel, type Section } from '../types';
 
 /** Papel na lista de corte. `plates` reúne bottom, top e double top plate. */
 export type CutRole = 'plates' | Exclude<MemberRole, 'bottomPlate' | 'topPlate' | 'doubleTopPlate'>;
@@ -37,8 +37,14 @@ export const CUT_ROLE_ORDER: readonly CutRole[] = [
   'cripple',
 ];
 
-/** Ordem das seções, da menor para a maior profundidade. */
+/** Ordem das seções serradas, da menor para a maior profundidade. */
 export const SECTION_ORDER: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
+
+/** Posição de ordenação: serradas na ordem da tabela; engenheiradas (LVL/PSL) depois, por profundidade. */
+export function sectionRank(section: Section): number {
+  const i = SECTION_ORDER.indexOf(section);
+  return i >= 0 ? i : SECTION_ORDER.length + sectionDepth(section);
+}
 
 /** Resolução usada para agrupar comprimentos (1/64"). */
 const LENGTH_RESOLUTION = 64;
@@ -95,5 +101,5 @@ export function compareCutLines(a: CutLine, b: CutLine): number {
   const byRole = CUT_ROLE_ORDER.indexOf(a.role) - CUT_ROLE_ORDER.indexOf(b.role);
   if (byRole !== 0) return byRole;
   if (a.length !== b.length) return b.length - a.length;
-  return SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section);
+  return sectionRank(a.section) - sectionRank(b.section);
 }

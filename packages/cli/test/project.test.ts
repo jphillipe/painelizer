@@ -110,9 +110,13 @@ describe('parseProject', () => {
     expect(p.config.doubleSillOver).toBe(72);
     expect(p.walls.map((w) => w.floorsSupported)).toEqual([0, 0, undefined, undefined, 0, 0, 0]);
     expect(p.walls[4]?.openings[0]).not.toHaveProperty('header');
-    expect(p.walls[6]?.openings.map((o) => o.header)).toEqual([
-      { section: '2x10', plies: 2 },
-      { section: '2x10', plies: 2 },
+    // W05 e W04 por tag + center (S12.5): mesma Opening de antes
+    expect(p.walls[4]?.openings[0]).toMatchObject({ type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
+    expect(p.walls[3]?.openings[0]).toMatchObject({ type: 'door', offset: 40, roughWidth: 32, roughHeight: 82.5 });
+    // W07 por headerMark HDR1: seção, plies e jacks do schedule; kings do schedule viram kingStuds
+    expect(p.walls[6]?.openings.map((o) => [o.header, o.kingStuds])).toEqual([
+      [{ section: '2x10', plies: 2, jackStuds: 1 }, 1],
+      [{ section: '2x10', plies: 2, jackStuds: 1 }, 1],
     ]);
   });
 
@@ -166,6 +170,113 @@ describe('parseProject', () => {
     expect(() => header({ section: '2x10' })).toThrow(/header\.plies: esperado inteiro ≥ 1/);
     expect(() => header({ section: '2x10', plies: 2, jackStuds: 0 })).toThrow(/header\.jackStuds/);
     expect(() => header('2-2x10')).toThrow(/openings\[0\]\.header: esperado objeto/);
+  });
+
+  it('header.section aceita LVL/PSL em texto ou objeto com medidas em pés-pol (S12.5)', () => {
+    const withHeader = (header: unknown) =>
+      valid({
+        walls: [
+          {
+            ...(valid().walls as object[])[0],
+            openings: [{ id: 'J1', type: 'window', offset: 48, roughWidth: 36, roughHeight: 48, header }],
+          },
+        ],
+      });
+    const header = (h: unknown) => projectFrom(withHeader(h), 'projeto').walls[0]?.openings[0]?.header;
+    expect(header({ section: 'LVL 1.75x9.25', plies: 2, jackStuds: 2 })).toEqual({
+      section: 'LVL 1.75x9.25',
+      plies: 2,
+      jackStuds: 2,
+    });
+    expect(header({ section: { material: 'PSL', width: '5 1/4"', depth: '7"' }, plies: 1 })).toEqual({
+      section: 'PSL 5.25x7',
+      plies: 1,
+    });
+    expect(() => header({ section: { material: 'GLULAM', width: 3, depth: 9 }, plies: 1 })).toThrow(
+      /header\.section\.material: esperado um de LVL, PSL/,
+    );
+    expect(() => header({ section: { material: 'LVL', width: 0, depth: 9 }, plies: 1 })).toThrow(/header\.section\.width/);
+  });
+
+  it('catálogo (S12.5): openingTypes + headerSchedule resolvem tag, center e headerMark em Opening', () => {
+    const p = projectFrom(
+      valid({
+        config: {
+          ...(valid().config as object),
+          building: { groundSnowLoad: 30, buildingWidth: "29'", windSpeed: 130, species: 'Hem-Fir' },
+          openingTypes: {
+            A: { kind: 'window', width: "2'-5\"", height: "6'-0\"", sillHeight: "2'-0\"", description: 'vent w/ transom' },
+            '1': { kind: 'door', width: "3'-0\"", height: "6'-8\"", frame: 'hm' },
+          },
+          headerSchedule: { HDR2: { section: '2x10', plies: 3, jackStuds: 2, kingStuds: 4, description: '(3) 2x10' } },
+        },
+        walls: [
+          {
+            ...(valid().walls as object[])[0],
+            openings: [
+              { id: 'J1', tag: 'A', center: "8'-7\"", headerMark: 'HDR2' },
+              { id: 'P1', tag: '1', center: 60, header: { section: '2x8', plies: 2 }, headerHeight: "6'-10 1/2\"" },
+            ],
+          },
+        ],
+      }),
+      'projeto',
+    );
+    expect(p.config.building?.species).toBe('Hem-Fir');
+    expect(p.config.openingTypes?.['A']).toEqual({
+      kind: 'window',
+      width: 29,
+      height: 72,
+      sillHeight: 24,
+      description: 'vent w/ transom',
+    });
+    expect(p.config.headerSchedule?.['HDR2']).toMatchObject({ section: '2x10', plies: 3, jackStuds: 2, kingStuds: 4 });
+    expect(p.walls[0]?.openings).toEqual([
+      {
+        id: 'J1',
+        type: 'window',
+        offset: 103 - 29.5 / 2,
+        roughWidth: 29.5,
+        roughHeight: 72.75,
+        header: { section: '2x10', plies: 3, jackStuds: 2 },
+        kingStuds: 4,
+        headerHeight: 24 + 72.75,
+      },
+      {
+        id: 'P1',
+        type: 'door',
+        offset: 60 - 40.5 / 2,
+        roughWidth: 40.5,
+        roughHeight: 83,
+        header: { section: '2x8', plies: 2 },
+        headerHeight: 82.5,
+      },
+    ]);
+  });
+
+  it.each([
+    [{ openingTypes: { A: { kind: 'hatch', width: 29, height: 72 } } }, /openingTypes\.A\.kind: esperado um de window, door/],
+    [{ openingTypes: { A: { kind: 'door', width: 36, height: 80, frame: 'steel' } } }, /openingTypes\.A\.frame: esperado um de wood, hm, al/],
+    [{ openingTypes: { '': { kind: 'door', width: 36, height: 80 } } }, /openingTypes: chave vazia/],
+    [{ headerSchedule: { HDR1: { section: '2x10', plies: 3, jackStuds: 2 } } }, /headerSchedule\.HDR1\.kingStuds: esperado inteiro ≥ 1/],
+    [{ headerSchedule: 'x' }, /headerSchedule: esperado objeto/],
+    [{ building: { groundSnowLoad: 30, buildingWidth: 300, species: 'Pine' } }, /building\.species: esperado um de SPF, Hem-Fir, DF, SP/],
+  ])('catálogo inválido: %j', (extra, re) => {
+    expect(() => projectFrom(valid({ config: { ...(valid().config as object), ...extra } }), 'projeto')).toThrow(re);
+  });
+
+  it('abertura por tag inexistente ou sem posição: erro de projeto com o caminho da parede', () => {
+    const withOpening = (opening: unknown) =>
+      valid({ walls: [{ ...(valid().walls as object[])[0], openings: [opening] }] });
+    expect(() => projectFrom(withOpening({ id: 'J1', tag: 'W9', center: 10 }), 'projeto')).toThrow(
+      /projeto\.walls\[0\]\.openings: parede W01, abertura J1: tag "W9" não está em config\.openingTypes/,
+    );
+    expect(() => projectFrom(withOpening({ id: 'J1', type: 'window', roughWidth: 36, roughHeight: 48 }), 'projeto')).toThrow(
+      /sem offset nem center/,
+    );
+    expect(() => projectFrom(withOpening({ id: 'J1', type: 'window', offset: 10 }), 'projeto')).toThrow(
+      /sem roughWidth\/roughHeight e sem tag/,
+    );
   });
 
   it('kingStuds e jackStuds opcionais por abertura, inteiros ≥ 1', () => {

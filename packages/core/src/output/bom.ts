@@ -17,9 +17,9 @@
  * falhar do que omitir material.
  */
 
-import type { Panel, Section } from '../types';
+import { isLumberSection, type Panel, type Section } from '../types';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
-import { cutList, SECTION_ORDER } from './cutlist';
+import { cutList, sectionRank } from './cutlist';
 
 /** Comprimentos comerciais em polegadas (P9). */
 export const DEFAULT_STOCK_LENGTHS: readonly number[] = [96, 120, 144, 168, 192];
@@ -33,6 +33,8 @@ export interface BomLine {
   stockLength: number;
   /** `true` quando a linha é de pré-corte de stud, não de comprimento comercial. */
   precut: boolean;
+  /** `true` para LVL/PSL: comprado no comprimento da peça (`stockLength` = corte), sem sobra. */
+  engineered: boolean;
   /** Peças comerciais a comprar. */
   qty: number;
   /** Soma dos comprimentos de corte atendidos por estas peças. */
@@ -80,16 +82,21 @@ export function bom(
 
   for (const panel of panels) {
     for (const cut of cutList(panel)) {
+      const engineered = !isLumberSection(cut.section);
       const precutLength = PRECUT_SECTIONS.includes(cut.section)
         ? matchPrecut(cut.length, precuts)
         : undefined;
       const precut = precutLength !== undefined;
-      const stockLength = precutLength ?? stockLengthFor(cut.length, stockLengths);
+      // LVL/PSL (S12.5) é comprado no comprimento da peça: não há estoque comercial nem sobra.
+      const stockLength = engineered
+        ? cut.length
+        : (precutLength ?? stockLengthFor(cut.length, stockLengths));
       const key = `${cut.section}|${stockLength}|${precut}`;
       const line = lines.get(key) ?? {
         section: cut.section,
         stockLength,
         precut,
+        engineered,
         qty: 0,
         cutTotal: 0,
         waste: 0,
@@ -108,7 +115,7 @@ export function bom(
   }
 
   return [...lines.values()].sort((a, b) => {
-    const bySection = SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section);
+    const bySection = sectionRank(a.section) - sectionRank(b.section);
     return bySection !== 0 ? bySection : a.stockLength - b.stockLength;
   });
 }

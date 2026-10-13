@@ -114,7 +114,38 @@ uma ferramenta de divisão de PDF (ignorar).
 - Matilda numera paredes por eixos (A6, A7, C.1, D…) e por tipo (WALL TYPE 1–7); Horace por partição
   (E01…E16, P1…P12). Nenhum tem numeração de painel (S13 é convenção da fábrica).
 
-## O que muda (proposta, a confirmar)
+### Aberturas: onde a informação mora (análise de 2026-10-13, Horace, pasta `docs/examples/Horace Bid_Drawings…`)
+Pedido do marceneiro (pai do Phillipe): "geralmente tem um arquivo do projeto sobre as aberturas". No Horace a
+informação de uma abertura está espalhada em **cinco lugares**, e nenhum deles sozinho dá o que o motor precisa:
+- **Planta (A-101).** Posição: aberturas em parede de madeira são cotadas **ao eixo do rough opening** (convenções E
+  e F das notas gerais); paredes externas cotadas aos eixos de coluna, que ficam na **face externa do sheathing**;
+  internas pela face do stud. Portas levam o número da sala (114, 103A…); **janelas não têm tag na planta**.
+- **Elevações (A-201).** Tag de janela (W41…W46) em cada abertura. É o único lugar que diz qual janela vai onde.
+- **Window schedule (A-604).** Por tag: tamanho nominal do caixilho (W41 6'-0" x 5'-6" double-hung dupla; W42
+  3'-0" x 6'-0" fixa; W43 6'-0" x 5'-6" fixa dupla; W44 3'-0" x 5'-6"; W45 3'-0" x 6'-0" aço corta-fogo), tipo,
+  **altura do peitoril acima do piso acabado** (1'-4", 1'-6", "varia" em tijolo). Os detalhes de jamb cotam
+  **RO = largura da janela + 1/4" por lado**; na altura, folga de selante de 3/8" no peitoril e ~1/2" na cabeça.
+  Fabricante base: Quaker v300. Confirma a hipótese P28 do Ringgold (par de 2'-5" → RO 58 1/2").
+- **Door schedule (A-606) e detalhes (A-608).** Por número de porta: largura (2'-0" a 3'-8", duplas 2'-6"/2'-6"),
+  altura 7'-0", material, **tipo de batente** (WD1 madeira, HM1/HM2 metálico, AL1 alumínio), fire rating. Sem RO
+  na tabela. Detalhe 7/A-608 (batente de madeira): jamb 3/4" + shim 1/4" por lado → RO = porta + 2" na largura;
+  cabeça 3/4" + 1/4". Batente HM: RO = largura do batente + folga, batente de 2" de face (spec 081113).
+- **Estrutural (S-104 e irmãs, S-101.A).** **WOOD HEADER SCHEDULE**: HDR1–HDR8 com descrição, jacks e kings
+  (HDR1 (3) 2x8, 2 jacks, 2 kings; HDR2 (3) 2x10, 2, 4; HDR3 (2) 1 3/4"x14" LVL, 3 jacks, kings = post PSL
+  5 1/4"x7"; HDR4 (3) 1 3/4"x9 1/4" LVL, 2, 4; HDR5 (2) 1 3/4"x9 1/4" LVL, 2, 1; HDR6 1 3/4"x11 1/4" LVL, 2, 1;
+  HDR7 (3) 2x8, 2, 1; HDR8 (3) 2x10, 2, 1). Cada abertura na planta estrutural leva a marca (HDR2…) e "NBWH" =
+  header não portante pela mesma tabela. Notas: mínimo 3 jacks sob LVL/PSL/girder truss; jacks contínuos até a
+  fundação; hold-down "HD / (2) 2x" = kings extras além dos jacks; studs agrupados "■(4)". Madeira: **Hem-Fir
+  No. 2** (S-003), não SPF. Sill dupla em abertura > 6'-0" (S-507, já no motor como P25).
+
+**O que isso muda no motor (proposta, ver S12.5 em 03-sessoes):** hoje a abertura entra já resolvida (`offset`
+da borda esquerda, `roughWidth`, `roughHeight`, `header` por seção 2x). O projeto real fala em **tag + eixo +
+marca de header**. Falta uma camada de catálogo por projeto: (a) `openingTypes` (window/door schedule: tag →
+tamanho nominal, tipo de batente, peitoril, regra de RO); (b) `headerSchedule` (marca → peças, jacks, kings),
+com header LVL/PSL (hoje `Section` só aceita 2x); (c) abertura por `type` + `center` + `headerMark`, com
+`roughWidth`/`roughHeight` continuando como sobrescrita; (d) `sillHeight` como alternativa a `headerHeight`;
+(e) espécie por projeto para a tabela IRC (Hem-Fir aqui, SPF em RI).
+
 1. **S7/S8:** prever `kingStuds` e `jackStuds` por abertura (default 1/1) e sill dupla opcional (default simples).
 2. **S9:** tabela de header com espécie como entrada e possibilidade de tabela por projeto (engenheiro) além da
    IRC; header de 2x6 wall = plies + spacers de 1/2" (contar OSB na BOM ou ao menos avisar).
