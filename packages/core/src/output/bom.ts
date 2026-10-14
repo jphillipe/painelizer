@@ -12,20 +12,21 @@
  * Peça mais curta (jack, cripple) não sai de pré-corte: vai para o comercial.
  *
  * Comprimentos comerciais default: 8', 10', 12', 14', 16' (P9, confirmado em
- * 2026-10-01). Peça mais longa que o maior comercial lança `RangeError`: até a
- * S12 dividir painéis, uma parede de 20' não tem plate em estoque, e é melhor
- * falhar do que omitir material.
+ * 2026-10-01; `DEFAULT_STOCK_LENGTHS` em `types.ts`). Peça serrada mais longa que
+ * o maior comercial sai numa linha `oversize: true` (estoque = o próprio corte, sem
+ * sobra) em vez de lançar erro: desde a S15 as plates acima do estoque são
+ * emendadas pelo motor, e o que ainda passar é algo para a folha mostrar, não
+ * para derrubar a lista inteira. `stockLengthFor` continua lançando.
  */
 
-import { isLumberSection, type Panel, type Section } from '../types';
+import { DEFAULT_STOCK_LENGTHS, isLumberSection, type Panel, type Section } from '../types';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, sectionRank } from './cutlist';
 
-/** Comprimentos comerciais em polegadas (P9). */
-export const DEFAULT_STOCK_LENGTHS: readonly number[] = [96, 120, 144, 168, 192];
-
 /** Seções em que existe pré-corte de stud (P7: iguais para 2x4 e 2x6). */
 const PRECUT_SECTIONS: readonly Section[] = ['2x4', '2x6'];
+
+const EPS = 1e-9;
 
 export interface BomLine {
   section: Section;
@@ -35,6 +36,8 @@ export interface BomLine {
   precut: boolean;
   /** `true` para LVL/PSL: comprado no comprimento da peça (`stockLength` = corte), sem sobra. */
   engineered: boolean;
+  /** `true` para peça serrada acima do maior comprimento comercial (S15): `stockLength` = corte, sem sobra. */
+  oversize: boolean;
   /** Peças comerciais a comprar. */
   qty: number;
   /** Soma dos comprimentos de corte atendidos por estas peças. */
@@ -88,15 +91,16 @@ export function bom(
         : undefined;
       const precut = precutLength !== undefined;
       // LVL/PSL (S12.5) é comprado no comprimento da peça: não há estoque comercial nem sobra.
-      const stockLength = engineered
-        ? cut.length
-        : (precutLength ?? stockLengthFor(cut.length, stockLengths));
-      const key = `${cut.section}|${stockLength}|${precut}`;
+      const oversize = !engineered && precutLength === undefined && cut.length > Math.max(...stockLengths) + EPS;
+      const stockLength =
+        engineered || oversize ? cut.length : (precutLength ?? stockLengthFor(cut.length, stockLengths));
+      const key = `${cut.section}|${stockLength}|${precut}|${oversize}`;
       const line = lines.get(key) ?? {
         section: cut.section,
         stockLength,
         precut,
         engineered,
+        oversize,
         qty: 0,
         cutTotal: 0,
         waste: 0,

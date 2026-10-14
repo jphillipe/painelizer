@@ -1,0 +1,62 @@
+{
+  "$comment": "S15 (2026-10-13): parede lisa de 20' (240\") 2x6 — cabe em um painel só (maxLength 240), sem divisão, mas as três plates passam do estoque de 16' (192\") e são emendadas sobre o centro de um stud (P14, cada peça apoia 3/4\"): top plate na marca 192, a maior peça que deixa o resto ≤ 192 → 192 + 48; double top defasada ≥ 48 da emenda da top e das pontas da top plate → marca 144 → 144 + 96; bottom sobre stud sem outra restrição → 192 + 48. 16 studs (0, 15.25 … 223.25, 238.5) + 6 peças de plate = 22 peças; peso 367 lb (hipótese P8). `expected.panels[].members` compara (role, section, length, x, y) sem ordem.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5,
+    "building": {
+      "groundSnowLoad": 50,
+      "buildingWidth": 336,
+      "windSpeed": 120
+    }
+  },
+  "wall": {
+    "id": "W-240",
+    "length": 240,
+    "height": 97.125,
+    "section": "2x6",
+    "exterior": true,
+    "bearing": true,
+    "openings": []
+  },
+  "expected": {
+    "panels": [
+      {
+        "id": "W-240",
+        "wallId": "W-240",
+        "wallOffset": 0,
+        "length": 240,
+        "layoutOrigin": 0,
+        "weightLb": 367,
+        "warnings": [],
+        "fieldCuts": [],
+        "members": [
+          { "role": "bottomPlate", "section": "2x6", "length": 192, "x": 0, "y": 0 },
+          { "role": "bottomPlate", "section": "2x6", "length": 48, "x": 192, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 192, "x": 0, "y": 94.125 },
+          { "role": "topPlate", "section": "2x6", "length": 48, "x": 192, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 144, "x": 0, "y": 95.625 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 96, "x": 144, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 159.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 175.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 191.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 207.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 223.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 238.5, "y": 1.5 }
+        ]
+      }
+    ]
+  }
+}

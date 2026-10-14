@@ -1,50 +1,155 @@
 {
-  "$comment": "S13 (2026-10-13): a casa de docs/00-visao.md em planta — eixos de 480 x 336 (laço W01 sul → W02 leste → W03 norte → W04 oeste, 2x6 externas portantes, só telhado) e W05 interna portante 2x4 de (264,0) a (264,336), encostando em T em W01 e W03 (a 240 da visão cairia dentro do RO da porta de correr e seria erro). Cantos: W01 e W03 (480) atravessam os quatro cantos por serem as mais longas (P21) → plates 485.5, origem 0; W02 e W04 encostam → 330.5, origem −5.5. W05: para nas faces de W01 e W03 → 330.5, origem 0. Offsets medidos do start de cada parede ao longo do eixo (W03 e W04 correm no sentido negativo) e convertidos para o x do painel pelo deslocamento da plate: ±2.75. Headers do projeto (2-2x10; 2-2x12 na porta de correr), base a 82.5; vento 120 B → 1 king por lado até 4', 2 kings na porta de correr de 6' (R602.7.5). Peças por painel conferidas com panelizeWall sobre as paredes derivadas. Painéis acima de 240\" e emendas de plate são da S15. S14 (2026-10-13): W01 e W03 atravessam os quatro cantos → stud flat de canto em x=1.5 e em x=478.5 (485.5 − 1.5 − 5.5); o stud de layout em 479.25 sai porque sobrepõe o flat (o fechamento em 484 só encosta); a double top recua 5.5 nas duas pontas e é cortada na faixa do T de W05 (3.5\") → duas peças; 3 blocos 2x6 × 14.5 do ladder entre os studs vizinhos da faixa. W02 e W04 (encostam) e W05 (T nas duas pontas): double top avança 5.5 nas duas pontas → 341.5\", contagem igual. W01: 46 → 51; W03: 37 → 42.",
+  "$comment": "S13 (2026-10-13): a casa de docs/00-visao.md em planta — eixos de 480 x 336 (laço W01 sul → W02 leste → W03 norte → W04 oeste, 2x6 externas portantes, só telhado) e W05 interna portante 2x4 de (264,0) a (264,336), encostando em T em W01 e W03 (a 240 da visão cairia dentro do RO da porta de correr e seria erro). Cantos: W01 e W03 (480) atravessam os quatro cantos por serem as mais longas (P21) → plates 485.5, origem 0; W02 e W04 encostam → 330.5, origem −5.5. W05: para nas faces de W01 e W03 → 330.5, origem 0. Offsets medidos do start de cada parede ao longo do eixo (W03 e W04 correm no sentido negativo) e convertidos para o x do painel pelo deslocamento da plate: ±2.75. Headers do projeto (2-2x10; 2-2x12 na porta de correr), base a 82.5; vento 120 B → 1 king por lado até 4', 2 kings na porta de correr de 6' (R602.7.5). Peças por painel conferidas com panelizeWall sobre as paredes derivadas. Painéis acima de 240\" e emendas de plate são da S15. S14 (2026-10-13): W01 e W03 atravessam os quatro cantos → stud flat de canto em x=1.5 e em x=478.5 (485.5 − 1.5 − 5.5); o stud de layout em 479.25 sai porque sobrepõe o flat (o fechamento em 484 só encosta); a double top recua 5.5 nas duas pontas e é cortada na faixa do T de W05 (3.5\") → duas peças; 3 blocos 2x6 × 14.5 do ladder entre os studs vizinhos da faixa. W02 e W04 (encostam) e W05 (T nas duas pontas): double top avança 5.5 nas duas pontas → 341.5\", contagem igual. W01: 46 → 51; W03: 37 → 42. S15 (2026-10-13, hipóteses P35, P23, P8): paredes divididas por splitWall — W01 (485.5) em 144 + 144 + 197.5 (quebras nas marcas 144 e 288, múltiplas de 48: menor número de painéis que cabe em 240 e, entre as divisões em 3, a de painel mais longo menor); W03 (485.5) em 144 + 192 + 149.5 (quebras 144 e 336; empate em 192 com 192/192/101.5, desfeito pela divisão mais próxima dos terços); W02 e W04 (330.5, origem −5.5) em 186.5 + 144 (quebra na marca 186.5 = 192 da quina); W05 (330.5) em 192 + 138.5. Lap da double top entre painéis: 48, encurtado para 24 quando os 48 cairiam dentro de um header (W01-P1 → P2, porta P1; W02-P1 → P2, janela J3). A double top da W01-P2 é cortada na faixa do T da W05 (121–124.5 local) e a da W03-P2 na faixa 73–76.5. Emendas (P14, estoque máximo 192): W01-P3 bottom 176 + 21.5 e top 144 + 53.5; W02-P1 double top (216 com o lap) 144 + 72; W04-P1 double top (240) 144 + 96; W05-P1 double top (245.5) cortada sobre o king da porta em 115. `expected.panels` ganha wallId, wallOffset, length, layoutOrigin e weightLb por painel; parede de um painel só manteria o id da parede (numeração definitiva na S16).",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
     "plateThickness": 1.5,
     "studLength": [92.625, 104.625],
     "headerHeight": 82.5,
-    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120, "exposure": "B" }
+    "building": {
+      "groundSnowLoad": 50,
+      "buildingWidth": 336,
+      "windSpeed": 120,
+      "exposure": "B"
+    }
   },
   "house": {
     "walls": [
       {
-        "id": "W01", "start": { "x": 0, "y": 0 }, "end": { "x": 480, "y": 0 },
-        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "id": "W01",
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 480, "y": 0 },
+        "height": 97.125,
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "floorsSupported": 0,
         "openings": [
-          { "id": "P1", "type": "door", "offset": 168, "roughWidth": 38, "roughHeight": 82.5, "header": { "section": "2x10", "plies": 2 } },
-          { "id": "J1", "type": "window", "offset": 336, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+          {
+            "id": "P1",
+            "type": "door",
+            "offset": 168,
+            "roughWidth": 38,
+            "roughHeight": 82.5,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          },
+          {
+            "id": "J1",
+            "type": "window",
+            "offset": 336,
+            "roughWidth": 36,
+            "roughHeight": 48,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          }
         ]
       },
       {
-        "id": "W02", "start": { "x": 480, "y": 0 }, "end": { "x": 480, "y": 336 },
-        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "id": "W02",
+        "start": { "x": 480, "y": 0 },
+        "end": { "x": 480, "y": 336 },
+        "height": 97.125,
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "floorsSupported": 0,
         "openings": [
-          { "id": "J2", "type": "window", "offset": 72, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } },
-          { "id": "J3", "type": "window", "offset": 216, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+          {
+            "id": "J2",
+            "type": "window",
+            "offset": 72,
+            "roughWidth": 36,
+            "roughHeight": 48,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          },
+          {
+            "id": "J3",
+            "type": "window",
+            "offset": 216,
+            "roughWidth": 36,
+            "roughHeight": 48,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          }
         ]
       },
       {
-        "id": "W03", "start": { "x": 480, "y": 336 }, "end": { "x": 0, "y": 336 },
-        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "id": "W03",
+        "start": { "x": 480, "y": 336 },
+        "end": { "x": 0, "y": 336 },
+        "height": 97.125,
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "floorsSupported": 0,
         "openings": [
-          { "id": "P2", "type": "door", "offset": 240, "roughWidth": 72, "roughHeight": 82.5, "header": { "section": "2x12", "plies": 2 } }
+          {
+            "id": "P2",
+            "type": "door",
+            "offset": 240,
+            "roughWidth": 72,
+            "roughHeight": 82.5,
+            "header": {
+              "section": "2x12",
+              "plies": 2
+            }
+          }
         ]
       },
       {
-        "id": "W04", "start": { "x": 0, "y": 336 }, "end": { "x": 0, "y": 0 },
-        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "id": "W04",
+        "start": { "x": 0, "y": 336 },
+        "end": { "x": 0, "y": 0 },
+        "height": 97.125,
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "floorsSupported": 0,
         "openings": [
-          { "id": "J4", "type": "window", "offset": 96, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+          {
+            "id": "J4",
+            "type": "window",
+            "offset": 96,
+            "roughWidth": 36,
+            "roughHeight": 48,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          }
         ]
       },
       {
-        "id": "W05", "start": { "x": 264, "y": 0 }, "end": { "x": 264, "y": 336 },
-        "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "floorsSupported": 0,
+        "id": "W05",
+        "start": { "x": 264, "y": 0 },
+        "end": { "x": 264, "y": 336 },
+        "height": 97.125,
+        "section": "2x4",
+        "exterior": false,
+        "bearing": true,
+        "floorsSupported": 0,
         "openings": [
-          { "id": "P3", "type": "door", "offset": 120, "roughWidth": 34, "roughHeight": 82.5, "header": { "section": "2x10", "plies": 2 } }
+          {
+            "id": "P3",
+            "type": "door",
+            "offset": 120,
+            "roughWidth": 34,
+            "roughHeight": 82.5,
+            "header": {
+              "section": "2x10",
+              "plies": 2
+            }
+          }
         ]
       }
     ]
@@ -58,11 +163,30 @@
         "length": 485.5,
         "layoutOrigin": 0,
         "connections": {
-          "start": { "kind": "corner", "wallId": "W04", "through": true, "at": { "x": 0, "y": 0 } },
-          "end": { "kind": "corner", "wallId": "W02", "through": true, "at": { "x": 480, "y": 0 } },
-          "tees": [{ "x": 266.75, "wallId": "W05", "width": 3.5 }]
+          "start": {
+            "kind": "corner",
+            "wallId": "W04",
+            "through": true,
+            "at": { "x": 0, "y": 0 }
+          },
+          "end": {
+            "kind": "corner",
+            "wallId": "W02",
+            "through": true,
+            "at": { "x": 480, "y": 0 }
+          },
+          "tees": [
+            {
+              "x": 266.75,
+              "wallId": "W05",
+              "width": 3.5
+            }
+          ]
         },
-        "openingOffsets": { "P1": 170.75, "J1": 338.75 }
+        "openingOffsets": {
+          "P1": 170.75,
+          "J1": 338.75
+        }
       },
       {
         "wallId": "W02",
@@ -71,11 +195,24 @@
         "length": 330.5,
         "layoutOrigin": -5.5,
         "connections": {
-          "start": { "kind": "corner", "wallId": "W01", "through": false, "at": { "x": 480, "y": 0 } },
-          "end": { "kind": "corner", "wallId": "W03", "through": false, "at": { "x": 480, "y": 336 } },
+          "start": {
+            "kind": "corner",
+            "wallId": "W01",
+            "through": false,
+            "at": { "x": 480, "y": 0 }
+          },
+          "end": {
+            "kind": "corner",
+            "wallId": "W03",
+            "through": false,
+            "at": { "x": 480, "y": 336 }
+          },
           "tees": []
         },
-        "openingOffsets": { "J2": 69.25, "J3": 213.25 }
+        "openingOffsets": {
+          "J2": 69.25,
+          "J3": 213.25
+        }
       },
       {
         "wallId": "W03",
@@ -84,11 +221,29 @@
         "length": 485.5,
         "layoutOrigin": 0,
         "connections": {
-          "start": { "kind": "corner", "wallId": "W02", "through": true, "at": { "x": 480, "y": 336 } },
-          "end": { "kind": "corner", "wallId": "W04", "through": true, "at": { "x": 0, "y": 336 } },
-          "tees": [{ "x": 218.75, "wallId": "W05", "width": 3.5 }]
+          "start": {
+            "kind": "corner",
+            "wallId": "W02",
+            "through": true,
+            "at": { "x": 480, "y": 336 }
+          },
+          "end": {
+            "kind": "corner",
+            "wallId": "W04",
+            "through": true,
+            "at": { "x": 0, "y": 336 }
+          },
+          "tees": [
+            {
+              "x": 218.75,
+              "wallId": "W05",
+              "width": 3.5
+            }
+          ]
         },
-        "openingOffsets": { "P2": 242.75 }
+        "openingOffsets": {
+          "P2": 242.75
+        }
       },
       {
         "wallId": "W04",
@@ -97,11 +252,23 @@
         "length": 330.5,
         "layoutOrigin": -5.5,
         "connections": {
-          "start": { "kind": "corner", "wallId": "W03", "through": false, "at": { "x": 0, "y": 336 } },
-          "end": { "kind": "corner", "wallId": "W01", "through": false, "at": { "x": 0, "y": 0 } },
+          "start": {
+            "kind": "corner",
+            "wallId": "W03",
+            "through": false,
+            "at": { "x": 0, "y": 336 }
+          },
+          "end": {
+            "kind": "corner",
+            "wallId": "W01",
+            "through": false,
+            "at": { "x": 0, "y": 0 }
+          },
           "tees": []
         },
-        "openingOffsets": { "J4": 93.25 }
+        "openingOffsets": {
+          "J4": 93.25
+        }
       },
       {
         "wallId": "W05",
@@ -110,19 +277,156 @@
         "length": 330.5,
         "layoutOrigin": 0,
         "connections": {
-          "start": { "kind": "tee", "wallId": "W01", "at": { "x": 264, "y": 0 } },
-          "end": { "kind": "tee", "wallId": "W03", "at": { "x": 264, "y": 336 } },
+          "start": {
+            "kind": "tee",
+            "wallId": "W01",
+            "at": { "x": 264, "y": 0 }
+          },
+          "end": {
+            "kind": "tee",
+            "wallId": "W03",
+            "at": { "x": 264, "y": 336 }
+          },
           "tees": []
         },
-        "openingOffsets": { "P3": 117.25 }
+        "openingOffsets": {
+          "P3": 117.25
+        }
       }
     ],
     "panels": {
-      "W01": { "members": 51, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 159.25, 223.25, 239.25, 255.25, 271.25, 287.25, 303.25, 319.25, 383.25, 399.25, 415.25, 431.25, 447.25, 463.25, 484], "flat": [1.5, 478.5], "warnings": [] },
-      "W02": { "members": 39, "studs": [0, 9.75, 25.75, 41.75, 57.75, 121.75, 137.75, 153.75, 169.75, 185.75, 201.75, 265.75, 281.75, 297.75, 313.75, 329], "flat": [], "warnings": [] },
-      "W03": { "members": 42, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 159.25, 175.25, 191.25, 207.25, 223.25, 319.25, 335.25, 351.25, 367.25, 383.25, 399.25, 415.25, 431.25, 447.25, 463.25, 484], "flat": [1.5, 478.5], "warnings": [] },
-      "W04": { "members": 32, "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 137.75, 153.75, 169.75, 185.75, 201.75, 217.75, 233.75, 249.75, 265.75, 281.75, 297.75, 313.75, 329], "flat": [], "warnings": [] },
-      "W05": { "members": 30, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 159.25, 175.25, 191.25, 207.25, 223.25, 239.25, 255.25, 271.25, 287.25, 303.25, 319.25, 329], "flat": [], "warnings": [] }
+      "W01-P1": {
+        "wallId": "W01",
+        "wallOffset": 0,
+        "length": 144,
+        "layoutOrigin": 0,
+        "weightLb": 244.9,
+        "members": 14,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
+        "flat": [1.5],
+        "warnings": []
+      },
+      "W01-P2": {
+        "wallId": "W01",
+        "wallOffset": 144,
+        "length": 144,
+        "layoutOrigin": -144,
+        "weightLb": 272.4,
+        "members": 21,
+        "studs": [0, 15.25, 79.25, 95.25, 111.25, 127.25, 142.5],
+        "flat": [],
+        "warnings": []
+      },
+      "W01-P3": {
+        "wallId": "W01",
+        "wallOffset": 288,
+        "length": 197.5,
+        "layoutOrigin": -288,
+        "weightLb": 356.7,
+        "members": 26,
+        "studs": [0, 15.25, 31.25, 95.25, 111.25, 127.25, 143.25, 159.25, 175.25, 196],
+        "flat": [190.5],
+        "warnings": []
+      },
+      "W02-P1": {
+        "wallId": "W02",
+        "wallOffset": 0,
+        "length": 186.5,
+        "layoutOrigin": -5.5,
+        "weightLb": 349.6,
+        "members": 24,
+        "studs": [0, 9.75, 25.75, 41.75, 57.75, 121.75, 137.75, 153.75, 169.75, 185],
+        "flat": [],
+        "warnings": []
+      },
+      "W02-P2": {
+        "wallId": "W02",
+        "wallOffset": 186.5,
+        "length": 144,
+        "layoutOrigin": -192,
+        "weightLb": 274.1,
+        "members": 20,
+        "studs": [0, 15.25, 79.25, 95.25, 111.25, 127.25, 142.5],
+        "flat": [],
+        "warnings": []
+      },
+      "W03-P1": {
+        "wallId": "W03",
+        "wallOffset": 0,
+        "length": 144,
+        "layoutOrigin": 0,
+        "weightLb": 248.9,
+        "members": 14,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
+        "flat": [1.5],
+        "warnings": []
+      },
+      "W03-P2": {
+        "wallId": "W03",
+        "wallOffset": 144,
+        "length": 192,
+        "layoutOrigin": -144,
+        "weightLb": 366.2,
+        "members": 22,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 175.25, 190.5],
+        "flat": [],
+        "warnings": []
+      },
+      "W03-P3": {
+        "wallId": "W03",
+        "wallOffset": 336,
+        "length": 149.5,
+        "layoutOrigin": -336,
+        "weightLb": 235.6,
+        "members": 14,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 148],
+        "flat": [142.5],
+        "warnings": []
+      },
+      "W04-P1": {
+        "wallId": "W04",
+        "wallOffset": 0,
+        "length": 186.5,
+        "layoutOrigin": -5.5,
+        "weightLb": 353.6,
+        "members": 24,
+        "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 137.75, 153.75, 169.75, 185],
+        "flat": [],
+        "warnings": []
+      },
+      "W04-P2": {
+        "wallId": "W04",
+        "wallOffset": 186.5,
+        "length": 144,
+        "layoutOrigin": -192,
+        "weightLb": 219.3,
+        "members": 13,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
+        "flat": [],
+        "warnings": []
+      },
+      "W05-P1": {
+        "wallId": "W05",
+        "wallOffset": 0,
+        "length": 192,
+        "layoutOrigin": 0,
+        "weightLb": 234.2,
+        "members": 22,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 159.25, 175.25, 190.5],
+        "flat": [],
+        "warnings": []
+      },
+      "W05-P2": {
+        "wallId": "W05",
+        "wallOffset": 192,
+        "length": 138.5,
+        "layoutOrigin": -192,
+        "weightLb": 138.6,
+        "members": 13,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 137],
+        "flat": [],
+        "warnings": []
+      }
     }
   }
 }

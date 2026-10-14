@@ -323,7 +323,7 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   testaria o ladder). `formatInches` aceita negativo (x da double top com lap). `house-28x40`: W01 51 e W03 42
   peças; exemplo do CLI 130 (eram 125). Detalhes em 04-decisoes.
 
-- [ ] **S15 — Divisão em painéis, emendas de plate e peso**
+- [x] **S15 — Divisão em painéis, emendas de plate e peso**
   Depende de P6 e P14 (respondidas), P8/P15/P23 (hipóteses). Prompt: "Crie `rules/split.ts`:
   `splitPanel(panel, frame, config.panel)` com `config.panel = { maxLength: 240, maxWeight?: number,
   module: 48, lap: 48, minLap: 24 }`. Candidatos a quebra = marcas de layout em coordenadas do prédio
@@ -344,6 +344,15 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   Fixtures (confirmar antes): `house-split-480.json` (parede de 40' de `00-visao`, porta e janela → painéis com
   quebras, plates e studs esperados) e um painel de 240" com plate emendada. Saída: fixtures verdes; peso em
   `panels.csv` do CLI.
+  Feita em 2026-10-13 (abordagem, critério de divisão e fixtures confirmados pelo humano). Diferenças em relação
+  ao prompt: (a) a divisão **re-executa `panelizeWall` por trecho** (`panelize/splitWall.ts`) com uma `Wall`
+  derivada e a junta como ligação `{ kind: 'panel', lap }` — o par de studs da junta, cripples, blocos, validações
+  e avisos saem por painel sem remendo; (b) critério **equilibrado** no lugar do guloso (hipótese P35): menor
+  número de painéis, depois o painel mais longo menor, preferindo marcas múltiplas de 48 — o guloso dava tocos de
+  53 1/2" nas paredes de 40' da casa 28x40; (c) `stockLengths` entrou em `Config` (o CLI copia o campo da raiz);
+  (d) a BOM marca peça acima do estoque como `oversize` em vez de erro. Fixtures: `wall-480-split` (dois painéis
+  de 240) e `wall-240-spliced` (um painel, plates emendadas); `house-28x40` com 12 painéis. CLI: `panels.csv`.
+  Detalhes em 04-decisoes.
 
 - [ ] **S16 — Numeração e planta de painéis**
   Prompt: "`Panel.id` = `{level}-{wallId}-P{n}` (`level` default 1; sempre com `-P1`, mesmo em parede de um

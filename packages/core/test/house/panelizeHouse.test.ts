@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Config, Panel } from '../../src/types';
 import type { House, HouseWall } from '../../src/house/types';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
-import { panelizeWall } from '../../src/panelize/panelizeWall';
+import { splitWall } from '../../src/panelize/splitWall';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
@@ -20,6 +20,12 @@ interface ExpectedPanel {
   flat: number[];
   warnings: string[];
   expectedMembers?: MemberKeyFields[];
+  /** Parede dividida (S15): id da parede, início do painel na parede, comprimento, origem e peso. */
+  wallId?: string;
+  wallOffset?: number;
+  length?: number;
+  layoutOrigin?: number;
+  weightLb?: number;
 }
 
 describe('panelizeHouse — fixtures', () => {
@@ -27,29 +33,41 @@ describe('panelizeHouse — fixtures', () => {
     ['house-corner-L', cornerL],
     ['house-tee', tee],
     ['house-28x40', house28x40],
-  ])('%s: um painel por parede, peças, studs e avisos como no fixture', (_name, fx) => {
+  ])('%s: painéis por parede, peças, studs e avisos como no fixture', (_name, fx) => {
     const { panels, frames, warnings } = panelizeHouse(fx.house as House, fx.config as Config);
     const expected = fx.expected.panels as Record<string, ExpectedPanel>;
     expect(panels.map((p) => p.id)).toEqual(Object.keys(expected));
-    expect(frames.map((f) => f.wallId)).toEqual(Object.keys(expected));
+    const wallIds = [...new Set(Object.entries(expected).map(([id, e]) => e.wallId ?? id))];
+    expect(frames.map((f) => f.wallId)).toEqual(wallIds);
     for (const p of panels) {
       const e = expected[p.id]!;
+      const frame = frames.find((f) => f.wallId === p.wallId)!;
+      expect(p.wallId, p.id).toBe(e.wallId ?? p.id);
       expect(p.members, p.id).toHaveLength(e.members);
       expect(studXs(p), p.id).toEqual(e.studs);
       expect(flatXs(p), p.id).toEqual(e.flat);
       expect(p.warnings.map((w) => w.code), p.id).toEqual(e.warnings);
       if (e.expectedMembers !== undefined) expectSameMembers(p.members, e.expectedMembers);
-      expect(p.length).toBe(frames.find((f) => f.wallId === p.id)!.wall.length);
-      expect(p.layoutOrigin).toBe(frames.find((f) => f.wallId === p.id)!.layoutOrigin);
+      expect(p.length, p.id).toBe(e.length ?? frame.wall.length);
+      expect(p.wallOffset, p.id).toBe(e.wallOffset ?? 0);
+      expect(p.layoutOrigin, p.id).toBe(e.layoutOrigin ?? frame.layoutOrigin);
+      if (e.weightLb !== undefined) expect(p.weightLb, p.id).toBe(e.weightLb);
+    }
+    // Os painéis de cada parede cobrem a plate inteira, em sequência.
+    for (const f of frames) {
+      const own = panels.filter((p) => p.wallId === f.wallId);
+      expect(own.map((p) => p.wallOffset)).toEqual(own.map((_, i) => own.slice(0, i).reduce((s, p) => s + p.length, 0)));
+      expect(own.reduce((s, p) => s + p.length, 0)).toBeCloseTo(f.wall.length, 9);
     }
     expect(warnings).toEqual(panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning }))));
   });
 
-  it('cada painel é exatamente o panelizeWall da Wall derivada', () => {
+  it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15)', () => {
     const { panels, frames } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
-    for (const [i, f] of frames.entries()) {
-      expect(panels[i]!.members).toEqual(panelizeWall(f.wall, house28x40.config as Config).members);
-    }
+    expect(panels).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
+    expect(panels.map((p) => p.id)).toEqual([
+      'W01-P1', 'W01-P2', 'W01-P3', 'W02-P1', 'W02-P2', 'W03-P1', 'W03-P2', 'W03-P3', 'W04-P1', 'W04-P2', 'W05-P1', 'W05-P2',
+    ]);
   });
 });
 

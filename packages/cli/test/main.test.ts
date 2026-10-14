@@ -110,13 +110,14 @@ describe('run (I/O em memória)', () => {
     expect(m.dirs).toEqual([]);
   });
 
-  it('sucesso: grava 9 arquivos sob --out e resume no stdout', () => {
+  it('sucesso: grava 10 arquivos sob --out e resume no stdout', () => {
     const m = memoryIo({ 'p.json': exampleText });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     const outDir = resolve('saida');
     expect([...m.written.keys()]).toEqual([
       join(outDir, 'cutlist.csv'),
       join(outDir, 'bom.csv'),
+      join(outDir, 'panels.csv'),
       join(outDir, 'panels', 'W01.svg'),
       join(outDir, 'panels', 'W02.svg'),
       join(outDir, 'panels', 'W03.svg'),
@@ -131,6 +132,7 @@ describe('run (I/O em memória)', () => {
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
+      '  panels.csv',
       '  panels/W01.svg',
       '  panels/W02.svg',
       '  panels/W03.svg',
@@ -192,7 +194,7 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(code).toBe(0);
     expect(err).toEqual([]);
-    expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels']);
+    expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels', 'panels.csv']);
     expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg', 'W07.svg']);
     expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,126,"126""",3');
     expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>15'-9 1/4&quot;</text>`); // W02 encosta no canto: 192 − 2.75

@@ -51,22 +51,66 @@ export const BOM_HEADER = [
 ] as const;
 
 /**
- * `stock_type` é `precut` (pré-corte de stud, P9), `commercial` ou `engineered` (LVL/PSL comprado no
- * comprimento da peça, S12.5). Pré-corte e engenheirado saem formatados só em polegadas (`92 5/8"`, como a
- * fábrica os chama); o comercial, em pés (`8'-0"`).
+ * `stock_type` é `precut` (pré-corte de stud, P9), `commercial`, `engineered` (LVL/PSL comprado no
+ * comprimento da peça, S12.5) ou `oversize` (peça serrada acima do maior comercial, que o motor não emendou —
+ * S15). Pré-corte, engenheirado e oversize saem formatados só em polegadas (`92 5/8"`, como a fábrica os
+ * chama); o comercial, em pés (`8'-0"`).
  */
 export function bomCsv(lines: readonly BomLine[]): string {
   const rows: (string | number)[][] = [[...BOM_HEADER]];
   for (const l of lines) {
+    const commercial = !l.precut && !l.engineered && !l.oversize;
     rows.push([
       l.section,
-      l.engineered ? 'engineered' : l.precut ? 'precut' : 'commercial',
+      l.engineered ? 'engineered' : l.oversize ? 'oversize' : l.precut ? 'precut' : 'commercial',
       l.stockLength,
-      l.precut || l.engineered ? formatInches(l.stockLength) : formatFeetInches(l.stockLength),
+      commercial ? formatFeetInches(l.stockLength) : formatInches(l.stockLength),
       l.qty,
       l.cutTotal,
       l.waste,
       l.wastePercent,
+    ]);
+  }
+  return toCsv(rows);
+}
+
+export const PANELS_HEADER = [
+  'panel',
+  'wall',
+  'offset_in',
+  'offset',
+  'length_in',
+  'length',
+  'height_in',
+  'height',
+  'section',
+  'pieces',
+  'weight_lb',
+  'warnings',
+] as const;
+
+/**
+ * Um painel por linha (S15): parede de origem, onde começa nela, dimensões, nº de peças, peso estimado da
+ * madeira (hipótese P8, sem sheathing) e os códigos dos avisos separados por `;`. Pavimento e id definitivo
+ * são da S16.
+ */
+export function panelsCsv(panels: readonly Panel[]): string {
+  const rows: (string | number)[][] = [[...PANELS_HEADER]];
+  for (const p of panels) {
+    const offset = p.wallOffset ?? 0;
+    rows.push([
+      p.id,
+      p.wallId,
+      offset,
+      formatFeetInches(offset),
+      p.length,
+      formatFeetInches(p.length),
+      p.height,
+      formatFeetInches(p.height),
+      p.section,
+      p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
+      p.weightLb ?? '',
+      p.warnings.map((w) => w.code).join(';'),
     ]);
   }
   return toCsv(rows);

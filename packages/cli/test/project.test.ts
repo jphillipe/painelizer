@@ -387,9 +387,47 @@ describe('parseProject', () => {
     expect(() => projectFrom(raw, 'projeto')).toThrow(message);
   });
 
-  it('stockLengths aceita pés-pol e é repassado', () => {
+  it('stockLengths aceita pés-pol e é repassado — na raiz ou em config (S15), nunca nos dois', () => {
     const p = projectFrom(valid({ stockLengths: [`8'`, 120, `16'`] }));
     expect(p.stockLengths).toEqual([96, 120, 192]);
+    expect(p.config.stockLengths).toEqual([96, 120, 192]);
+    const inConfig = projectFrom(valid({ config: { ...(valid().config as object), stockLengths: [`20'`] } }));
+    expect(inConfig.config.stockLengths).toEqual([240]);
+    expect(inConfig.stockLengths).toEqual([240]);
+    expect(() => projectFrom(valid({ stockLengths: [96], config: { ...(valid().config as object), stockLengths: [96] } }), 'projeto')).toThrow(
+      /projeto\.stockLengths: informe o estoque só uma vez/,
+    );
+    expect(() => projectFrom(valid({ config: { ...(valid().config as object), stockLengths: [] } }), 'projeto')).toThrow(/config\.stockLengths: esperado array não vazio/);
+  });
+
+  describe('config.panel (S15)', () => {
+    const withPanel = (panel: unknown) => valid({ config: { ...(valid().config as object), panel } });
+
+    it('ausente: config.panel fica indefinido (o core usa o default)', () => {
+      expect(projectFrom(valid()).config.panel).toBeUndefined();
+    });
+
+    it('campos em medidas, com default do core para os ausentes; maxWeight em lb', () => {
+      expect(projectFrom(withPanel({})).config.panel).toEqual({ maxLength: 240, module: 48, lap: 48, minLap: 24 });
+      expect(projectFrom(withPanel({ maxLength: `16'`, maxWeight: 800, lap: `2'`, minLap: 24 })).config.panel).toEqual({
+        maxLength: 192,
+        maxWeight: 800,
+        module: 48,
+        lap: 24,
+        minLap: 24,
+      });
+    });
+
+    it.each([
+      [withPanel('x'), /config\.panel: esperado objeto/],
+      [withPanel({ maxLength: 0 }), /config\.panel\.maxLength: esperado medida > 0/],
+      [withPanel({ maxWeight: '800' }), /config\.panel\.maxWeight: esperado peso em lb/],
+      [withPanel({ maxWeight: 0 }), /config\.panel\.maxWeight/],
+      [withPanel({ lap: 24, minLap: 48 }), /config\.panel\.minLap: 48 maior que lap \(24\)/],
+    ])('rejeita config.panel inválido (%#)', (raw, message) => {
+      expect(() => projectFrom(raw, 'projeto')).toThrow(ProjectError);
+      expect(() => projectFrom(raw, 'projeto')).toThrow(message);
+    });
   });
 });
 

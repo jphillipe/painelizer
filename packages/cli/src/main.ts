@@ -20,6 +20,7 @@ Uso:
 Gera em <dir>:
   cutlist.csv        lista de corte de todos os painéis
   bom.csv            lista de material consolidada
+  panels.csv         um painel por linha: parede, posição, dimensões, peças, peso, avisos
   panels/<id>.svg    elevação de cada painel
 
 Opções:

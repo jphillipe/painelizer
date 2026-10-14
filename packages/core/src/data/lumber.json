@@ -1,0 +1,11 @@
+{
+  "$comment": "Peso da madeira para estimar o peso do painel (S15, hipótese P8). SPF No. 2 (P10) a ~35 pcf: lb por pé linear = área real (in²) / 144 × 35. 2x4 1.5×3.5 = 5.25 in² → 1.28; 2x6 8.25 → 2.0; 2x8 10.875 → 2.64; 2x10 13.875 → 3.37; 2x12 16.875 → 4.1. LVL/PSL calculados pela seção real a `engineeredPcf` (~42 pcf, valor típico de catálogo). Sem sheathing, pregos ou isolamento — a folha anota.",
+  "poundsPerFoot": {
+    "2x4": 1.28,
+    "2x6": 2.0,
+    "2x8": 2.64,
+    "2x10": 3.37,
+    "2x12": 4.1
+  },
+  "engineeredPcf": 42
+}

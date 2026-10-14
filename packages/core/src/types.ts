@@ -28,6 +28,9 @@ export type WallSection = Extract<LumberSection, '2x4' | '2x6'>;
 /** Espessura real de qualquer peça "2x" (polegadas). */
 export const NOMINAL_2X_THICKNESS = 1.5;
 
+/** Comprimentos comerciais em estoque, polegadas: 8', 10', 12', 14', 16' (P9). */
+export const DEFAULT_STOCK_LENGTHS: readonly number[] = [96, 120, 144, 168, 192];
+
 /** Profundidade real (largura da face) de cada seção nominal, em polegadas. */
 export const SECTION_DEPTH: Readonly<Record<LumberSection, number>> = {
   '2x4': 3.5,
@@ -280,6 +283,17 @@ export type EndJoint =
       kind: 'tee';
       otherThickness: number;
       wallId?: string;
+    }
+  | {
+      /**
+       * Junta com o painel vizinho da mesma parede (S15, hipótese P23). No `end` do painel i a double top
+       * avança `lap` sobre o seguinte; no `start` do painel i+1 ela recua `lap`. `cuts` são vãos (faixa de um T
+       * do painel vizinho) que caem no trecho avançado, em x deste painel.
+       */
+      kind: 'panel';
+      lap: number;
+      cuts?: { x: number; width: number }[];
+      panelId?: string;
     };
 
 /** Parede que encosta em T no interior desta, em x do painel: ocupa `[x − width/2, x + width/2]`. */
@@ -369,7 +383,30 @@ export interface Panel {
   warnings: Warning[];
   /** `Wall.layoutOrigin` da parede (0 quando ausente); o SVG desenha as marcas a partir dele. */
   layoutOrigin?: number;
+  /** x, na parede, onde este painel começa (S15). Ausente = 0 (parede de um painel só). */
+  wallOffset?: number;
+  /** Peso estimado da madeira, lb, sem sheathing (S15, hipótese P8). */
+  weightLb?: number;
 }
+
+/**
+ * Divisão da parede em painéis transportáveis (S15; P6 respondida, P15 e P23 hipóteses).
+ * Medidas em polegadas; `maxWeight` em lb.
+ */
+export interface PanelConfig {
+  /** Comprimento máximo de um painel (P6: 240). */
+  maxLength: number;
+  /** Peso máximo de um painel, lb (P15: ausente = sem limite). */
+  maxWeight?: number;
+  /** Módulo preferido das quebras, contado da marca 0 do layout (P6: 48). */
+  module: number;
+  /** Avanço da double top plate sobre o painel seguinte (P23: 48). */
+  lap: number;
+  /** Avanço mínimo quando o de `lap` não cabe; também a defasagem mínima entre emendas de plate (P14: 24). */
+  minLap: number;
+}
+
+export const DEFAULT_PANEL_CONFIG: Readonly<PanelConfig> = { maxLength: 240, module: 48, lap: 48, minLap: 24 };
 
 export interface Config {
   /** Espaçamento OC entre studs (16 ou 24). */
@@ -404,4 +441,11 @@ export interface Config {
   corner?: CornerStyle;
   /** Montagem do T (S14). Ausente = `'ladder'` (P5, alturas por hipótese P22). */
   tee?: TeeStyle;
+  /** Divisão em painéis (S15). Ausente = `DEFAULT_PANEL_CONFIG`. */
+  panel?: PanelConfig;
+  /**
+   * Comprimentos comerciais em estoque, polegadas (P9). Plate de painel mais longa que o maior deles é
+   * emendada sobre stud (S15, P14). Ausente = 8', 10', 12', 14', 16'. A BOM usa a mesma lista.
+   */
+  stockLengths?: number[];
 }

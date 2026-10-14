@@ -17,6 +17,7 @@ describe('buildProject', () => {
     expect(result.files.map((f) => f.path)).toEqual([
       'cutlist.csv',
       'bom.csv',
+      'panels.csv',
       'panels/W01.svg',
       'panels/W02.svg',
       'panels/W03.svg',
@@ -138,7 +139,7 @@ describe('buildProject', () => {
     expect(csv).toContain('2x4,precut,92.625,"92 5/8""",');
   });
 
-  it('aberturas próximas demais (P16) e plate sem comprimento comercial viram problemas, sem arquivos', () => {
+  it('aberturas próximas demais (P16) viram problema, sem arquivos; parede de 20\' sai emendada, sem erro da BOM (S15)', () => {
     const p = example();
     const walls = p.house!.walls;
     walls[0]!.openings.push(
@@ -157,9 +158,53 @@ describe('buildProject', () => {
     expect(error!.problems).toHaveLength(1);
     expect(error!.problems[0]).toMatch(/^parede W01: aberturas J8 e J9: 4" entre os RO/);
 
-    // Sem a abertura, o erro da BOM (plate de 240") aparece.
+    // Sem a abertura o projeto gera: a W99 (240") cabe num painel e as plates são emendadas sobre stud (P14),
+    // então a BOM não vê peça acima do estoque de 16'.
     walls[0]!.openings = [];
-    expect(() => buildProject(p)).toThrow(/lista de material: .*240/);
+    const result = buildProject(p);
+    const w99 = result.panels.find((x) => x.id === 'W99')!;
+    const plates = w99.members.filter((m) => m.role === 'bottomPlate' || m.role === 'topPlate' || m.role === 'doubleTopPlate');
+    expect(plates.map((m) => m.length).sort((a, b) => a - b)).toEqual([48, 48, 96, 144, 192, 192]);
+    const bom = result.files.find((f) => f.path === 'bom.csv')!.content;
+    expect(bom).not.toContain('oversize');
+    expect(bom).toContain('2x6,commercial,192,"16\'-0""",');
+  });
+
+  it("parede acima de 20' é dividida em painéis W-P1, W-P2…; panels.csv traz posição, peso e avisos (S15)", () => {
+    const p = example();
+    p.house!.walls.push({
+      id: 'W40',
+      start: { x: 0, y: 600 },
+      end: { x: 480, y: 600 },
+      height: 97.125,
+      section: '2x6',
+      exterior: true,
+      bearing: true,
+      floorsSupported: 0,
+      openings: [{ id: 'P40', type: 'door', offset: 168, roughWidth: 38, roughHeight: 82.5, header: { section: '2x10', plies: 2 } }],
+    });
+    const result = buildProject(p);
+    expect(result.panels.map((x) => x.id).slice(7)).toEqual(['W40-P1', 'W40-P2']);
+    expect(result.files.map((f) => f.path).slice(-2)).toEqual(['panels/W40-P1.svg', 'panels/W40-P2.svg']);
+    const csv = result.files.find((f) => f.path === 'panels.csv')!.content;
+    expect(csv.split('\n')[0]).toBe('panel,wall,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings');
+    expect(csv).toContain('W01,W01,0,"0""",146.75,"12\'-2 3/4""",97.125,"8\'-1 1/8""",2x6,');
+    expect(csv).toContain('W40-P1,W40,0,"0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
+    expect(csv).toContain('W40-P2,W40,240,"20\'-0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
+    const p1 = csv.split('\n').find((l) => l.startsWith('W40-P1,'))!.split(',');
+    // peças (plies contam) e peso em lb
+    expect(Number(p1[9])).toBe(result.panels[7]!.members.reduce((n, m) => n + (m.plies ?? 1), 0));
+    expect(Number(p1[10])).toBe(result.panels[7]!.weightLb);
+    expect(p1[11]).toBe('');
+    // config.panel do projeto: máximo de 12' divide a W40 em quatro, com quebras em múltiplos de 48 (módulo).
+    p.config.panel = { maxLength: 144, module: 48, lap: 48, minLap: 24 };
+    const four = buildProject(p).panels.filter((x) => x.wallId === 'W40');
+    expect(four).toHaveLength(4);
+    expect(four.reduce((n, x) => n + x.length, 0)).toBe(480);
+    for (const x of four) {
+      expect(x.length).toBeLessThanOrEqual(144);
+      expect(x.wallOffset! % 48).toBe(0);
+    }
   });
 
   it('ids que colidem no nome de arquivo são erro, não sobrescrita', () => {

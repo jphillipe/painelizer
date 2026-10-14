@@ -6,11 +6,12 @@
  * - Todas deitadas, x=0, comprimento = comprimento da parede.
  * - bottom em y=0; top em y = height − 2·t; double top em y = height − t.
  *   Para a altura padrão 97.125: 0, 94.125 e 95.625.
- * - Laps da double top plate (S14, R602.3.2): só a double top muda. Por ponta, `extend` faz a peça
+ * - Laps da double top plate (S14, R602.3.2; junta entre painéis na S15): só a double top muda. Por ponta, `extend` faz a peça
  *   avançar além da plate (x negativo no início; passa de `length` no fim) para cobrir a top plate da
  *   parede vizinha; `recess` a recua para receber o avanço da outra. `cuts` abre vãos na peça (faixa de uma
  *   parede que encosta em T): a double top sai em tantos pedaços quantos os trechos restantes, da esquerda
- *   para a direita. Pedaço sem comprimento é descartado.
+ *   para a direita. Pedaço sem comprimento é descartado; corte inteiramente fora da peça é ignorado (a faixa
+ *   cai no lap do painel vizinho, S15); corte que sai parcialmente da peça é erro.
  */
 
 import type { Member, WallSection } from '../types';
@@ -105,6 +106,8 @@ function doubleTopPieces(length: number, opts: PlateOptions): { x: number; lengt
     }
     const lo = c.x;
     const hi = c.x + c.width;
+    // Corte inteiramente fora da double top (S15): a faixa cai no lap do painel vizinho, que a corta.
+    if (hi <= x0 + EPS || lo >= x1 - EPS) continue;
     if (lo < x0 - EPS || hi > x1 + EPS) {
       throw new RangeError(
         `layoutPlates: cuts[${i}] de ${lo}" a ${hi}" sai da double top plate (de ${x0}" a ${x1}")`,

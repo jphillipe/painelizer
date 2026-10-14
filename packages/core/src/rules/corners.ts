@@ -71,10 +71,19 @@ export function plateOptionsFor(joints: WallJoints | undefined): PlateOptions {
   for (const end of ['start', 'end'] as const) {
     const j = joints[end];
     if (j === undefined) continue;
+    if (j.kind === 'panel') {
+      // Junta entre painéis da mesma parede (S15, P23): o painel da esquerda avança o lap, o da direita recua.
+      opts[end] = end === 'end' ? { extend: j.lap } : { recess: j.lap };
+      continue;
+    }
     // Quem atravessa o canto recua; quem encosta (canto ou T) avança sobre a top plate da outra.
     opts[end] = j.kind === 'corner' && j.through ? { recess: j.otherThickness } : { extend: j.otherThickness };
   }
-  const cuts = (joints.tees ?? []).map((t) => ({ x: t.x - t.width / 2, width: t.width }));
+  const cuts = [
+    ...(joints.tees ?? []).map((t) => ({ x: t.x - t.width / 2, width: t.width })),
+    ...(joints.start?.kind === 'panel' ? joints.start.cuts ?? [] : []),
+    ...(joints.end?.kind === 'panel' ? joints.end.cuts ?? [] : []),
+  ];
   if (cuts.length > 0) opts.cuts = cuts;
   return opts;
 }

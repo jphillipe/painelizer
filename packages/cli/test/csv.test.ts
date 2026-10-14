@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { panelizeWall, type Config, type Wall } from 'core';
+import { panelizeWall, splitWall, type Config, type Wall } from 'core';
 import plain from '../../core/test/fixtures/wall-144-plain.json';
-import { bomCsv, csvCell, cutListCsv, projectBom, toCsv } from '../src/csv';
+import split480 from '../../core/test/fixtures/wall-480-split.json';
+import { bomCsv, csvCell, cutListCsv, panelsCsv, projectBom, toCsv } from '../src/csv';
 
 const panel = panelizeWall(plain.wall as Wall, plain.config as Config);
 
@@ -55,5 +56,29 @@ describe('bomCsv', () => {
     const csv = bomCsv(projectBom([panel], [104.625], [144]));
     expect(csv.trimEnd().split('\n')).toHaveLength(2);
     expect(csv).toContain(`2x6,commercial,144,"12'-0""",13,`);
+  });
+
+  it('peça serrada acima do estoque sai como stock_type oversize (S15), formatada em polegadas', () => {
+    const long = panelizeWall({ ...(plain.wall as Wall), length: 240 }, plain.config as Config);
+    const csv = bomCsv(projectBom([long], plain.config.studLength));
+    expect(csv).toContain(`2x6,oversize,240,"240""",3,720,0,0\n`);
+  });
+});
+
+describe('panelsCsv (S15)', () => {
+  it('um painel por linha: parede, posição e dimensões em decimal e pés-pol, peças, peso e avisos', () => {
+    const panels = splitWall(split480.wall as Wall, split480.config as Config);
+    const csv = panelsCsv(panels);
+    expect(csv).toBe(
+      'panel,wall,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings\n' +
+        `W-480-P1,W-480,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,\n` +
+        `W-480-P2,W-480,240,"20'-0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,29,409.8,\n`,
+    );
+  });
+
+  it('painel sem divisão: offset 0, id da parede; avisos separados por ;', () => {
+    const warned = { ...panel, warnings: [{ code: 'A', message: '' }, { code: 'B', message: '' }] };
+    const line = panelsCsv([warned]).split('\n')[1]!;
+    expect(line).toBe(`W-plain,W-plain,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,,A;B`);
   });
 });

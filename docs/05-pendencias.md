@@ -45,6 +45,9 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
   config — feito na S7.1 (`config.studLength` é lista).
 - [ ] **P8 — Peso por peça.** Densidade usada para estimar peso do painel (SPF ~ 1.3 lb/pé linear para 2x4,
   ~2.0 para 2x6?). Madeira confirmada: SPF No. 2 (P10). — hipótese: tabela fixa em `src/data/lumber.json` — S12.
+  S15 (2026-10-13) feita com a tabela: SPF a ~35 pcf (2x4 1.28, 2x6 2.0, 2x8 2.64, 2x10 3.37, 2x12 4.1 lb/pé),
+  LVL/PSL pela seção real a 42 pcf, só madeira (sem sheathing). `Panel.weightLb` vai para `panels.csv`; mudar é
+  trocar o JSON e os pesos dos fixtures `wall-480-split`, `wall-240-spliced` e `house-28x40`.
 - [x] **P9 — Comprimentos comerciais em estoque.** — **Resposta (2026-10-01):** 2x4 e 2x6 em **8', 10', 12', 14' e
   16'**, mais os pré-cortes **92 5/8" e 104 5/8"**. — Impacto: default da BOM confirmado; falta incluir os
   pré-cortes — feito na S7.1. Preço por comprimento não informado (orçamento continua sem tabela).
@@ -86,6 +89,8 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
   **Resposta parcial (2026-10-05):** sem número até confirmarem a capacidade nominal do equipamento. Pedem o
   **peso estimado de cada painel na folha** (shop drawing) e divisão quando peso ou comprimento se aproximar do
   limite — o peso estimado entra na folha (S12/S13) mesmo sem limite; depende de P8.
+  S15 (2026-10-13): `config.panel.maxWeight` opcional divide também pelo peso; ausente = só comprimento (240).
+  Quando a fábrica der o número, basta pô-lo no projeto.
 - [ ] **P16 — Aberturas muito próximas.** Com 1 king + 1 jack, duas aberturas vizinhas compartilham um king e
   precisam de 4.5" entre os RO (jack + king + jack). O que a fábrica faz quando o projeto traz menos que isso
   (ex.: 4", sobra 1" entre os jacks)? Header contínuo sobre as duas com poste de jacks? Calço? Pede para mover
@@ -142,6 +147,9 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
 - [ ] **P24 — Orientação da folha.** A elevação é vista de fora (como a elevação do arquiteto) ou de dentro (como
   o montador vê na mesa)? Que lado do painel fica para cima na mesa? — hipótese: vista de fora, face externa
   indicada no desenho — S17.
+  P23 na S15 (2026-10-13): lap de 48" preso ao painel da esquerda; 24" quando os 48" cairiam dentro de um
+  header ou de uma faixa de T; a double top do painel seguinte começa onde o lap acaba. Se a fábrica mandar a
+  peça solta, `splitWall` troca `extend`/`recess` por lap 0 e a peça vira item da lista.
 
 ## Novas (abertas em 2026-10-06, S12)
 - [ ] **P25 — Sill dupla: limite e montagem.** O Horace pede "double sill plate for openings larger than 6'-0"";
@@ -180,6 +188,19 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   (+2" na largura); na altura, a resposta P4 (porta 80" → RO 82 1/2" do subfloor). — hipótese: +2" x +2 1/2" — S12.5.
 - [ ] **P34 — Folga de RO de porta com batente metálico (HM) ou alumínio.** Batente HM de 2" de face por
   lado mais folga de instalação; a spec 081113 remete ao fabricante. — hipótese: +4 1/2" x +3" — S12.5.
+
+## Novas (abertas em 2026-10-13, S15 — divisão em painéis)
+- [ ] **P35 — Critério de divisão da parede em painéis.** A fábrica prefere o menor número de painéis com
+  comprimentos parecidos, ou enche o primeiro até 20' e deixa o resto (toco de 4'-5" no fim)? Quebra sempre em
+  múltiplo de 48" da quina, mesmo que isso faça um painel a mais? — hipótese: equilibrado — menor número de
+  painéis que cabe em 240" (e no peso), depois o painel mais longo menor, usando só marcas múltiplas de 48" e, se
+  não há divisão com elas, qualquer marca; `rules/split.ts` (`chooseBreaks`) — S15. Trocar o critério é mexer só
+  em `chooseBreaks` e recalcular `house-28x40` e `wall-480-split`.
+- [ ] **P36 — Posição das emendas de plate.** Dentro do que P14 respondeu (sobre stud; top e double top
+  defasadas ≥ 24", 48" se possível): a fábrica prefere a peça maior à esquerda (como o motor faz), peças
+  iguais, ou a emenda longe das aberturas? A bottom plate pode emendar em qualquer stud, inclusive no king de uma
+  porta? — hipótese: da esquerda, a maior peça que deixa o resto emendável; bottom sobre qualquer stud ou king;
+  `splicePlates` em `rules/split.ts` — S15.
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

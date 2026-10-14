@@ -56,6 +56,27 @@
   - Fixtures: `house-corner-L` (W1 atravessa: flat em 1.5, double top 141.25 em x=5.5; W2 encosta: double top
     122.75 em x=−5.5) e `house-tee` (T em 72: 3 blocos 2x6 × 14.5 em y = 23.25, 47.25, 71.25; double top de W1 em
     duas peças, 70.25 e 118.25; a de W2 avança 5.5).
+- Divisão em painéis, lap entre painéis, emendas e peso (S15, `panelize/splitWall.ts` + `rules/split.ts`;
+  `config.panel = { maxLength 240, maxWeight?, module 48, lap 48, minLap 24 }`, `config.stockLengths`):
+  - **Quebra** só no centro de um stud de layout comum cuja faixa de 2t (os dois studs da junta) não toca
+    king, jack, header, sill, cripple, bloco, stud extra ou de canto, zona de abertura ou faixa de T, a ≥ 2t das
+    pontas. Na junta o stud da marca vira dois: fechamento do painel i em `b − t` e primeiro stud do i+1 em `b`;
+    o painel i+1 tem `layoutOrigin = origem − b` e é calculado de novo por `panelizeWall` (cripples, blocos,
+    validações e avisos por painel).
+  - **Critério** (hipótese P35): menor número de painéis que cabe em `maxLength` (e `maxWeight`); entre essas
+    divisões, a de painel mais longo menor, só com marcas múltiplas de `module` da marca 0 e, se não há, qualquer
+    marca; empate pela divisão mais próxima das partes iguais. Ids `W01-P1`, `W01-P2`…; parede de um painel só
+    mantém o id (S16 fecha a numeração).
+  - **Lap da double top** (hipótese P23): a do painel i avança `lap` sobre o seguinte e a do i+1 começa aí;
+    dentro de um header ou faixa de T encurta para `minLap`, senão vai à marca seguinte ao obstáculo. Faixa de T
+    que cai no lap é cortada no painel da esquerda.
+  - **Emenda de plate** (P14): plate acima do maior `stockLengths` em `ceil(L/estoque)` peças sobre o centro de
+    um stud ou king (3/4" por peça): top plate ≥ 48" (ou ≥ 24") das pontas da double top; double top ≥ 48"/24" das
+    emendas da top e das pontas da top plate; bottom sobre stud sem restrição; da esquerda, a maior peça que
+    deixa o resto emendável (hipótese P36).
+  - **Peso** (hipótese P8): `Panel.weightLb` pela tabela `src/data/lumber.json` (SPF 35 pcf; LVL/PSL 42 pcf), só
+    madeira; `Panel.wallOffset` = início do painel na parede. Fixtures: `wall-480-split` (2 × 240),
+    `wall-240-spliced` (um painel, plates emendadas), `house-28x40` (12 painéis).
 - Altura padrão de parede: 97.125" (8'-1 1/8") = 3 plates × 1.5 + stud 92.625.
 - Parede declara `section` ('2x4' | '2x6'); espessura real (3.5 / 5.5) é derivada, nunca entrada.
 - Zona de abertura = [offset − (kings + jacks)·1.5, offset + roughWidth + (kings + jacks)·1.5]. `kingStuds` e

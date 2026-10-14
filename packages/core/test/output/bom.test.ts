@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Config, Member, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
-import { bom, DEFAULT_STOCK_LENGTHS, stockLengthFor } from '../../src/output/bom';
+import { bom, stockLengthFor } from '../../src/output/bom';
+import { DEFAULT_STOCK_LENGTHS } from '../../src/types';
 import plain from '../fixtures/wall-144-plain.json';
 import window from '../fixtures/wall-144-window.json';
 import low from '../fixtures/wall-144-window-82.5.json';
@@ -39,8 +40,8 @@ describe('stockLengthFor', () => {
 describe('bom', () => {
   it('fixture wall-144-plain: 10 studs no pré-corte 92 5/8" (sem sobra) e 3 plates em 12\'', () => {
     expect(bom([plainPanel])).toEqual([
-      { section: '2x6', stockLength: 92.625, precut: true, engineered: false, qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
-      { section: '2x6', stockLength: 144, precut: false, engineered: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 92.625, precut: true, engineered: false, oversize: false, qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 144, precut: false, engineered: false, oversize: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 
@@ -84,6 +85,7 @@ describe('bom', () => {
       stockLength: 39,
       precut: false,
       engineered: true,
+      oversize: false,
       qty: 2,
       cutTotal: 78,
       waste: 0,
@@ -121,8 +123,8 @@ describe('bom', () => {
 
   it('sem pré-cortes ([]) os studs voltam ao 8\' comercial, com sobra', () => {
     expect(bom([plainPanel], DEFAULT_STOCK_LENGTHS, [])).toEqual([
-      { section: '2x6', stockLength: 96, precut: false, engineered: false, qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
-      { section: '2x6', stockLength: 144, precut: false, engineered: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 96, precut: false, engineered: false, oversize: false, qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
+      { section: '2x6', stockLength: 144, precut: false, engineered: false, oversize: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 
@@ -138,8 +140,21 @@ describe('bom', () => {
     expect(bom([])).toEqual([]);
   });
 
-  it('plate mais longa que o maior comercial lança RangeError (até a S12 dividir painéis)', () => {
+  it('plate serrada mais longa que o maior comercial sai como linha oversize, sem erro (S15)', () => {
+    // panelizeWall sem splitWall: as plates de 240" não foram emendadas.
     const long = panelizeWall({ ...(plain.wall as Wall), id: 'W-20ft', length: 240 }, plain.config as Config);
-    expect(() => bom([long])).toThrow(RangeError);
+    const lines = bom([long]);
+    expect(lines.find((l) => l.oversize)).toEqual({
+      section: '2x6',
+      stockLength: 240,
+      precut: false,
+      engineered: false,
+      oversize: true,
+      qty: 3,
+      cutTotal: 720,
+      waste: 0,
+      wastePercent: 0,
+    });
+    expect(lines.filter((l) => !l.oversize).map((l) => [l.stockLength, l.qty])).toEqual([[92.625, 16]]);
   });
 });

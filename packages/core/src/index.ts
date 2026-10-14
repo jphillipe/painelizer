@@ -67,6 +67,20 @@ export {
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
 export { panelizeWall, planOpenings, type OpeningPlan } from './panelize/panelizeWall';
+export { splitWall } from './panelize/splitWall';
+export {
+  breakCandidates,
+  chooseBreaks,
+  lapEnd,
+  layoutMarks,
+  memberSpan,
+  splicePlates,
+  validatePanelConfig,
+  type BreakContext,
+  type BreakOptions,
+  type LapObstacle,
+} from './rules/split';
+export { ENGINEERED_PCF, POUNDS_PER_FOOT, memberWeightLb, panelWeight, poundsPerFoot } from './rules/weight';
 export * from './house/types';
 export {
   DEFAULT_TOLERANCE,

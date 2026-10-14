@@ -37,16 +37,23 @@
  * Montagem de canto e T (S14): `config.corner` ('california' | 'three-stud', default california) e
  * `config.tee` ('ladder' | 'backer', default ladder) — P5.
  *
+ * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
+ * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
+ * (medidas; o `stockLengths` na raiz do arquivo continua aceito e vale o mesmo — os dois juntos é erro). Plate
+ * mais longa que o maior estoque é emendada sobre stud pelo core; a BOM usa a mesma lista.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
 
 import {
+  DEFAULT_PANEL_CONFIG,
   engineeredSection,
   parseEngineeredSection,
   parseFeetInches,
   resolveOpenings,
   type Config,
+  type PanelConfig,
   type DoorFrame,
   type EndRule,
   type CornerStyle,
@@ -139,13 +146,15 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
 
   const project: Project = { name, config, walls };
   if (house) project.house = { walls: houseWalls };
+  // Estoque: `config.stockLengths` (S15) ou, como antes, `stockLengths` na raiz — o mesmo valor nos dois lugares,
+  // porque o core emenda plates por ele e a BOM compra por ele.
   if (root['stockLengths'] !== undefined) {
-    const list = root['stockLengths'];
-    if (!Array.isArray(list) || list.length === 0) {
-      throw new ProjectError(`${source}.stockLengths: esperado array não vazio de medidas`);
+    if (config.stockLengths !== undefined) {
+      throw new ProjectError(`${source}.stockLengths: informe o estoque só uma vez (aqui ou em config.stockLengths)`);
     }
-    project.stockLengths = list.map((v, i) => positive(v, `${source}.stockLengths[${i}]`));
+    config.stockLengths = stockList(root['stockLengths'], `${source}.stockLengths`);
   }
+  if (config.stockLengths !== undefined) project.stockLengths = config.stockLengths;
   return project;
 }
 
@@ -189,6 +198,8 @@ function configFrom(raw: unknown, path: string): Config {
   }
   if (c['corner'] !== undefined) config.corner = oneOf(c['corner'], CORNERS, `${path}.corner`);
   if (c['tee'] !== undefined) config.tee = oneOf(c['tee'], TEES, `${path}.tee`);
+  if (c['panel'] !== undefined) config.panel = panelConfigFrom(c['panel'], `${path}.panel`);
+  if (c['stockLengths'] !== undefined) config.stockLengths = stockList(c['stockLengths'], `${path}.stockLengths`);
   if (c['openingTypes'] !== undefined) {
     config.openingTypes = record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom);
   }
@@ -196,6 +207,34 @@ function configFrom(raw: unknown, path: string): Config {
     config.headerSchedule = record(c['headerSchedule'], `${path}.headerSchedule`, headerScheduleFrom);
   }
   return config;
+}
+
+/** Divisão em painéis (S15): cada campo ausente vale o default do core. */
+function panelConfigFrom(raw: unknown, path: string): PanelConfig {
+  const p = obj(raw, path);
+  const panel: PanelConfig = {
+    maxLength: p['maxLength'] === undefined ? DEFAULT_PANEL_CONFIG.maxLength : positive(p['maxLength'], `${path}.maxLength`),
+    module: p['module'] === undefined ? DEFAULT_PANEL_CONFIG.module : positive(p['module'], `${path}.module`),
+    lap: p['lap'] === undefined ? DEFAULT_PANEL_CONFIG.lap : positive(p['lap'], `${path}.lap`),
+    minLap: p['minLap'] === undefined ? DEFAULT_PANEL_CONFIG.minLap : positive(p['minLap'], `${path}.minLap`),
+  };
+  if (p['maxWeight'] !== undefined) {
+    const w = p['maxWeight'];
+    if (typeof w !== 'number' || !Number.isFinite(w) || w <= 0) {
+      throw new ProjectError(`${path}.maxWeight: esperado peso em lb (número > 0), recebido ${show(w)}`);
+    }
+    panel.maxWeight = w;
+  }
+  if (panel.minLap > panel.lap) {
+    throw new ProjectError(`${path}.minLap: ${panel.minLap} maior que lap (${panel.lap})`);
+  }
+  return panel;
+}
+
+/** Comprimentos comerciais: array não vazio de medidas > 0. */
+function stockList(raw: unknown, path: string): number[] {
+  if (!Array.isArray(raw) || raw.length === 0) throw new ProjectError(`${path}: esperado array não vazio de medidas`);
+  return raw.map((v, i) => positive(v, `${path}[${i}]`));
 }
 
 /** Objeto chave → valor, cada valor validado por `item`; chave vazia é erro. */
