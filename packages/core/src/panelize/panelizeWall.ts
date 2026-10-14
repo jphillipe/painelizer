@@ -21,18 +21,46 @@
  * - Avisos: os da parede, depois os das aberturas, depois os de `validate.ts` (S10).
  */
 
-import type { Config, Member, Panel, Wall, Warning } from '../types';
+import type { Config, Member, Opening, Panel, Wall, Warning } from '../types';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
-import { mergeOpeningZones } from '../rules/zones';
-import { resolveOpeningHeader, type HeaderTables } from '../rules/openingHeader';
+import { mergeOpeningZones, type ZonePlan } from '../rules/zones';
+import { resolveOpeningHeader, type HeaderTables, type ResolvedHeader } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
 import { matchPrecut } from '../rules/precuts';
 import { validatePanel } from './validate';
 
 /** Folga numérica para comparações de geometria. */
 const EPS = 1e-9;
+
+/** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
+export interface OpeningPlan {
+  headers: ResolvedHeader[];
+  /** `wall.openings` com `jackStuds` e `kingStuds` já resolvidos, na ordem original. */
+  openings: Opening[];
+  plan: ZonePlan;
+}
+
+/**
+ * O header vem antes da geometria: os jacks (NJ) e os kings dele definem a largura de cada zona.
+ * Usado por `panelizeWall` e por `panelizeHouse` (tee na zona de abertura, S13).
+ *
+ * @throws RangeError os de `resolveOpeningHeader` e `mergeOpeningZones`
+ */
+export function planOpenings(
+  wall: Wall,
+  config: Config,
+  tables?: readonly HeaderTable[] | HeaderTables,
+): OpeningPlan {
+  const headers = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
+  const openings = wall.openings.map((o, i) => ({
+    ...o,
+    jackStuds: headers[i]!.jackStuds,
+    kingStuds: headers[i]!.kingStuds,
+  }));
+  return { headers, openings, plan: mergeOpeningZones(openings, config.studThickness) };
+}
 
 /**
  * @param tables tabelas injetadas (testes): lista de tabelas de header ou `{ headers?, kings? }`;
@@ -63,15 +91,7 @@ export function panelizeWall(
     });
   }
 
-  // O header vem antes da geometria: os jacks (NJ) e os kings dele definem a largura de cada zona.
-  const headers = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
-  const openings = wall.openings.map((o, i) => ({
-    ...o,
-    jackStuds: headers[i]!.jackStuds,
-    kingStuds: headers[i]!.kingStuds,
-  }));
-
-  const plan = mergeOpeningZones(openings, studThickness);
+  const { headers, openings, plan } = planOpenings(wall, config, tables);
   const fullHeight = {
     section: wall.section,
     length: studLength,

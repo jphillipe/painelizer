@@ -1,0 +1,128 @@
+{
+  "$comment": "S13 (2026-10-13): a casa de docs/00-visao.md em planta — eixos de 480 x 336 (laço W01 sul → W02 leste → W03 norte → W04 oeste, 2x6 externas portantes, só telhado) e W05 interna portante 2x4 de (264,0) a (264,336), encostando em T em W01 e W03 (a 240 da visão cairia dentro do RO da porta de correr e seria erro). Cantos: W01 e W03 (480) atravessam os quatro cantos por serem as mais longas (P21) → plates 485.5, origem 0; W02 e W04 encostam → 330.5, origem −5.5. W05: para nas faces de W01 e W03 → 330.5, origem 0. Offsets medidos do start de cada parede ao longo do eixo (W03 e W04 correm no sentido negativo) e convertidos para o x do painel pelo deslocamento da plate: ±2.75. Headers do projeto (2-2x10; 2-2x12 na porta de correr), base a 82.5; vento 120 B → 1 king por lado até 4', 2 kings na porta de correr de 6' (R602.7.5). Peças por painel conferidas com panelizeWall sobre as paredes derivadas. Painéis acima de 240\" e emendas de plate são da S15.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5,
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120, "exposure": "B" }
+  },
+  "house": {
+    "walls": [
+      {
+        "id": "W01", "start": { "x": 0, "y": 0 }, "end": { "x": 480, "y": 0 },
+        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "P1", "type": "door", "offset": 168, "roughWidth": 38, "roughHeight": 82.5, "header": { "section": "2x10", "plies": 2 } },
+          { "id": "J1", "type": "window", "offset": 336, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+        ]
+      },
+      {
+        "id": "W02", "start": { "x": 480, "y": 0 }, "end": { "x": 480, "y": 336 },
+        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "J2", "type": "window", "offset": 72, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } },
+          { "id": "J3", "type": "window", "offset": 216, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+        ]
+      },
+      {
+        "id": "W03", "start": { "x": 480, "y": 336 }, "end": { "x": 0, "y": 336 },
+        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "P2", "type": "door", "offset": 240, "roughWidth": 72, "roughHeight": 82.5, "header": { "section": "2x12", "plies": 2 } }
+        ]
+      },
+      {
+        "id": "W04", "start": { "x": 0, "y": 336 }, "end": { "x": 0, "y": 0 },
+        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "J4", "type": "window", "offset": 96, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+        ]
+      },
+      {
+        "id": "W05", "start": { "x": 264, "y": 0 }, "end": { "x": 264, "y": 336 },
+        "height": 97.125, "section": "2x4", "exterior": false, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "P3", "type": "door", "offset": 120, "roughWidth": 34, "roughHeight": 82.5, "header": { "section": "2x10", "plies": 2 } }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "frames": [
+      {
+        "wallId": "W01",
+        "plateStart": { "x": -2.75, "y": 0 },
+        "plateEnd": { "x": 482.75, "y": 0 },
+        "length": 485.5,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W04", "through": true, "at": { "x": 0, "y": 0 } },
+          "end": { "kind": "corner", "wallId": "W02", "through": true, "at": { "x": 480, "y": 0 } },
+          "tees": [{ "x": 266.75, "wallId": "W05", "width": 3.5 }]
+        },
+        "openingOffsets": { "P1": 170.75, "J1": 338.75 }
+      },
+      {
+        "wallId": "W02",
+        "plateStart": { "x": 480, "y": 2.75 },
+        "plateEnd": { "x": 480, "y": 333.25 },
+        "length": 330.5,
+        "layoutOrigin": -5.5,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W01", "through": false, "at": { "x": 480, "y": 0 } },
+          "end": { "kind": "corner", "wallId": "W03", "through": false, "at": { "x": 480, "y": 336 } },
+          "tees": []
+        },
+        "openingOffsets": { "J2": 69.25, "J3": 213.25 }
+      },
+      {
+        "wallId": "W03",
+        "plateStart": { "x": 482.75, "y": 336 },
+        "plateEnd": { "x": -2.75, "y": 336 },
+        "length": 485.5,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W02", "through": true, "at": { "x": 480, "y": 336 } },
+          "end": { "kind": "corner", "wallId": "W04", "through": true, "at": { "x": 0, "y": 336 } },
+          "tees": [{ "x": 218.75, "wallId": "W05", "width": 3.5 }]
+        },
+        "openingOffsets": { "P2": 242.75 }
+      },
+      {
+        "wallId": "W04",
+        "plateStart": { "x": 0, "y": 333.25 },
+        "plateEnd": { "x": 0, "y": 2.75 },
+        "length": 330.5,
+        "layoutOrigin": -5.5,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W03", "through": false, "at": { "x": 0, "y": 336 } },
+          "end": { "kind": "corner", "wallId": "W01", "through": false, "at": { "x": 0, "y": 0 } },
+          "tees": []
+        },
+        "openingOffsets": { "J4": 93.25 }
+      },
+      {
+        "wallId": "W05",
+        "plateStart": { "x": 264, "y": 2.75 },
+        "plateEnd": { "x": 264, "y": 333.25 },
+        "length": 330.5,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "tee", "wallId": "W01", "at": { "x": 264, "y": 0 } },
+          "end": { "kind": "tee", "wallId": "W03", "at": { "x": 264, "y": 336 } },
+          "tees": []
+        },
+        "openingOffsets": { "P3": 117.25 }
+      }
+    ],
+    "panels": {
+      "W01": { "members": 46, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 159.25, 223.25, 239.25, 255.25, 271.25, 287.25, 303.25, 319.25, 383.25, 399.25, 415.25, 431.25, 447.25, 463.25, 479.25, 484], "warnings": [] },
+      "W02": { "members": 39, "studs": [0, 9.75, 25.75, 41.75, 57.75, 121.75, 137.75, 153.75, 169.75, 185.75, 201.75, 265.75, 281.75, 297.75, 313.75, 329], "warnings": [] },
+      "W03": { "members": 37, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 159.25, 175.25, 191.25, 207.25, 223.25, 319.25, 335.25, 351.25, 367.25, 383.25, 399.25, 415.25, 431.25, 447.25, 463.25, 479.25, 484], "warnings": [] },
+      "W04": { "members": 32, "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 137.75, 153.75, 169.75, 185.75, 201.75, 217.75, 233.75, 249.75, 265.75, 281.75, 297.75, 313.75, 329], "warnings": [] },
+      "W05": { "members": 30, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 159.25, 175.25, 191.25, 207.25, 223.25, 239.25, 255.25, 271.25, 287.25, 303.25, 319.25, 329], "warnings": [] }
+    }
+  }
+}

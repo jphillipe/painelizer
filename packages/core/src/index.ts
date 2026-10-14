@@ -53,7 +53,17 @@ export {
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
-export { panelizeWall } from './panelize/panelizeWall';
+export { panelizeWall, planOpenings, type OpeningPlan } from './panelize/panelizeWall';
+export * from './house/types';
+export {
+  DEFAULT_TOLERANCE,
+  findConnections,
+  type Connection,
+  type TeeOn,
+  type WallConnections,
+} from './house/connections';
+export { frameWalls, type FrameConnections, type TeeAt, type WallFrame } from './house/frame';
+export { panelizeFrame, panelizeHouse, type HouseResult } from './house/panelizeHouse';
 export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';
 export * from './output/bom';

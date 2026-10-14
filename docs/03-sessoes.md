@@ -254,7 +254,7 @@ A entrada passa a descrever a casa em planta. `panelizeWall(wall, config)` e os 
 valendo como estão: a casa é uma camada acima, que deriva uma `Wall` (comprimento de plate, offsets convertidos,
 origem de layout) por parede e chama o motor atual. Tudo em `src/house/` e `src/rules/`, puro.
 
-Convenções novas (propostas; confirmar na abertura da S13 e registrar em 04-decisoes):
+Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 04-decisoes):
 - Parede em planta = `start`/`end` (polegadas) no **eixo** da parede (centro da espessura), só paralela aos eixos
   x/y da planta (90°). Uma regra para parede externa e interna; a Fase 4 converte a cota do arquiteto (face
   externa, centro de janela) para o eixo. Alternativa rejeitada: face externa como referência exige saber o lado
@@ -267,7 +267,7 @@ Convenções novas (propostas; confirmar na abertura da S13 e registrar em 04-de
   `layoutOrigin = −t` da parede que atravessa (a marca 0 é a quina, antes da plate); painel no meio da parede
   tem `layoutOrigin = −x` do seu início (S11). Primeiro stud sempre em 0.
 
-- [ ] **S13 — Planta: paredes por eixo, cantos e T**
+- [x] **S13 — Planta: paredes por eixo, cantos e T**
   Prompt: "Crie `src/house/types.ts`: `Point { x; y }`; `HouseWall = Omit<Wall, 'length'> & { start: Point;
   end: Point; level?: number; ends?: { start?: EndRule; end?: EndRule } }`, `EndRule = 'through' | 'butt'`;
   `House { walls: HouseWall[] }`. `src/house/connections.ts`: `findConnections(walls, tolerance = 0.5)` →
@@ -288,6 +288,14 @@ Convenções novas (propostas; confirmar na abertura da S13 e registrar em 04-de
   Saída: fixtures verdes; `casa-exemplo.json` reescrito em planta, gerando os mesmos painéis de antes onde não há
   canto. Decisões a registrar: eixo como referência; mais longa atravessa; tolerância 0.5"; mistura de formatos
   é erro.
+  Feita em 2026-10-13 (abordagem e valores confirmados pelo humano). Os valores do prompt (plates 149.5 / 114.5,
+  origem 5.5) eram ±t inteiro; pela convenção de eixo (±t_outra/2) ficou 146.75 / 117.25 e origem −5.5.
+  `src/house/{types,axis,connections,frame,panelizeHouse}.ts`; `HouseWall` também omite `layoutOrigin` (derivado);
+  `frameWalls(house, tolerance?)` não precisa de `config`; `panelizeFrame` exposto para o CLI tratar o erro de
+  cada parede; `planOpenings` extraído de `panelizeWall` para o aviso de T. Colineares ponta a ponta não são
+  erro (duas paredes livres em sequência). `house-28x40` com a interna em x=264 (em 240 cairia no RO da porta de
+  correr). CLI: `Project.house`; exemplo com W01 `ends.start: "through"` (W02 16' atravessando daria plate de
+  194.75", acima do estoque da BOM até a S15) — 125 peças (eram 123).
 
 - [ ] **S14 — Canto California, T ladder e laps da double top plate**
   Depende de P5 (respondida) e P22 (hipótese). Prompt: "Crie `rules/corners.ts`. (a) **Canto**

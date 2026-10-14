@@ -28,6 +28,12 @@
  * catálogo. `header.section` aceita `"LVL 1.75x9.25"` ou `{ material, width, depth }`;
  * `config.building.species` ('SPF' | 'Hem-Fir' | 'DF' | 'SP') guarda a espécie das notas estruturais.
  *
+ * Casa em planta (S13): cada parede vem com `start: { x, y }` e `end: { x, y }` (eixo da parede; cada
+ * coordenada é medida com sinal, número ou pés-pol) em vez de `length`, mais `ends?: { start?, end? }`
+ * ('through' | 'butt') e `level?`. `offset`, `center` e `extraStuds[].x` são medidos do `start`; comprimento
+ * de plate, cantos, T e origem de layout saem do core (`panelizeHouse`). `length` ou `layoutOrigin` numa
+ * parede em planta é erro, e misturar paredes em planta com paredes soltas no mesmo arquivo também.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
@@ -39,15 +45,19 @@ import {
   resolveOpenings,
   type Config,
   type DoorFrame,
+  type EndRule,
   type Exposure,
   type ExtraStud,
   type FloorSpan,
   type HeaderScheduleEntry,
+  type House,
+  type HouseWall,
   type LumberSpecies,
   type OpeningCatalogEntry,
   type OpeningHeader,
   type OpeningSpec,
   type OpeningType,
+  type Point,
   type Section,
   type Wall,
   type WallSection,
@@ -56,7 +66,10 @@ import {
 export interface Project {
   name: string;
   config: Config;
+  /** Paredes soltas (formato por comprimento). Vazio quando o projeto vem em planta (`house`). */
   walls: Wall[];
+  /** Casa em planta (S13): paredes com `start`/`end`. Presente ⇔ `walls` vazio. */
+  house?: House;
   /** Comprimentos comerciais para a BOM; ausente = default do core (hipótese P9). */
   stockLengths?: number[];
 }
@@ -75,6 +88,7 @@ const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
 const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
 const SPECIES: readonly LumberSpecies[] = ['SPF', 'Hem-Fir', 'DF', 'SP'];
 const DOOR_FRAMES: readonly DoorFrame[] = ['wood', 'hm', 'al'];
+const END_RULES: readonly EndRule[] = ['through', 'butt'];
 
 /** Converte o texto do arquivo em `Project` validado. */
 export function parseProject(text: string, source = 'projeto'): Project {
@@ -95,15 +109,29 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   const wallsRaw = root['walls'];
   if (!Array.isArray(wallsRaw)) throw new ProjectError(`${source}.walls: esperado array de paredes`);
   if (wallsRaw.length === 0) throw new ProjectError(`${source}.walls: nenhuma parede`);
-  const walls = wallsRaw.map((w, i) => wallFrom(w, `${source}.walls[${i}]`, config));
+
+  // Formato: planta (toda parede com `start`/`end`) ou paredes soltas (toda parede com `length`).
+  const inPlan = wallsRaw.map((w) => typeof w === 'object' && w !== null && ('start' in w || 'end' in w));
+  const planCount = inPlan.filter(Boolean).length;
+  if (planCount > 0 && planCount < wallsRaw.length) {
+    const first = inPlan.indexOf(planCount * 2 > wallsRaw.length ? false : true);
+    throw new ProjectError(
+      `${source}.walls[${first}]: paredes em planta (start/end) e soltas (length) no mesmo arquivo — ` +
+        'use um formato só',
+    );
+  }
+  const house = planCount > 0;
+  const walls = house ? [] : wallsRaw.map((w, i) => wallFrom(w, `${source}.walls[${i}]`, config));
+  const houseWalls = house ? wallsRaw.map((w, i) => houseWallFrom(w, `${source}.walls[${i}]`, config)) : [];
 
   const ids = new Set<string>();
-  for (const w of walls) {
+  for (const w of house ? houseWalls : walls) {
     if (ids.has(w.id)) throw new ProjectError(`${source}.walls: id duplicado "${w.id}"`);
     ids.add(w.id);
   }
 
   const project: Project = { name, config, walls };
+  if (house) project.house = { walls: houseWalls };
   if (root['stockLengths'] !== undefined) {
     const list = root['stockLengths'];
     if (!Array.isArray(list) || list.length === 0) {
@@ -219,8 +247,51 @@ function headerSectionFrom(v: unknown, path: string): Section {
   );
 }
 
+/** Parede solta: `length` e, opcionalmente, `layoutOrigin`. */
 function wallFrom(raw: unknown, path: string, config: Config): Wall {
   const w = obj(raw, path);
+  const wall: Wall = { ...wallCommon(w, path, config), length: positive(w['length'], `${path}.length`) };
+  if (w['layoutOrigin'] !== undefined) wall.layoutOrigin = signed(w['layoutOrigin'], `${path}.layoutOrigin`);
+  return wall;
+}
+
+/**
+ * Parede em planta (S13): `start`/`end` no eixo, `ends?` e `level?`. `length` e `layoutOrigin` são
+ * derivados pelo core e não podem vir no arquivo. Offsets e studs extras são medidos do `start`.
+ */
+function houseWallFrom(raw: unknown, path: string, config: Config): HouseWall {
+  const w = obj(raw, path);
+  for (const derived of ['length', 'layoutOrigin']) {
+    if (w[derived] !== undefined) {
+      throw new ProjectError(
+        `${path}.${derived}: parede em planta não leva ${derived} — o core deriva da planta (start/end)`,
+      );
+    }
+  }
+  const wall: HouseWall = {
+    ...wallCommon(w, path, config),
+    start: point(w['start'], `${path}.start`),
+    end: point(w['end'], `${path}.end`),
+  };
+  if (w['level'] !== undefined) wall.level = count(w['level'], `${path}.level`);
+  if (w['ends'] !== undefined) {
+    const e = obj(w['ends'], `${path}.ends`);
+    const ends: HouseWall['ends'] = {};
+    if (e['start'] !== undefined) ends.start = oneOf(e['start'], END_RULES, `${path}.ends.start`);
+    if (e['end'] !== undefined) ends.end = oneOf(e['end'], END_RULES, `${path}.ends.end`);
+    wall.ends = ends;
+  }
+  return wall;
+}
+
+/** Ponto em planta: `{ x, y }`, cada coordenada medida com sinal (número ou pés-pol). */
+function point(v: unknown, path: string): Point {
+  const p = obj(v, path);
+  return { x: signed(p['x'], `${path}.x`), y: signed(p['y'], `${path}.y`) };
+}
+
+/** Campos comuns aos dois formatos de parede: tudo de `Wall` menos `length` e `layoutOrigin`. */
+function wallCommon(w: Record<string, unknown>, path: string, config: Config): Omit<Wall, 'length' | 'layoutOrigin'> {
   const openingsRaw = w['openings'] ?? [];
   if (!Array.isArray(openingsRaw)) throw new ProjectError(`${path}.openings: esperado array`);
   const id = str(w['id'], `${path}.id`);
@@ -232,9 +303,8 @@ function wallFrom(raw: unknown, path: string, config: Config): Wall {
     // Erros do catálogo (tag ou marca inexistente, RO ou posição sem como resolver) viram erro de projeto.
     throw new ProjectError(`${path}.openings: ${(e as Error).message}`);
   }
-  const wall: Wall = {
+  const wall: Omit<Wall, 'length' | 'layoutOrigin'> = {
     id,
-    length: positive(w['length'], `${path}.length`),
     height: positive(w['height'], `${path}.height`),
     section: oneOf(w['section'], WALL_SECTIONS, `${path}.section`),
     exterior: bool(w['exterior'], `${path}.exterior`),
@@ -252,7 +322,6 @@ function wallFrom(raw: unknown, path: string, config: Config): Wall {
     wall.floorsSupported = n;
   }
   if (w['floorSpan'] !== undefined) wall.floorSpan = oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`);
-  if (w['layoutOrigin'] !== undefined) wall.layoutOrigin = signed(w['layoutOrigin'], `${path}.layoutOrigin`);
   if (w['extraStuds'] !== undefined) {
     const list = w['extraStuds'];
     if (!Array.isArray(list)) throw new ProjectError(`${path}.extraStuds: esperado array`);

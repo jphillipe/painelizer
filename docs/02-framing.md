@@ -25,6 +25,18 @@
   (15.25, 31.25, 47.25…), para a emenda do OSB (48", 96") cair no meio do stud. Primeiro stud sempre em x=0;
   último sempre em x = comprimento − 1.5. Stud de marca que sobrepõe o de ponta ou o fechamento é mantido e
   a validação avisa (`STUDS_OVERLAP`); stud que coincide com o fechamento vira um só.
+- Casa em planta (S13, hipótese P21): parede = `start`/`end` no **eixo** (centro da espessura), só paralela aos
+  eixos da planta; mesma regra para externa e interna. Tudo se decide no **cruzamento dos eixos** de duas paredes
+  perpendiculares, nunca no ponto digitado (a ponta "está" no cruzamento a até `t_outra/2 + 0.5"` dele): ponta
+  de uma e ponta da outra = **canto**; ponta de uma no interior da outra = **T**; nada = livre. Paredes que se
+  cruzam, corpos que se sobrepõem ou ponta com duas ligações são erro. No canto, quem **atravessa** leva a plate
+  `t_outra/2` além do cruzamento (até a face externa da outra); quem **encosta** (canto ou T) para `t_outra/2`
+  antes (na face da outra); ponta livre acaba no ponto. Quem atravessa: `ends` declarado > a mais longa > a
+  primeira do arquivo. Offsets de abertura, `extraStuds[].x` e o x do T são medidos do `start` e convertidos para
+  o x do painel (0 no início da plate). `layoutOrigin = −t_outra` só quando o `start` encosta num canto (a marca
+  0 é a quina); T, livre e atravessa = 0. Exemplo resolvido: `test/fixtures/house-corner-L.json` (2x6 em L,
+  eixos 144 e 120 → plates 146.75 e 117.25, origem −5.5 na que encosta). T na zona de uma abertura avisa
+  `OPENING_AT_TEE`; dentro do RO é erro. Peças de canto e T (California, ladder) são da S14.
 - Altura padrão de parede: 97.125" (8'-1 1/8") = 3 plates × 1.5 + stud 92.625.
 - Parede declara `section` ('2x4' | '2x6'); espessura real (3.5 / 5.5) é derivada, nunca entrada.
 - Zona de abertura = [offset − (kings + jacks)·1.5, offset + roughWidth + (kings + jacks)·1.5]. `kingStuds` e

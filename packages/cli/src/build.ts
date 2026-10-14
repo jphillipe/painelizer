@@ -12,7 +12,7 @@
  * nenhum arquivo — meia saída na fábrica é pior que nenhuma.
  */
 
-import { panelizeWall, panelSvg, type Panel, type Warning } from 'core';
+import { frameWalls, panelizeFrame, panelizeWall, panelSvg, type Panel, type WallFrame, type Warning } from 'core';
 import { bomCsv, cutListCsv, projectBom } from './csv';
 import type { Project } from './project';
 
@@ -42,14 +42,36 @@ export function buildProject(project: Project): BuildResult {
   const panels: Panel[] = [];
   const problems: string[] = [];
 
-  for (const wall of project.walls) {
+  /** Erros de header já vêm com "parede <id>, abertura <id>: …"; os demais ganham o prefixo. */
+  const problem = (wallId: string, e: unknown): void => {
+    const message = (e as Error).message;
+    const prefix = `parede ${wallId}`;
+    problems.push(message.startsWith(prefix) ? message : `${prefix}: ${message}`);
+  };
+
+  if (project.house !== undefined) {
+    // Casa em planta (S13): a planta inteira é enquadrada de uma vez (cantos e T dependem de todas as
+    // paredes; um erro aí é um problema só), depois cada parede vira painel separadamente.
+    let frames: WallFrame[] = [];
     try {
-      panels.push(panelizeWall(wall, project.config));
+      frames = frameWalls(project.house);
     } catch (e) {
-      // Erros de header já vêm com "parede <id>, abertura <id>: …".
-      const message = (e as Error).message;
-      const prefix = `parede ${wall.id}`;
-      problems.push(message.startsWith(prefix) ? message : `${prefix}: ${message}`);
+      problems.push(`planta: ${(e as Error).message}`);
+    }
+    for (const frame of frames) {
+      try {
+        panels.push(panelizeFrame(frame, project.config));
+      } catch (e) {
+        problem(frame.wallId, e);
+      }
+    }
+  } else {
+    for (const wall of project.walls) {
+      try {
+        panels.push(panelizeWall(wall, project.config));
+      } catch (e) {
+        problem(wall.id, e);
+      }
     }
   }
 

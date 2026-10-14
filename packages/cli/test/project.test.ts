@@ -20,16 +20,88 @@ describe('parseProject', () => {
     expect(p.name).toBe('casa-exemplo');
     expect(p.config.studLength).toEqual([92.625, 104.625]);
     expect(p.config.headerHeight).toBe(82.5);
-    expect(p.walls.map((w) => [w.id, w.length, w.height])).toEqual([
-      ['W01', 144, 97.125],
-      ['W02', 192, 97.125],
-      ['W03', 120, 97.125],
-      ['W04', 126, 97.125],
-      ['W05', 144, 97.125],
-      ['W06', 120, 109.125],
-      ['W07', 144, 97.125],
+    // Exemplo em planta (S13): `walls` fica vazio e a casa vai em `house`.
+    expect(p.walls).toEqual([]);
+    expect(p.house!.walls.map((w) => [w.id, w.start, w.end, w.height])).toEqual([
+      ['W01', { x: 0, y: 0 }, { x: 144, y: 0 }, 97.125],
+      ['W02', { x: 0, y: 0 }, { x: 0, y: 192 }, 97.125],
+      ['W03', { x: 0, y: 96 }, { x: 120, y: 96 }, 97.125],
+      ['W04', { x: 0, y: 300 }, { x: 126, y: 300 }, 97.125],
+      ['W05', { x: 156, y: 300 }, { x: 300, y: 300 }, 97.125],
+      ['W06', { x: 324, y: 300 }, { x: 444, y: 300 }, 109.125],
+      ['W07', { x: 0, y: 420 }, { x: 144, y: 420 }, 97.125],
     ]);
+    expect(p.house!.walls[0]!.ends).toEqual({ start: 'through' });
+    expect(p.house!.walls[1]).not.toHaveProperty('ends');
     expect(p.stockLengths).toBeUndefined();
+  });
+
+  describe('casa em planta (S13)', () => {
+    const plan = (wall: Record<string, unknown>, more: Record<string, unknown>[] = []) =>
+      valid({
+        walls: [
+          { id: 'W01', start: { x: 0, y: 0 }, end: { x: 144, y: 0 }, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [], ...wall },
+          ...more,
+        ],
+      });
+
+    it('start/end aceitam pés-pol e sinal; ends e level opcionais', () => {
+      const p = projectFrom(
+        plan({ start: { x: `-2'-6"`, y: '0' }, end: { x: `12'`, y: 0 }, ends: { start: 'butt', end: 'through' }, level: 2 }),
+      );
+      expect(p.walls).toEqual([]);
+      expect(p.house!.walls[0]).toMatchObject({
+        id: 'W01',
+        start: { x: -30, y: 0 },
+        end: { x: 144, y: 0 },
+        ends: { start: 'butt', end: 'through' },
+        level: 2,
+      });
+      expect(p.house!.walls[0]).not.toHaveProperty('length');
+    });
+
+    it('offsets, center e extraStuds ficam como medidos do start (o core converte)', () => {
+      const p = projectFrom(
+        plan({
+          openings: [{ id: 'J1', type: 'window', center: 60, roughWidth: 36, roughHeight: 48 }],
+          extraStuds: [{ x: `8'` }],
+        }),
+      );
+      expect(p.house!.walls[0]!.openings[0]!.offset).toBe(42);
+      expect(p.house!.walls[0]!.extraStuds).toEqual([{ x: 96 }]);
+    });
+
+    it.each([
+      [{ length: 144 }, /projeto\.walls\[0\]\.length: parede em planta não leva length/],
+      [{ layoutOrigin: -5.5 }, /projeto\.walls\[0\]\.layoutOrigin: parede em planta não leva layoutOrigin/],
+      [{ start: { x: 0 } }, /projeto\.walls\[0\]\.start\.y: esperado medida/],
+      [{ end: [144, 0] }, /projeto\.walls\[0\]\.end: esperado objeto/],
+      [{ start: { x: '12 feet', y: 0 } }, /projeto\.walls\[0\]\.start\.x: medida inválida/],
+      [{ ends: { start: 'thru' } }, /projeto\.walls\[0\]\.ends\.start: esperado um de through, butt/],
+      [{ ends: 'through' }, /projeto\.walls\[0\]\.ends: esperado objeto/],
+      [{ level: 0 }, /projeto\.walls\[0\]\.level: esperado inteiro ≥ 1/],
+    ])('parede em planta inválida %j', (wall, re) => {
+      expect(() => projectFrom(plan(wall), 'projeto')).toThrow(re);
+    });
+
+    it('misturar paredes em planta e soltas no mesmo arquivo é erro, apontando a minoria', () => {
+      const loose = { id: 'W02', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] };
+      expect(() => projectFrom(plan({}, [loose]), 'projeto')).toThrow(
+        /projeto\.walls\[0\]: paredes em planta \(start\/end\) e soltas \(length\) no mesmo arquivo/,
+      );
+      const loose3 = { ...loose, id: 'W03' };
+      expect(() => projectFrom(plan({}, [loose, loose3]), 'projeto')).toThrow(/projeto\.walls\[0\]: paredes em planta/);
+      const planB = { id: 'W02', start: { x: 0, y: 0 }, end: { x: 0, y: 120 }, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] };
+      expect(() => projectFrom(valid({ walls: [loose, planB, { ...loose, id: 'W03' }] }), 'projeto')).toThrow(
+        /projeto\.walls\[1\]: paredes em planta/,
+      );
+    });
+
+    it('id duplicado também na planta', () => {
+      expect(() => projectFrom(plan({}, [{ id: 'W01', start: { x: 0, y: 50 }, end: { x: 144, y: 50 }, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] }]))).toThrow(
+        /id duplicado "W01"/,
+      );
+    });
   });
 
   it('JSON inválido vira ProjectError com o nome do arquivo', () => {
@@ -108,13 +180,14 @@ describe('parseProject', () => {
     const p = parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa-exemplo.json');
     expect(p.config.building).toEqual({ groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120, exposure: 'B' });
     expect(p.config.doubleSillOver).toBe(72);
-    expect(p.walls.map((w) => w.floorsSupported)).toEqual([0, 0, undefined, undefined, 0, 0, 0]);
-    expect(p.walls[4]?.openings[0]).not.toHaveProperty('header');
-    // W05 e W04 por tag + center (S12.5): mesma Opening de antes
-    expect(p.walls[4]?.openings[0]).toMatchObject({ type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
-    expect(p.walls[3]?.openings[0]).toMatchObject({ type: 'door', offset: 40, roughWidth: 32, roughHeight: 82.5 });
+    const walls = p.house!.walls;
+    expect(walls.map((w) => w.floorsSupported)).toEqual([0, 0, undefined, undefined, 0, 0, 0]);
+    expect(walls[4]?.openings[0]).not.toHaveProperty('header');
+    // W05 e W04 por tag + center (S12.5): mesma Opening de antes (offset medido do start da parede)
+    expect(walls[4]?.openings[0]).toMatchObject({ type: 'window', offset: 48, roughWidth: 36, roughHeight: 48 });
+    expect(walls[3]?.openings[0]).toMatchObject({ type: 'door', offset: 40, roughWidth: 32, roughHeight: 82.5 });
     // W07 por headerMark HDR1: seção, plies e jacks do schedule; kings do schedule viram kingStuds
-    expect(p.walls[6]?.openings.map((o) => [o.header, o.kingStuds])).toEqual([
+    expect(walls[6]?.openings.map((o) => [o.header, o.kingStuds])).toEqual([
       [{ section: '2x10', plies: 2, jackStuds: 1 }, 1],
       [{ section: '2x10', plies: 2, jackStuds: 1 }, 1],
     ]);

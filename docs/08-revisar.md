@@ -6,7 +6,7 @@ Gerado por `pnpm hipoteses` em 2026-10-13. Não edite à mão: a fonte é `05-pe
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
-| P1 | Painéis reais | fixtures sintéticos | `packages/cli/src/build.ts:92` |
+| P1 | Painéis reais | fixtures sintéticos | `packages/cli/src/build.ts:114` |
 | P8 | Peso por peça | tabela fixa em `src/data/lumber.json` | — |
 | P10 | Tabela IRC em vigor | IRC 2021 sem emenda local em R602.7 | `packages/core/src/rules/headers.ts:3`, `packages/core/src/rules/openingHeader.ts:5`, `packages/core/src/types.ts:92` |
 | P15 | Peso máximo do painel | sem limite de peso até a resposta; só comprimento (240") | — |
@@ -14,9 +14,9 @@ Gerado por `pnpm hipoteses` em 2026-10-13. Não edite à mão: a fonte é `05-pe
 | P17 | Escolha de header pela tabela e parede não portante | (a) menor altura de seção, depois menos plies, respeitando a espessura da parede; (b) `headerFor` devolve `{ nonBearing: true }` e quem chama decide | `packages/core/src/rules/headers.ts:13`, `packages/core/src/rules/headers.ts:27`, `packages/core/src/rules/headers.ts:6` |
 | P18 | Header deitado em parede não portante: detalhes | (a) seção da parede; (b) 1 king + 1 jack como na portante, a peça apoiada nos jacks; (c) sem cripples, como respondido | `packages/core/src/rules/openingHeader.ts:10`, `packages/core/test/fixtures/wall-120-door-nonbearing.json:2` |
 | P19 | Layout: stud centrado na marca ou borda na marca? | centrado (regra nova em S11, muda todos os fixtures com confirmação) | `packages/core/src/rules/studs.ts:10`, `packages/core/test/fixtures/wall-120-door-nonbearing.json:2`, `packages/core/test/fixtures/wall-120-door.json:2`, `packages/core/test/fixtures/wall-144-plain.json:2`, `packages/core/test/fixtures/wall-144-window-82.5.json:2` (+3) |
-| P20 | Cripple curto acima do header | cripple em pé para qualquer vão ≥ 1.5" (regra atual) | `packages/core/src/rules/openings.ts:38` |
-| P21 | Referência de medida das paredes e canto | eixo; a mais longa atravessa, com sobrescrita por ponta; layout da quina do prédio | — |
-| P22 | Ladder blocking no T | 3 blocos da seção da parede, deitados, centros em 24, 48 e 72 do subfloor (4 blocos em parede de 9'); stud de ponta comum | — |
+| P20 | Cripple curto acima do header | cripple em pé para qualquer vão ≥ 1.5" (regra atual) | `packages/core/src/rules/openings.ts:38`, `packages/core/test/fixtures/house-tee.json:2` |
+| P21 | Referência de medida das paredes e canto | eixo; a mais longa atravessa, com sobrescrita por ponta; layout da quina do prédio | `packages/core/src/house/connections.ts:2`, `packages/core/src/house/frame.ts:4`, `packages/core/src/house/types.ts:37`, `packages/core/src/house/types.ts:4`, `packages/core/test/fixtures/house-28x40.json:2` (+1) |
+| P22 | Ladder blocking no T | 3 blocos da seção da parede, deitados, centros em 24, 48 e 72 do subfloor (4 blocos em parede de 9'); stud de ponta comum | `packages/core/src/house/panelizeHouse.ts:5`, `packages/core/test/fixtures/house-tee.json:2` |
 | P23 | Lap da double top plate entre painéis da mesma parede | avança 48" presa ao painel, mínimo 24" | — |
 | P24 | Orientação da folha | vista de fora, face externa indicada no desenho | `packages/core/src/output/svg.ts:5` |
 | P25 | Sill dupla: limite e montagem | só quando o projeto pede (`config.doubleSillOver`, ausente = simples), segunda peça sob a primeira | `packages/core/src/rules/openings.ts:14` |

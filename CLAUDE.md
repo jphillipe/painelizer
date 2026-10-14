@@ -16,6 +16,9 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
   (borda esquerda em marca − 0.75: 15 1/4", 31 1/4"…). Primeiro stud sempre em x=0; último sempre encostado
   no fim da parede (x = comprimento − 1.5). Hipótese P19 até a fábrica responder.
 - Coordenadas de peça (`x`, `y`) = canto inferior esquerdo. y=0 é a base da bottom plate.
+- Casa em planta (S13): parede = `start`/`end` no EIXO (centro da espessura), paralela aos eixos. Plate medida do
+  cruzamento dos eixos: atravessa +t_outra/2, encosta (canto ou T) −t_outra/2, livre no ponto. Quem atravessa:
+  `ends` > mais longa > primeira do arquivo (P21). Offsets medidos do `start`; o motor converte para o painel.
 - Antes de implementar qualquer regra de framing, explique a abordagem em até 5 linhas e aguarde confirmação.
 - Uma sessão = um item de `docs/03-sessoes.md`. Ao terminar: marcar o item, registrar decisões novas em
   `docs/04-decisoes.md` e sugerir uma mensagem de commit descrevendo a regra (não o código).

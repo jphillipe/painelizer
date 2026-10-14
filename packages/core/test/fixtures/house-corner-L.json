@@ -1,0 +1,50 @@
+{
+  "$comment": "S13 (2026-10-13, hipótese P21): duas paredes 2x6 em L, eixos de 144 (W1, de (0,0) a (144,0)) e 120 (W2, de (0,0) a (0,120)). W1 é a mais longa e atravessa: plate da face externa de W2 (x = −2.75) ao ponto livre em 144 → 146.75, origem de layout 0 (a quina é o início da plate). W2 encosta: plate começa na face interna de W1 (y = 2.75) → 117.25, origem −5.5 (a marca 0 é a quina do prédio, 5.5 antes da plate): studs centrados em 10.5, 26.5… → bordas em 9.75, 25.75…; a chapa de OSB que termina a 48 da quina cai no stud 41.75–43.25. Sem aberturas: a conversão de offsets é testada em house-tee e house-28x40. Valores confirmados pelo humano na abertura da S13 (o prompt da sessão dizia 149.5 / 114.5, que seria ±t inteiro; a convenção de eixo dá ±t/2).",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
+  },
+  "house": {
+    "walls": [
+      { "id": "W1", "start": { "x": 0, "y": 0 }, "end": { "x": 144, "y": 0 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
+      { "id": "W2", "start": { "x": 0, "y": 0 }, "end": { "x": 0, "y": 120 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] }
+    ]
+  },
+  "expected": {
+    "frames": [
+      {
+        "wallId": "W1",
+        "plateStart": { "x": -2.75, "y": 0 },
+        "plateEnd": { "x": 144, "y": 0 },
+        "length": 146.75,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W2", "through": true, "at": { "x": 0, "y": 0 } },
+          "end": { "kind": "free" },
+          "tees": []
+        },
+        "openingOffsets": {}
+      },
+      {
+        "wallId": "W2",
+        "plateStart": { "x": 0, "y": 2.75 },
+        "plateEnd": { "x": 0, "y": 120 },
+        "length": 117.25,
+        "layoutOrigin": -5.5,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "W1", "through": false, "at": { "x": 0, "y": 0 } },
+          "end": { "kind": "free" },
+          "tees": []
+        },
+        "openingOffsets": {}
+      }
+    ],
+    "panels": {
+      "W1": { "members": 14, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 145.25], "warnings": [] },
+      "W2": { "members": 12, "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 89.75, 105.75, 115.75], "warnings": [] }
+    }
+  }
+}

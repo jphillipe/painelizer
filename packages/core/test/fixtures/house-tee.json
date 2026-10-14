@@ -1,0 +1,49 @@
+{
+  "$comment": "S13 (2026-10-13): parede externa W1 2x6 de 16' (de (0,0) a (192,0)), livre nas duas pontas, com janela RO 36x48 em offset 100 (header 2-2x10 do projeto, base a 82.5); parede interna W2 2x4 não portante de (96,0) a (96,120) encostando em T no meio de W1. W2: plate começa na face de W1 (y = 2.75) → 117.25, origem 0 (T não muda o layout; só o canto que encosta leva −t). W1: plate = eixo (192), tee em x=96 com faixa 94.25–97.75; a zona da janela [97, 139] (1 king + 1 jack por lado) pega a faixa por 0.75\" → aviso OPENING_AT_TEE no painel de W1 (dentro do RO seria erro). Peças de W1: 3 plates, 11 studs (saem 111.25 e 127.25), 2 kings, 2 jacks, header, sill, 2 cripples abaixo e 2 acima (header 2x10 a 82.5 deixa 2.375\" até a top plate, P20). Ladder blocking do T é da S14 (P22).",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5,
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
+  },
+  "house": {
+    "walls": [
+      {
+        "id": "W1", "start": { "x": 0, "y": 0 }, "end": { "x": 192, "y": 0 },
+        "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0,
+        "openings": [
+          { "id": "J1", "type": "window", "offset": 100, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+        ]
+      },
+      { "id": "W2", "start": { "x": 96, "y": 0 }, "end": { "x": 96, "y": 120 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+    ]
+  },
+  "expected": {
+    "frames": [
+      {
+        "wallId": "W1",
+        "plateStart": { "x": 0, "y": 0 },
+        "plateEnd": { "x": 192, "y": 0 },
+        "length": 192,
+        "layoutOrigin": 0,
+        "connections": { "start": { "kind": "free" }, "end": { "kind": "free" }, "tees": [{ "x": 96, "wallId": "W2", "width": 3.5 }] },
+        "openingOffsets": { "J1": 100 }
+      },
+      {
+        "wallId": "W2",
+        "plateStart": { "x": 96, "y": 2.75 },
+        "plateEnd": { "x": 96, "y": 120 },
+        "length": 117.25,
+        "layoutOrigin": 0,
+        "connections": { "start": { "kind": "tee", "wallId": "W1", "at": { "x": 96, "y": 0 } }, "end": { "kind": "free" }, "tees": [] },
+        "openingOffsets": {}
+      }
+    ],
+    "panels": {
+      "W1": { "members": 24, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 143.25, 159.25, 175.25, 190.5], "warnings": ["OPENING_AT_TEE"] },
+      "W2": { "members": 12, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 115.75], "warnings": [] }
+    }
+  }
+}

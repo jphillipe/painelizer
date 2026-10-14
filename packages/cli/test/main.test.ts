@@ -127,7 +127,7 @@ describe('run (I/O em memória)', () => {
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
-    expect(m.out[0]).toBe(`7 painel(is), 123 peças → ${outDir}`);
+    expect(m.out[0]).toBe(`7 painel(is), 125 peças → ${outDir}`);
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
@@ -195,7 +195,7 @@ describe('ponta a ponta (disco)', () => {
     expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels']);
     expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg', 'W07.svg']);
     expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,126,"126""",3');
-    expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>16'-0&quot;</text>`);
+    expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>15'-9 1/4&quot;</text>`); // W02 encosta no canto: 192 − 2.75
   });
 
   it('processo real: tsx src/cli.ts build ... --out ...', () => {
@@ -208,7 +208,7 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
-    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 123 peças → ${outDir}`);
+    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 125 peças → ${outDir}`);
     expect(existsSync(join(outDir, 'panels', 'W01.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });
