@@ -1,0 +1,41 @@
+{
+  "$comment": "Resposta gravada (S18) em formato de planta: um L de 12' x 16' no eixo, W01 atravessando o canto, W02 com janela, W03 interna 2x4 em T. Serve para testar a conversão para start/end, ends, level, openingTypes e a derivação dos pré-cortes.",
+  "projectName": "Canto L",
+  "level": 1,
+  "sheets": { "plan": "A-101", "schedule": null, "elevations": null },
+  "origin": "(0,0) no cruzamento dos eixos das paredes W01 (sul) e W02 (oeste), no canto sudoeste; x para leste, y para norte.",
+  "wallHeight": "8' - 1 1/8\"",
+  "headerHeight": "6' - 10 1/2\"",
+  "building": { "groundSnowLoad": null, "buildingWidth": null, "windSpeed": null, "exposure": null, "species": null },
+  "wallTypes": [],
+  "openingTypes": [
+    { "tag": "J36", "kind": "window", "width": "2' - 11 1/2\"", "height": "3' - 11 1/4\"", "frame": null, "sillHeight": null, "roughWidth": null, "roughHeight": null, "description": "janela 36x48 de RO", "confidence": 1, "evidence": "window schedule" },
+    { "tag": "P30", "kind": "door", "width": "2' - 6\"", "height": "6' - 8\"", "frame": "wood", "sillHeight": null, "roughWidth": null, "roughHeight": null, "description": null, "confidence": 1, "evidence": "door schedule" }
+  ],
+  "headerSchedule": [],
+  "walls": [
+    {
+      "id": "S1", "start": { "x": "0\"", "y": "0\"" }, "end": { "x": "12' - 0\"", "y": "0\"" }, "length": null, "endsStart": "through", "endsEnd": null,
+      "wallType": null, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "height": null, "level": 1,
+      "openings": [],
+      "confidence": 1, "evidence": "cota externa 12' - 5 1/2\" da face externa à ponta = 12' no eixo"
+    },
+    {
+      "id": "W1", "start": { "x": "0\"", "y": "0\"" }, "end": { "x": "0\"", "y": "16' - 0\"" }, "length": null, "endsStart": "butt", "endsEnd": null,
+      "wallType": null, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "height": null, "level": 1,
+      "openings": [
+        { "id": "W1-J1", "tag": "J36", "type": null, "center": "8' - 0\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": null, "confidence": 1, "evidence": "eixo da janela a 8' - 0\" do canto" }
+      ],
+      "confidence": 1, "evidence": "16' - 0\" no eixo"
+    },
+    {
+      "id": "I1", "start": { "x": "6' - 0\"", "y": "0\"" }, "end": { "x": "6' - 0\"", "y": "8' - 0\"" }, "length": null, "endsStart": null, "endsEnd": null,
+      "wallType": "1", "section": "2x4", "exterior": false, "bearing": false, "floorsSupported": null, "height": null, "level": 1,
+      "openings": [
+        { "id": "I1-P1", "tag": "P30", "type": null, "center": "3' - 0\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": null, "confidence": 0.9, "evidence": "eixo da porta a 3' - 0\" da parede sul" }
+      ],
+      "confidence": 0.9, "evidence": "T na parede sul; ponta norte livre"
+    }
+  ],
+  "notes": []
+}

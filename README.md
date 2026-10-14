@@ -49,3 +49,9 @@ pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Cada parede vem **em planta** (`s
 S13: o motor resolve cantos, T, comprimento de plate e origem de layout) ou **solta** (`length`); os dois
 formatos não se misturam no mesmo arquivo. Montagem de canto e T em `config.corner` (`california` | `three-stud`)
 e `config.tee` (`ladder` | `backer`), S14; sem eles, California corner e ladder blocking (P5). Ver `packages/cli/examples/casa-exemplo.json` e `packages/cli/src/project.ts`.
+
+## Extrair paredes de um PDF (S18, biblioteca; o comando vem na S19)
+`packages/extract`: `extractWalls({ pdf, pages })` manda as páginas da planta (A-1xx) e do schedule (A-8xx) para a API
+do Claude e devolve o JSON de entrada do CLI, com confiança e evidência por parede e abertura e um relatório de
+revisão em Markdown. Precisa de `ANTHROPIC_API_KEY` no ambiente; a saída é revisada por humano antes de rodar o
+`build`. O core não chama IA: a extração fica fora do motor.

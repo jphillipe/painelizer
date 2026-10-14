@@ -416,8 +416,22 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
 Decidir P12 antes. Se houver DXF, S18 vira "importar DXF → `HouseWall[]`" e a visão sobre PDF vai para o backlog.
 Os PDFs de referência são vetoriais (Revit): extrair texto e geometria do PDF antes de recorrer a imagem.
 
-- [ ] **S18 — Prompt para extração de paredes** (API do Claude, imagem/texto do PDF → `HouseWall[]` + confiança;
+- [x] **S18 — Prompt para extração de paredes** (API do Claude, imagem/texto do PDF → `HouseWall[]` + confiança;
   cotas do arquiteto convertidas para o eixo: face externa + t/2, centro de janela − RO/2)
+  Feita em 2026-10-14 (abordagem aprovada em 5 pontos). Pacote novo `packages/extract` (fora do core): `pdf.ts` lê o
+  PDF vetorial com `pdfjs-dist` (texto com posição e rotação, agrupado em linhas; número da folha pelo carimbo;
+  `pickPages` escolhe A-1xx e A-8xx; `subsetPdf` recorta as páginas com `pdf-lib`); `schema.ts` é o que o modelo
+  devolve (zod, listas em vez de chaves dinâmicas, `null` em vez de campo ausente, medidas como texto do desenho,
+  confiança e evidência por parede, abertura e tipo); `prompt.ts` é o system prompt fixo com as convenções do CLI
+  (eixo, face externa + t/2, `center` das aberturas, tags do schedule, nunca inventar cota, não escolher header) e a
+  mensagem com o PDF recortado como `document` + texto posicionado; `convert.ts` monta o JSON do CLI e passa pelo
+  `projectFrom` do CLI (erros viram `problems`), mais o relatório de revisão em Markdown; `client.ts` chama
+  `messages.parse` com structured outputs (`claude-opus-5-5`, effort high, system cacheável) e trata recusa, corte
+  e resposta fora do schema. Testes sem rede (39): PDF sintético com `pdf-lib`, respostas gravadas
+  (`ringgold-output.json`, que convertida bate com `ringgold-checkpoint.json` nas 4 paredes e 5 aberturas;
+  `corner-output.json` em planta) e cliente falso; a leitura do PDF real do Ringgold roda quando o arquivo existe
+  (A-100 = página 3, A-800 = 15). A chamada real fica para a S19 e só roda com `ANTHROPIC_API_KEY`. Não há
+  resposta real gravada: o fixture foi escrito à mão a partir do texto da A-100, então a S19 é quem valida o prompt.
 - [ ] **S19 — Script `panelizer extract <planta.pdf>`** gerando o JSON de entrada para revisão
 
 ## Fase 5 — App

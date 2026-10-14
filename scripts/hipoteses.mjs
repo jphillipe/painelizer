@@ -6,7 +6,7 @@ import { join, relative } from 'node:path';
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const PENDENCIAS = join(root, 'docs', '05-pendencias.md');
 const OUT = join(root, 'docs', '08-revisar.md');
-const SCAN = ['packages/core/src', 'packages/core/test', 'packages/cli/src', 'packages/cli/test', 'packages/cli/examples'];
+const SCAN = ['packages/core/src', 'packages/core/test', 'packages/cli/src', 'packages/cli/test', 'packages/cli/examples', 'packages/extract/src', 'packages/extract/test'];
 
 // --- 1. pendências -------------------------------------------------------------------------------------
 const lines = readFileSync(PENDENCIAS, 'utf8').split('\n');
