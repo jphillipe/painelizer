@@ -84,6 +84,21 @@ describe('parseProject', () => {
       expect(() => projectFrom(plan(wall), 'projeto')).toThrow(re);
     });
 
+    it('northAngle na raiz vai para house.northAngle (S16); só em projeto em planta e só número finito', () => {
+      expect(projectFrom({ ...plan({}), northAngle: 15 }).house!.northAngle).toBe(15);
+      expect(projectFrom(plan({})).house).not.toHaveProperty('northAngle');
+      expect(() => projectFrom({ ...plan({}), northAngle: '15°' }, 'projeto')).toThrow(/projeto\.northAngle: esperado ângulo em graus/);
+      expect(() => projectFrom(valid({ northAngle: 0 }), 'projeto')).toThrow(/projeto\.northAngle: só vale em projeto em planta/);
+    });
+
+    it('level vale também em parede solta (S16)', () => {
+      const p = projectFrom(valid({ walls: [{ ...(valid()['walls'] as Record<string, unknown>[])[0]!, level: 2 }] }));
+      expect(p.walls[0]!.level).toBe(2);
+      expect(() => projectFrom(valid({ walls: [{ ...(valid()['walls'] as Record<string, unknown>[])[0]!, level: 1.5 }] }), 'projeto')).toThrow(
+        /projeto\.walls\[0\]\.level: esperado inteiro ≥ 1/,
+      );
+    });
+
     it('misturar paredes em planta e soltas no mesmo arquivo é erro, apontando a minoria', () => {
       const loose = { id: 'W02', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] };
       expect(() => projectFrom(plan({}, [loose]), 'projeto')).toThrow(

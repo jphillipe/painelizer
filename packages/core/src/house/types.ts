@@ -11,13 +11,10 @@
  *   face interna. Qual atravessa: `ends` declarado > a mais longa > a primeira do arquivo.
  */
 
-import type { Wall } from '../types';
+import type { Point, Wall } from '../types';
 
-/** Ponto em planta, polegadas. */
-export interface Point {
-  x: number;
-  y: number;
-}
+/** `Point` mora em `types.ts` desde a S16 (`Panel.plan`); re-exportado aqui para os módulos da casa. */
+export type { Point };
 
 /** Papel de uma ponta num canto: `through` leva a plate até a face externa da outra; `butt` encosta nela. */
 export type EndRule = 'through' | 'butt';
@@ -27,17 +24,21 @@ export type WallEnd = 'start' | 'end';
 
 /**
  * Parede como a planta a descreve. `length`, `layoutOrigin` e `joints` são derivados pelo motor da casa
- * (`frameWalls`); os demais campos de `Wall` valem como estão.
+ * (`frameWalls`); os demais campos de `Wall` valem como estão — inclusive `level` (pavimento, default 1),
+ * que entra no id dos painéis (S16).
  */
 export interface HouseWall extends Omit<Wall, 'length' | 'layoutOrigin' | 'joints'> {
   start: Point;
   end: Point;
-  /** Pavimento (1 = térreo). Ausente = 1. Só identifica; a numeração dos painéis é da S16. */
-  level?: number;
   /** Papel declarado de cada ponta num canto. Ausente = regra da mais longa (P21). */
   ends?: { start?: EndRule; end?: EndRule };
 }
 
 export interface House {
   walls: HouseWall[];
+  /**
+   * Direção do norte na planta (S16), em graus, medida do +y da planta no sentido horário (0 = norte para
+   * cima, 90 = norte para a direita). Ausente = a planta de painéis sai sem seta do norte.
+   */
+  northAngle?: number;
 }

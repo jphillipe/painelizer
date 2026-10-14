@@ -12,6 +12,7 @@ const config = split480.config as Config;
 interface ExpectedPanel {
   id: string;
   wallId: string;
+  level: number;
   wallOffset: number;
   length: number;
   layoutOrigin: number;
@@ -29,6 +30,7 @@ describe('splitWall — fixtures', () => {
     const panels = splitWall(fx.wall as Wall, fx.config as Config);
     const expected = fx.expected.panels as ExpectedPanel[];
     expect(panels.map((p) => p.id)).toEqual(expected.map((e) => e.id));
+    expect(panels.map((p) => p.level)).toEqual(expected.map((e) => e.level));
     for (const [i, p] of panels.entries()) {
       const e = expected[i]!;
       expect(p).toMatchObject({ wallId: e.wallId, wallOffset: e.wallOffset, length: e.length, layoutOrigin: e.layoutOrigin, weightLb: e.weightLb });
@@ -58,12 +60,13 @@ describe('splitWall — fixtures', () => {
 });
 
 describe('splitWall — parede de um painel só', () => {
-  it('parede que cabe: um painel igual ao panelizeWall, com o id da parede, mais wallOffset 0 e peso', () => {
+  it('parede que cabe: um painel igual ao panelizeWall, com id {level}-{wallId}-P1 (S16), wallOffset 0 e peso', () => {
     const wall = plain.wall as Wall;
     const [panel, ...rest] = splitWall(wall, plain.config as Config);
     expect(rest).toEqual([]);
-    expect(panel).toEqual({ ...panelizeWall(wall, plain.config as Config), wallOffset: 0, weightLb: 226.4 });
-    expect(panel!.id).toBe('W-plain');
+    expect(panel).toEqual({ ...panelizeWall(wall, plain.config as Config), id: '1-W-plain-P1', level: 1, wallOffset: 0, weightLb: 226.4 });
+    expect(splitWall({ ...wall, level: 3 }, plain.config as Config)[0]).toMatchObject({ id: '3-W-plain-P1', level: 3 });
+    expect(() => splitWall({ ...wall, level: 1.5 }, plain.config as Config)).toThrow(/parede W-plain: level deve ser inteiro ≥ 1 \(recebido 1\.5\)/);
   });
 
   it('config.panel inválido é RangeError', () => {
@@ -80,8 +83,8 @@ describe('splitWall — peso (P15)', () => {
     // (P1 = 187.5 lb: 7 studs + fechamento, plates 112 + 112 + 160; P2 = 194.9 lb: 9 studs, plates 128 + 128 + 80).
     const panels = splitWall(wall240, { ...config, panel: { maxLength: 240, maxWeight: 200, module: 48, lap: 48, minLap: 24 } });
     expect(panels.map((p) => [p.id, p.length, p.weightLb])).toEqual([
-      ['W-240-P1', 112, 187.5],
-      ['W-240-P2', 128, 194.9],
+      ['1-W-240-P1', 112, 187.5],
+      ['1-W-240-P2', 128, 194.9],
     ]);
     for (const p of panels) expect(p.weightLb!).toBeLessThanOrEqual(200);
     expect(panels.map((p) => p.warnings)).toEqual([[], []]);
@@ -109,7 +112,7 @@ describe('splitWall — peso (P15)', () => {
     expect(panels.map((p) => p.length)).toEqual([240, 240]);
     expect(panels[0]!.warnings).toEqual([]);
     expect(panels[1]!.warnings.map((w) => w.code)).toEqual(['PANEL_OVERWEIGHT']);
-    expect(panels[1]!.warnings[0]!.message).toMatch(new RegExp(`painel W-480-P2: peso estimado de ${p2!.weightLb} lb passa do máximo de ${limit} lb`));
+    expect(panels[1]!.warnings[0]!.message).toMatch(new RegExp(`painel 1-W-480-P2: peso estimado de ${p2!.weightLb} lb passa do máximo de ${limit} lb`));
   });
 
   it('sem como caber no peso: RangeError', () => {

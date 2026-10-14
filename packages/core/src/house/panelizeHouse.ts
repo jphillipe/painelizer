@@ -4,11 +4,12 @@
  *
  * Desde a S14 a `Wall` derivada leva `joints` (canto, T, laps), e `panelizeWall` monta tudo — inclusive o
  * aviso `OPENING_AT_TEE` (faixa do T na zona de uma abertura) e o erro de faixa dentro do RO
- * (`rules/corners.ts`). Os painéis de uma parede são exatamente `splitWall(frame.wall, config)`: um só, com o
- * id da parede, quando ela cabe em `config.panel.maxLength`; `W01-P1`, `W01-P2`… quando não.
+ * (`rules/corners.ts`). Os painéis de uma parede são `splitWall(frame.wall, config)` — ids
+ * `{level}-{wallId}-P{n}` (S16) — mais `Panel.plan`: as pontas da plate de cada painel em planta, andando de
+ * `plateStart` para `plateEnd` pelo `wallOffset` e pelo comprimento do painel.
  */
 
-import type { Config, Panel, Warning } from '../types';
+import type { Config, Panel, Point, Warning } from '../types';
 import { splitWall } from '../panelize/splitWall';
 import type { HeaderTables } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
@@ -49,5 +50,12 @@ export function panelizeFrame(
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
 ): Panel[] {
-  return splitWall(frame.wall, config, tables);
+  // Direção unitária da plate em planta: a parede é paralela a um eixo, então é ±1 num eixo e 0 no outro.
+  const ux = Math.sign(frame.plateEnd.x - frame.plateStart.x);
+  const uy = Math.sign(frame.plateEnd.y - frame.plateStart.y);
+  const at = (s: number): Point => ({ x: frame.plateStart.x + ux * s, y: frame.plateStart.y + uy * s });
+  return splitWall(frame.wall, config, tables).map((p) => {
+    const a = p.wallOffset ?? 0;
+    return { ...p, plan: { start: at(a), end: at(a + p.length) } };
+  });
 }

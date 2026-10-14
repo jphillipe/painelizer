@@ -35,6 +35,8 @@ export interface FrameConnections {
 /** Uma parede da casa pronta para o motor. */
 export interface WallFrame {
   wallId: string;
+  /** Pavimento (`HouseWall.level`, 1 quando ausente); entra no id dos painéis (S16). */
+  level: number;
   /** Pontos da plate em planta (x=0 do painel é `plateStart`). */
   plateStart: Point;
   plateEnd: Point;
@@ -91,9 +93,9 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
     width: axes.get(t.wallId)!.thickness,
   }));
 
-  // `start`, `end`, `level` e `ends` são da planta; o resto é `Wall`. As ligações (S14) vão em `joints`,
-  // já em x do painel, para o motor montar canto, T e laps da double top.
-  const { start, end, level, ends, ...rest } = wall;
+  // `start`, `end` e `ends` são da planta; o resto (inclusive `level`) é `Wall`. As ligações (S14) vão em
+  // `joints`, já em x do painel, para o motor montar canto, T e laps da double top.
+  const { start, end, ends, ...rest } = wall;
   const derived: Wall = { ...rest, length, openings, layoutOrigin };
   if (wall.extraStuds !== undefined) {
     derived.extraStuds = wall.extraStuds.map((e): ExtraStud => ({ ...e, x: e.x - s0 }));
@@ -108,6 +110,7 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
 
   return {
     wallId: wall.id,
+    level: wall.level ?? 1,
     plateStart: pointAt(axis, s0),
     plateEnd: pointAt(axis, s1),
     wall: derived,

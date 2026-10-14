@@ -67,7 +67,7 @@ export {
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
 export { panelizeWall, planOpenings, type OpeningPlan } from './panelize/panelizeWall';
-export { splitWall } from './panelize/splitWall';
+export { panelId, splitWall } from './panelize/splitWall';
 export {
   breakCandidates,
   chooseBreaks,
@@ -95,3 +95,4 @@ export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';
 export * from './output/bom';
 export * from './output/svg';
+export * from './output/planSvg';

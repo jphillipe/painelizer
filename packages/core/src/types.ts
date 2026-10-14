@@ -88,6 +88,12 @@ export function verticalWidth(m: { section: Section; flat?: boolean }): number {
   return m.flat === true ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
 }
 
+/** Ponto em planta, polegadas (S13). Eixos x/y quaisquer — a origem é do arquiteto. */
+export interface Point {
+  x: number;
+  y: number;
+}
+
 export type OpeningType = 'window' | 'door';
 
 /** Piso suportado pela parede: apoiado no centro (center-bearing) ou vão livre (clear span). */
@@ -262,6 +268,8 @@ export interface Wall {
   layoutOrigin?: number;
   /** Studs de altura inteira adicionais pedidos pelo projeto (S12). */
   extraStuds?: ExtraStud[];
+  /** Pavimento da parede (1 = térreo). Ausente = 1. Entra no id dos painéis (S16): `{level}-{wallId}-P{n}`. */
+  level?: number;
   /**
    * Ligações desta parede com as vizinhas, em x do painel (S14). Derivadas pela planta (`frameWalls`);
    * ausente = parede solta. Definem as peças de canto e T e os laps da double top plate.
@@ -373,8 +381,11 @@ export interface FieldCut {
 }
 
 export interface Panel {
+  /** `{level}-{wallId}-P{n}` (S16): pavimento, parede e ordem do painel de start para end, sempre com `-P1`. */
   id: string;
   wallId: string;
+  /** Pavimento da parede (`Wall.level`, 1 quando ausente). */
+  level?: number;
   length: number;
   height: number;
   section: WallSection;
@@ -387,6 +398,11 @@ export interface Panel {
   wallOffset?: number;
   /** Peso estimado da madeira, lb, sem sheathing (S15, hipótese P8). */
   weightLb?: number;
+  /**
+   * Pontas da plate deste painel em planta (S16): `start` é o x=0 do painel, `end` o `length`. Só na casa em
+   * planta (`panelizeHouse`); parede solta não tem.
+   */
+  plan?: { start: Point; end: Point };
 }
 
 /**

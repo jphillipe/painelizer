@@ -17,8 +17,8 @@
  *    estima o peso (P8). Painel acima de `config.panel.maxWeight` só pelo peso real (a escolha das quebras usa
  *    uma estimativa por trecho) ganha o aviso `PANEL_OVERWEIGHT`.
  *
- * Ids: `W01-P1`, `W01-P2`… quando a parede se divide; parede de um painel só mantém o id da parede
- * (a numeração definitiva, com pavimento, é da S16). `Panel.wallOffset` = `a`.
+ * Ids (S16): `{level}-{wallId}-P{n}` — pavimento (`Wall.level`, default 1), parede e ordem do painel de start
+ * para end, sempre com `-P1`, mesmo em parede de um painel só (`1-W01-P1`). `Panel.wallOffset` = `a`.
  */
 
 import {
@@ -58,6 +58,10 @@ export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTa
   const cfg = config.panel ?? DEFAULT_PANEL_CONFIG;
   validatePanelConfig(cfg);
   const stock = config.stockLengths ?? DEFAULT_STOCK_LENGTHS;
+  const level = wall.level ?? 1;
+  if (!Number.isInteger(level) || level < 1) {
+    throw new RangeError(`parede ${wall.id}: level deve ser inteiro ≥ 1 (recebido ${level})`);
+  }
 
   const whole = panelizeWall(wall, config, tables);
   const { plan } = planOpenings(wall, config, tables);
@@ -79,7 +83,7 @@ export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTa
     cfg,
   );
 
-  if (breaks.length === 0) return [finish(whole, wall.id, 0, stock, cfg)];
+  if (breaks.length === 0) return [finish({ ...whole, id: panelId(level, wall.id, 1), level }, wall.id, 0, stock, cfg)];
 
   const marks = layoutMarks(wall.length, config.studSpacing, origin);
   const obstacles: LapObstacle[] = [
@@ -93,7 +97,7 @@ export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTa
 
   const bounds = [0, ...breaks, wall.length];
   const n = breaks.length + 1;
-  const ids = bounds.slice(1).map((_, i) => `${wall.id}-P${i + 1}`);
+  const ids = bounds.slice(1).map((_, i) => panelId(level, wall.id, i + 1));
   return bounds.slice(1).map((b, i) => {
     const a = bounds[i]!;
     const segment = segmentWall(wall, a, b, {
@@ -106,8 +110,13 @@ export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTa
       strips,
     });
     const panel = panelizeWall(segment, config, tables);
-    return finish({ ...panel, id: ids[i]!, wallId: wall.id }, wall.id, a, stock, cfg);
+    return finish({ ...panel, id: ids[i]!, wallId: wall.id, level }, wall.id, a, stock, cfg);
   });
+}
+
+/** Id do painel `n` (1-based, de start para end) da parede `wallId` no pavimento `level`: `1-W01-P2`. */
+export function panelId(level: number, wallId: string, n: number): string {
+  return `${level}-${wallId}-P${n}`;
 }
 
 interface SegmentOptions {

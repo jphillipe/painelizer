@@ -77,6 +77,7 @@ export function bomCsv(lines: readonly BomLine[]): string {
 export const PANELS_HEADER = [
   'panel',
   'wall',
+  'level',
   'offset_in',
   'offset',
   'length_in',
@@ -90,9 +91,8 @@ export const PANELS_HEADER = [
 ] as const;
 
 /**
- * Um painel por linha (S15): parede de origem, onde começa nela, dimensões, nº de peças, peso estimado da
- * madeira (hipótese P8, sem sheathing) e os códigos dos avisos separados por `;`. Pavimento e id definitivo
- * são da S16.
+ * Um painel por linha (S15/S16): parede de origem, pavimento, onde começa na parede, dimensões, nº de peças,
+ * peso estimado da madeira (hipótese P8, sem sheathing) e os códigos dos avisos separados por `;`.
  */
 export function panelsCsv(panels: readonly Panel[]): string {
   const rows: (string | number)[][] = [[...PANELS_HEADER]];
@@ -101,6 +101,7 @@ export function panelsCsv(panels: readonly Panel[]): string {
     rows.push([
       p.id,
       p.wallId,
+      p.level ?? 1,
       offset,
       formatFeetInches(offset),
       p.length,

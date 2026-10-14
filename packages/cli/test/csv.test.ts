@@ -70,15 +70,16 @@ describe('panelsCsv (S15)', () => {
     const panels = splitWall(split480.wall as Wall, split480.config as Config);
     const csv = panelsCsv(panels);
     expect(csv).toBe(
-      'panel,wall,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings\n' +
-        `W-480-P1,W-480,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,\n` +
-        `W-480-P2,W-480,240,"20'-0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,29,409.8,\n`,
+      'panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings\n' +
+        `1-W-480-P1,W-480,1,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,\n` +
+        `1-W-480-P2,W-480,1,240,"20'-0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,29,409.8,\n`,
     );
   });
 
-  it('painel sem divisão: offset 0, id da parede; avisos separados por ;', () => {
+  it('painel direto do panelizeWall: pavimento 1 e offset 0 por default; avisos separados por ;', () => {
     const warned = { ...panel, warnings: [{ code: 'A', message: '' }, { code: 'B', message: '' }] };
     const line = panelsCsv([warned]).split('\n')[1]!;
-    expect(line).toBe(`W-plain,W-plain,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,,A;B`);
+    expect(line).toBe(`W-plain,W-plain,1,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,,A;B`);
+    expect(panelsCsv([{ ...panel, level: 2 }]).split('\n')[1]).toMatch(/^W-plain,W-plain,2,0,/);
   });
 });

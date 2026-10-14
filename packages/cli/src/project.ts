@@ -37,6 +37,10 @@
  * Montagem de canto e T (S14): `config.corner` ('california' | 'three-stud', default california) e
  * `config.tee` ('ladder' | 'backer', default ladder) — P5.
  *
+ * Numeração e planta (S16): `level` (pavimento, inteiro ≥ 1, default 1) vale em qualquer parede e entra no id
+ * dos painéis (`{level}-{wallId}-P{n}`); `northAngle` na raiz (graus, do +y da planta no sentido horário) põe a
+ * seta do norte na planta de painéis e só vale em projeto em planta.
+ *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
  * (medidas; o `stockLengths` na raiz do arquivo continua aceito e vale o mesmo — os dois juntos é erro). Plate
@@ -146,6 +150,10 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
 
   const project: Project = { name, config, walls };
   if (house) project.house = { walls: houseWalls };
+  if (root['northAngle'] !== undefined) {
+    if (!house) throw new ProjectError(`${source}.northAngle: só vale em projeto em planta (paredes com start/end)`);
+    project.house!.northAngle = degrees(root['northAngle'], `${source}.northAngle`);
+  }
   // Estoque: `config.stockLengths` (S15) ou, como antes, `stockLengths` na raiz — o mesmo valor nos dois lugares,
   // porque o core emenda plates por ele e a BOM compra por ele.
   if (root['stockLengths'] !== undefined) {
@@ -321,7 +329,6 @@ function houseWallFrom(raw: unknown, path: string, config: Config): HouseWall {
     start: point(w['start'], `${path}.start`),
     end: point(w['end'], `${path}.end`),
   };
-  if (w['level'] !== undefined) wall.level = count(w['level'], `${path}.level`);
   if (w['ends'] !== undefined) {
     const e = obj(w['ends'], `${path}.ends`);
     const ends: HouseWall['ends'] = {};
@@ -370,6 +377,7 @@ function wallCommon(w: Record<string, unknown>, path: string, config: Config): O
     wall.floorsSupported = n;
   }
   if (w['floorSpan'] !== undefined) wall.floorSpan = oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`);
+  if (w['level'] !== undefined) wall.level = count(w['level'], `${path}.level`);
   if (w['extraStuds'] !== undefined) {
     const list = w['extraStuds'];
     if (!Array.isArray(list)) throw new ProjectError(`${path}.extraStuds: esperado array`);
@@ -500,6 +508,14 @@ function mph(v: unknown, path: string): number {
 }
 
 /** Inteiro ≥ 1 (plies, kings, jacks). */
+/** Ângulo em graus, finito (seta do norte). */
+function degrees(v: unknown, path: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) {
+    throw new ProjectError(`${path}: esperado ângulo em graus, recebido ${show(v)}`);
+  }
+  return v;
+}
+
 function count(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) {
     throw new ProjectError(`${path}: esperado inteiro ≥ 1, recebido ${show(v)}`);

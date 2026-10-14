@@ -20,8 +20,12 @@ interface ExpectedPanel {
   flat: number[];
   warnings: string[];
   expectedMembers?: MemberKeyFields[];
-  /** Parede dividida (S15): id da parede, início do painel na parede, comprimento, origem e peso. */
-  wallId?: string;
+  /** Parede e pavimento (S16): o id é `{level}-{wallId}-P{n}`. */
+  wallId: string;
+  level: number;
+  /** Pontas da plate do painel em planta (S16). */
+  plan: { start: { x: number; y: number }; end: { x: number; y: number } };
+  /** Parede dividida (S15): início do painel na parede, comprimento, origem e peso. */
   wallOffset?: number;
   length?: number;
   layoutOrigin?: number;
@@ -36,13 +40,16 @@ describe('panelizeHouse — fixtures', () => {
   ])('%s: painéis por parede, peças, studs e avisos como no fixture', (_name, fx) => {
     const { panels, frames, warnings } = panelizeHouse(fx.house as House, fx.config as Config);
     const expected = fx.expected.panels as Record<string, ExpectedPanel>;
+    expect(panels.map((p) => p.id)).toEqual(fx.expected.panelIds);
     expect(panels.map((p) => p.id)).toEqual(Object.keys(expected));
-    const wallIds = [...new Set(Object.entries(expected).map(([id, e]) => e.wallId ?? id))];
+    const wallIds = [...new Set(Object.values(expected).map((e) => e.wallId))];
     expect(frames.map((f) => f.wallId)).toEqual(wallIds);
     for (const p of panels) {
       const e = expected[p.id]!;
       const frame = frames.find((f) => f.wallId === p.wallId)!;
-      expect(p.wallId, p.id).toBe(e.wallId ?? p.id);
+      expect(p.wallId, p.id).toBe(e.wallId);
+      expect(p.level, p.id).toBe(e.level);
+      expect(p.plan, p.id).toEqual(e.plan);
       expect(p.members, p.id).toHaveLength(e.members);
       expect(studXs(p), p.id).toEqual(e.studs);
       expect(flatXs(p), p.id).toEqual(e.flat);
@@ -53,21 +60,39 @@ describe('panelizeHouse — fixtures', () => {
       expect(p.layoutOrigin, p.id).toBe(e.layoutOrigin ?? frame.layoutOrigin);
       if (e.weightLb !== undefined) expect(p.weightLb, p.id).toBe(e.weightLb);
     }
-    // Os painéis de cada parede cobrem a plate inteira, em sequência.
+    // Os painéis de cada parede cobrem a plate inteira, em sequência — também em planta: o primeiro começa em
+    // plateStart, cada um começa onde o anterior acaba e o último acaba em plateEnd.
     for (const f of frames) {
       const own = panels.filter((p) => p.wallId === f.wallId);
       expect(own.map((p) => p.wallOffset)).toEqual(own.map((_, i) => own.slice(0, i).reduce((s, p) => s + p.length, 0)));
       expect(own.reduce((s, p) => s + p.length, 0)).toBeCloseTo(f.wall.length, 9);
+      expect(own[0]!.plan!.start).toEqual(f.plateStart);
+      expect(own[own.length - 1]!.plan!.end).toEqual(f.plateEnd);
+      for (let i = 1; i < own.length; i++) expect(own[i]!.plan!.start).toEqual(own[i - 1]!.plan!.end);
     }
     expect(warnings).toEqual(panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning }))));
   });
 
-  it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15)', () => {
+  it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15), mais o plan (S16)', () => {
     const { panels, frames } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
-    expect(panels).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
+    expect(panels.map(({ plan, ...p }) => p)).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
     expect(panels.map((p) => p.id)).toEqual([
-      'W01-P1', 'W01-P2', 'W01-P3', 'W02-P1', 'W02-P2', 'W03-P1', 'W03-P2', 'W03-P3', 'W04-P1', 'W04-P2', 'W05-P1', 'W05-P2',
+      '1-W01-P1', '1-W01-P2', '1-W01-P3', '1-W02-P1', '1-W02-P2', '1-W03-P1', '1-W03-P2', '1-W03-P3', '1-W04-P1', '1-W04-P2', '1-W05-P1', '1-W05-P2',
     ]);
+  });
+
+  it('level da parede entra no id e no painel; parede sem level é pavimento 1 (S16)', () => {
+    const house = house28x40.house as House;
+    const walls = house.walls.map((w) => (w.id === 'W05' ? { ...w, level: 2 } : w));
+    const { panels, frames } = panelizeHouse({ walls }, house28x40.config as Config);
+    expect(frames.map((f) => f.level)).toEqual([1, 1, 1, 1, 2]);
+    expect(panels.filter((p) => p.wallId === 'W05').map((p) => [p.id, p.level])).toEqual([['2-W05-P1', 2], ['2-W05-P2', 2]]);
+    expect(panels[0]!.level).toBe(1);
+    // A planta não muda com o pavimento: o plan do W05 é o mesmo.
+    expect(panels.filter((p) => p.wallId === 'W05').map((p) => p.plan)).toEqual(
+      panelizeHouse(house, house28x40.config as Config).panels.filter((p) => p.wallId === 'W05').map((p) => p.plan),
+    );
+    expect(() => panelizeHouse({ walls: walls.map((w) => ({ ...w, level: 0 })) }, house28x40.config as Config)).toThrow(/level deve ser inteiro ≥ 1/);
   });
 });
 

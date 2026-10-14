@@ -354,7 +354,7 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   de 240) e `wall-240-spliced` (um painel, plates emendadas); `house-28x40` com 12 painéis. CLI: `panels.csv`.
   Detalhes em 04-decisoes.
 
-- [ ] **S16 — Numeração e planta de painéis**
+- [x] **S16 — Numeração e planta de painéis**
   Prompt: "`Panel.id` = `{level}-{wallId}-P{n}` (`level` default 1; sempre com `-P1`, mesmo em parede de um
   painel só) e `Panel.plan: { start: Point; end: Point }`. Ordem: paredes na ordem do arquivo; painéis de start
   para end. Crie `output/planSvg.ts`: `housePlanSvg(house, panels, opts)` — vista de cima, escala em px/pol,
@@ -363,6 +363,14 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   CLI: `plan.svg` e `panels.csv` (id, parede, pavimento, comprimento, altura, seção, nº de peças, peso, avisos);
   `panels/<id>.svg` usa o id novo." Fixture: `house-28x40` com `expected.panelIds`; snapshot do `plan.svg`.
   Saída: planta conferida visualmente. Decisão: formato do id.
+  Feita em 2026-10-14 em sessão autônoma ("faça a próxima sessão"): abordagem não submetida antes; os `plan` dos
+  fixtures foram derivados do motor e conferidos à mão contra `expected.frames`; a planta foi conferida
+  visualmente pelo Claude no browser (28x40 e `casa-exemplo`) — o humano confere `plan.svg` no Checkpoint 3.
+  Diferenças em relação ao prompt: `level` virou campo de `Wall` (parede solta também numera `1-W01-P1`);
+  `Panel.plan` sai de `panelizeFrame`; `housePlanSvg(house, panels, opts)` desenha só a partir dos `plan`
+  dos painéis (a plate de cada parede vai do primeiro ao último painel), sem precisar dos frames;
+  `northAngle` entra na raiz do projeto do CLI. Fixtures `wall-480-split`, `wall-240-spliced` e `house-*`
+  atualizados para o id novo (`casa-exemplo` continua com 130 peças). Detalhes em 04-decisoes.
 
 - [ ] **S17 — Folha de fabricação**
   Depende de P24 (hipótese: vista de fora). Prompt: "Transforme `panelSvg` numa folha: cabeçalho (projeto, id,

@@ -9,22 +9,24 @@ const example = (): Project => parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa
 describe('buildProject', () => {
   const result = buildProject(example());
 
-  it('um painel por parede, na ordem do projeto', () => {
-    expect(result.panels.map((p) => p.id)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W06', 'W07']);
+  it('um painel por parede, na ordem do projeto, com id {level}-{wallId}-P{n} (S16)', () => {
+    expect(result.panels.map((p) => p.id)).toEqual(['1-W01-P1', '1-W02-P1', '1-W03-P1', '1-W04-P1', '1-W05-P1', '1-W06-P1', '1-W07-P1']);
+    expect(result.panels.map((p) => p.level)).toEqual([1, 1, 1, 1, 1, 1, 1]);
   });
 
-  it('gera cutlist.csv, bom.csv e um SVG por painel', () => {
+  it('gera cutlist.csv, bom.csv, panels.csv, plan.svg e um SVG por painel', () => {
     expect(result.files.map((f) => f.path)).toEqual([
       'cutlist.csv',
       'bom.csv',
       'panels.csv',
-      'panels/W01.svg',
-      'panels/W02.svg',
-      'panels/W03.svg',
-      'panels/W04.svg',
-      'panels/W05.svg',
-      'panels/W06.svg',
-      'panels/W07.svg',
+      'plan.svg',
+      'panels/1-W01-P1.svg',
+      'panels/1-W02-P1.svg',
+      'panels/1-W03-P1.svg',
+      'panels/1-W04-P1.svg',
+      'panels/1-W05-P1.svg',
+      'panels/1-W06-P1.svg',
+      'panels/1-W07-P1.svg',
     ]);
     for (const f of result.files.filter((f) => f.path.endsWith('.svg'))) {
       expect(f.content.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
@@ -35,7 +37,7 @@ describe('buildProject', () => {
   it('SVG usa o studSpacing do projeto nas marcas de layout', () => {
     const p = example();
     p.config.studSpacing = 24;
-    const svg = buildProject(p).files.find((f) => f.path === 'panels/W01.svg')!.content;
+    const svg = buildProject(p).files.find((f) => f.path === 'panels/1-W01-P1.svg')!.content;
     expect(svg).toContain('>24&quot;</text>');
     expect(svg).not.toContain('>16&quot;</text>');
   });
@@ -46,46 +48,46 @@ describe('buildProject', () => {
     p.config.studLength = [104.625];
     const { warnings } = buildProject(p);
     // só a W06 (9') tem stud de 104 5/8"
-    expect(warnings.map((w) => w.panelId)).toEqual(['W01', 'W02', 'W03', 'W04', 'W05', 'W07']);
-    expect(warnings[0]).toMatchObject({ panelId: 'W01', warning: { code: 'STUD_LENGTH_MISMATCH' } });
+    expect(warnings.map((w) => w.panelId)).toEqual(['1-W01-P1', '1-W02-P1', '1-W03-P1', '1-W04-P1', '1-W05-P1', '1-W07-P1']);
+    expect(warnings[0]).toMatchObject({ panelId: '1-W01-P1', warning: { code: 'STUD_LENGTH_MISMATCH' } });
   });
 
   it('W05: header pela tabela IRC (2-2x6, 2 jacks) a 82.5 — 22 peças, como o fixture wall-144-window-irc', () => {
-    const w05 = result.panels.find((p) => p.id === 'W05')!;
+    const w05 = result.panels.find((p) => p.id === '1-W05-P1')!;
     expect(w05.members).toHaveLength(22);
     const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
-    expect(csv).toContain('W05,header,2x6,42,"42""",2');
-    expect(csv).toContain('W05,jackStud,2x6,81,"81""",4');
-    expect(csv).toContain('W05,sill,2x6,36,"36""",1');
-    expect(csv).toContain('W05,cripple,2x6,31.5,"31 1/2""",2');
-    expect(csv).toContain('W05,cripple,2x6,6.125,"6 1/8""",2');
-    const svg = result.files.find((f) => f.path === 'panels/W05.svg')!.content;
+    expect(csv).toContain('1-W05-P1,header,2x6,42,"42""",2');
+    expect(csv).toContain('1-W05-P1,jackStud,2x6,81,"81""",4');
+    expect(csv).toContain('1-W05-P1,sill,2x6,36,"36""",1');
+    expect(csv).toContain('1-W05-P1,cripple,2x6,31.5,"31 1/2""",2');
+    expect(csv).toContain('1-W05-P1,cripple,2x6,6.125,"6 1/8""",2');
+    const svg = result.files.find((f) => f.path === 'panels/1-W05-P1.svg')!.content;
     expect(svg).toContain('<title>header 2x6 × 42&quot; (2 plies) [R602.7(1)] — ');
   });
 
   it("W06: headerHeight da abertura (7'-6\") sobrescreve o do config numa parede de 9'", () => {
-    const w06 = result.panels.find((p) => p.id === 'W06')!;
+    const w06 = result.panels.find((p) => p.id === '1-W06-P1')!;
     expect(w06.members.find((m) => m.role === 'header')).toMatchObject({ y: 90, section: '2x6' });
     expect(w06.members.filter((m) => m.role === 'jackStud').map((j) => j.length)).toEqual([88.5, 88.5, 88.5, 88.5]);
     expect(w06.members.filter((m) => m.role === 'stud').every((s) => s.length === 104.625)).toBe(true);
   });
 
   it('W07: janela e porta com king compartilhado — 24 peças, como o fixture wall-144-window-door', () => {
-    const w07 = result.panels.find((p) => p.id === 'W07')!;
+    const w07 = result.panels.find((p) => p.id === '1-W07-P1')!;
     expect(w07.members).toHaveLength(24);
     expect(w07.fieldCuts).toEqual([{ role: 'bottomPlate', openingId: 'P1', x: 64.5, length: 38 }]);
     const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
-    expect(csv).toContain('W07,plates,2x6,144,"144""",3');
-    expect(csv).toContain('W07,kingStud,2x6,92.625,"92 5/8""",3');
-    expect(csv).toContain('W07,jackStud,2x6,81,"81""",4');
-    expect(csv).toContain('W07,header,2x10,41,"41""",2');
-    const svg = result.files.find((f) => f.path === 'panels/W07.svg')!.content;
+    expect(csv).toContain('1-W07-P1,plates,2x6,144,"144""",3');
+    expect(csv).toContain('1-W07-P1,kingStud,2x6,92.625,"92 5/8""",3');
+    expect(csv).toContain('1-W07-P1,jackStud,2x6,81,"81""",4');
+    expect(csv).toContain('1-W07-P1,header,2x10,41,"41""",2');
+    const svg = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
     expect(svg).toContain('>cortar na obra 38&quot;</text>');
     expect(svg).toContain('<title>header 2x10 × 41&quot; (2 plies) [project] — ');
   });
 
   it('W04: porta em parede interna não portante leva 2x4 deitado (R602.7.4), sem cripples acima', () => {
-    const w04 = result.panels.find((p) => p.id === 'W04')!;
+    const w04 = result.panels.find((p) => p.id === '1-W04-P1')!;
     expect(w04.members.find((m) => m.role === 'header')).toMatchObject({
       section: '2x4',
       plies: 1,
@@ -98,8 +100,8 @@ describe('buildProject', () => {
     expect(w04.members.filter((m) => m.role === 'cripple')).toEqual([]);
     expect(w04.fieldCuts).toEqual([{ role: 'bottomPlate', openingId: 'P2', x: 40, length: 32 }]);
     const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
-    expect(csv).toContain('W04,header,2x4,35,"35""",1');
-    const svg = result.files.find((f) => f.path === 'panels/W04.svg')!.content;
+    expect(csv).toContain('1-W04-P1,header,2x4,35,"35""",1');
+    const svg = result.files.find((f) => f.path === 'panels/1-W04-P1.svg')!.content;
     expect(svg).toContain('<title>header 2x4 × 35&quot; [R602.7.4] — ');
   });
 
@@ -126,7 +128,7 @@ describe('buildProject', () => {
     w03.openings.push({ id: 'P9', type: 'door', offset: 40, roughWidth: 38, roughHeight: 82.5 });
     expect(() => buildProject(p)).toThrow(/parede W03, abertura P9: header fora da tabela \(0 pavimento/);
     w03.openings[0]!.header = { section: '2x6', plies: 2 };
-    expect(buildProject(p).panels.find((x) => x.id === 'W03')!.members.some((m) => m.role === 'header')).toBe(true);
+    expect(buildProject(p).panels.find((x) => x.id === '1-W03-P1')!.members.some((m) => m.role === 'header')).toBe(true);
   });
 
   it('bom.csv usa os pré-cortes do projeto: 92 5/8" e 104 5/8" como estoque', () => {
@@ -162,7 +164,7 @@ describe('buildProject', () => {
     // então a BOM não vê peça acima do estoque de 16'.
     walls[0]!.openings = [];
     const result = buildProject(p);
-    const w99 = result.panels.find((x) => x.id === 'W99')!;
+    const w99 = result.panels.find((x) => x.id === '1-W99-P1')!;
     const plates = w99.members.filter((m) => m.role === 'bottomPlate' || m.role === 'topPlate' || m.role === 'doubleTopPlate');
     expect(plates.map((m) => m.length).sort((a, b) => a - b)).toEqual([48, 48, 96, 144, 192, 192]);
     const bom = result.files.find((f) => f.path === 'bom.csv')!.content;
@@ -184,18 +186,18 @@ describe('buildProject', () => {
       openings: [{ id: 'P40', type: 'door', offset: 168, roughWidth: 38, roughHeight: 82.5, header: { section: '2x10', plies: 2 } }],
     });
     const result = buildProject(p);
-    expect(result.panels.map((x) => x.id).slice(7)).toEqual(['W40-P1', 'W40-P2']);
-    expect(result.files.map((f) => f.path).slice(-2)).toEqual(['panels/W40-P1.svg', 'panels/W40-P2.svg']);
+    expect(result.panels.map((x) => x.id).slice(7)).toEqual(['1-W40-P1', '1-W40-P2']);
+    expect(result.files.map((f) => f.path).slice(-2)).toEqual(['panels/1-W40-P1.svg', 'panels/1-W40-P2.svg']);
     const csv = result.files.find((f) => f.path === 'panels.csv')!.content;
-    expect(csv.split('\n')[0]).toBe('panel,wall,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings');
-    expect(csv).toContain('W01,W01,0,"0""",146.75,"12\'-2 3/4""",97.125,"8\'-1 1/8""",2x6,');
-    expect(csv).toContain('W40-P1,W40,0,"0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
-    expect(csv).toContain('W40-P2,W40,240,"20\'-0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
-    const p1 = csv.split('\n').find((l) => l.startsWith('W40-P1,'))!.split(',');
+    expect(csv.split('\n')[0]).toBe('panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings');
+    expect(csv).toContain('1-W01-P1,W01,1,0,"0""",146.75,"12\'-2 3/4""",97.125,"8\'-1 1/8""",2x6,');
+    expect(csv).toContain('1-W40-P1,W40,1,0,"0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
+    expect(csv).toContain('1-W40-P2,W40,1,240,"20\'-0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
+    const p1 = csv.split('\n').find((l) => l.startsWith('1-W40-P1,'))!.split(',');
     // peças (plies contam) e peso em lb
-    expect(Number(p1[9])).toBe(result.panels[7]!.members.reduce((n, m) => n + (m.plies ?? 1), 0));
-    expect(Number(p1[10])).toBe(result.panels[7]!.weightLb);
-    expect(p1[11]).toBe('');
+    expect(Number(p1[10])).toBe(result.panels[7]!.members.reduce((n, m) => n + (m.plies ?? 1), 0));
+    expect(Number(p1[11])).toBe(result.panels[7]!.weightLb);
+    expect(p1[12]).toBe('');
     // config.panel do projeto: máximo de 12' divide a W40 em quatro, com quebras em múltiplos de 48 (módulo).
     p.config.panel = { maxLength: 144, module: 48, lap: 48, minLap: 24 };
     const four = buildProject(p).panels.filter((x) => x.wallId === 'W40');
@@ -214,12 +216,12 @@ describe('buildProject', () => {
       { ...w, id: 'W/1' },
       { ...w, id: 'W_1', start: { x: 0, y: 900 }, end: { x: 144, y: 900 }, ends: {} },
     ];
-    expect(() => buildProject(p)).toThrow(/"W\/1" e "W_1" gerariam o mesmo arquivo panels\/W_1\.svg/);
+    expect(() => buildProject(p)).toThrow(/"1-W\/1-P1" e "1-W_1-P1" gerariam o mesmo arquivo panels\/1-W_1-P1\.svg/);
   });
 
   describe('casa em planta (S13)', () => {
     it('W01 atravessa por ends, W02 encosta, W03 em T; as soltas saem como antes', () => {
-      const plates = Object.fromEntries(result.panels.map((p) => [p.id, [p.length, p.layoutOrigin]]));
+      const plates = Object.fromEntries(result.panels.map((p) => [p.wallId, [p.length, p.layoutOrigin]]));
       expect(plates).toEqual({
         W01: [146.75, 0],
         W02: [189.25, -5.5],
@@ -233,19 +235,19 @@ describe('buildProject', () => {
       const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
       // S14: double top de W01 recua 5.5 no canto (atravessa); a de W02 avança 5.5 no canto e é cortada na faixa
       // do T de W03 (3.5"); a de W03 avança 5.5 sobre W02. Bottom e top não mudam.
-      expect(csv).toContain('W01,plates,2x6,146.75,"146 3/4""",2');
-      expect(csv).toContain('W01,plates,2x6,141.25,"141 1/4""",1');
-      expect(csv).toContain('W02,plates,2x6,189.25,"189 1/4""",2');
-      expect(csv).toContain('W02,plates,2x6,97,"97""",1');
-      expect(csv).toContain('W02,plates,2x6,94.25,"94 1/4""",1');
-      expect(csv).toContain('W02,block,2x6,14.5,"14 1/2""",3');
-      expect(csv).toContain('W03,plates,2x4,122.75,"122 3/4""",1');
-      expect(csv).toContain('W03,plates,2x4,117.25,"117 1/4""",2');
+      expect(csv).toContain('1-W01-P1,plates,2x6,146.75,"146 3/4""",2');
+      expect(csv).toContain('1-W01-P1,plates,2x6,141.25,"141 1/4""",1');
+      expect(csv).toContain('1-W02-P1,plates,2x6,189.25,"189 1/4""",2');
+      expect(csv).toContain('1-W02-P1,plates,2x6,97,"97""",1');
+      expect(csv).toContain('1-W02-P1,plates,2x6,94.25,"94 1/4""",1');
+      expect(csv).toContain('1-W02-P1,block,2x6,14.5,"14 1/2""",3');
+      expect(csv).toContain('1-W03-P1,plates,2x4,122.75,"122 3/4""",1');
+      expect(csv).toContain('1-W03-P1,plates,2x4,117.25,"117 1/4""",2');
       // Canto California: W01 atravessa e ganha o stud flat em x=1.5.
-      const w01 = result.panels.find((p) => p.id === 'W01')!;
+      const w01 = result.panels.find((p) => p.id === '1-W01-P1')!;
       expect(w01.members.filter((m) => m.role === 'stud' && m.flat === true).map((m) => m.x)).toEqual([1.5]);
       // W02: layout da quina — primeiro stud de marca em 9.75 (marca 10.5 = 16 − 5.5).
-      const w02 = result.panels.find((p) => p.id === 'W02')!;
+      const w02 = result.panels.find((p) => p.id === '1-W02-P1')!;
       expect(w02.members.filter((m) => m.role === 'stud').map((m) => m.x).slice(0, 3)).toEqual([0, 9.75, 25.75]);
     });
 
@@ -268,7 +270,7 @@ describe('buildProject', () => {
       expect(() => buildProject(p)).toThrow(/^parede W02, abertura J9: a parede W03 encosta em T em x=93.25/);
       w02.openings[0]!.offset = 100; // zona [97, 139] no eixo → [94.25, 136.25] no painel; faixa do T 91.5–95
       const { warnings } = buildProject(p);
-      expect(warnings).toEqual([{ panelId: 'W02', warning: expect.objectContaining({ code: 'OPENING_AT_TEE' }) }]);
+      expect(warnings).toEqual([{ panelId: '1-W02-P1', warning: expect.objectContaining({ code: 'OPENING_AT_TEE' }) }]);
     });
 
     it('formato por comprimento continua valendo: mesmas paredes soltas, mesmos painéis', () => {
@@ -278,7 +280,27 @@ describe('buildProject', () => {
         walls: [{ id: 'W05', length: 144, height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 0, openings: example().house!.walls[4]!.openings }],
       };
       const panel = buildProject(loose).panels[0]!;
-      expect(panel.members).toEqual(result.panels.find((p) => p.id === 'W05')!.members);
+      expect(panel.members).toEqual(result.panels.find((p) => p.id === '1-W05-P1')!.members);
+      // Parede solta também numera com o pavimento, mas não gera plan.svg nem Panel.plan.
+      expect(panel.id).toBe('1-W05-P1');
+      expect(panel.plan).toBeUndefined();
+      expect(buildProject(loose).files.map((f) => f.path)).toEqual(['cutlist.csv', 'bom.csv', 'panels.csv', 'panels/1-W05-P1.svg']);
+    });
+
+    it('plan.svg: planta de painéis com o nome do projeto, as 7 paredes e a seta do norte do projeto (S16)', () => {
+      const plan = result.files.find((f) => f.path === 'plan.svg')!.content;
+      expect(plan.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
+      expect(plan).toContain('>casa-exemplo</text>');
+      expect(plan).toContain('>7 paredes · 7 painéis · ');
+      expect(plan.match(/<rect class="wall /g)).toHaveLength(7);
+      expect(plan).toContain('>1-W01-P1</text>');
+      expect(plan).toContain('<g class="north" transform="rotate(0 ');
+      // Painéis em planta: a W01 (atravessa por ends) começa na face externa da W02.
+      expect(result.panels[0]!.plan).toEqual({ start: { x: -2.75, y: 0 }, end: { x: 144, y: 0 } });
+      // Sem northAngle no projeto, sem seta.
+      const p = example();
+      delete p.house!.northAngle;
+      expect(buildProject(p).files.find((f) => f.path === 'plan.svg')!.content).not.toContain('class="north"');
     });
   });
 });

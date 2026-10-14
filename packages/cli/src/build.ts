@@ -5,17 +5,18 @@
  * Saídas:
  * - `cutlist.csv` — lista de corte de todos os painéis (uma seção por painel);
  * - `bom.csv` — lista de material consolidada;
- * - `panels.csv` — um painel por linha, com parede, posição, dimensões, peças, peso e avisos (S15);
+ * - `panels.csv` — um painel por linha, com parede, pavimento, posição, dimensões, peças, peso e avisos (S15/S16);
+ * - `plan.svg` — planta de painéis (só na casa em planta, S16);
  * - `panels/<id>.svg` — elevação de cada painel.
  *
- * Cada parede (solta ou em planta) vira os painéis de `splitWall` (S15): um só, com o id da parede, quando
- * cabe em `config.panel.maxLength`; `W01-P1`, `W01-P2`… quando não.
+ * Cada parede (solta ou em planta) vira os painéis de `splitWall` (S15), com ids `{level}-{wallId}-P{n}` (S16):
+ * `1-W01-P1` quando cabe em `config.panel.maxLength`; `1-W01-P1`, `1-W01-P2`… quando não.
  *
  * Erros do core (header fora da tabela, parede sem como dividir…) são recolhidos por parede e devolvidos
  * juntos; um projeto com erro não gera nenhum arquivo — meia saída na fábrica é pior que nenhuma.
  */
 
-import { frameWalls, panelizeFrame, panelSvg, splitWall, type Panel, type WallFrame, type Warning } from 'core';
+import { frameWalls, housePlanSvg, panelizeFrame, panelSvg, splitWall, type Panel, type WallFrame, type Warning } from 'core';
 import { bomCsv, cutListCsv, panelsCsv, projectBom } from './csv';
 import type { Project } from './project';
 
@@ -103,6 +104,9 @@ export function buildProject(project: Project): BuildResult {
           content: bomCsv(projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths)),
         },
         { path: 'panels.csv', content: panelsCsv(panels) },
+        ...(project.house === undefined
+          ? []
+          : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
       );
     } catch (e) {
       problems.push(`lista de material: ${(e as Error).message}`);

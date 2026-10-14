@@ -24,8 +24,9 @@
   "expected": {
     "panels": [
       {
-        "id": "W-240",
+        "id": "1-W-240-P1",
         "wallId": "W-240",
+        "level": 1,
         "wallOffset": 0,
         "length": 240,
         "layoutOrigin": 0,

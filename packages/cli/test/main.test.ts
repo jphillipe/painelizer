@@ -110,7 +110,7 @@ describe('run (I/O em memória)', () => {
     expect(m.dirs).toEqual([]);
   });
 
-  it('sucesso: grava 10 arquivos sob --out e resume no stdout', () => {
+  it('sucesso: grava 11 arquivos sob --out e resume no stdout', () => {
     const m = memoryIo({ 'p.json': exampleText });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     const outDir = resolve('saida');
@@ -118,13 +118,14 @@ describe('run (I/O em memória)', () => {
       join(outDir, 'cutlist.csv'),
       join(outDir, 'bom.csv'),
       join(outDir, 'panels.csv'),
-      join(outDir, 'panels', 'W01.svg'),
-      join(outDir, 'panels', 'W02.svg'),
-      join(outDir, 'panels', 'W03.svg'),
-      join(outDir, 'panels', 'W04.svg'),
-      join(outDir, 'panels', 'W05.svg'),
-      join(outDir, 'panels', 'W06.svg'),
-      join(outDir, 'panels', 'W07.svg'),
+      join(outDir, 'plan.svg'),
+      join(outDir, 'panels', '1-W01-P1.svg'),
+      join(outDir, 'panels', '1-W02-P1.svg'),
+      join(outDir, 'panels', '1-W03-P1.svg'),
+      join(outDir, 'panels', '1-W04-P1.svg'),
+      join(outDir, 'panels', '1-W05-P1.svg'),
+      join(outDir, 'panels', '1-W06-P1.svg'),
+      join(outDir, 'panels', '1-W07-P1.svg'),
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
@@ -133,13 +134,14 @@ describe('run (I/O em memória)', () => {
       '  cutlist.csv',
       '  bom.csv',
       '  panels.csv',
-      '  panels/W01.svg',
-      '  panels/W02.svg',
-      '  panels/W03.svg',
-      '  panels/W04.svg',
-      '  panels/W05.svg',
-      '  panels/W06.svg',
-      '  panels/W07.svg',
+      '  plan.svg',
+      '  panels/1-W01-P1.svg',
+      '  panels/1-W02-P1.svg',
+      '  panels/1-W03-P1.svg',
+      '  panels/1-W04-P1.svg',
+      '  panels/1-W05-P1.svg',
+      '  panels/1-W06-P1.svg',
+      '  panels/1-W07-P1.svg',
     ]);
     expect(m.err).toEqual([]);
   });
@@ -150,7 +152,7 @@ describe('run (I/O em memória)', () => {
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     expect(m.err).toHaveLength(6);
-    expect(m.err[0]).toMatch(/^aviso W01 STUD_LENGTH_MISMATCH: /);
+    expect(m.err[0]).toMatch(/^aviso 1-W01-P1 STUD_LENGTH_MISMATCH: /);
   });
 
   it('cwd explícito resolve entrada e saída relativas', () => {
@@ -194,10 +196,11 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(code).toBe(0);
     expect(err).toEqual([]);
-    expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels', 'panels.csv']);
-    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['W01.svg', 'W02.svg', 'W03.svg', 'W04.svg', 'W05.svg', 'W06.svg', 'W07.svg']);
-    expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('W04,plates,2x4,126,"126""",3');
-    expect(readFileSync(join(outDir, 'panels', 'W02.svg'), 'utf8')).toContain(`>15'-9 1/4&quot;</text>`); // W02 encosta no canto: 192 − 2.75
+    expect(readdirSync(outDir).sort()).toEqual(['bom.csv', 'cutlist.csv', 'panels', 'panels.csv', 'plan.svg']);
+    expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['1-W01-P1.svg', '1-W02-P1.svg', '1-W03-P1.svg', '1-W04-P1.svg', '1-W05-P1.svg', '1-W06-P1.svg', '1-W07-P1.svg']);
+    expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('1-W04-P1,plates,2x4,126,"126""",3');
+    expect(readFileSync(join(outDir, 'panels', '1-W02-P1.svg'), 'utf8')).toContain(`>15'-9 1/4&quot;</text>`); // W02 encosta no canto: 192 − 2.75
+    expect(readFileSync(join(outDir, 'plan.svg'), 'utf8')).toContain('>casa-exemplo</text>');
   });
 
   it('processo real: tsx src/cli.ts build ... --out ...', () => {
@@ -211,7 +214,7 @@ describe('ponta a ponta (disco)', () => {
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
     expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 130 peças → ${outDir}`);
-    expect(existsSync(join(outDir, 'panels', 'W01.svg'))).toBe(true);
+    expect(existsSync(join(outDir, 'panels', '1-W01-P1.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });
     expect(bad.status).toBe(2);

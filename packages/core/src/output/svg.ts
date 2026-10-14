@@ -74,10 +74,10 @@ const FILL: Readonly<Record<MemberRole, string>> = {
   block: '#cdb98f',
 };
 
-const STROKE = '#5a4632';
-const DIM = '#1f4e79';
+export const STROKE = '#5a4632';
+export const DIM = '#1f4e79';
 const FIELD_CUT = '#c0392b';
-const FONT = 'Helvetica, Arial, sans-serif';
+export const FONT = 'Helvetica, Arial, sans-serif';
 
 const TITLE_HEIGHT = 44;
 const DIM_LEFT_WIDTH = 56;
@@ -285,8 +285,8 @@ function fieldCutMark(
   ].join('\n');
 }
 
-/** Cota horizontal em `y`, com linhas de chamada subindo até `fromY`. */
-function dimensionH(x1: number, x2: number, y: number, fromY: number, label: string): string {
+/** Cota horizontal em `y`, com linhas de chamada subindo até `fromY`. Usada também pela planta (S16). */
+export function dimensionH(x1: number, x2: number, y: number, fromY: number, label: string): string {
   const mid = (x1 + x2) / 2;
   return [
     `<g class="dim dim-length" stroke="${DIM}" stroke-width="0.75" fill="none">`,
@@ -300,8 +300,8 @@ function dimensionH(x1: number, x2: number, y: number, fromY: number, label: str
   ].join('\n');
 }
 
-/** Cota vertical em `x`, com linhas de chamada indo até `fromX`. */
-function dimensionV(x: number, y1: number, y2: number, fromX: number, label: string): string {
+/** Cota vertical em `x`, com linhas de chamada indo até `fromX`. Usada também pela planta (S16). */
+export function dimensionV(x: number, y1: number, y2: number, fromX: number, label: string): string {
   const mid = (y1 + y2) / 2;
   return [
     `<g class="dim dim-height" stroke="${DIM}" stroke-width="0.75" fill="none">`,

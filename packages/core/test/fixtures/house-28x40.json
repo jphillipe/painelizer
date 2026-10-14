@@ -14,6 +14,7 @@
     }
   },
   "house": {
+    "northAngle": 0,
     "walls": [
       {
         "id": "W01",
@@ -294,133 +295,158 @@
         }
       }
     ],
+    "panelIds": ["1-W01-P1", "1-W01-P2", "1-W01-P3", "1-W02-P1", "1-W02-P2", "1-W03-P1", "1-W03-P2", "1-W03-P3", "1-W04-P1", "1-W04-P2", "1-W05-P1", "1-W05-P2"],
     "panels": {
-      "W01-P1": {
+      "1-W01-P1": {
         "wallId": "W01",
+        "level": 1,
         "wallOffset": 0,
         "length": 144,
         "layoutOrigin": 0,
+        "plan": { "start": { "x": -2.75, "y": 0 }, "end": { "x": 141.25, "y": 0 } },
         "weightLb": 244.9,
         "members": 14,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
         "flat": [1.5],
         "warnings": []
       },
-      "W01-P2": {
+      "1-W01-P2": {
         "wallId": "W01",
+        "level": 1,
         "wallOffset": 144,
         "length": 144,
         "layoutOrigin": -144,
+        "plan": { "start": { "x": 141.25, "y": 0 }, "end": { "x": 285.25, "y": 0 } },
         "weightLb": 272.4,
         "members": 21,
         "studs": [0, 15.25, 79.25, 95.25, 111.25, 127.25, 142.5],
         "flat": [],
         "warnings": []
       },
-      "W01-P3": {
+      "1-W01-P3": {
         "wallId": "W01",
+        "level": 1,
         "wallOffset": 288,
         "length": 197.5,
         "layoutOrigin": -288,
+        "plan": { "start": { "x": 285.25, "y": 0 }, "end": { "x": 482.75, "y": 0 } },
         "weightLb": 356.7,
         "members": 26,
         "studs": [0, 15.25, 31.25, 95.25, 111.25, 127.25, 143.25, 159.25, 175.25, 196],
         "flat": [190.5],
         "warnings": []
       },
-      "W02-P1": {
+      "1-W02-P1": {
         "wallId": "W02",
+        "level": 1,
         "wallOffset": 0,
         "length": 186.5,
         "layoutOrigin": -5.5,
+        "plan": { "start": { "x": 480, "y": 2.75 }, "end": { "x": 480, "y": 189.25 } },
         "weightLb": 349.6,
         "members": 24,
         "studs": [0, 9.75, 25.75, 41.75, 57.75, 121.75, 137.75, 153.75, 169.75, 185],
         "flat": [],
         "warnings": []
       },
-      "W02-P2": {
+      "1-W02-P2": {
         "wallId": "W02",
+        "level": 1,
         "wallOffset": 186.5,
         "length": 144,
         "layoutOrigin": -192,
+        "plan": { "start": { "x": 480, "y": 189.25 }, "end": { "x": 480, "y": 333.25 } },
         "weightLb": 274.1,
         "members": 20,
         "studs": [0, 15.25, 79.25, 95.25, 111.25, 127.25, 142.5],
         "flat": [],
         "warnings": []
       },
-      "W03-P1": {
+      "1-W03-P1": {
         "wallId": "W03",
+        "level": 1,
         "wallOffset": 0,
         "length": 144,
         "layoutOrigin": 0,
+        "plan": { "start": { "x": 482.75, "y": 336 }, "end": { "x": 338.75, "y": 336 } },
         "weightLb": 248.9,
         "members": 14,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
         "flat": [1.5],
         "warnings": []
       },
-      "W03-P2": {
+      "1-W03-P2": {
         "wallId": "W03",
+        "level": 1,
         "wallOffset": 144,
         "length": 192,
         "layoutOrigin": -144,
+        "plan": { "start": { "x": 338.75, "y": 336 }, "end": { "x": 146.75, "y": 336 } },
         "weightLb": 366.2,
         "members": 22,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 175.25, 190.5],
         "flat": [],
         "warnings": []
       },
-      "W03-P3": {
+      "1-W03-P3": {
         "wallId": "W03",
+        "level": 1,
         "wallOffset": 336,
         "length": 149.5,
         "layoutOrigin": -336,
+        "plan": { "start": { "x": 146.75, "y": 336 }, "end": { "x": -2.75, "y": 336 } },
         "weightLb": 235.6,
         "members": 14,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 148],
         "flat": [142.5],
         "warnings": []
       },
-      "W04-P1": {
+      "1-W04-P1": {
         "wallId": "W04",
+        "level": 1,
         "wallOffset": 0,
         "length": 186.5,
         "layoutOrigin": -5.5,
+        "plan": { "start": { "x": 0, "y": 333.25 }, "end": { "x": 0, "y": 146.75 } },
         "weightLb": 353.6,
         "members": 24,
         "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 137.75, 153.75, 169.75, 185],
         "flat": [],
         "warnings": []
       },
-      "W04-P2": {
+      "1-W04-P2": {
         "wallId": "W04",
+        "level": 1,
         "wallOffset": 186.5,
         "length": 144,
         "layoutOrigin": -192,
+        "plan": { "start": { "x": 0, "y": 146.75 }, "end": { "x": 0, "y": 2.75 } },
         "weightLb": 219.3,
         "members": 13,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 142.5],
         "flat": [],
         "warnings": []
       },
-      "W05-P1": {
+      "1-W05-P1": {
         "wallId": "W05",
+        "level": 1,
         "wallOffset": 0,
         "length": 192,
         "layoutOrigin": 0,
+        "plan": { "start": { "x": 264, "y": 2.75 }, "end": { "x": 264, "y": 194.75 } },
         "weightLb": 234.2,
         "members": 22,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 159.25, 175.25, 190.5],
         "flat": [],
         "warnings": []
       },
-      "W05-P2": {
+      "1-W05-P2": {
         "wallId": "W05",
+        "level": 1,
         "wallOffset": 192,
         "length": 138.5,
         "layoutOrigin": -192,
+        "plan": { "start": { "x": 264, "y": 194.75 }, "end": { "x": 264, "y": 333.25 } },
         "weightLb": 138.6,
         "members": 13,
         "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 137],

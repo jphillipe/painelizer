@@ -40,7 +40,8 @@ Primeiro prompt: ver `docs/03-sessoes.md`, sessão 1.
 ```bash
 pnpm panelizer build packages/cli/examples/casa-exemplo.json --out saida/
 ```
-Gera `saida/cutlist.csv`, `saida/bom.csv` e `saida/panels/<id>.svg` (um por painel; abra no navegador).
+Gera `saida/cutlist.csv`, `saida/bom.csv`, `saida/panels.csv`, `saida/plan.svg` (planta de painéis, só em projeto em
+planta) e `saida/panels/<id>.svg` (um por painel, id `{pavimento}-{parede}-P{n}`, S16; abra no navegador).
 Entrada: `{ "name", "config", "walls": [...], "stockLengths"? }` — medidas em polegadas decimais ou
 pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Cada parede vem **em planta** (`start`/`end` no eixo da parede,
 S13: o motor resolve cantos, T, comprimento de plate e origem de layout) ou **solta** (`length`); os dois

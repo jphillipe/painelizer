@@ -20,8 +20,9 @@ Uso:
 Gera em <dir>:
   cutlist.csv        lista de corte de todos os painéis
   bom.csv            lista de material consolidada
-  panels.csv         um painel por linha: parede, posição, dimensões, peças, peso, avisos
-  panels/<id>.svg    elevação de cada painel
+  panels.csv         um painel por linha: parede, pavimento, posição, dimensões, peças, peso, avisos
+  plan.svg           planta de painéis (vista de cima, só para projeto em planta)
+  panels/<id>.svg    elevação de cada painel ({pavimento}-{parede}-P{n})
 
 Opções:
   --out <dir>   diretório de saída (obrigatório; criado se não existir)
