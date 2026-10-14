@@ -372,7 +372,7 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   `northAngle` entra na raiz do projeto do CLI. Fixtures `wall-480-split`, `wall-240-spliced` e `house-*`
   atualizados para o id novo (`casa-exemplo` continua com 130 peças). Detalhes em 04-decisoes.
 
-- [ ] **S17 — Folha de fabricação**
+- [x] **S17 — Folha de fabricação**
   Depende de P24 (hipótese: vista de fora). Prompt: "Transforme `panelSvg` numa folha: cabeçalho (projeto, id,
   parede, pavimento, seção, data e revisão vindas de `opts`), indicação de face externa e de vista (P24),
   cotas de RO (largura; altura do subfloor ao topo e à base do RO), altura do header e do sill ao subfloor,
@@ -382,6 +382,17 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   dependência; PDF fica no CLI (`--pdf`, `@resvg/resvg-js`) só se a fábrica pedir — o SVG abre e imprime no
   navegador." Fixtures: snapshots novos de todos os painéis; conferência visual do humano de pelo menos
   `wall-144-window-door` e um painel de canto. Saída: a folha que vai para o Checkpoint 3 (abaixo).
+  Feita em 2026-10-14 em sessão autônoma ("faça a próxima sessão"): abordagem não submetida antes; as folhas
+  foram conferidas visualmente pelo Claude (render com Chrome headless de `wall-144-window-door`, porta não
+  portante, stud extra, canto L W1/W2 e `house-28x40` W01-P1) — **o humano ainda confere** `wall-144-window-door`
+  e um canto antes do Checkpoint 3. Diferenças em relação ao prompt: (a) o desenho **não espelha**: vai sempre de
+  start para end (x=0 à esquerda) e a folha escreve qual face o leitor vê — `Panel.facing` vem da planta (lado
+  oposto ao centro das plates, como na planta de painéis); parede externa solta assume vista de fora; (b) o motor
+  passou a expor `Panel.openings` (RO em x do painel, topo = base do header), `exterior` e `bearing` — a folha
+  não deriva o RO das peças; (c) a sill é cotada pelo topo (peitoril = base do RO) e o header pela base (= topo do
+  RO), que são as alturas que a fábrica usa; (d) data e revisão vêm do arquivo do projeto no CLI (`date`,
+  `revision` na raiz), nunca do relógio. Snapshots `wall-*` regenerados e dois novos (`house-corner-L-W1/W2`).
+  Detalhes em 04-decisoes.
 
 - [ ] **Checkpoint 3 — casa inteira na fábrica (sem Claude)**
   Rodar `house-28x40` e um projeto de `06-referencias` do início ao fim; levar as folhas, o `plan.svg` e a BOM

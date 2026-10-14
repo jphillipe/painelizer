@@ -41,8 +41,10 @@ Primeiro prompt: ver `docs/03-sessoes.md`, sessão 1.
 pnpm panelizer build packages/cli/examples/casa-exemplo.json --out saida/
 ```
 Gera `saida/cutlist.csv`, `saida/bom.csv`, `saida/panels.csv`, `saida/plan.svg` (planta de painéis, só em projeto em
-planta) e `saida/panels/<id>.svg` (um por painel, id `{pavimento}-{parede}-P{n}`, S16; abra no navegador).
-Entrada: `{ "name", "config", "walls": [...], "stockLengths"? }` — medidas em polegadas decimais ou
+planta) e `saida/panels/<id>.svg` (a folha de fabricação de cada painel, id `{pavimento}-{parede}-P{n}`, S16/S17:
+cabeçalho com nome, `date` e `revision` do projeto, elevação cotada com a vista indicada (P24), lista de peças,
+peso, cortes na obra e avisos; abra e imprima no navegador).
+Entrada: `{ "name", "date"?, "revision"?, "config", "walls": [...], "stockLengths"? }` — medidas em polegadas decimais ou
 pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Cada parede vem **em planta** (`start`/`end` no eixo da parede,
 S13: o motor resolve cantos, T, comprimento de plate e origem de layout) ou **solta** (`length`); os dois
 formatos não se misturam no mesmo arquivo. Montagem de canto e T em `config.corner` (`california` | `three-stud`)

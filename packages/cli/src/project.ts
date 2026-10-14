@@ -41,6 +41,9 @@
  * dos painéis (`{level}-{wallId}-P{n}`); `northAngle` na raiz (graus, do +y da planta no sentido horário) põe a
  * seta do norte na planta de painéis e só vale em projeto em planta.
  *
+ * Folha de fabricação (S17): `date` e `revision` na raiz (texto livre) vão para o cabeçalho de cada folha, junto
+ * com `name`. A folha nunca lê o relógio — sem `date` sai sem data.
+ *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
  * (medidas; o `stockLengths` na raiz do arquivo continua aceito e vale o mesmo — os dois juntos é erro). Plate
@@ -81,6 +84,9 @@ import {
 
 export interface Project {
   name: string;
+  /** Data e revisão das folhas de fabricação (S17), como texto livre na raiz do arquivo. Ausentes = sem carimbo. */
+  date?: string;
+  revision?: string;
   config: Config;
   /** Paredes soltas (formato por comprimento). Vazio quando o projeto vem em planta (`house`). */
   walls: Wall[];
@@ -149,6 +155,8 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   }
 
   const project: Project = { name, config, walls };
+  if (root['date'] !== undefined) project.date = str(root['date'], `${source}.date`);
+  if (root['revision'] !== undefined) project.revision = str(root['revision'], `${source}.revision`);
   if (house) project.house = { walls: houseWalls };
   if (root['northAngle'] !== undefined) {
     if (!house) throw new ProjectError(`${source}.northAngle: só vale em projeto em planta (paredes com start/end)`);

@@ -9,7 +9,7 @@
  * `plateStart` para `plateEnd` pelo `wallOffset` e pelo comprimento do painel.
  */
 
-import type { Config, Panel, Point, Warning } from '../types';
+import type { Config, Panel, PanelFacing, Point, Warning } from '../types';
 import { splitWall } from '../panelize/splitWall';
 import type { HeaderTables } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
@@ -54,8 +54,12 @@ export function panelizeFrame(
   const ux = Math.sign(frame.plateEnd.x - frame.plateStart.x);
   const uy = Math.sign(frame.plateEnd.y - frame.plateStart.y);
   const at = (s: number): Point => ({ x: frame.plateStart.x + ux * s, y: frame.plateStart.y + uy * s });
+  // Face voltada para quem lê a folha (S17, P24): x=0 à esquerda ⇒ o leitor está à direita do sentido
+  // start→end; se o lado de fora está aí, a elevação é a vista de fora.
+  const facing: { facing: PanelFacing } | Record<string, never> =
+    frame.outside === undefined ? {} : { facing: frame.outside === 'right' ? 'exterior' : 'interior' };
   return splitWall(frame.wall, config, tables).map((p) => {
     const a = p.wallOffset ?? 0;
-    return { ...p, plan: { start: at(a), end: at(a + p.length) } };
+    return { ...p, plan: { start: at(a), end: at(a + p.length) }, ...facing };
   });
 }

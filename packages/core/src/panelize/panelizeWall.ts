@@ -25,7 +25,16 @@
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
-import { verticalWidth, type Config, type Member, type Opening, type Panel, type Wall, type Warning } from '../types';
+import {
+  verticalWidth,
+  type Config,
+  type Member,
+  type Opening,
+  type Panel,
+  type PanelOpening,
+  type Wall,
+  type Warning,
+} from '../types';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
@@ -146,6 +155,13 @@ export function panelizeWall(
   const verticals = [...studs, ...extras, ...jointStuds, ...kings];
   const blocks = ladderBlocks(wall, strips, verticals, config);
 
+  // Aberturas como ficam no painel (S17): o topo do RO é a base do header montado.
+  const panelOpenings: PanelOpening[] = openings.map((o, i) => {
+    const header = framings[i]!.members.find((m) => m.role === 'header');
+    if (header === undefined) throw new RangeError(`parede ${wall.id}, abertura ${o.id}: abertura sem header`);
+    return { id: o.id, type: o.type, x: o.offset, width: o.roughWidth, top: header.y, height: o.roughHeight };
+  });
+
   const panel: Panel = {
     id: wall.id,
     wallId: wall.id,
@@ -156,6 +172,9 @@ export function panelizeWall(
     fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
     layoutOrigin,
+    openings: panelOpenings,
+    exterior: wall.exterior,
+    bearing: wall.bearing,
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.

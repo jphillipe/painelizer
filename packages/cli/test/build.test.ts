@@ -72,6 +72,24 @@ describe('buildProject', () => {
     expect(w06.members.filter((m) => m.role === 'stud').every((s) => s.length === 104.625)).toBe(true);
   });
 
+  it('folha de fabricação (S17): nome, date e revision do projeto no cabeçalho; sem date/revision, sem carimbo', () => {
+    const svg = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
+    expect(svg).toContain('text-anchor="end">casa-exemplo</text>');
+    expect(svg).toContain('>data 2026-10-14 · rev. A</text>');
+    expect(svg).toContain('>parede W07 · pavimento 1 · 2x6 externa portante · ');
+    expect(svg).toContain('>Peso estimado: ');
+    expect(svg).toContain('>peitoril ');
+    // W01 atravessa o canto em (0,0) indo para +x com a casa a +y: vista de fora.
+    const w01 = result.files.find((f) => f.path === 'panels/1-W01-P1.svg')!.content;
+    expect(w01).toContain('>Vista de fora — face externa voltada para o observador; ');
+    const p = example();
+    delete p.date;
+    delete p.revision;
+    const bare = buildProject(p).files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
+    expect(bare).not.toContain('class="stamp"');
+    expect(bare).toContain('text-anchor="end">casa-exemplo</text>');
+  });
+
   it('W07: janela e porta com king compartilhado — 24 peças, como o fixture wall-144-window-door', () => {
     const w07 = result.panels.find((p) => p.id === '1-W07-P1')!;
     expect(w07.members).toHaveLength(24);

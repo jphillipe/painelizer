@@ -44,6 +44,13 @@ export interface WallFrame {
   wall: Wall;
   layoutOrigin: number;
   connections: FrameConnections;
+  /**
+   * Lado da face externa em relação ao sentido start→end (S17): `'right'` quando o lado de fora fica à
+   * direita de quem anda de `plateStart` para `plateEnd`. Só em parede externa; ausente quando o eixo passa
+   * pelo centro da casa (indecidível). Mesma regra da planta de painéis (S16): fora = oposto ao centro da
+   * caixa das plates.
+   */
+  outside?: 'left' | 'right';
 }
 
 /**
@@ -56,7 +63,39 @@ export function frameWalls(house: House, tolerance: number = DEFAULT_TOLERANCE):
   const connections = findConnections(house.walls, tolerance);
   const axes = new Map<string, Axis>();
   for (const w of house.walls) axes.set(w.id, axisOf(w));
-  return house.walls.map((w, i) => frameWall(axes.get(w.id)!, connections[i]!, axes));
+  const frames = house.walls.map((w, i) => frameWall(axes.get(w.id)!, connections[i]!, axes));
+  markOutside(frames, axes);
+  return frames;
+}
+
+/** Preenche `outside` das paredes externas: o lado oposto ao centro da caixa das plates (faces externas). */
+function markOutside(frames: WallFrame[], axes: ReadonlyMap<string, Axis>): void {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const f of frames) {
+    const half = axes.get(f.wallId)!.thickness / 2;
+    for (const p of [f.plateStart, f.plateEnd]) {
+      minX = Math.min(minX, p.x - half);
+      maxX = Math.max(maxX, p.x + half);
+      minY = Math.min(minY, p.y - half);
+      maxY = Math.max(maxY, p.y + half);
+    }
+  }
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  for (const f of frames) {
+    if (!f.wall.exterior) continue;
+    const dx = Math.sign(f.plateEnd.x - f.plateStart.x);
+    const dy = Math.sign(f.plateEnd.y - f.plateStart.y);
+    const mx = (f.plateStart.x + f.plateEnd.x) / 2;
+    const my = (f.plateStart.y + f.plateEnd.y) / 2;
+    // Normal à direita do sentido de caminhada é (dy, −dx); projeta nela o vetor do centro ao meio da plate.
+    const d = dy * (mx - cx) - dx * (my - cy);
+    if (d > EPS) f.outside = 'right';
+    else if (d < -EPS) f.outside = 'left';
+  }
 }
 
 function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string, Axis>): WallFrame {

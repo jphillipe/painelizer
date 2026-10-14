@@ -7,7 +7,8 @@
  * - `bom.csv` — lista de material consolidada;
  * - `panels.csv` — um painel por linha, com parede, pavimento, posição, dimensões, peças, peso e avisos (S15/S16);
  * - `plan.svg` — planta de painéis (só na casa em planta, S16);
- * - `panels/<id>.svg` — elevação de cada painel.
+ * - `panels/<id>.svg` — folha de fabricação de cada painel (S17): cabeçalho com `name`, `date` e `revision` do
+ *   projeto, elevação cotada, lista de peças, peso, cortes na obra e avisos. Abre e imprime no navegador.
  *
  * Cada parede (solta ou em planta) vira os painéis de `splitWall` (S15), com ids `{level}-{wallId}-P{n}` (S16):
  * `1-W01-P1` quando cabe em `config.panel.maxLength`; `1-W01-P1`, `1-W01-P2`… quando não.
@@ -91,7 +92,12 @@ export function buildProject(project: Project): BuildResult {
     usedNames.set(name, panel.id);
     files.push({
       path: `panels/${name}`,
-      content: panelSvg(panel, { studSpacing: project.config.studSpacing }),
+      content: panelSvg(panel, {
+        studSpacing: project.config.studSpacing,
+        project: project.name,
+        ...(project.date === undefined ? {} : { date: project.date }),
+        ...(project.revision === undefined ? {} : { revision: project.revision }),
+      }),
     });
   }
 

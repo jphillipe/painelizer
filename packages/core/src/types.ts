@@ -380,6 +380,28 @@ export interface FieldCut {
   length: number;
 }
 
+/**
+ * Rough opening como fica no painel (S17): em x do painel, com o topo do RO (= base do header) medido da
+ * base da bottom plate (= subfloor). Base do RO = `top − height` (0 na porta).
+ */
+export interface PanelOpening {
+  id: string;
+  type: OpeningType;
+  /** x da borda esquerda do RO. */
+  x: number;
+  width: number;
+  /** y do topo do RO = base do header. */
+  top: number;
+  /** Altura do RO (`Opening.roughHeight`). */
+  height: number;
+}
+
+/**
+ * Face da parede voltada para quem lê a folha, com o início da parede (x=0) à esquerda (S17, hipótese P24).
+ * Só em parede externa em planta: `'exterior'` quando o lado de fora fica à direita do sentido start→end.
+ */
+export type PanelFacing = 'exterior' | 'interior';
+
 export interface Panel {
   /** `{level}-{wallId}-P{n}` (S16): pavimento, parede e ordem do painel de start para end, sempre com `-P1`. */
   id: string;
@@ -392,6 +414,13 @@ export interface Panel {
   members: Member[];
   fieldCuts: FieldCut[];
   warnings: Warning[];
+  /** Aberturas do painel, em x do painel (S17). `panelizeWall` sempre preenche; ausente só em painel montado à mão. */
+  openings?: PanelOpening[];
+  /** `Wall.exterior` / `Wall.bearing` da parede de origem (S17), para o cabeçalho da folha. */
+  exterior?: boolean;
+  bearing?: boolean;
+  /** Face voltada para quem lê a folha (S17). Só em parede externa em planta. */
+  facing?: PanelFacing;
   /** `Wall.layoutOrigin` da parede (0 quando ausente); o SVG desenha as marcas a partir dele. */
   layoutOrigin?: number;
   /** x, na parede, onde este painel começa (S15). Ausente = 0 (parede de um painel só). */

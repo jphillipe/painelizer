@@ -151,3 +151,23 @@ describe('frameWalls — erros', () => {
     expect(() => frameWalls({ walls: [wall('A', [0, 0], [200, 0]), wall('B', [100, -50], [100, 50])] })).toThrow(/se cruzam/);
   });
 });
+
+describe('frameWalls — lado da face externa (S17)', () => {
+  it('casa 28x40 (laço anti-horário): fora à direita de start→end em todas as externas; interna sem outside', () => {
+    const frames = frameWalls(house28x40.house as House);
+    expect(frames.map((f) => f.outside)).toEqual(['right', 'right', 'right', 'right', undefined]);
+  });
+
+  it('L: W1 (fora em −y) à direita; W2 sobe com a casa a +x, fora à esquerda; invertendo o sentido o lado troca', () => {
+    const frames = frameWalls(cornerL.house as House);
+    expect(frames.map((f) => f.outside)).toEqual(['right', 'left']);
+    const [w1, w2] = cornerL.house.walls as HouseWall[];
+    const flipped = frameWalls({ walls: [w1!, { ...w2!, start: w2!.end, end: w2!.start }] });
+    expect(flipped[1]!.outside).toBe('right');
+  });
+
+  it('parede única: o eixo passa pelo centro, lado indecidível', () => {
+    const w1 = cornerL.house.walls[0] as HouseWall;
+    expect(frameWalls({ walls: [w1] })[0]!.outside).toBeUndefined();
+  });
+});

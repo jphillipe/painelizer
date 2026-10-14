@@ -22,7 +22,9 @@ Gera em <dir>:
   bom.csv            lista de material consolidada
   panels.csv         um painel por linha: parede, pavimento, posição, dimensões, peças, peso, avisos
   plan.svg           planta de painéis (vista de cima, só para projeto em planta)
-  panels/<id>.svg    elevação de cada painel ({pavimento}-{parede}-P{n})
+  panels/<id>.svg    folha de fabricação de cada painel ({pavimento}-{parede}-P{n}): cabeçalho
+                     (nome, date e revision do projeto), elevação cotada, lista de peças, peso,
+                     cortes na obra e avisos — abra e imprima no navegador
 
 Opções:
   --out <dir>   diretório de saída (obrigatório; criado se não existir)

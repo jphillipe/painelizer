@@ -56,6 +56,9 @@ describe('splitWall — fixtures', () => {
     // A porta inteira (kings, jacks, header, corte na obra) fica no P1; a janela no P2, deslocada de −240.
     expect(p1!.fieldCuts).toEqual([{ role: 'bottomPlate', openingId: 'P1', x: 168, length: 38 }]);
     expect(p2!.members.find((m) => m.role === 'sill')).toMatchObject({ x: 96, length: 36 });
+    // Aberturas da folha (S17) saem em x de cada painel.
+    expect(p1!.openings!.map((o) => [o.id, o.x])).toEqual([['P1', 168]]);
+    expect(p2!.openings!.map((o) => [o.id, o.x])).toEqual([['J1', 96]]);
   });
 });
 

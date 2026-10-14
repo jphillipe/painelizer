@@ -422,3 +422,24 @@ describe('panelizeWall — studs extras do projeto (S12)', () => {
     expect(panel.warnings.map((w) => w.code)).toEqual(['STUDS_OVERLAP']);
   });
 });
+
+describe('panelizeWall — dados da folha (S17)', () => {
+  it('openings em x do painel, com o topo do RO = base do header; exterior e bearing da parede', () => {
+    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    expect(panel.openings).toEqual([
+      { id: 'win1', type: 'window', x: 24, width: 36, top: 82.5, height: 48 },
+      { id: 'door1', type: 'door', x: 64.5, width: 38, top: 82.5, height: 82.5 },
+    ]);
+    expect(panel.exterior).toBe(true);
+    expect(panel.bearing).toBe(true);
+    expect(panelizeWall(wall, config).openings).toEqual([]);
+    // Header deitado (não portante): topo do RO na base da peça deitada.
+    const nb = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
+    expect(nb.openings).toEqual([{ id: 'door1', type: 'door', x: 40, width: 38, top: 82.5, height: 82.5 }]);
+    expect(nb.exterior).toBe(false);
+    expect(nb.bearing).toBe(false);
+    // Sem headerHeight: header encostado na top plate (topo do RO = 94.125 − profundidade).
+    const { headerHeight, ...noHeight } = window.config as Config;
+    expect(panelizeWall(window.wall as Wall, noHeight).openings![0]!.top).toBe(94.125 - 9.25);
+  });
+});

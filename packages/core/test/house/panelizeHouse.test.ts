@@ -73,9 +73,9 @@ describe('panelizeHouse — fixtures', () => {
     expect(warnings).toEqual(panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning }))));
   });
 
-  it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15), mais o plan (S16)', () => {
+  it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15), mais o plan (S16) e o facing (S17)', () => {
     const { panels, frames } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
-    expect(panels.map(({ plan, ...p }) => p)).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
+    expect(panels.map(({ plan, facing, ...p }) => p)).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
     expect(panels.map((p) => p.id)).toEqual([
       '1-W01-P1', '1-W01-P2', '1-W01-P3', '1-W02-P1', '1-W02-P2', '1-W03-P1', '1-W03-P2', '1-W03-P3', '1-W04-P1', '1-W04-P2', '1-W05-P1', '1-W05-P2',
     ]);
@@ -166,5 +166,15 @@ describe('panelizeHouse — T e aberturas', () => {
 
   it('erros da planta sobem como RangeError com os ids', () => {
     expect(() => panelizeHouse({ walls: [{ ...base, id: 'A', start: { x: 0, y: 0 }, end: { x: 10, y: 10 }, openings: [] }] }, config)).toThrow(/parede A: fora dos eixos/);
+  });
+});
+
+describe('panelizeHouse — facing (S17)', () => {
+  it('painéis de parede externa levam facing pelo outside do frame; interna não', () => {
+    const { panels } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
+    expect(panels.filter((p) => p.wallId !== 'W05').every((p) => p.facing === 'exterior')).toBe(true);
+    expect(panels.filter((p) => p.wallId === 'W05').every((p) => p.facing === undefined)).toBe(true);
+    const L = panelizeHouse(cornerL.house as House, cornerL.config as Config).panels;
+    expect(L.map((p) => p.facing)).toEqual(['exterior', 'interior']);
   });
 });

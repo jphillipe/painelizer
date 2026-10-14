@@ -91,6 +91,16 @@ describe('parseProject', () => {
       expect(() => projectFrom(valid({ northAngle: 0 }), 'projeto')).toThrow(/projeto\.northAngle: só vale em projeto em planta/);
     });
 
+    it('date e revision na raiz vão para o projeto como texto (S17); vazio ou não texto é erro', () => {
+      const p = projectFrom(valid({ date: '2026-10-14', revision: 'A' }));
+      expect(p.date).toBe('2026-10-14');
+      expect(p.revision).toBe('A');
+      expect(projectFrom(valid())).not.toHaveProperty('date');
+      expect(projectFrom(valid())).not.toHaveProperty('revision');
+      expect(() => projectFrom(valid({ date: 20261014 }), 'projeto')).toThrow(/projeto\.date: esperado texto não vazio/);
+      expect(() => projectFrom(valid({ revision: '' }), 'projeto')).toThrow(/projeto\.revision: esperado texto não vazio/);
+    });
+
     it('level vale também em parede solta (S16)', () => {
       const p = projectFrom(valid({ walls: [{ ...(valid()['walls'] as Record<string, unknown>[])[0]!, level: 2 }] }));
       expect(p.walls[0]!.level).toBe(2);

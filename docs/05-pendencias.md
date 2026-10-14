@@ -147,6 +147,11 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
 - [ ] **P24 — Orientação da folha.** A elevação é vista de fora (como a elevação do arquiteto) ou de dentro (como
   o montador vê na mesa)? Que lado do painel fica para cima na mesa? — hipótese: vista de fora, face externa
   indicada no desenho — S17.
+  S17 (2026-10-14): a folha desenha sempre de start para end (x=0 à esquerda, como a planta, a cutlist e a cadeia
+  de cotas) e escreve no cabeçalho qual face o leitor vê: "vista de fora" quando o lado externo fica à direita do
+  sentido start→end na planta (`Panel.facing = 'exterior'`), "vista de dentro — face externa no verso" quando
+  fica à esquerda; parede solta assume vista de fora. Se a fábrica quiser sempre a vista de fora, a S17.1
+  espelha o desenho (x' = L − x) quando `facing = 'interior'`; se quiser a vista de dentro (mesa), inverte a regra.
   P23 na S15 (2026-10-13): lap de 48" preso ao painel da esquerda; 24" quando os 48" cairiam dentro de um
   header ou de uma faixa de T; a double top do painel seguinte começa onde o lap acaba. Se a fábrica mandar a
   peça solta, `splitWall` troca `extend`/`recess` por lap 0 e a peça vira item da lista.
