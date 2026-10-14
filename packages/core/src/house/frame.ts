@@ -14,20 +14,16 @@
  *   (`panelizeWall`).
  */
 
-import type { ExtraStud, Opening, Wall } from '../types';
+import type { EndJoint, ExtraStud, Opening, TeeJoint, Wall, WallJoints } from '../types';
 import { along, axisOf, pointAt, type Axis } from './axis';
 import { DEFAULT_TOLERANCE, findConnections, type Connection, type WallConnections } from './connections';
 import type { House, HouseWall, Point } from './types';
 
 const EPS = 1e-9;
 
-/** Parede que encosta em T nesta, em x do painel. */
-export interface TeeAt {
-  /** x do eixo da parede que encosta, no painel desta. */
-  x: number;
+/** Parede que encosta em T nesta, em x do painel (`TeeJoint` com `wallId` obrigatório). */
+export interface TeeAt extends TeeJoint {
   wallId: string;
-  /** Espessura real da parede que encosta; ela ocupa `[x − width/2, x + width/2]`. */
-  width: number;
 }
 
 export interface FrameConnections {
@@ -89,18 +85,26 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
   const layoutOrigin =
     conns.start.kind === 'corner' && !conns.start.through ? -otherThickness(conns.start) : 0;
 
-  // `start`, `end`, `level` e `ends` são da planta; o resto é `Wall`.
-  const { start, end, level, ends, ...rest } = wall;
-  const derived: Wall = { ...rest, length, openings, layoutOrigin };
-  if (wall.extraStuds !== undefined) {
-    derived.extraStuds = wall.extraStuds.map((e): ExtraStud => ({ ...e, x: e.x - s0 }));
-  }
-
   const tees: TeeAt[] = conns.tees.map((t) => ({
     x: along(axis, t.at) - s0,
     wallId: t.wallId,
     width: axes.get(t.wallId)!.thickness,
   }));
+
+  // `start`, `end`, `level` e `ends` são da planta; o resto é `Wall`. As ligações (S14) vão em `joints`,
+  // já em x do painel, para o motor montar canto, T e laps da double top.
+  const { start, end, level, ends, ...rest } = wall;
+  const derived: Wall = { ...rest, length, openings, layoutOrigin };
+  if (wall.extraStuds !== undefined) {
+    derived.extraStuds = wall.extraStuds.map((e): ExtraStud => ({ ...e, x: e.x - s0 }));
+  }
+  const joints: WallJoints = {};
+  const startJoint = endJoint(conns.start, otherThickness(conns.start));
+  const endJ = endJoint(conns.end, otherThickness(conns.end));
+  if (startJoint !== undefined) joints.start = startJoint;
+  if (endJ !== undefined) joints.end = endJ;
+  if (tees.length > 0) joints.tees = tees;
+  if (Object.keys(joints).length > 0) derived.joints = joints;
 
   return {
     wallId: wall.id,
@@ -110,6 +114,13 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
     layoutOrigin,
     connections: { start: conns.start, end: conns.end, tees },
   };
+}
+
+/** Ligação de uma ponta para o motor (`Wall.joints`); ponta livre não gera nada. */
+function endJoint(c: Connection, tOther: number): EndJoint | undefined {
+  if (c.kind === 'free') return undefined;
+  if (c.kind === 'corner') return { kind: 'corner', through: c.through, otherThickness: tOther, wallId: c.wallId };
+  return { kind: 'tee', otherThickness: tOther, wallId: c.wallId };
 }
 
 /** Posição, ao longo do eixo a partir de `start`, onde a plate começa (`start`) ou termina (`end`). */

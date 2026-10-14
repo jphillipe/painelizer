@@ -22,7 +22,7 @@
  * lança `Error` (docs/04-decisoes.md, 2026-10-05).
  */
 
-import type { Config, Member, Panel, Wall, WallSection, Warning } from '../types';
+import { verticalWidth, type Config, type Member, type Panel, type Wall, type WallSection, type Warning } from '../types';
 import { openingZone } from '../rules/openings';
 
 /** Folga mínima entre a zona da abertura e a ponta da parede para caber o stud de ponta. */
@@ -78,15 +78,15 @@ function openingsNearCorner(wall: Wall, config: Config): Warning[] {
   return warnings;
 }
 
-function overlappingStuds(panel: Panel, wall: Wall, config: Config): Warning[] {
-  const t = config.studThickness;
+function overlappingStuds(panel: Panel, wall: Wall, _config: Config): Warning[] {
   const vertical = panel.members.filter((m) => m.orientation === 'vertical');
   const warnings: Warning[] = [];
   for (let i = 0; i < vertical.length; i++) {
     for (let j = i + 1; j < vertical.length; j++) {
       const a = vertical[i]!;
       const b = vertical[j]!;
-      const xOverlap = Math.min(a.x + t, b.x + t) - Math.max(a.x, b.x);
+      // Largura real de cada peça: o stud flat do canto California ocupa a profundidade da seção (S14).
+      const xOverlap = Math.min(a.x + verticalWidth(a), b.x + verticalWidth(b)) - Math.max(a.x, b.x);
       const yOverlap = Math.min(a.y + a.length, b.y + b.length) - Math.max(a.y, b.y);
       if (xOverlap > EPS && yOverlap > EPS) {
         warnings.push({

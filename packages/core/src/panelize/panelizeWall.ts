@@ -18,10 +18,14 @@
  * - Studs extras do projeto (`wall.extraStuds`, S12, hipótese P26) entram como `role: 'stud'` de altura inteira,
  *   com `label`; o stud de layout que os sobrepõe sai (como na zona de abertura). Extra fora da
  *   parede ou dentro de uma zona é `RangeError`.
- * - Avisos: os da parede, depois os das aberturas, depois os de `validate.ts` (S10).
+ * - Ligações (`wall.joints`, S14, `rules/corners.ts`): stud de canto na parede que atravessa (California
+ *   `flat` ou em pé), blocos do ladder ou studs de encosto no T, laps e cortes da double top plate. Stud de
+ *   layout que sobrepõe stud de canto ou de encosto sai, como com os extras. Faixa do T dentro de um RO é
+ *   `RangeError`; na zona de abertura, aviso `OPENING_AT_TEE` e nenhuma peça de T.
+ * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
-import type { Config, Member, Opening, Panel, Wall, Warning } from '../types';
+import { verticalWidth, type Config, type Member, type Opening, type Panel, type Wall, type Warning } from '../types';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
@@ -29,6 +33,14 @@ import { mergeOpeningZones, type ZonePlan } from '../rules/zones';
 import { resolveOpeningHeader, type HeaderTables, type ResolvedHeader } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
 import { matchPrecut } from '../rules/precuts';
+import {
+  backerStuds,
+  cornerStuds,
+  ladderBlocks,
+  plateOptionsFor,
+  teeConflicts,
+  teeStrips,
+} from '../rules/corners';
 import { validatePanel } from './validate';
 
 /** Folga numérica para comparações de geometria. */
@@ -75,7 +87,7 @@ export function panelizeWall(
   const { plateThickness, studThickness, studSpacing } = config;
   const warnings: Warning[] = [];
 
-  const plates = layoutPlates(wall.length, wall.height, wall.section, plateThickness);
+  const plates = layoutPlates(wall.length, wall.height, wall.section, plateThickness, plateOptionsFor(wall.joints));
 
   const studLength = wall.height - 3 * plateThickness;
   if (config.studLength.length === 0) {
@@ -107,10 +119,20 @@ export function panelizeWall(
     ...(label === undefined ? {} : { label }),
   }));
 
+  // Ligações (S14): faixas de T sem conflito com abertura; studs de canto e de encosto.
+  const { clear: strips, warnings: teeWarnings } = teeConflicts(wall, teeStrips(wall.joints), openings, plan.zones);
+  const jointStuds: Member[] = [...cornerStuds(wall, config), ...backerStuds(strips, config)].map(({ x, flat }) => ({
+    role: 'stud',
+    ...fullHeight,
+    x,
+    ...(flat ? { flat: true } : {}),
+  }));
+  const occupied = [...extras, ...jointStuds].map((m) => ({ start: m.x, end: m.x + verticalWidth(m) }));
+
   const layoutOrigin = wall.layoutOrigin ?? 0;
   const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness, layoutOrigin)
     .filter((x) => !plan.zones.some((z) => overlaps(x, x + studThickness, z)))
-    .filter((x) => !extras.some((e) => overlaps(x, x + studThickness, { start: e.x, end: e.x + studThickness })))
+    .filter((x) => !occupied.some((o) => overlaps(x, x + studThickness, o)))
     .map((x) => ({ role: 'stud', ...fullHeight, x }));
 
   const kings: Member[] = plan.kings.map((x) => ({ role: 'kingStud', ...fullHeight, x }));
@@ -119,6 +141,10 @@ export function panelizeWall(
     framingForOpening(o, wall, config, { kings: false, header: headers[i]! }),
   );
   for (const f of framings) warnings.push(...f.warnings);
+  warnings.push(...teeWarnings);
+
+  const verticals = [...studs, ...extras, ...jointStuds, ...kings];
+  const blocks = ladderBlocks(wall, strips, verticals, config);
 
   const panel: Panel = {
     id: wall.id,
@@ -126,7 +152,7 @@ export function panelizeWall(
     length: wall.length,
     height: wall.height,
     section: wall.section,
-    members: [...plates, ...studs, ...extras, ...kings, ...framings.flatMap((f) => f.members)],
+    members: [...plates, ...verticals, ...blocks, ...framings.flatMap((f) => f.members)],
     fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
     layoutOrigin,

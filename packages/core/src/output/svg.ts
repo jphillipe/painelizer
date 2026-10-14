@@ -24,6 +24,7 @@
 import {
   NOMINAL_2X_THICKNESS,
   sectionDepth,
+  verticalWidth,
   type FieldCut,
   type Member,
   type MemberRole,
@@ -52,7 +53,8 @@ export interface MemberBox {
 /** Caixa que o member ocupa na elevação, em polegadas. */
 export function memberBox(m: Member): MemberBox {
   if (m.orientation === 'vertical') {
-    return { x: m.x, y: m.y, width: NOMINAL_2X_THICKNESS, height: m.length };
+    // Stud flat do canto California (S14) ocupa a profundidade da seção em x.
+    return { x: m.x, y: m.y, width: verticalWidth(m), height: m.length };
   }
   const height = m.role === 'header' && !m.flat ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
   return { x: m.x, y: m.y, width: m.length, height };
@@ -69,6 +71,7 @@ const FILL: Readonly<Record<MemberRole, string>> = {
   header: '#c49a5c',
   sill: '#d9c9a8',
   cripple: '#f2e6cc',
+  block: '#cdb98f',
 };
 
 const STROKE = '#5a4632';
@@ -81,6 +84,8 @@ const DIM_LEFT_WIDTH = 56;
 const DIM_GAP = 28;
 const LAYOUT_GAP = 34;
 const WARNING_LINE = 16;
+/** Espaço extra acima do painel para a cota do avanço da double top plate (S14). */
+const OVERHANG_DIM_GAP = 22;
 
 export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const scale = opts.scale ?? 4;
@@ -107,14 +112,18 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
     );
   }
 
-  const drawX0 = margin + DIM_LEFT_WIDTH;
-  const drawY0 = margin + TITLE_HEIGHT;
+  // Avanço da double top plate além do contorno (laps de canto e T, S14): o desenho abre espaço dos dois
+  // lados e cota o avanço. Sem avanço, nada muda.
+  const { left: overLeft, right: overRight } = overhang(panel);
+  const drawX0 = margin + DIM_LEFT_WIDTH + overLeft * scale;
+  // Com avanço, a cota fica entre o subtítulo e o topo do painel: o desenho desce `OVERHANG_DIM_GAP`.
+  const drawY0 = margin + TITLE_HEIGHT + (overLeft > 0 || overRight > 0 ? OVERHANG_DIM_GAP : 0);
   const drawW = panel.length * scale;
   const drawH = panel.height * scale;
   const dimY = drawY0 + drawH + DIM_GAP;
   const layoutY = dimY + LAYOUT_GAP;
   const warningsY = layoutY + 24;
-  const totalW = drawX0 + drawW + margin;
+  const totalW = drawX0 + drawW + overRight * scale + margin;
   const totalH = warningsY + panel.warnings.length * WARNING_LINE + margin;
 
   const toPx = (x: number): number => drawX0 + x * scale;
@@ -166,6 +175,16 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
 
   // Cota do comprimento (embaixo).
   out.push(dimensionH(toPx(0), toPx(panel.length), dimY, toPy(0), formatFeetInches(panel.length)));
+  // Cotas do avanço da double top plate (acima do topo do painel).
+  const overY = toPy(panel.height) - 10;
+  if (overLeft > 0) {
+    out.push(dimensionH(toPx(-overLeft), toPx(0), overY, toPy(panel.height), `avanço ${formatInches(overLeft)}`));
+  }
+  if (overRight > 0) {
+    out.push(
+      dimensionH(toPx(panel.length), toPx(panel.length + overRight), overY, toPy(panel.height), `avanço ${formatInches(overRight)}`),
+    );
+  }
   // Cota da altura (à esquerda).
   out.push(dimensionV(margin + 20, toPy(panel.height), toPy(0), toPx(0), formatFeetInches(panel.height)));
 
@@ -179,6 +198,18 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
 
   out.push('</svg>');
   return out.join('\n');
+}
+
+/** Quanto alguma peça (double top plate com lap) passa do contorno à esquerda (x < 0) e à direita. */
+function overhang(panel: Panel): { left: number; right: number } {
+  let left = 0;
+  let right = 0;
+  for (const m of panel.members) {
+    const box = memberBox(m);
+    left = Math.max(left, -box.x);
+    right = Math.max(right, box.x + box.width - panel.length);
+  }
+  return { left, right };
 }
 
 function memberRect(
@@ -196,8 +227,9 @@ function memberRect(
   const pliesNote = plies > 1 ? ` (${plies} plies)` : '';
   const sourceNote = m.headerSource === undefined ? '' : ` [${m.headerSource}]`;
   const labelNote = m.label === undefined ? '' : ` "${m.label}"`;
+  const flatNote = m.flat === true && m.orientation === 'vertical' ? ' (flat)' : '';
   const title =
-    `${m.role} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote}${labelNote} — ` +
+    `${m.role}${flatNote} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote}${labelNote} — ` +
     `x=${formatInches(m.x)} y=${formatInches(m.y)}`;
 
   const parts: string[] = [];

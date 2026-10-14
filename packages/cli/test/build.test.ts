@@ -184,11 +184,21 @@ describe('buildProject', () => {
         W06: [120, 0],
         W07: [144, 0],
       });
-      expect(result.panels.reduce((n, p) => n + p.members.length, 0)).toBe(125);
+      expect(result.panels.reduce((n, p) => n + p.members.length, 0)).toBe(130);
       const csv = result.files.find((f) => f.path === 'cutlist.csv')!.content;
-      expect(csv).toContain('W01,plates,2x6,146.75,"146 3/4""",3');
-      expect(csv).toContain('W02,plates,2x6,189.25,"189 1/4""",3');
-      expect(csv).toContain('W03,plates,2x4,117.25,"117 1/4""",3');
+      // S14: double top de W01 recua 5.5 no canto (atravessa); a de W02 avança 5.5 no canto e é cortada na faixa
+      // do T de W03 (3.5"); a de W03 avança 5.5 sobre W02. Bottom e top não mudam.
+      expect(csv).toContain('W01,plates,2x6,146.75,"146 3/4""",2');
+      expect(csv).toContain('W01,plates,2x6,141.25,"141 1/4""",1');
+      expect(csv).toContain('W02,plates,2x6,189.25,"189 1/4""",2');
+      expect(csv).toContain('W02,plates,2x6,97,"97""",1');
+      expect(csv).toContain('W02,plates,2x6,94.25,"94 1/4""",1');
+      expect(csv).toContain('W02,block,2x6,14.5,"14 1/2""",3');
+      expect(csv).toContain('W03,plates,2x4,122.75,"122 3/4""",1');
+      expect(csv).toContain('W03,plates,2x4,117.25,"117 1/4""",2');
+      // Canto California: W01 atravessa e ganha o stud flat em x=1.5.
+      const w01 = result.panels.find((p) => p.id === 'W01')!;
+      expect(w01.members.filter((m) => m.role === 'stud' && m.flat === true).map((m) => m.x)).toEqual([1.5]);
       // W02: layout da quina — primeiro stud de marca em 9.75 (marca 10.5 = 16 − 5.5).
       const w02 = result.panels.find((p) => p.id === 'W02')!;
       expect(w02.members.filter((m) => m.role === 'stud').map((m) => m.x).slice(0, 3)).toEqual([0, 9.75, 25.75]);

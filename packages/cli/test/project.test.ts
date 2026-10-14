@@ -433,6 +433,15 @@ describe('projectFrom — dados do estrutural (S12)', () => {
     expect(() => projectFrom(cfg(0), 'projeto')).toThrow(/projeto\.config\.doubleSillOver: esperado medida > 0/);
   });
 
+it("config.corner ('california' | 'three-stud') e config.tee ('ladder' | 'backer') — S14", () => {
+    const cfg = (extra: object) => valid({ config: { studSpacing: 16, studLength: 92.625, ...extra } });
+    expect(projectFrom(cfg({ corner: 'three-stud', tee: 'backer' })).config).toMatchObject({ corner: 'three-stud', tee: 'backer' });
+    expect(projectFrom(valid()).config).not.toHaveProperty('corner');
+    expect(projectFrom(valid()).config).not.toHaveProperty('tee');
+    expect(() => projectFrom(cfg({ corner: 'two-stud' }), 'projeto')).toThrow(/projeto\.config\.corner: esperado um de california, three-stud/);
+    expect(() => projectFrom(cfg({ tee: 'blocks' }), 'projeto')).toThrow(/projeto\.config\.tee: esperado um de ladder, backer/);
+  });
+
   it('wall.extraStuds: x como medida, count inteiro ≥ 1, label texto', () => {
     const withExtras = (extraStuds: unknown) => valid({ walls: [{ ...(valid().walls as object[])[0], extraStuds }] });
     expect(projectFrom(withExtras([{ x: `3'-4"` }, { x: 60, count: 2, label: 'HDU2 post' }])).walls[0]?.extraStuds).toEqual([

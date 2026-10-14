@@ -26,10 +26,10 @@ export type EndRule = 'through' | 'butt';
 export type WallEnd = 'start' | 'end';
 
 /**
- * Parede como a planta a descreve. `length` e `layoutOrigin` são derivados pelo motor da casa
+ * Parede como a planta a descreve. `length`, `layoutOrigin` e `joints` são derivados pelo motor da casa
  * (`frameWalls`); os demais campos de `Wall` valem como estão.
  */
-export interface HouseWall extends Omit<Wall, 'length' | 'layoutOrigin'> {
+export interface HouseWall extends Omit<Wall, 'length' | 'layoutOrigin' | 'joints'> {
   start: Point;
   end: Point;
   /** Pavimento (1 = térreo). Ausente = 1. Só identifica; a numeração dos painéis é da S16. */

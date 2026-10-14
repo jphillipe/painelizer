@@ -51,8 +51,10 @@ describe('frameWalls — fixtures', () => {
       floorsSupported: 0,
       openings: [],
       layoutOrigin: 0,
+      joints: { start: { kind: 'corner', through: true, otherThickness: 5.5, wallId: 'W2' } },
     });
     expect(w2!.wall.layoutOrigin).toBe(-5.5);
+    expect(w2!.wall.joints).toEqual({ start: { kind: 'corner', through: false, otherThickness: 5.5, wallId: 'W1' } });
     expect('start' in w2!.wall).toBe(false);
   });
 });

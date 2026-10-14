@@ -59,9 +59,17 @@ describe('formatFeetInches', () => {
     expect(formatFeetInches(0.125)).toBe('1/8"');
   });
 
-  it('rejeita negativo e não finito', () => {
-    expect(() => formatFeetInches(-1)).toThrow(RangeError);
+  it('negativo sai com "-" na frente (posição antes do painel, S14); −0 arredondado não leva sinal', () => {
+    expect(formatFeetInches(-1)).toBe('-1"');
+    expect(formatFeetInches(-5.5)).toBe('-5 1/2"');
+    expect(formatFeetInches(-24)).toBe(`-2'-0"`);
+    expect(formatInches(-5.5)).toBe('-5 1/2"');
+    expect(formatInches(-0.01)).toBe('0"');
+  });
+
+  it('rejeita não finito', () => {
     expect(() => formatFeetInches(Number.NaN)).toThrow(RangeError);
+    expect(() => formatInches(Number.POSITIVE_INFINITY)).toThrow(RangeError);
   });
 });
 

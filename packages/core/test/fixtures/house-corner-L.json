@@ -1,5 +1,5 @@
 {
-  "$comment": "S13 (2026-10-13, hipótese P21): duas paredes 2x6 em L, eixos de 144 (W1, de (0,0) a (144,0)) e 120 (W2, de (0,0) a (0,120)). W1 é a mais longa e atravessa: plate da face externa de W2 (x = −2.75) ao ponto livre em 144 → 146.75, origem de layout 0 (a quina é o início da plate). W2 encosta: plate começa na face interna de W1 (y = 2.75) → 117.25, origem −5.5 (a marca 0 é a quina do prédio, 5.5 antes da plate): studs centrados em 10.5, 26.5… → bordas em 9.75, 25.75…; a chapa de OSB que termina a 48 da quina cai no stud 41.75–43.25. Sem aberturas: a conversão de offsets é testada em house-tee e house-28x40. Valores confirmados pelo humano na abertura da S13 (o prompt da sessão dizia 149.5 / 114.5, que seria ±t inteiro; a convenção de eixo dá ±t/2).",
+  "$comment": "S13 (2026-10-13, hipótese P21): duas paredes 2x6 em L, eixos de 144 (W1, de (0,0) a (144,0)) e 120 (W2, de (0,0) a (0,120)). W1 é a mais longa e atravessa: plate da face externa de W2 (x = −2.75) ao ponto livre em 144 → 146.75, origem de layout 0 (a quina é o início da plate). W2 encosta: plate começa na face interna de W1 (y = 2.75) → 117.25, origem −5.5 (a marca 0 é a quina do prédio, 5.5 antes da plate): studs centrados em 10.5, 26.5… → bordas em 9.75, 25.75…; a chapa de OSB que termina a 48 da quina cai no stud 41.75–43.25. Sem aberturas: a conversão de offsets é testada em house-tee e house-28x40. Valores confirmados pelo humano na abertura da S13 (o prompt da sessão dizia 149.5 / 114.5, que seria ±t inteiro; a convenção de eixo dá ±t/2). S14 (2026-10-13, P5 respondida): canto California — W1 (atravessa) ganha um stud flat 2x6 colado ao stud de ponta pelo lado de dentro (x = 1.5, ocupa 1.5–7; `flat: true`); W2 (encosta) não ganha peça: seu stud de ponta já é o do canto. Laps da double top plate (R602.3.2): a de W1 recua 5.5 (t de W2) → x = 5.5, 141.25\"; a de W2 avança 5.5 (t de W1) sobre a top plate de W1 → x = −5.5, 122.75\". Bottom e top plates não mudam. `expected.members` compara (role, section, length, x, y) sem ordem; `expected.flat` lista os x dos studs flat.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -43,8 +43,49 @@
       }
     ],
     "panels": {
-      "W1": { "members": 14, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 145.25], "warnings": [] },
-      "W2": { "members": 12, "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 89.75, 105.75, 115.75], "warnings": [] }
+      "W1": {
+        "members": 15,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 145.25],
+        "flat": [1.5],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x6", "length": 146.75, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 146.75, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 141.25, "x": 5.5, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 1.5, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 145.25, "y": 1.5 }
+        ]
+      },
+      "W2": {
+        "members": 12,
+        "studs": [0, 9.75, 25.75, 41.75, 57.75, 73.75, 89.75, 105.75, 115.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x6", "length": 117.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 117.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 122.75, "x": -5.5, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 9.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 25.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 41.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 57.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 73.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 89.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 105.75, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 115.75, "y": 1.5 }
+        ]
+      }
     }
   }
 }

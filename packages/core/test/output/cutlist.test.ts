@@ -89,3 +89,15 @@ describe('cutList', () => {
     expect(() => cutList({ members: [bad] })).toThrow(RangeError);
   });
 });
+
+describe('cutList — blocos do ladder (S14)', () => {
+  it("'block' entra depois de 'cripple' e conta como peça", () => {
+    const block = (y: number) => ({ role: 'block' as const, section: '2x6' as const, length: 14.5, x: 64.75, y, orientation: 'horizontal' as const });
+    const cripple = { role: 'cripple' as const, section: '2x6' as const, length: 31.5, x: 111.25, y: 1.5, orientation: 'vertical' as const };
+    const lines = cutList({ members: [block(23.25), block(47.25), block(71.25), cripple] });
+    expect(lines).toEqual([
+      { role: 'cripple', section: '2x6', length: 31.5, qty: 1 },
+      { role: 'block', section: '2x6', length: 14.5, qty: 3 },
+    ]);
+  });
+});

@@ -34,6 +34,9 @@
  * de plate, cantos, T e origem de layout saem do core (`panelizeHouse`). `length` ou `layoutOrigin` numa
  * parede em planta é erro, e misturar paredes em planta com paredes soltas no mesmo arquivo também.
  *
+ * Montagem de canto e T (S14): `config.corner` ('california' | 'three-stud', default california) e
+ * `config.tee` ('ladder' | 'backer', default ladder) — P5.
+ *
  * A validação é estrutural (tipos e campos obrigatórios), com mensagem apontando o caminho do campo.
  * Regras de framing não são validadas aqui: isso é papel do core (S10).
  */
@@ -46,7 +49,9 @@ import {
   type Config,
   type DoorFrame,
   type EndRule,
+  type CornerStyle,
   type Exposure,
+  type TeeStyle,
   type ExtraStud,
   type FloorSpan,
   type HeaderScheduleEntry,
@@ -86,6 +91,8 @@ const SECTIONS: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
 const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
 const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
 const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
+const CORNERS: readonly CornerStyle[] = ['california', 'three-stud'];
+const TEES: readonly TeeStyle[] = ['ladder', 'backer'];
 const SPECIES: readonly LumberSpecies[] = ['SPF', 'Hem-Fir', 'DF', 'SP'];
 const DOOR_FRAMES: readonly DoorFrame[] = ['wood', 'hm', 'al'];
 const END_RULES: readonly EndRule[] = ['through', 'butt'];
@@ -180,6 +187,8 @@ function configFrom(raw: unknown, path: string): Config {
   if (c['doubleSillOver'] !== undefined) {
     config.doubleSillOver = positive(c['doubleSillOver'], `${path}.doubleSillOver`);
   }
+  if (c['corner'] !== undefined) config.corner = oneOf(c['corner'], CORNERS, `${path}.corner`);
+  if (c['tee'] !== undefined) config.tee = oneOf(c['tee'], TEES, `${path}.tee`);
   if (c['openingTypes'] !== undefined) {
     config.openingTypes = record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom);
   }

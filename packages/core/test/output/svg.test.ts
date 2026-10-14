@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Panel, Wall } from '../../src/types';
+import type { Config, Member, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { esc, memberBox, panelSvg, px } from '../../src/output/svg';
 import plain from '../fixtures/wall-144-plain.json';
@@ -270,5 +270,60 @@ describe('panelSvg — studs extras (S12)', () => {
     );
     expect(out).toContain('<title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title>');
     expect(rects(out)).toHaveLength(14);
+  });
+});
+
+describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
+  const config: Config = { ...(plain.config as Config), building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 } };
+  const base: Omit<Wall, 'id' | 'length'> = { height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 0, openings: [] };
+
+  it('memberBox do stud flat: profundidade da seção de largura', () => {
+    const flat: Member = { role: 'stud', section: '2x6', length: 92.625, x: 1.5, y: 1.5, orientation: 'vertical', flat: true };
+    expect(memberBox(flat)).toEqual({ x: 1.5, y: 1.5, width: 5.5, height: 92.625 });
+    expect(memberBox({ ...flat, section: '2x4' }).width).toBe(3.5);
+  });
+
+  it('bloco do ladder: deitado, comprimento × 1.5, cor própria', () => {
+    const block: Member = { role: 'block', section: '2x6', length: 14.5, x: 64.75, y: 23.25, orientation: 'horizontal' };
+    expect(memberBox(block)).toEqual({ x: 64.75, y: 23.25, width: 14.5, height: 1.5 });
+    const panel = panelizeWall({ ...base, id: 'T', length: 192, joints: { tees: [{ x: 72, width: 3.5 }] } }, config);
+    const svg = panelSvg(panel);
+    expect(rects(svg).filter((r) => r.includes('class="member block"'))).toHaveLength(3);
+  });
+
+  it('stud flat desenhado com 22 px (5.5" × 4) e "(flat)" no <title>', () => {
+    const panel = panelizeWall({ ...base, id: 'C', length: 146.75, joints: { start: { kind: 'corner', through: true, otherThickness: 5.5 } } }, config);
+    const svg = panelSvg(panel);
+    const flat = rects(svg).find((r) => attr(r, 'x') === px(X0 + 1.5 * 4))!;
+    expect(attr(flat, 'width')).toBe('22');
+    expect(svg).toContain('<title>stud (flat) 2x6 × 92 5/8&quot; — x=1 1/2&quot; y=1 1/2&quot;</title>');
+  });
+
+  it('double top com avanço: o desenho abre espaço à esquerda, a peça começa fora do contorno e o avanço é cotado', () => {
+    const panel = panelizeWall({ ...base, id: 'B', length: 117.25, joints: { start: { kind: 'corner', through: false, otherThickness: 5.5 } } }, config);
+    const svg = panelSvg(panel);
+    const over = 5.5 * 4;
+    // Contorno deslocado em 22 px à direita e 22 px para baixo (espaço da cota do avanço); a double top
+    // começa 22 px antes dele.
+    expect(svg).toContain(`<rect x="${px(X0 + over)}" y="${px(Y0 + 22)}" width="469" height="388.5" fill="none"`);
+    const dt = rects(svg).find((r) => r.includes('doubleTopPlate'))!;
+    expect(attr(dt, 'x')).toBe(px(X0));
+    expect(attr(dt, 'width')).toBe(px(122.75 * 4));
+    expect(svg).toContain('>avanço 5 1/2&quot;</text>');
+    // Largura total cresce exatamente o avanço.
+    const plainSvg = panelSvg(panelizeWall({ ...base, id: 'B', length: 117.25 }, config));
+    expect(Number(attr(svg, 'width')) - Number(attr(plainSvg, 'width'))).toBe(over);
+  });
+
+  it('avanço no fim: canvas cresce à direita e cota o avanço', () => {
+    const panel = panelizeWall({ ...base, id: 'E', length: 100, joints: { end: { kind: 'tee', otherThickness: 3.5 } } }, config);
+    const svg = panelSvg(panel);
+    expect(svg).toContain('>avanço 3 1/2&quot;</text>');
+    const plainSvg = panelSvg(panelizeWall({ ...base, id: 'E', length: 100 }, config));
+    expect(Number(attr(svg, 'width')) - Number(attr(plainSvg, 'width'))).toBe(14);
+  });
+
+  it('sem joints o desenho não muda (snapshots wall-* intactos)', () => {
+    expect(panelSvg(plainPanel)).not.toContain('avanço');
   });
 });

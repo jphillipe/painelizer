@@ -42,25 +42,28 @@ export function parseFeetInches(s: string): number {
  * A partir de 12": `3'-0"`, `7'-8 5/8"`, `8'-1 1/8"`.
  */
 export function formatFeetInches(n: number): string {
-  const { feet, whole, num, den } = decompose(n);
+  const { sign, feet, whole, num, den } = decompose(n);
   // Com pés presentes a polegada inteira sempre aparece (`1'-0 1/16"`), para não
   // confundir `1'-1/16"` com `1'-1 1/16"` numa leitura rápida.
   const inchPart = fractionString(whole, num, den, feet > 0);
-  return feet > 0 ? `${feet}'-${inchPart}"` : `${inchPart}"`;
+  return feet > 0 ? `${sign}${feet}'-${inchPart}"` : `${sign}${inchPart}"`;
 }
 
 /**
  * Formata só em polegadas, sem pés: `144"`, `92 5/8"`, `1 1/2"`.
  * Usado em listas de corte, onde a fábrica lê comprimentos em polegadas.
+ * Valor negativo (posição antes do início do painel: double top plate com lap, S14) sai com `-` na frente.
  */
 export function formatInches(n: number): string {
-  const { feet, whole, num, den } = decompose(n);
-  return `${fractionString(feet * 12 + whole, num, den)}"`;
+  const { sign, feet, whole, num, den } = decompose(n);
+  return `${sign}${fractionString(feet * 12 + whole, num, den)}"`;
 }
 
-function decompose(n: number): { feet: number; whole: number; num: number; den: number } {
-  if (!Number.isFinite(n) || n < 0) throw new RangeError(`Medida inválida: ${n}`);
-  const sixteenths = Math.round(n * DENOMINATOR);
+function decompose(n: number): { sign: '' | '-'; feet: number; whole: number; num: number; den: number } {
+  if (!Number.isFinite(n)) throw new RangeError(`Medida inválida: ${n}`);
+  const sixteenths = Math.round(Math.abs(n) * DENOMINATOR);
+  // Sinal só quando sobra algo depois do arredondamento (−0.01 é `0"`, não `-0"`).
+  const sign = n < 0 && sixteenths > 0 ? '-' : '';
   const totalInches = Math.floor(sixteenths / DENOMINATOR);
   let num = sixteenths % DENOMINATOR;
   let den = DENOMINATOR;
@@ -69,7 +72,7 @@ function decompose(n: number): { feet: number; whole: number; num: number; den: 
     num /= g;
     den /= g;
   }
-  return { feet: Math.floor(totalInches / 12), whole: totalInches % 12, num, den };
+  return { sign, feet: Math.floor(totalInches / 12), whole: totalInches % 12, num, den };
 }
 
 function fractionString(whole: number, num: number, den: number, forceWhole = false): string {

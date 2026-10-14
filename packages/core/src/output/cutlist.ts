@@ -35,6 +35,7 @@ export const CUT_ROLE_ORDER: readonly CutRole[] = [
   'header',
   'sill',
   'cripple',
+  'block',
 ];
 
 /** Ordem das seções serradas, da menor para a maior profundidade. */

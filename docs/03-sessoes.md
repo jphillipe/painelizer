@@ -297,7 +297,7 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   correr). CLI: `Project.house`; exemplo com W01 `ends.start: "through"` (W02 16' atravessando daria plate de
   194.75", acima do estoque da BOM até a S15) — 125 peças (eram 123).
 
-- [ ] **S14 — Canto California, T ladder e laps da double top plate**
+- [x] **S14 — Canto California, T ladder e laps da double top plate**
   Depende de P5 (respondida) e P22 (hipótese). Prompt: "Crie `rules/corners.ts`. (a) **Canto**
   (`config.corner: 'california' | 'three-stud'`, default california, P5): na parede que atravessa, um stud
   `flat: true` (face larga para dentro; ocupa `sectionDepth` em x e 1.5" em y) colado ao stud de ponta pelo lado
@@ -316,6 +316,12 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   Fixtures: `house-corner-L` e `house-tee` ganham `expected.members` por painel (lista proposta antes de editar).
   Saída: fixtures verdes; SVG dos dois conferido visualmente. Decisões: alturas dos blocos; canto = `stud` +
   `flat` (sem papel novo); laps por ponta em `layoutPlates`.
+  Feita em 2026-10-13 (abordagem e lista de peças confirmadas pelo humano). As ligações entram no motor por
+  `Wall.joints` (derivado em `frameWalls`); `panelizeWall` monta tudo e `panelizeFrame` virou só
+  `panelizeWall(frame.wall)` — o aviso `OPENING_AT_TEE` mora em `rules/corners.ts`. Faixa do T na zona de
+  abertura: só o aviso, sem peça de T. `house-tee` com a W2 em x=72 (em 96 caía na zona da janela e não
+  testaria o ladder). `formatInches` aceita negativo (x da double top com lap). `house-28x40`: W01 51 e W03 42
+  peças; exemplo do CLI 130 (eram 125). Detalhes em 04-decisoes.
 
 - [ ] **S15 — Divisão em painéis, emendas de plate e peso**
   Depende de P6 e P14 (respondidas), P8/P15/P23 (hipóteses). Prompt: "Crie `rules/split.ts`:

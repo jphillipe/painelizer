@@ -44,4 +44,5 @@ Gera `saida/cutlist.csv`, `saida/bom.csv` e `saida/panels/<id>.svg` (um por pain
 Entrada: `{ "name", "config", "walls": [...], "stockLengths"? }` — medidas em polegadas decimais ou
 pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Cada parede vem **em planta** (`start`/`end` no eixo da parede,
 S13: o motor resolve cantos, T, comprimento de plate e origem de layout) ou **solta** (`length`); os dois
-formatos não se misturam no mesmo arquivo. Ver `packages/cli/examples/casa-exemplo.json` e `packages/cli/src/project.ts`.
+formatos não se misturam no mesmo arquivo. Montagem de canto e T em `config.corner` (`california` | `three-stud`)
+e `config.tee` (`ladder` | `backer`), S14; sem eles, California corner e ladder blocking (P5). Ver `packages/cli/examples/casa-exemplo.json` e `packages/cli/src/project.ts`.

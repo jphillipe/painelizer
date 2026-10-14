@@ -1,5 +1,5 @@
 {
-  "$comment": "S13 (2026-10-13): parede externa W1 2x6 de 16' (de (0,0) a (192,0)), livre nas duas pontas, com janela RO 36x48 em offset 100 (header 2-2x10 do projeto, base a 82.5); parede interna W2 2x4 não portante de (96,0) a (96,120) encostando em T no meio de W1. W2: plate começa na face de W1 (y = 2.75) → 117.25, origem 0 (T não muda o layout; só o canto que encosta leva −t). W1: plate = eixo (192), tee em x=96 com faixa 94.25–97.75; a zona da janela [97, 139] (1 king + 1 jack por lado) pega a faixa por 0.75\" → aviso OPENING_AT_TEE no painel de W1 (dentro do RO seria erro). Peças de W1: 3 plates, 11 studs (saem 111.25 e 127.25), 2 kings, 2 jacks, header, sill, 2 cripples abaixo e 2 acima (header 2x10 a 82.5 deixa 2.375\" até a top plate, P20). Ladder blocking do T é da S14 (P22).",
+  "$comment": "S13 (2026-10-13): parede externa W1 2x6 de 16' (de (0,0) a (192,0)), livre nas duas pontas, com janela RO 36x48 em offset 100 (header 2-2x10 do projeto, base a 82.5); parede interna W2 2x4 não portante de (72,0) a (72,120) encostando em T em W1. W2: plate começa na face de W1 (y = 2.75) → 117.25, origem 0 (T não muda o layout; só o canto que encosta leva −t). W1: plate = eixo (192), tee em x=72 com faixa 70.25–73.75, entre os studs de layout 63.25 e 79.25. Peças de W1 sem o T: 3 plates, 11 studs (saem 111.25 e 127.25), 2 kings, 2 jacks, header, sill, 2 cripples abaixo e 2 acima (header 2x10 a 82.5 deixa 2.375\" até a top plate, P20) = 24. S14 (2026-10-13, P5 respondida, P22 hipótese): ladder blocking — 3 blocos 2x6 deitados (1.5\" de altura) do stud 63.25 (face direita 64.75) ao stud 79.25 → 14.5\", centros em 24, 48 e 72 do subfloor (y = 23.25, 47.25, 71.25; o de 96 não cabe sob a top plate de 8'). Laps da double top plate (R602.3.2): a de W1 é cortada na faixa → duas peças, 70.25\" em x=0 e 118.25\" em x=73.75; a de W2 avança 5.5 (t de W1) → x = −5.5, 122.75\". Total W1 = 28, sem avisos. Até a S14 a W2 ficava em x=96, com a faixa 94.25–97.75 pegando a zona da janela [97, 139] por 0.75\" (aviso OPENING_AT_TEE) — movida para 72 para o fixture testar o ladder; o caso do T na zona (aviso, sem blocos) e dentro do RO (erro) ficam em testes inline de panelizeHouse. `expected.members` compara (role, section, length, x, y) sem ordem.",
   "config": {
     "studSpacing": 16,
     "studThickness": 1.5,
@@ -17,7 +17,7 @@
           { "id": "J1", "type": "window", "offset": 100, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
         ]
       },
-      { "id": "W2", "start": { "x": 96, "y": 0 }, "end": { "x": 96, "y": 120 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+      { "id": "W2", "start": { "x": 72, "y": 0 }, "end": { "x": 72, "y": 120 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
     ]
   },
   "expected": {
@@ -28,22 +28,76 @@
         "plateEnd": { "x": 192, "y": 0 },
         "length": 192,
         "layoutOrigin": 0,
-        "connections": { "start": { "kind": "free" }, "end": { "kind": "free" }, "tees": [{ "x": 96, "wallId": "W2", "width": 3.5 }] },
+        "connections": { "start": { "kind": "free" }, "end": { "kind": "free" }, "tees": [{ "x": 72, "wallId": "W2", "width": 3.5 }] },
         "openingOffsets": { "J1": 100 }
       },
       {
         "wallId": "W2",
-        "plateStart": { "x": 96, "y": 2.75 },
-        "plateEnd": { "x": 96, "y": 120 },
+        "plateStart": { "x": 72, "y": 2.75 },
+        "plateEnd": { "x": 72, "y": 120 },
         "length": 117.25,
         "layoutOrigin": 0,
-        "connections": { "start": { "kind": "tee", "wallId": "W1", "at": { "x": 96, "y": 0 } }, "end": { "kind": "free" }, "tees": [] },
+        "connections": { "start": { "kind": "tee", "wallId": "W1", "at": { "x": 72, "y": 0 } }, "end": { "kind": "free" }, "tees": [] },
         "openingOffsets": {}
       }
     ],
     "panels": {
-      "W1": { "members": 24, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 143.25, 159.25, 175.25, 190.5], "warnings": ["OPENING_AT_TEE"] },
-      "W2": { "members": 12, "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 115.75], "warnings": [] }
+      "W1": {
+        "members": 28,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 143.25, 159.25, 175.25, 190.5],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x6", "length": 192, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 192, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 70.25, "x": 0, "y": 95.625 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 118.25, "x": 73.75, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 159.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 175.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 190.5, "y": 1.5 },
+          { "role": "block", "section": "2x6", "length": 14.5, "x": 64.75, "y": 23.25 },
+          { "role": "block", "section": "2x6", "length": 14.5, "x": 64.75, "y": 47.25 },
+          { "role": "block", "section": "2x6", "length": 14.5, "x": 64.75, "y": 71.25 },
+          { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 97, "y": 1.5 },
+          { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 137.5, "y": 1.5 },
+          { "role": "jackStud", "section": "2x6", "length": 81, "x": 98.5, "y": 1.5 },
+          { "role": "jackStud", "section": "2x6", "length": 81, "x": 136, "y": 1.5 },
+          { "role": "header", "section": "2x10", "length": 39, "x": 98.5, "y": 82.5 },
+          { "role": "sill", "section": "2x6", "length": 36, "x": 100, "y": 33 },
+          { "role": "cripple", "section": "2x6", "length": 31.5, "x": 111.25, "y": 1.5 },
+          { "role": "cripple", "section": "2x6", "length": 31.5, "x": 127.25, "y": 1.5 },
+          { "role": "cripple", "section": "2x6", "length": 2.375, "x": 111.25, "y": 91.75 },
+          { "role": "cripple", "section": "2x6", "length": 2.375, "x": 127.25, "y": 91.75 }
+        ]
+      },
+      "W2": {
+        "members": 12,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 115.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x4", "length": 117.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x4", "length": 117.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 122.75, "x": -5.5, "y": 95.625 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 115.75, "y": 1.5 }
+        ]
+      }
     }
   }
 }

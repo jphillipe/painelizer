@@ -77,6 +77,14 @@ export function sectionThickness(section: Section): number {
   return e.width;
 }
 
+/**
+ * Largura em x que uma peça vertical ocupa na elevação: a espessura da madeira (1.5") em pé, a profundidade
+ * da seção quando deitada (`flat`, stud do canto California — S14).
+ */
+export function verticalWidth(m: { section: Section; flat?: boolean }): number {
+  return m.flat === true ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
+}
+
 export type OpeningType = 'window' | 'door';
 
 /** Piso suportado pela parede: apoiado no centro (center-bearing) ou vão livre (clear span). */
@@ -251,7 +259,49 @@ export interface Wall {
   layoutOrigin?: number;
   /** Studs de altura inteira adicionais pedidos pelo projeto (S12). */
   extraStuds?: ExtraStud[];
+  /**
+   * Ligações desta parede com as vizinhas, em x do painel (S14). Derivadas pela planta (`frameWalls`);
+   * ausente = parede solta. Definem as peças de canto e T e os laps da double top plate.
+   */
+  joints?: WallJoints;
 }
+
+/** Como uma ponta da parede se liga à vizinha (S14). `otherThickness` = espessura real da outra parede. */
+export type EndJoint =
+  | {
+      kind: 'corner';
+      /** Esta parede atravessa o canto (plate até a face externa da outra) ou encosta nela. */
+      through: boolean;
+      otherThickness: number;
+      wallId?: string;
+    }
+  | {
+      /** Esta parede encosta em T no interior da outra. */
+      kind: 'tee';
+      otherThickness: number;
+      wallId?: string;
+    };
+
+/** Parede que encosta em T no interior desta, em x do painel: ocupa `[x − width/2, x + width/2]`. */
+export interface TeeJoint {
+  /** x do eixo da parede que encosta. */
+  x: number;
+  /** Espessura real da parede que encosta. */
+  width: number;
+  wallId?: string;
+}
+
+export interface WallJoints {
+  start?: EndJoint;
+  end?: EndJoint;
+  tees?: TeeJoint[];
+}
+
+/** Montagem do canto externo (P5): California (stud deitado) ou três studs. */
+export type CornerStyle = 'california' | 'three-stud';
+
+/** Montagem do T (P5): ladder blocking ou studs de encosto (backer). */
+export type TeeStyle = 'ladder' | 'backer';
 
 export type MemberRole =
   | 'bottomPlate'
@@ -262,7 +312,8 @@ export type MemberRole =
   | 'jackStud'
   | 'header'
   | 'sill'
-  | 'cripple';
+  | 'cripple'
+  | 'block';
 
 export type Orientation = 'horizontal' | 'vertical';
 
@@ -279,7 +330,11 @@ export interface Member {
   plies?: number;
   /** Só no header: de onde veio a seção. */
   headerSource?: HeaderSource;
-  /** Só no header: peça deitada (1.5" de altura na elevação, como o sill), não em pé. Ausente = em pé. */
+  /**
+   * Peça deitada (face larga virada para a face da parede). No header: 1.5" de altura na elevação, como o
+   * sill (R602.7.4). No stud: stud do canto California (S14), que ocupa `sectionDepth` em x e 1.5" na
+   * espessura da parede. Ausente = em pé.
+   */
   flat?: boolean;
   /** Texto do projeto para a peça (stud extra: `ExtraStud.label`); vai para o `<title>` no SVG. */
   label?: string;
@@ -345,4 +400,8 @@ export interface Config {
   openingTypes?: Record<string, OpeningCatalogEntry>;
   /** Wood header schedule do estrutural, por marca (S12.5). */
   headerSchedule?: Record<string, HeaderScheduleEntry>;
+  /** Montagem do canto externo (S14). Ausente = `'california'` (P5). */
+  corner?: CornerStyle;
+  /** Montagem do T (S14). Ausente = `'ladder'` (P5, alturas por hipótese P22). */
+  tee?: TeeStyle;
 }

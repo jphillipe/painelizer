@@ -49,3 +49,47 @@ describe('layoutPlates', () => {
     expect(() => layoutPlates(length, height, '2x6', t)).toThrow(RangeError);
   });
 });
+
+describe('layoutPlates — laps e cortes da double top plate (S14, R602.3.2)', () => {
+  it('extend no início: a double top começa em x negativo e cresce; bottom e top não mudam', () => {
+    const plates = layoutPlates(117.25, 97.125, '2x6', 1.5, { start: { extend: 5.5 } });
+    expectSameMembers(plates, [
+      { role: 'bottomPlate', section: '2x6', length: 117.25, x: 0, y: 0 },
+      { role: 'topPlate', section: '2x6', length: 117.25, x: 0, y: 94.125 },
+      { role: 'doubleTopPlate', section: '2x6', length: 122.75, x: -5.5, y: 95.625 },
+    ]);
+  });
+
+  it('recess no início e extend no fim', () => {
+    const [, , dt] = layoutPlates(146.75, 97.125, '2x6', 1.5, { start: { recess: 5.5 }, end: { extend: 3.5 } });
+    expect(dt).toMatchObject({ role: 'doubleTopPlate', x: 5.5, length: 146.75 - 5.5 + 3.5 });
+  });
+
+  it('corte abre um vão: duas peças, da esquerda para a direita', () => {
+    const plates = layoutPlates(192, 97.125, '2x6', 1.5, { cuts: [{ x: 70.25, width: 3.5 }] });
+    expect(plates.filter((p) => p.role === 'doubleTopPlate')).toEqual([
+      { role: 'doubleTopPlate', section: '2x6', length: 70.25, x: 0, y: 95.625, orientation: 'horizontal' },
+      { role: 'doubleTopPlate', section: '2x6', length: 118.25, x: 73.75, y: 95.625, orientation: 'horizontal' },
+    ]);
+    expect(plates).toHaveLength(4);
+  });
+
+  it('cortes fora de ordem são ordenados; corte encostado na ponta não deixa pedaço vazio', () => {
+    const dts = layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 60, width: 10 }, { x: 0, width: 10 }] }).filter(
+      (p) => p.role === 'doubleTopPlate',
+    );
+    expect(dts.map((p) => [p.x, p.length])).toEqual([
+      [10, 50],
+      [70, 30],
+    ]);
+  });
+
+  it('rejeita lap negativo, extend e recess juntos, corte fora da peça, cortes sobrepostos e peça consumida', () => {
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { start: { extend: -1 } })).toThrow(RangeError);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { end: { extend: 2, recess: 2 } })).toThrow(/extend e recess/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 95, width: 10 }] })).toThrow(/sai da double top/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 10, width: 10 }, { x: 15, width: 10 }] })).toThrow(/sobrepõe/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 0, width: 100 }] })).toThrow(/inteira/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { start: { recess: 60 }, end: { recess: 60 } })).toThrow(/sem comprimento/);
+  });
+});

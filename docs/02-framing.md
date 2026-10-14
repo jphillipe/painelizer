@@ -36,7 +36,26 @@
   o x do painel (0 no início da plate). `layoutOrigin = −t_outra` só quando o `start` encosta num canto (a marca
   0 é a quina); T, livre e atravessa = 0. Exemplo resolvido: `test/fixtures/house-corner-L.json` (2x6 em L,
   eixos 144 e 120 → plates 146.75 e 117.25, origem −5.5 na que encosta). T na zona de uma abertura avisa
-  `OPENING_AT_TEE`; dentro do RO é erro. Peças de canto e T (California, ladder) são da S14.
+  `OPENING_AT_TEE`; dentro do RO é erro.
+- Canto, T e laps da double top plate (S14, `rules/corners.ts`, a partir de `Wall.joints` que a planta deriva):
+  - **Canto** (`config.corner`, default `california`, P5): só a parede que **atravessa** ganha peça — um stud
+    `flat: true` (face larga para dentro; ocupa `sectionDepth` em x) colado ao stud de ponta pelo lado de dentro,
+    x = 1.5 no início ou `length − 1.5 − sectionDepth` no fim; `three-stud` põe um stud em pé no mesmo lugar. A que
+    encosta não ganha peça: seu stud de ponta já é o do canto. Stud de layout que sobrepõe o stud de canto sai
+    (como com os extras); flat sobre king/jack de abertura junto à quina fica e `STUDS_OVERLAP` avisa.
+  - **T** (`config.tee`, default `ladder`, P5): na parede atravessada, a que encosta ocupa a faixa `x ± w/2`.
+    Ladder: blocos `role: 'block'` da seção da parede, deitados (1.5" de altura), do stud vizinho à esquerda da
+    faixa ao vizinho à direita, com centros em 24, 48, 72… do subfloor enquanto o topo do bloco cabe sob a top
+    plate (3 blocos em 8', 4 em 9' — hipótese P22). Stud de layout dentro da faixa fica e divide o bloco; pedaço
+    < 1.5" sai. `backer`: dois studs de altura inteira colados às faces da faixa. Faixa na zona de abertura:
+    só o aviso `OPENING_AT_TEE`, nenhuma peça de T.
+  - **Laps** (R602.3.2, só a double top plate; bottom e top não mudam): no canto, a de quem encosta avança
+    `t_outra` sobre a top plate da outra (`x = −t_outra`) e a de quem atravessa recua `t_outra`; no T, a de quem
+    encosta avança `t_outra` e a da atravessada é cortada em duas peças na faixa. `layoutPlates` recebe
+    `{ start?, end?: { extend?, recess? }, cuts? }`. O SVG abre espaço para `x < 0` / `x > length` e cota o avanço.
+  - Fixtures: `house-corner-L` (W1 atravessa: flat em 1.5, double top 141.25 em x=5.5; W2 encosta: double top
+    122.75 em x=−5.5) e `house-tee` (T em 72: 3 blocos 2x6 × 14.5 em y = 23.25, 47.25, 71.25; double top de W1 em
+    duas peças, 70.25 e 118.25; a de W2 avança 5.5).
 - Altura padrão de parede: 97.125" (8'-1 1/8") = 3 plates × 1.5 + stud 92.625.
 - Parede declara `section` ('2x4' | '2x6'); espessura real (3.5 / 5.5) é derivada, nunca entrada.
 - Zona de abertura = [offset − (kings + jacks)·1.5, offset + roughWidth + (kings + jacks)·1.5]. `kingStuds` e

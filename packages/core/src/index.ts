@@ -6,7 +6,20 @@
 export * from './types';
 export * from './units';
 export { layoutStuds } from './rules/studs';
-export { layoutPlates } from './rules/plates';
+export { layoutPlates, type PlateCut, type PlateEndLap, type PlateOptions } from './rules/plates';
+export {
+  LADDER_BLOCK_SPACING,
+  MIN_BLOCK_LENGTH,
+  backerStuds,
+  cornerStuds,
+  ladderBlockCenters,
+  ladderBlocks,
+  plateOptionsFor,
+  teeConflicts,
+  teeStrips,
+  type JointStud,
+  type TeeStrip,
+} from './rules/corners';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
 export {
   framingForOpening,
