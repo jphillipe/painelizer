@@ -398,6 +398,17 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   Rodar `house-28x40` e um projeto de `06-referencias` do início ao fim; levar as folhas, o `plan.svg` e a BOM
   para a fábrica; montar dois painéis vizinhos e um canto. Divergências viram fixtures e linhas em 04-decisoes.
   Só depois a Fase 4.
+  Preparação feita em 2026-10-14 (sessão autônoma "faça o checkpoint 3"): entrada do CLI
+  `packages/cli/examples/house-28x40.json` (mesma casa do fixture, com nome, data, revisão e norte) e o
+  `ringgold-checkpoint.json` com carimbo; os dois rodados do início ao fim em `out/checkpoint-3/` (28x40: 12 painéis,
+  234 peças a cortar, sem avisos; Ringgold: 4 painéis, os 2 avisos de jacks de sempre). Planta e 8 folhas
+  conferidas pelo Claude em PNG (Chrome headless). Roteiro da visita em `docs/09-checkpoint-3.md`: o que levar,
+  os três painéis a montar (1-W01-P1 + 1-W01-P2 vizinhos e 1-W04-P2 fechando o canto noroeste — cobrem canto
+  que atravessa, canto que encosta, lap, T com ladder e porta com corte na obra), o que anotar e como a resposta
+  volta. Correção feita de passagem: o cabeçalho da folha contava o header como 1 peça enquanto a lista da
+  margem e `panels.csv` contavam os plies — agora todos contam peças a cortar (5 snapshots `wall-*` mudaram só
+  nessa linha). O Ringgold continua com 4 painéis (o estrutural da SAB não está no repositório); a casa inteira
+  é a 28x40. Falta: a visita, e a conferência humana de `wall-144-window-door` e um canto (S17).
 
 ## Fase 4 — Entrada de dados
 

@@ -13,7 +13,7 @@
  *   - horizontal deitado (plates, sill, header flat, bloco): `length` × 1.5;
  *   - header (em pé): `length` × profundidade da seção (`sectionDepth`).
  * - Cabeçalho: id do painel, projeto (`opts.project`), parede, pavimento, seção, externa/interna,
- *   portante, dimensões, nº de peças, peso, data e revisão (`opts.date`, `opts.revision` — a folha não lê o
+ *   portante, dimensões, nº de peças a cortar (plies contam, como na lista), peso, data e revisão (`opts.date`, `opts.revision` — a folha não lê o
  *   relógio: mesma entrada, mesma string) e a linha da vista (P24).
  * - Desenho: contorno tracejado, members com cor por papel e `<title>` (papel, seção, comprimento, plies,
  *   origem do header, label do stud extra, posição), rótulo curto por peça (K king, J jack, C cripple,
@@ -193,7 +193,8 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const totalW = listX + LIST_WIDTH + margin;
   const totalH = Math.max(warningsY + panel.warnings.length * WARNING_LINE, list.bottom) + margin;
 
-  const pieces = panel.members.length;
+  // Peças a cortar: header de n plies conta n, como na lista da margem e em panels.csv (Checkpoint 3).
+  const pieces = panel.members.reduce((n, m) => n + (m.plies ?? 1), 0);
   const weightLb = panel.weightLb ?? panelWeight(panel);
 
   const out: string[] = [];

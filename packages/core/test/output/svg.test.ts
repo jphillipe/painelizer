@@ -335,11 +335,11 @@ describe('panelSvg — folha de fabricação (S17)', () => {
   const windowDoorPanel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
   const sheet = panelSvg(windowDoorPanel, { project: 'Casa X', date: '2026-10-14', revision: 'A' });
 
-  it('cabeçalho: projeto, data e revisão vêm de opts; parede, pavimento, seção, externa/portante, dimensões, peças e peso', () => {
+  it('cabeçalho: projeto, data e revisão vêm de opts; parede, pavimento, seção, externa/portante, dimensões, peças a cortar (plies contam) e peso', () => {
     expect(sheet).toContain('text-anchor="end">Casa X</text>');
     expect(sheet).toContain('>data 2026-10-14 · rev. A</text>');
     expect(sheet).toContain(
-      `>parede W-window-door · pavimento 1 · 2x6 externa portante · 12'-0&quot; × 8'-1 1/8&quot; · 24 peças · 312.5 lb</text>`,
+      `>parede W-window-door · pavimento 1 · 2x6 externa portante · 12'-0&quot; × 8'-1 1/8&quot; · 26 peças · 312.5 lb</text>`,
     );
     // Sem opts: sem projeto nem carimbo; a folha nunca lê o relógio.
     const bare = panelSvg(windowDoorPanel);

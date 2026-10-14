@@ -1,0 +1,192 @@
+{
+  "$comment": "Checkpoint 3 — a casa 28x40 de docs/00-visao.md (mesma entrada do fixture test/fixtures/house-28x40.json do core, só com nome, data, revisão e norte para o cabeçalho das folhas). Gerado em 2026-10-14; se o fixture mudar, regenerar este arquivo a partir dele.",
+  "name": "Casa 28x40 (visão)",
+  "date": "2026-10-14",
+  "revision": "A",
+  "northAngle": 0,
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [
+      92.625,
+      104.625
+    ],
+    "headerHeight": 82.5,
+    "building": {
+      "groundSnowLoad": 50,
+      "buildingWidth": 336,
+      "windSpeed": 120,
+      "exposure": "B"
+    }
+  },
+  "walls": [
+    {
+      "id": "W01",
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "x": 480,
+        "y": 0
+      },
+      "height": 97.125,
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P1",
+          "type": "door",
+          "offset": 168,
+          "roughWidth": 38,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        },
+        {
+          "id": "J1",
+          "type": "window",
+          "offset": 336,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "W02",
+      "start": {
+        "x": 480,
+        "y": 0
+      },
+      "end": {
+        "x": 480,
+        "y": 336
+      },
+      "height": 97.125,
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "J2",
+          "type": "window",
+          "offset": 72,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        },
+        {
+          "id": "J3",
+          "type": "window",
+          "offset": 216,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "W03",
+      "start": {
+        "x": 480,
+        "y": 336
+      },
+      "end": {
+        "x": 0,
+        "y": 336
+      },
+      "height": 97.125,
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P2",
+          "type": "door",
+          "offset": 240,
+          "roughWidth": 72,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x12",
+            "plies": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "W04",
+      "start": {
+        "x": 0,
+        "y": 336
+      },
+      "end": {
+        "x": 0,
+        "y": 0
+      },
+      "height": 97.125,
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "J4",
+          "type": "window",
+          "offset": 96,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "W05",
+      "start": {
+        "x": 264,
+        "y": 0
+      },
+      "end": {
+        "x": 264,
+        "y": 336
+      },
+      "height": 97.125,
+      "section": "2x4",
+      "exterior": false,
+      "bearing": true,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P3",
+          "type": "door",
+          "offset": 120,
+          "roughWidth": 34,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ]
+    }
+  ]
+}
