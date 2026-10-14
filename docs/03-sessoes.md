@@ -394,21 +394,22 @@ Convenções novas (confirmadas na abertura da S13, 2026-10-13; registradas em 0
   `revision` na raiz), nunca do relógio. Snapshots `wall-*` regenerados e dois novos (`house-corner-L-W1/W2`).
   Detalhes em 04-decisoes.
 
-- [ ] **Checkpoint 3 — casa inteira na fábrica (sem Claude)**
-  Rodar `house-28x40` e um projeto de `06-referencias` do início ao fim; levar as folhas, o `plan.svg` e a BOM
-  para a fábrica; montar dois painéis vizinhos e um canto. Divergências viram fixtures e linhas em 04-decisoes.
-  Só depois a Fase 4.
-  Preparação feita em 2026-10-14 (sessão autônoma "faça o checkpoint 3"): entrada do CLI
-  `packages/cli/examples/house-28x40.json` (mesma casa do fixture, com nome, data, revisão e norte) e o
-  `ringgold-checkpoint.json` com carimbo; os dois rodados do início ao fim em `out/checkpoint-3/` (28x40: 12 painéis,
-  234 peças a cortar, sem avisos; Ringgold: 4 painéis, os 2 avisos de jacks de sempre). Planta e 8 folhas
-  conferidas pelo Claude em PNG (Chrome headless). Roteiro da visita em `docs/09-checkpoint-3.md`: o que levar,
-  os três painéis a montar (1-W01-P1 + 1-W01-P2 vizinhos e 1-W04-P2 fechando o canto noroeste — cobrem canto
-  que atravessa, canto que encosta, lap, T com ladder e porta com corte na obra), o que anotar e como a resposta
-  volta. Correção feita de passagem: o cabeçalho da folha contava o header como 1 peça enquanto a lista da
-  margem e `panels.csv` contavam os plies — agora todos contam peças a cortar (5 snapshots `wall-*` mudaram só
-  nessa linha). O Ringgold continua com 4 painéis (o estrutural da SAB não está no repositório); a casa inteira
-  é a 28x40. Falta: a visita, e a conferência humana de `wall-144-window-door` e um canto (S17).
+- [x] **Checkpoint 3 — casa inteira com hipóteses (interno)**
+  Como escrito antes ("na fábrica": montar dois painéis vizinhos e um canto, divergências viram fixtures), não
+  cabe na decisão de 2026-10-13: a fábrica não responde agora, o motor segue com as hipóteses de `05-pendencias`
+  e a revisão fica para a lista de `08-revisar.md`. Refeito como checkpoint interno: rodar a casa inteira do
+  início ao fim, conferir folhas, planta e listas, e registrar o que a casa exercita de cada hipótese.
+  Feito em 2026-10-14: entrada do CLI `packages/cli/examples/house-28x40.json` (mesma casa do fixture, com nome,
+  data, revisão e norte) e `ringgold-checkpoint.json` com carimbo; os dois rodados em `out/checkpoint-3/` (28x40:
+  12 painéis, 234 peças a cortar, sem avisos; Ringgold: 4 painéis, os 2 avisos de jacks de sempre — segue com 4
+  painéis porque o estrutural da SAB não está no repositório). Planta e 8 folhas conferidas pelo Claude em PNG
+  (Chrome headless): cantos que atravessam e que encostam, T com ladder, porta com corte na obra, janela, interna
+  2x4 com double top emendada, S2 do Ringgold. Relatório em `docs/09-checkpoint-3.md` (e PDF em
+  `out/checkpoint-3/`): o que foi gerado, de onde vem a altura de cada abertura, o que cada painel exercita de
+  P19–P24, P35 e P36, e o que fica para quando alguém responder. Correção de passagem: o cabeçalho da folha
+  contava o header como 1 peça enquanto a lista da margem e `panels.csv` contavam os plies — agora todos contam
+  peças a cortar (5 snapshots `wall-*` mudaram só nessa linha). `07-perguntas-fabrica.md` arquivado (redundante
+  com 05 e 08). Nenhum fixture `real-*`: os sintéticos continuam sendo a verdade. Próximo: Fase 4 (S18).
 
 ## Fase 4 — Entrada de dados
 

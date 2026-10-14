@@ -1,5 +1,9 @@
 # 07 — Perguntas para a fábrica
 
+> **Arquivado em 2026-10-14.** Escrito para a reunião de 2026-10-12, que não houve. Decisão de 2026-10-13: o motor
+> segue com as hipóteses; a fábrica não responde por enquanto. Tudo que está aqui já vive em `05-pendencias.md`
+> (a hipótese em vigor) e em `08-revisar.md` (onde mexer quando responderem). Não atualizar este arquivo.
+
 Lista para a reunião de 2026-10-12. Perguntas gerais sobre os painéis, sem nada específico de projeto.
 Entre colchetes, o que o motor assume hoje: anote só o que diverge. Cada resposta vira uma linha em
 `05-pendencias.md` (número P entre parênteses) e em `04-decisoes.md`.
