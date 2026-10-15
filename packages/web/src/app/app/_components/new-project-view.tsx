@@ -7,10 +7,11 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import type { ExtractOutcome } from '@/types/extract';
+import type { ExtractJob, ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
 import { generatePanels } from '../_actions/generate-panels';
 import { AdvancedImport } from './advanced-import';
+import { ExtractProgress } from './extract-progress';
 import { PreviewCard } from './preview-card';
 import { ResultView } from './result-view';
 import { SamplePicker } from './sample-picker';
@@ -31,7 +32,8 @@ export interface NewProjectViewProps {
 export function NewProjectView({ examples, aiEnabled, illustration }: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(1);
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
-  const [extracting, setExtracting] = useState(false);
+  const [job, setJob] = useState<ExtractJob | undefined>(undefined);
+  const extracting = job !== undefined;
   const [result, setResult] = useState<GenerateResult | undefined>(undefined);
 
   const generate = useAction(generatePanels, {
@@ -62,7 +64,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [step]);
+  }, [step, extracting]);
 
   const done: StepId[] = [...(outcome?.ok ? [1 as const] : []), ...(result ? [1 as const, 2 as const] : [])];
 
@@ -79,11 +81,17 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
 
       <StepBar active={step} done={done} onGo={setStep} />
 
+      {step === 1 && job ? <ExtractProgress job={job} /> : null}
+
       {step === 1 ? (
-        <section key="upload" className="step-enter no-print grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start">
+        // Escondido (não desmontado) durante a leitura: arquivos e campos voltam intactos se ela falhar.
+        <section
+          key="upload"
+          className={extracting ? 'hidden' : 'step-enter no-print grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start'}
+        >
           <div className="space-y-4">
             <div className="rounded-md border bg-card p-6 shadow-1">
-              <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onPendingChange={setExtracting} />
+              <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} />
             </div>
             <div className="space-y-4 rounded-md border bg-card p-6">
               <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={runProject} />
@@ -104,7 +112,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
             </Button>
           </div>
           {outcome?.ok ? (
-            <WallsReview outcome={outcome} pending={generate.isPending} onGenerate={runProject} />
+            <WallsReview outcome={outcome} pending={generate.isPending} onGenerate={runProject} onOutcome={onOutcome} />
           ) : (
             <Alert variant="destructive">
               <OctagonXIcon />

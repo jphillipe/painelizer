@@ -167,12 +167,63 @@
   }
 }
 
+/*
+ * Espera da extração (única animação em loop do app): peças da parede montam em cascata, seguram e somem;
+ * uma linha dourada varre o desenho como quem lê a planta.
+ */
+@utility frame-piece {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: frame-build 7s var(--ease-site) infinite both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+@utility frame-scan {
+  animation: frame-scan 3.2s ease-in-out infinite alternate;
+}
+@utility blueprint {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--line-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+@keyframes frame-build {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  7%,
+  76% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+@keyframes frame-scan {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(432px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .step-enter,
   .stagger,
   .lift {
     animation: none;
     transition: none;
+  }
+  .frame-piece {
+    animation: none;
+  }
+  .frame-scan {
+    display: none;
   }
 }
 

@@ -10,13 +10,13 @@ import {
   ExtractError,
   extractWalls,
   finish,
-  type ConvertOptions,
   type ExtractHints,
   type ExtractResult,
   type ExtractSource,
   type ImageMediaType,
 } from 'extract';
-import type { ExtractOutcome, WallReview } from '@/types/extract';
+import { toConvertOptions } from '@/schemas/extract';
+import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ProjectData, type WallReview } from '@/types/extract';
 
 export type { ExtractOutcome, OpeningReview, WallReview } from '@/types/extract';
 
@@ -65,8 +65,8 @@ export interface FromFilesOptions {
   /** Páginas (1-based) a enviar de cada PDF; ausente = carimbo (A-1xx, A-8xx) ou todas. */
   pages?: readonly number[];
   hints?: ExtractHints;
-  /** Altura de parede, data, revisão: o que o humano sabe e os desenhos não trazem. */
-  convert?: ConvertOptions;
+  /** O que o humano sabe e os desenhos não trazem (altura, estrutural); aplicado só onde o modelo deixou null. */
+  given?: ProjectData;
 }
 
 export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesOptions = {}, deps: ExtractDeps = defaultDeps): Promise<ExtractOutcome> {
@@ -78,6 +78,7 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
     };
   }
   if (files.length === 0) return { ok: false, reason: 'input', message: 'Add at least one PDF or image.' };
+  const given = opts.given ?? EMPTY_PROJECT_DATA;
   const sources: ExtractSource[] = [];
   for (const f of files) {
     const s = toSource(f, opts.pages);
@@ -89,20 +90,20 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
       {
         sources,
         ...(opts.hints === undefined ? {} : { hints: opts.hints }),
-        ...(opts.convert === undefined ? {} : { convert: opts.convert }),
+        convert: toConvertOptions(given),
       },
       {},
     );
-    return toOutcome(result);
+    return toOutcome(result, given);
   } catch (e) {
     return failure(e);
   }
 }
 
 /** Resposta gravada do modelo (JSON) → mesmo pós-processamento, sem chave e sem rede. */
-export function fromRecorded(raw: unknown): ExtractOutcome {
+export function fromRecorded(raw: unknown, given: ProjectData = EMPTY_PROJECT_DATA): ExtractOutcome {
   try {
-    return toOutcome(finish(raw, undefined, 'recorded', { inputTokens: 0, outputTokens: 0 }));
+    return toOutcome(finish(raw, toConvertOptions(given), 'recorded', { inputTokens: 0, outputTokens: 0 }), given);
   } catch (e) {
     return failure(e);
   }
@@ -127,7 +128,17 @@ function point(p: { x: string; y: string }): string {
   return `(${p.x}, ${p.y})`;
 }
 
-export function toOutcome(r: ExtractResult): ExtractOutcome {
+/** Reaplica dados do projeto a uma leitura já feita (revisão), sem chamar a IA; mantém modelo e páginas. */
+export function reconvert(raw: unknown, given: ProjectData, meta: { model: string; pagesSent: { name: string; pages: number[] }[] }): ExtractOutcome {
+  try {
+    const r = finish(raw, toConvertOptions(given), meta.model, { inputTokens: 0, outputTokens: 0 });
+    return toOutcome({ ...r, pagesSent: meta.pagesSent }, given);
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+export function toOutcome(r: ExtractResult, given: ProjectData): ExtractOutcome {
   const walls: WallReview[] = r.output.walls.map((w) => ({
     id: w.id,
     geometry: w.start !== null && w.end !== null ? `${point(w.start)} → ${point(w.end)}` : (w.length ?? '—'),
@@ -146,6 +157,8 @@ export function toOutcome(r: ExtractResult): ExtractOutcome {
   }));
   return {
     ok: true,
+    output: r.output,
+    given,
     projectName: r.output.projectName,
     level: r.output.level,
     origin: r.output.origin,

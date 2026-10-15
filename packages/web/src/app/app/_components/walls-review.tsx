@@ -1,17 +1,22 @@
 'use client';
 
-import { Loader2Icon } from 'lucide-react';
+import { DownloadIcon, Loader2Icon } from 'lucide-react';
+import { downloadText } from '@/lib/download';
+
+const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
 import { Problems, Warnings } from './problems';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type { ExtractOutcome } from '@/types/extract';
+import { ProjectDataForm } from './project-data-form';
 
 export interface WallsReviewProps {
   outcome: Extract<ExtractOutcome, { ok: true }>;
   pending: boolean;
   onGenerate: (projectText: string) => void;
+  onOutcome: (outcome: ExtractOutcome) => void;
 }
 
 function Confidence({ value }: { value: number }) {
@@ -20,8 +25,9 @@ function Confidence({ value }: { value: number }) {
 }
 
 /** Passo 02: o que a IA leu, com confiança e evidência, para o humano conferir antes de gerar. */
-export function WallsReview({ outcome, pending, onGenerate }: WallsReviewProps) {
+export function WallsReview({ outcome, pending, onGenerate, onOutcome }: WallsReviewProps) {
   const lowConfidence = outcome.walls.filter((w) => w.confidence < 0.7 || w.openings.some((o) => o.confidence < 0.7)).length;
+  const needsData = outcome.problems.some((p) => p.startsWith('altura:') || p.includes('config.building') || p.includes('floorsSupported'));
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -35,7 +41,22 @@ export function WallsReview({ outcome, pending, onGenerate }: WallsReviewProps) 
           {outcome.pagesSent.length > 0 ? ` · ${outcome.pagesSent.map((p) => `${p.name} p.${p.pages.join(',')}`).join(' · ')}` : ''}
         </span>
       </div>
-      <p className="text-sm text-ink-2">Origin: {outcome.origin}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="mr-auto text-sm text-ink-2">Origin: {outcome.origin}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={outcome.output === undefined}
+          onClick={() => downloadText(`${slug(outcome.projectName)}-reading.json`, JSON.stringify(outcome.output, null, 2))}
+        >
+          <DownloadIcon /> Download reading
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => downloadText(`${slug(outcome.projectName)}-project.json`, outcome.projectText)}>
+          <DownloadIcon /> Download project
+        </Button>
+      </div>
+
+      <ProjectDataForm outcome={outcome} onOutcome={onOutcome} highlight={needsData} />
 
       {outcome.problems.length > 0 ? <Problems problems={outcome.problems} /> : null}
       <Warnings warnings={outcome.warnings} />
@@ -111,7 +132,9 @@ export function WallsReview({ outcome, pending, onGenerate }: WallsReviewProps) 
         </Button>
         <span className="text-sm text-ink-3">
           {outcome.problems.length > 0
-            ? 'The engine can’t build this as read. Wall editing arrives with the editor; for now, fix the project file and import it under Advanced.'
+            ? needsData
+              ? 'Fill in the project data above and apply it.'
+              : 'The engine can’t build this as read. Wall editing arrives with the editor; for now, fix the project file and import it under Advanced.'
             : 'Deterministic: same input, same sheets.'}
         </span>
       </div>

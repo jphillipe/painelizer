@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon, SparklesIcon, TriangleAlertIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -12,31 +12,38 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { recordDuration } from '@/lib/extract-timing';
 import { uploadFieldsSchema, type UploadFields } from '@/schemas/extract';
-import type { ExtractOutcome } from '@/types/extract';
+import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome } from '@/types/extract';
 import { extractWalls } from '../_actions/extract-walls';
 import { DropZone } from './drop-zone';
+import { ProjectDataFields } from './project-data-fields';
 
 export interface UploadFormProps {
   aiEnabled: boolean;
   onOutcome: (outcome: ExtractOutcome) => void;
-  onPendingChange: (pending: boolean) => void;
+  /** A leitura em andamento (tela de espera), ou `undefined` quando acaba. */
+  onJobChange: (job: ExtractJob | undefined) => void;
 }
 
 const AUTO = 'auto';
 
-/** Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`. */
-export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadFormProps) {
+/**
+ * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
+ * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
+ */
+export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
+  const startedAt = useRef(0);
   const form = useForm<UploadFields>({
     resolver: zodResolver(uploadFieldsSchema),
-    defaultValues: { level: '', projectName: '', wallHeight: '', snow: '', width: '', wind: '', exposure: '', floors: '', floorSpan: '', pages: '', notes: '' },
+    defaultValues: { level: '', projectName: '', pages: '', notes: '', ...EMPTY_PROJECT_DATA },
   });
 
   const { execute, isPending } = useAction(extractWalls, {
-    onExecute: () => onPendingChange(true),
-    onSettled: () => onPendingChange(false),
+    onSettled: () => onJobChange(undefined),
     onSuccess: ({ data }) => {
+      if (data?.ok) recordDuration(Date.now() - startedAt.current);
       if (data) onOutcome(data);
     },
     onError: ({ error }) => toast.error(error.serverError ?? 'Could not extract walls.'),
@@ -50,6 +57,8 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
     const fd = new FormData();
     for (const f of files) fd.append('files', f);
     for (const [k, v] of Object.entries(fields)) fd.set(k, v);
+    startedAt.current = Date.now();
+    onJobChange({ startedAt: startedAt.current, files: files.map((f) => ({ name: f.name, size: f.size })) });
     execute(fd);
   };
 
@@ -87,10 +96,10 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Level</FormLabel>
-                  <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
+                  <Select value={field.value || AUTO} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Identify from drawings" />
+                        <SelectValue>{field.value === '' ? 'Identify from drawings' : `Level ${field.value}`}</SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -120,142 +129,26 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
               )}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="wallHeight"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Wall height <span className="font-normal text-ink-3">(if the set has no sections)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={`e.g. 9'-1 1/8"`} className="font-mono" />
-                  </FormControl>
-                  <FormDescription>Subfloor to top of the double top plate. Read from sections when they exist.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pages"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    PDF pages <span className="font-normal text-ink-3">(optional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g. 3,15" className="font-mono" />
-                  </FormControl>
-                  <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="pages"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  PDF pages <span className="font-normal text-ink-3">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
+                </FormControl>
+                <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <details className="text-sm">
-            <summary className="cursor-pointer text-ink-2">Structural data (from the engineer, when the set has none)</summary>
-            <p className="mt-2 text-ink-3">The engine sizes headers by the IRC tables; these only apply where the drawings say nothing.</p>
-            <div className="mt-3 grid gap-4 sm:grid-cols-3">
-              <FormField
-                control={form.control}
-                name="floors"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Floors above this level</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="2" inputMode="numeric" className="font-mono" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="floorSpan"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Floor span</FormLabel>
-                    <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="—" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={AUTO}>Not known</SelectItem>
-                        <SelectItem value="center">Center bearing</SelectItem>
-                        <SelectItem value="clear">Clear span</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="snow"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Snow load (psf)</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="30" inputMode="decimal" className="font-mono" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="width"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Building width</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder={`29'`} className="font-mono" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="wind"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wind (mph)</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="130" inputMode="numeric" className="font-mono" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="exposure"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Exposure</FormLabel>
-                    <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="—" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={AUTO}>Not known</SelectItem>
-                        <SelectItem value="B">B</SelectItem>
-                        <SelectItem value="C">C</SelectItem>
-                        <SelectItem value="D">D</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <summary className="cursor-pointer text-ink-2">Wall height and structural data (optional now; you can add them at review)</summary>
+            <p className="mt-2 mb-3 text-ink-3">Only used where the drawings say nothing. The engine sizes headers by the IRC tables.</p>
+            <ProjectDataFields control={form.control} />
           </details>
           <details className="text-sm">
             <summary className="cursor-pointer text-ink-2">Add notes for the AI (optional)</summary>
@@ -286,7 +179,7 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
               </>
             )}
           </Button>
-          <span className="text-sm text-ink-3">{isPending ? 'This can take a few minutes.' : 'You review every wall before anything is built.'}</span>
+          <span className="text-sm text-ink-3">The read takes several minutes. You review every wall before anything is built.</span>
         </div>
       </form>
     </Form>

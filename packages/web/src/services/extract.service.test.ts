@@ -68,6 +68,25 @@ describe('fromFiles', () => {
   });
 });
 
+describe('reconvert (dados do projeto na revisão, sem IA)', () => {
+  it('reaplica altura e estrutural a uma leitura sem cortes; mantém modelo e páginas', async () => {
+    const noHeight = { ...(ringgoldRaw as Record<string, unknown>), wallHeight: null };
+    const first = fromRecorded(noHeight);
+    if (!first.ok) throw new Error(first.message);
+    expect(first.problems[0]).toMatch(/^altura:/);
+    const { reconvert } = await import('./extract.service');
+    const second = reconvert(first.output, { ...first.given, wallHeight: `9' - 1 1/8"` }, { model: 'm', pagesSent: [{ name: 'p.pdf', pages: [3] }] });
+    if (!second.ok) throw new Error(second.message);
+    expect(second.problems.filter((p) => p.startsWith('altura'))).toEqual([]);
+    expect(second.given.wallHeight).toBe(`9' - 1 1/8"`);
+    expect(second.model).toBe('m');
+    expect(second.pagesSent).toEqual([{ name: 'p.pdf', pages: [3] }]);
+    const walls = (JSON.parse(second.projectText) as { walls: { height?: string }[] }).walls;
+    expect(walls).toHaveLength(4);
+    expect(walls.every((w) => w.height === `9' - 1 1/8"`)).toBe(true);
+  });
+});
+
 describe('fromRecorded', () => {
   it('resposta gravada válida vira revisão sem chave', () => {
     const r = fromRecorded(ringgoldRaw);

@@ -518,7 +518,13 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     paredes sul, porta da I12 colada no início da parede, e uma nova, P37: emenda da double top num painel de
     266 1/2" cheio de aberturas na S1). A chamada só rodou depois de três correções no cliente: streaming
     obrigatório, structured outputs inviável para este schema (vai no prompt), `max_tokens` 96 000 porque o
-    raciocínio conta. Chamada real pelo site ainda não feita (mesmo caminho; custo ~US$ 1,50 por conjunto).
+    raciocínio conta. **Chamada real pelo site feita pelo humano** (2026-10-15, PDF de 2 páginas `out/ringgold-1st-floor.pdf`):
+    26 paredes, os pares de janelas já como `A2` (16 pares), notas idênticas em qualidade; travou em "altura" porque
+    os dados do projeto só podiam ser dados antes da chamada. Corrigido: `ProjectDataForm` na tela de revisão
+    (action `applyProjectData` → `extract.service.reconvert`, que reaplica `toConvertOptions` à resposta guardada
+    em `outcome.output` sem nova chamada); os mesmos campos (`ProjectDataFields`) ficam opcionais no upload.
+    Conferido no browser com resposta gravada sem altura: o card aparece destacado, "Apply" remove o problema de
+    altura e o motor passa a apontar o que falta de verdade (header fora da tabela sem `floorSpan`).
   - [ ] **S20.3 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS.
     Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**

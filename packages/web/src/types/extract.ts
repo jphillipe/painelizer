@@ -22,9 +22,26 @@ export interface WallReview {
   evidence: string;
 }
 
+/** O que o humano informa e os desenhos não trazem; texto como no formulário ('' = não informado). */
+export interface ProjectData {
+  wallHeight: string;
+  floors: string;
+  floorSpan: '' | 'center' | 'clear';
+  snow: string;
+  width: string;
+  wind: string;
+  exposure: '' | 'B' | 'C' | 'D';
+}
+
+export const EMPTY_PROJECT_DATA: ProjectData = { wallHeight: '', floors: '', floorSpan: '', snow: '', width: '', wind: '', exposure: '' };
+
 export type ExtractOutcome =
   | {
       ok: true;
+      /** A resposta do modelo como veio (formato interno), para reaplicar dados do projeto sem nova chamada. */
+      output: unknown;
+      /** Dados do projeto aplicados nesta conversão. */
+      given: ProjectData;
       projectName: string;
       level: number;
       origin: string;
@@ -47,6 +64,12 @@ export type ExtractOutcome =
       message: string;
       rawText?: string;
     };
+
+/** Leitura em andamento, para a tela de espera: quando começou e o que foi enviado. */
+export interface ExtractJob {
+  startedAt: number;
+  files: { name: string; size: number }[];
+}
 
 export const ACCEPTED_UPLOAD_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
 export const ACCEPTED_UPLOAD_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif'] as const;
