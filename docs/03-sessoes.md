@@ -502,6 +502,23 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     `DropZone` (arrastar e soltar, lista com remover), "Project details" (pavimento, nome, páginas, notas
     recolhidas), `PreviewCard` com a planta da 28x40 como ilustração. Componentes e actions da rota vivem em
     `app/app/_components` e `app/app/_actions` (10-design §9).
+    **Primeira extração real (2026-10-15, chave do humano):** A-100 + A-800 do Ringgold, `claude-opus-5-5`, effort
+    high, 10 min 38 s, 20 989 tokens de entrada e 70 240 de saída (~US$ 1,50). Leu o 1º pavimento inteiro em
+    planta: 26 paredes (6 externas, 20 internas), 42 aberturas, 6 tipos de parede, 7 tipos de abertura, origem no
+    canto SO no eixo, e 25 notas honestas (erro de fechamento de 1/8" nas cadeias, paredes sem cota com confiança
+    0,3–0,4, dúvidas sobre portantes entre unidades). Conferido contra `ringgold-checkpoint.json`: as posições
+    batem exatamente (N1 par A, S1 par A, porta 1, pares da S2) — a diferença de 2 3/4" é a conversão face
+    externa → eixo, feita certo; a I1 saiu com 15'-8 1/2" eixo a eixo = 15'-4" entre faces + 2 3/4" + 1 3/4".
+    Divergências: a IA separou cada par de janelas A em duas aberturas coladas (RO sobrepostos) — regra nova no
+    prompt (par = uma abertura, tipo `A2`); duas portas internas sem posição (confiança 0,3). Sem cortes nem
+    estrutural no conjunto, `wallHeight`, `floorsSupported` e `building` vieram null: viraram entradas do humano
+    (`--wall-height`, `--snow`, `--width`, `--wind`, `--exposure`, `--floors`, `--floor-span` no CLI; "Wall
+    height" e "Structural data" no site), aplicadas só onde a IA deixou vazio. Replay offline da leitura com
+    esses dados e os pares juntados: o motor chega às aberturas e para em três objeções legítimas (P30 nas
+    paredes sul, porta da I12 colada no início da parede, e uma nova, P37: emenda da double top num painel de
+    266 1/2" cheio de aberturas na S1). A chamada só rodou depois de três correções no cliente: streaming
+    obrigatório, structured outputs inviável para este schema (vai no prompt), `max_tokens` 96 000 porque o
+    raciocínio conta. Chamada real pelo site ainda não feita (mesmo caminho; custo ~US$ 1,50 por conjunto).
   - [ ] **S20.3 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS.
     Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**

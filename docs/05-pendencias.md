@@ -207,6 +207,17 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   porta? — hipótese: da esquerda, a maior peça que deixa o resto emendável; bottom sobre qualquer stud ou king;
   `splicePlates` em `rules/split.ts` — S15.
 
+## Novas (abertas em 2026-10-15, primeira extração real do Ringgold)
+- [ ] **P37 — Emenda da double top plate em painel cheio de aberturas.** Na parede sul real do Ringgold (S1,
+  42'-3 1/2" com dois pares de janelas e uma porta nos primeiros 20'), a divisão gerou um painel de 266 1/2" e o
+  `splicePlates` não achou stud de altura inteira entre x=5 1/2" e x=197 1/2" que respeitasse a defasagem de 24"
+  das outras emendas com estoque de 192". Opções: permitir emenda sobre king (já permite?) com defasagem menor,
+  quebrar o painel em outro lugar (S15), ou aceitar plate de 20' quando o estoque tiver. — hipótese: erro,
+  como hoje; o revisor move a quebra do painel. Fixture candidato: `out/s19/real7/projeto.json` (fora do git).
+- [ ] **P38 — Porta colada ao início da parede (I12-U3-1 a 1'-9 3/8" do eixo, RO de 32").** A zona da
+  abertura (king + jack) sai 3/8" antes do início da parede. Pode ser erro de leitura (eixo vs. face) ou a
+  porta realmente encostada no canto, caso em que o king vira o stud de canto. — hipótese: erro, como hoje.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais

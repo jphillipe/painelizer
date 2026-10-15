@@ -30,7 +30,7 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
   const [files, setFiles] = useState<File[]>([]);
   const form = useForm<UploadFields>({
     resolver: zodResolver(uploadFieldsSchema),
-    defaultValues: { level: '', projectName: '', pages: '', notes: '' },
+    defaultValues: { level: '', projectName: '', wallHeight: '', snow: '', width: '', wind: '', exposure: '', floors: '', floorSpan: '', pages: '', notes: '' },
   });
 
   const { execute, isPending } = useAction(extractWalls, {
@@ -120,22 +120,143 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
               )}
             />
           </div>
-          <FormField
-            control={form.control}
-            name="pages"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  PDF pages <span className="font-normal text-ink-3">(optional)</span>
-                </FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
-                </FormControl>
-                <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="wallHeight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Wall height <span className="font-normal text-ink-3">(if the set has no sections)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder={`e.g. 9'-1 1/8"`} className="font-mono" />
+                  </FormControl>
+                  <FormDescription>Subfloor to top of the double top plate. Read from sections when they exist.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="pages"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    PDF pages <span className="font-normal text-ink-3">(optional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g. 3,15" className="font-mono" />
+                  </FormControl>
+                  <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <details className="text-sm">
+            <summary className="cursor-pointer text-ink-2">Structural data (from the engineer, when the set has none)</summary>
+            <p className="mt-2 text-ink-3">The engine sizes headers by the IRC tables; these only apply where the drawings say nothing.</p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="floors"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Floors above this level</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="2" inputMode="numeric" className="font-mono" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="floorSpan"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Floor span</FormLabel>
+                    <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={AUTO}>Not known</SelectItem>
+                        <SelectItem value="center">Center bearing</SelectItem>
+                        <SelectItem value="clear">Clear span</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="snow"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Snow load (psf)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="30" inputMode="decimal" className="font-mono" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="width"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Building width</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder={`29'`} className="font-mono" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="wind"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Wind (mph)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="130" inputMode="numeric" className="font-mono" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="exposure"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Exposure</FormLabel>
+                    <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={AUTO}>Not known</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </details>
           <details className="text-sm">
             <summary className="cursor-pointer text-ink-2">Add notes for the AI (optional)</summary>
             <FormField

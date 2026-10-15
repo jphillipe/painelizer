@@ -5,7 +5,17 @@
  */
 
 import 'server-only';
-import { apiErrorInfo, ExtractError, extractWalls, finish, type ExtractHints, type ExtractResult, type ExtractSource, type ImageMediaType } from 'extract';
+import {
+  apiErrorInfo,
+  ExtractError,
+  extractWalls,
+  finish,
+  type ConvertOptions,
+  type ExtractHints,
+  type ExtractResult,
+  type ExtractSource,
+  type ImageMediaType,
+} from 'extract';
 import type { ExtractOutcome, WallReview } from '@/types/extract';
 
 export type { ExtractOutcome, OpeningReview, WallReview } from '@/types/extract';
@@ -55,6 +65,8 @@ export interface FromFilesOptions {
   /** Páginas (1-based) a enviar de cada PDF; ausente = carimbo (A-1xx, A-8xx) ou todas. */
   pages?: readonly number[];
   hints?: ExtractHints;
+  /** Altura de parede, data, revisão: o que o humano sabe e os desenhos não trazem. */
+  convert?: ConvertOptions;
 }
 
 export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesOptions = {}, deps: ExtractDeps = defaultDeps): Promise<ExtractOutcome> {
@@ -73,7 +85,14 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
     sources.push(s);
   }
   try {
-    const result = await deps.extract({ sources, ...(opts.hints === undefined ? {} : { hints: opts.hints }) }, {});
+    const result = await deps.extract(
+      {
+        sources,
+        ...(opts.hints === undefined ? {} : { hints: opts.hints }),
+        ...(opts.convert === undefined ? {} : { convert: opts.convert }),
+      },
+      {},
+    );
     return toOutcome(result);
   } catch (e) {
     return failure(e);

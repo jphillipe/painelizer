@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it, vi } from 'vitest';
-import { buildRequest, DEFAULT_MODEL, ExtractError, extractWalls, finish } from '../src/client';
+import { buildRequest, DEFAULT_MODEL, ExtractError, extractWalls, finish, stripFences } from '../src/client';
 import { subsetPdf } from '../src/pdf';
+import { FULL_SYSTEM_PROMPT } from '../src/prompt';
 import { makePdf } from './helpers/makePdf';
 
 const ringgoldOutput = JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')) as unknown;
@@ -35,19 +36,18 @@ function fakeClient(message: Anthropic.Message) {
 }
 
 describe('buildRequest', () => {
-  it('modelo padrão, system cacheável, PDF recortado e structured output pelo schema', async () => {
+  it('modelo padrão, system cacheável com o JSON Schema, PDF recortado, sem structured outputs', async () => {
     const pdf = await makePdf();
     const { params, pagesSent } = await buildRequest({ pdf, pages: [1, 2] });
     expect(pagesSent).toEqual([{ name: 'planta.pdf', pages: [1, 2] }]);
     expect(params.model).toBe(DEFAULT_MODEL);
-    expect(params.max_tokens).toBe(32000);
+    expect(params.max_tokens).toBe(96000);
     expect(params.system[0]?.cache_control).toEqual({ type: 'ephemeral' });
-    expect(params.output_config.effort).toBe('high');
-    expect(params.output_config.format.type).toBe('json_schema');
-    const schema = params.output_config.format.schema as { properties: Record<string, unknown>; required?: string[] };
-    expect(Object.keys(schema.properties)).toEqual(
-      expect.arrayContaining(['projectName', 'walls', 'openingTypes', 'wallTypes', 'notes', 'origin']),
-    );
+    expect(params.output_config).toEqual({ effort: 'high' });
+    const system = params.system[0]?.text ?? '';
+    expect(system).toContain('## Formato da resposta');
+    for (const key of ['"projectName"', '"walls"', '"openingTypes"', '"wallTypes"', '"notes"', '"origin"']) expect(system).toContain(key);
+    expect(system).toBe(FULL_SYSTEM_PROMPT);
     const content = params.messages[0]?.content;
     expect(Array.isArray(content) && content.length).toBe(4); // document + 2 páginas + instrução
   });
@@ -124,7 +124,7 @@ describe('extractWalls com cliente falso', () => {
     const { client } = fakeClient(fakeMessage({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"proj', citations: null }] }));
     const err = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as ExtractError).message).toContain('32000 tokens');
+    expect((err as ExtractError).message).toContain('96000 tokens');
     expect((err as ExtractError).rawText).toBe('{"proj');
   });
 
@@ -142,6 +142,20 @@ describe('extractWalls com cliente falso', () => {
     expect(err).toBeInstanceOf(ExtractError);
     expect((err as ExtractError).message).toMatch(/fora do schema: level/);
     expect((err as ExtractError).rawText).toBe('{"projectName":"x"}');
+  });
+});
+
+describe('stripFences', () => {
+  it('tira a cerca de código quando o modelo a põe, e não mexe em JSON limpo', () => {
+    expect(stripFences('```json\n{"a":1}\n```')).toBe('{"a":1}');
+    expect(stripFences('```\n{"a":1}\n```\n')).toBe('{"a":1}');
+    expect(stripFences('  {"a":1}  ')).toBe('{"a":1}');
+  });
+
+  it('resposta com cerca passa pelo cliente falso', async () => {
+    const { client } = fakeClient(fakeMessage({ content: [{ type: 'text', text: '```json\n' + JSON.stringify(ringgoldOutput) + '\n```', citations: null }] }));
+    const r = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client });
+    expect(r.output.walls).toHaveLength(4);
   });
 });
 

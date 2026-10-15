@@ -134,6 +134,58 @@ describe('convert — formato de planta', () => {
   });
 });
 
+describe('altura de parede informada pelo humano', () => {
+  const noHeight: ExtractionOutput = { ...ringgold, wallHeight: null };
+
+  it('sem cortes e sem altura informada: problema claro, sem passar pelo parser', () => {
+    const r = convert(noHeight);
+    expect(r.problems).toHaveLength(1);
+    expect(r.problems[0]).toMatch(/^altura: .*4 parede\(s\) sem altura: N1, S1, S2, I1\)/);
+    const walls = r.project['walls'] as Record<string, unknown>[];
+    expect(walls[0]).not.toHaveProperty('height');
+  });
+
+  it('com wallHeight nas opções, as paredes ganham a altura e o pré-corte é derivado dela', () => {
+    const r = convert(noHeight, { wallHeight: `9' - 1 1/8"` });
+    expect(r.problems.filter((p) => p.startsWith('altura'))).toEqual([]);
+    const walls = r.project['walls'] as Record<string, unknown>[];
+    expect(walls.every((w) => w['height'] === `9' - 1 1/8"`)).toBe(true);
+    expect((r.project['config'] as Record<string, unknown>)['studLength']).toEqual([104.625]);
+  });
+
+  it('dados do estrutural informados entram só onde o modelo deixou null', () => {
+    const noLoads: ExtractionOutput = {
+      ...ringgold,
+      building: { groundSnowLoad: null, buildingWidth: null, windSpeed: 130, exposure: null, species: null },
+    };
+    const r = convert(noLoads, { building: { groundSnowLoad: 30, buildingWidth: `29' - 0"`, windSpeed: 90, exposure: 'B' } });
+    expect((r.project['config'] as Record<string, unknown>)['building']).toEqual({
+      groundSnowLoad: 30,
+      buildingWidth: `29' - 0"`,
+      windSpeed: 130, // o lido vence
+      exposure: 'B',
+    });
+    expect(r.problems.filter((p) => p.includes('config.building'))).toEqual([]);
+  });
+
+  it('pavimentos acima e apoio do piso entram só em parede portante sem o dado', () => {
+    const blank: ExtractionOutput = { ...ringgold, walls: ringgold.walls.map((w) => ({ ...w, floorsSupported: null, floorSpan: null })) };
+    const r = convert(blank, { floorsSupported: 2, floorSpan: 'center' });
+    const walls = r.project['walls'] as Record<string, unknown>[];
+    expect(walls[0]).toMatchObject({ id: 'N1', floorsSupported: 2, floorSpan: 'center' });
+    expect(walls[3]).not.toHaveProperty('floorsSupported'); // I1 não é portante
+    expect(walls[3]).not.toHaveProperty('floorSpan');
+    const kept = convert(ringgold, { floorsSupported: 1, floorSpan: 'clear' });
+    expect((kept.project['walls'] as Record<string, unknown>[])[0]).toMatchObject({ floorsSupported: 2, floorSpan: 'center' }); // o lido vence
+  });
+
+  it('a altura lida pelo modelo vence a informada', () => {
+    const r = convert(ringgold, { wallHeight: `8' - 1 1/8"` });
+    const walls = r.project['walls'] as Record<string, unknown>[];
+    expect(walls[0]?.['height']).toBe(`9' - 1 1/8"`);
+  });
+});
+
 describe('reviewReport', () => {
   it('lista paredes, aberturas e schedule com evidência e confiança', () => {
     const report = reviewReport(ringgold, convert(ringgold));

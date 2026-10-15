@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { buildRequest, ExtractError, extractWalls, finish, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
 import { formatPageText, listSheets, pickPages, readPageText } from './pdf';
+import { RESPONSE_SCHEMA } from './prompt';
 
 export const USAGE = `extract — planta em PDF → JSON de paredes do panelizer, para revisão
 
@@ -35,9 +36,13 @@ Opções:
   --hint <texto>         observação livre para o modelo ("ignore a garagem")
   --date <texto>         carimbo das folhas (vai para projeto.json)
   --revision <texto>     idem
+  --wall-height <medida> altura da parede (subfloor ao topo da double top) quando os desenhos não trazem cortes
+  --snow <psf>           carga de neve no solo, --width <medida> largura da edificação, --wind <mph>,
+  --exposure <B|C|D>     dados do estrutural que o conjunto de arquiteto não traz (só onde a IA não leu)
+  --floors <n>           pavimentos acima das paredes portantes; --floor-span <center|clear> apoio do piso
   --model <id>           modelo (default claude-opus-5-5)
   --effort <nível>       low | medium | high (default) | xhigh | max
-  --max-tokens <n>       limite de saída (default 32000)
+  --max-tokens <n>       limite de saída (default 96000; o raciocínio conta)
   --dry-run              não chama a API: grava paginas/ e pedido.json e para
   --response <arquivo>   não chama a API: pós-processa uma resposta gravada (JSON do modelo)
   -h, --help             esta ajuda
@@ -77,6 +82,13 @@ export interface ExtractArgs {
   hint?: string;
   date?: string;
   revision?: string;
+  wallHeight?: string;
+  snow?: number;
+  width?: string;
+  wind?: number;
+  exposure?: 'B' | 'C' | 'D';
+  floors?: number;
+  floorSpan?: 'center' | 'clear';
   model?: string;
   effort?: Effort;
   maxTokens?: number;
@@ -142,6 +154,36 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
         break;
       case '--date':
         args.date = value();
+        break;
+      case '--snow':
+        args.snow = Number(value());
+        if (!Number.isFinite(args.snow) || args.snow <= 0) throw new UsageError('--snow: esperado psf > 0');
+        break;
+      case '--width':
+        args.width = value();
+        break;
+      case '--wind':
+        args.wind = Number(value());
+        if (!Number.isFinite(args.wind) || args.wind <= 0) throw new UsageError('--wind: esperado mph > 0');
+        break;
+      case '--exposure': {
+        const e = value();
+        if (e !== 'B' && e !== 'C' && e !== 'D') throw new UsageError('--exposure: esperado B, C ou D');
+        args.exposure = e;
+        break;
+      }
+      case '--floors':
+        args.floors = Number(value());
+        if (!Number.isInteger(args.floors) || args.floors < 0) throw new UsageError('--floors: esperado inteiro ≥ 0');
+        break;
+      case '--floor-span': {
+        const s = value();
+        if (s !== 'center' && s !== 'clear') throw new UsageError('--floor-span: esperado center ou clear');
+        args.floorSpan = s;
+        break;
+      }
+      case '--wall-height':
+        args.wallHeight = value();
         break;
       case '--revision':
         args.revision = value();
@@ -242,7 +284,15 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
     for (const p of pages) write(`paginas/${p}.txt`, formatPageText(await readPageText(pdf, p)) + '\n');
 
     const hints = strip({ level: args.level, projectName: args.name, extra: args.hint });
-    const convert = strip({ date: args.date, revision: args.revision });
+    const building = strip({ groundSnowLoad: args.snow, buildingWidth: args.width, windSpeed: args.wind, exposure: args.exposure });
+    const convert = strip({
+      date: args.date,
+      revision: args.revision,
+      wallHeight: args.wallHeight,
+      building: Object.keys(building).length > 0 ? building : undefined,
+      floorsSupported: args.floors,
+      floorSpan: args.floorSpan,
+    });
     const req: ExtractRequest = { pdf, pages, hints, convert };
     const opts: ExtractOptions = strip({ model: args.model, effort: args.effort, maxTokens: args.maxTokens });
 
@@ -257,7 +307,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         pages,
         pdf_bytes: pdf.byteLength,
         content_blocks: (params.messages[0]?.content as unknown[]).map((b) => (b as { type: string }).type),
-        schema: params.output_config.format.schema,
+        schema: RESPONSE_SCHEMA,
       };
       write('pedido.json', JSON.stringify(summary, null, 2) + '\n');
       io.stdout(`dry-run: ${pages.length} página(s) → ${outDir} (paginas/, pedido.json); nada enviado`);

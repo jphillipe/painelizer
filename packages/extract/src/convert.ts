@@ -14,6 +14,29 @@ export interface ConvertOptions {
   revision?: string;
   /** Pré-cortes de stud da fábrica; ausente = derivado da altura de cada parede (altura − 3 plates). */
   studLength?: readonly number[];
+  /** Altura de parede quando os desenhos não trazem cortes (o modelo deixa `wallHeight` null); medida em texto. */
+  wallHeight?: string;
+  /** Dados do estrutural que o conjunto de arquiteto não traz; cada campo só entra onde o modelo deixou null. */
+  building?: {
+    groundSnowLoad?: number;
+    buildingWidth?: string;
+    windSpeed?: number;
+    exposure?: 'B' | 'C' | 'D';
+  };
+  /** Pavimentos acima das paredes portantes e apoio do piso, quando os desenhos não dizem (só onde o modelo deixou null). */
+  floorsSupported?: number;
+  floorSpan?: 'center' | 'clear';
+}
+
+/** Altura padrão do projeto: a lida pelo modelo, senão a informada pelo humano. */
+export function defaultWallHeight(out: ExtractionOutput, opts: ConvertOptions): string | null {
+  return out.wallHeight ?? opts.wallHeight ?? null;
+}
+
+/** Paredes que ficariam sem altura: o CLI não gera nada sem ela. */
+export function wallsWithoutHeight(out: ExtractionOutput, opts: ConvertOptions): string[] {
+  const dflt = defaultWallHeight(out, opts);
+  return out.walls.filter((w) => w.height === null && dflt === null).map((w) => w.id);
 }
 
 export interface Converted {
@@ -46,9 +69,12 @@ function openingJson(o: OpeningOut): Record<string, unknown> {
   });
 }
 
-function wallJson(w: WallOut, defaultHeight: string | null): Record<string, unknown> {
+function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions): Record<string, unknown> {
   const inPlan = w.start !== null && w.end !== null;
   const ends = strip({ start: w.endsStart, end: w.endsEnd });
+  // Dados estruturais do humano só em parede portante e só onde o modelo não leu.
+  const floorsSupported = w.floorsSupported ?? (w.bearing ? (opts.floorsSupported ?? null) : null);
+  const floorSpan = w.floorSpan ?? (w.bearing ? (opts.floorSpan ?? null) : null);
   return strip({
     id: w.id,
     start: inPlan ? w.start : null,
@@ -59,8 +85,8 @@ function wallJson(w: WallOut, defaultHeight: string | null): Record<string, unkn
     section: w.section,
     exterior: w.exterior,
     bearing: w.bearing,
-    floorsSupported: w.floorsSupported,
-    floorSpan: w.floorSpan,
+    floorsSupported,
+    floorSpan,
     level: w.level,
     wallType: w.wallType,
     openings: w.openings.map(openingJson),
@@ -68,10 +94,11 @@ function wallJson(w: WallOut, defaultHeight: string | null): Record<string, unkn
 }
 
 /** Pré-cortes derivados: altura de cada parede menos as três plates, sem repetição, crescente. */
-export function derivedStudLengths(out: ExtractionOutput): number[] {
+export function derivedStudLengths(out: ExtractionOutput, opts: ConvertOptions = {}): number[] {
   const heights = new Set<number>();
+  const dflt = defaultWallHeight(out, opts);
   for (const w of out.walls) {
-    const h = w.height ?? out.wallHeight;
+    const h = w.height ?? dflt;
     if (h !== null) heights.add(parseFeetInches(h));
   }
   return [...heights].map((h) => h - 3 * PLATE).filter((l) => l > 0).sort((a, b) => a - b);
@@ -79,12 +106,14 @@ export function derivedStudLengths(out: ExtractionOutput): number[] {
 
 /** Monta o JSON do CLI. Não valida: ver `convert`. */
 export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Record<string, unknown> {
-  const studLength = opts.studLength ?? derivedStudLengths(out);
+  const studLength = opts.studLength ?? derivedStudLengths(out, opts);
+  const height = defaultWallHeight(out, opts);
+  const given = opts.building ?? {};
   const building = strip({
-    groundSnowLoad: out.building.groundSnowLoad,
-    buildingWidth: out.building.buildingWidth,
-    windSpeed: out.building.windSpeed,
-    exposure: out.building.exposure,
+    groundSnowLoad: out.building.groundSnowLoad ?? given.groundSnowLoad,
+    buildingWidth: out.building.buildingWidth ?? given.buildingWidth,
+    windSpeed: out.building.windSpeed ?? given.windSpeed,
+    exposure: out.building.exposure ?? given.exposure,
     species: out.building.species,
   });
   const openingTypes: Record<string, unknown> = {};
@@ -126,7 +155,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
     date: opts.date,
     revision: opts.revision,
     config,
-    walls: out.walls.map((w) => wallJson(w, out.wallHeight)),
+    walls: out.walls.map((w) => wallJson(w, height, opts)),
   });
 }
 
@@ -139,6 +168,14 @@ export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Conve
   const project = toProject(out, opts);
   const problems: string[] = [];
   const warnings: string[] = [];
+  const noHeight = wallsWithoutHeight(out, opts);
+  if (noHeight.length > 0) {
+    // O parser do CLI reclamaria de `studLength`; a causa é a altura, e é isso que o revisor precisa saber.
+    problems.push(
+      `altura: os desenhos não trazem cortes nem pé-direito (${noHeight.length} parede(s) sem altura: ${noHeight.slice(0, 5).join(', ')}${noHeight.length > 5 ? '…' : ''}); informe a altura da parede (subfloor ao topo da double top plate)`,
+    );
+    return { project, problems, warnings };
+  }
   try {
     const parsed = projectFrom(project, out.projectName);
     const built = buildProject(parsed);
@@ -190,7 +227,6 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
     );
     if (w.confidence < threshold) review.push(`parede ${w.id}: confiança ${w.confidence.toFixed(2)}`);
     if ((w.start === null || w.end === null) && w.length === null) review.push(`parede ${w.id}: sem geometria`);
-    if (w.height === null && out.wallHeight === null) review.push(`parede ${w.id}: sem altura`);
     for (const o of w.openings) {
       if (o.confidence < threshold) review.push(`abertura ${o.id} (${w.id}): confiança ${o.confidence.toFixed(2)}`);
       if (o.center === null && o.offset === null) review.push(`abertura ${o.id} (${w.id}): sem posição`);

@@ -6,7 +6,9 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
 import { formatPageText, type PageText } from './pdf';
+import { ExtractionOutput } from './schema';
 
 export interface ExtractHints {
   /** Pavimento a extrair quando o PDF tem mais de uma planta (default: o que o modelo identificar como 1º). */
@@ -30,6 +32,7 @@ Um ou mais arquivos do projeto: páginas de PDF vetorial (planta de um pavimento
 - \`endsStart\`/\`endsEnd\`: só quando o desenho mostra qual parede atravessa o canto; senão null.
 - Aberturas: posição pelo EIXO da abertura medido do \`start\` da parede (\`center\`), como as plantas de arquiteto cotam portas e janelas. Se a planta cota a borda do RO, use \`offset\`. Tag do schedule em \`tag\`; sem schedule, \`type\` + RO se o desenho der.
 - Altura do topo do RO (\`headerHeight\`) só se a elevação ou o schedule der head height; senão null. Peitoril de janela vai em \`openingTypes[].sillHeight\`.
+- Janelas instaladas em par ou trio (duas ou três tags iguais lado a lado, coladas, com a cota da planta no eixo do conjunto) são UMA abertura: um único RO contínuo, com \`center\` no eixo do conjunto. Crie um tipo no schedule para o conjunto (tag = tag da janela + quantidade, ex.: \`A2\` = 2 × A) com largura nominal = soma das larguras (mais o mullion se o fabricante disser) e a mesma altura; diga em \`evidence\` que é um par. Nunca duas aberturas com RO sobrepostos.
 - Tipos de parede: leia a folha de partition types (stud 2x4 ou 2x6, externa ou interna) e dê \`wallType\` em cada parede com a tag que a planta usa; sem tag na parede, deduza pela nota geral ("all exterior walls are type X1") e diga isso em \`evidence\`.
 - \`bearing\`: externa é portante. Interna só é portante se o desenho disser; na dúvida, false e uma nota.
 - \`floorsSupported\` e \`floorSpan\`: só com evidência (número de pavimentos acima pelos cortes; apoio do piso pelas notas estruturais). Sem evidência, null e uma nota — o motor usa esses dois para escolher o header pela tabela do IRC.
@@ -43,6 +46,21 @@ Um ou mais arquivos do projeto: páginas de PDF vetorial (planta de um pavimento
 - Não escolher header, jacks ou kings: isso é do motor e das tabelas do IRC.
 - Não arredondar cotas nem converter para decimal.
 - Não omitir paredes porque faltou cota: inclua com confiança baixa e explique em \`notes\`.`;
+
+/** JSON Schema do `ExtractionOutput`, gerado do zod: vai no system prompt em vez de structured outputs. */
+export const RESPONSE_SCHEMA = z.toJSONSchema(ExtractionOutput) as Record<string, unknown>;
+
+/**
+ * System prompt completo: convenções + formato da resposta. Sem structured outputs: a API recusa o schema
+ * (33 campos nullable, gramática grande demais), então o modelo recebe o JSON Schema em texto e o zod valida
+ * a resposta depois (`finish`).
+ */
+export const FULL_SYSTEM_PROMPT =
+  SYSTEM_PROMPT +
+  '\n\n## Formato da resposta\n' +
+  'Responda SOMENTE com um objeto JSON válido, sem markdown, sem cerca de código e sem texto antes ou depois, ' +
+  'que satisfaça este JSON Schema (todo campo é obrigatório; use null onde o schema permite e o desenho não dá o dado):\n' +
+  JSON.stringify(RESPONSE_SCHEMA);
 
 export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
 

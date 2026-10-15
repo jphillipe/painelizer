@@ -58,6 +58,14 @@ describe('parseArgs', () => {
       date: '2026-10-14', revision: 'A', model: 'claude-sonnet-5-5', effort: 'max', maxTokens: 8000, dryRun: false,
     });
     expect(parseArgs(['p.pdf', '--out=d', '--dry-run'])).toMatchObject({ out: 'd', dryRun: true });
+    expect(parseArgs(['p.pdf', '--out', 'd', '--wall-height', `9'-1 1/8"`])).toMatchObject({ wallHeight: `9'-1 1/8"` });
+    expect(parseArgs(['p.pdf', '--out', 'd', '--snow', '30', '--width', `29'`, '--wind', '130', '--exposure', 'B'])).toMatchObject({
+      snow: 30, width: `29'`, wind: 130, exposure: 'B',
+    });
+    expect(() => parseArgs(['p.pdf', '--out', 'd', '--snow', 'x'])).toThrow(/--snow/);
+    expect(() => parseArgs(['p.pdf', '--out', 'd', '--exposure', 'E'])).toThrow(/--exposure/);
+    expect(parseArgs(['p.pdf', '--out', 'd', '--floors', '2', '--floor-span', 'center'])).toMatchObject({ floors: 2, floorSpan: 'center' });
+    expect(() => parseArgs(['p.pdf', '--out', 'd', '--floors', '1.5'])).toThrow(/--floors/);
     expect(parseArgs(['p.pdf', '-o', 'd', '--response', 'r.json'])).toMatchObject({ response: 'r.json' });
   });
 

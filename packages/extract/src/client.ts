@@ -7,20 +7,23 @@
  * Credencial: `new Anthropic()` lê `ANTHROPIC_API_KEY` (ou o perfil do `ant auth login`); nada é
  * gravado nem registrado aqui. De cada PDF vão só as páginas pedidas.
  *
- * Usa `messages.stream(...).finalMessage()` (não `messages.parse`) para ficar com o texto cru quando a
- * resposta não bate com o schema: o `parse` do SDK lança sem devolver o texto, e o texto é o que o humano
- * precisa ver; e streaming porque o SDK recusa chamadas sem stream que possam passar de 10 minutos.
+ * Sem structured outputs: a API recusou o schema (33 campos nullable; depois "gramática grande demais" mesmo
+ * sem uniões), então o JSON Schema vai no system prompt e o zod valida a resposta em `finish`. Streaming
+ * porque o SDK recusa chamadas sem stream que possam passar de 10 minutos; o texto cru fica no `ExtractError`.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { convert, reviewReport, type ConvertOptions, type Converted } from './convert';
 import { listSheets, pageCount, pickPages, readPageText, subsetPdf, type PageText } from './pdf';
-import { buildUserContent, SYSTEM_PROMPT, type ExtractHints, type ImageMediaType, type PdfInput, type ImageInput } from './prompt';
+import { buildUserContent, FULL_SYSTEM_PROMPT, type ExtractHints, type ImageMediaType, type PdfInput, type ImageInput } from './prompt';
 import { ExtractionOutput } from './schema';
 
 export const DEFAULT_MODEL = 'claude-opus-5-5';
-export const DEFAULT_MAX_TOKENS = 32000;
+/**
+ * O raciocínio adaptativo conta no `max_tokens`: com effort alto e uma planta inteira, 32 000 acabaram antes
+ * de o modelo escrever um byte de resposta (2026-10-15). 96 000 deixa folga; streaming permite até 128 000.
+ */
+export const DEFAULT_MAX_TOKENS = 96000;
 /** Sem `pages` e sem folha reconhecível pelo carimbo, vão no máximo estas páginas do PDF. */
 export const MAX_AUTO_PAGES = 20;
 
@@ -114,17 +117,15 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
   const params = {
     model: opts.model ?? DEFAULT_MODEL,
     max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
-    system: [{ type: 'text' as const, text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
+    system: [{ type: 'text' as const, text: FULL_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
     messages: [
       {
         role: 'user' as const,
         content: buildUserContent({ pdfs, images, ...(req.hints === undefined ? {} : { hints: req.hints }) }),
       },
     ],
-    output_config: {
-      format: zodOutputFormat(ExtractionOutput),
-      effort: opts.effort ?? 'high',
-    },
+    // Sem `output_config.format`: a API recusa a gramática deste schema; o formato vai no system prompt.
+    output_config: { effort: opts.effort ?? 'high' },
   } satisfies Anthropic.MessageCreateParamsNonStreaming;
   return { params, pagesSent };
 }
@@ -134,7 +135,7 @@ export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {
   const { params, pagesSent } = await buildRequest(req, opts);
   // Streaming: o SDK exige para respostas longas (max_tokens alto); `finalMessage` junta tudo.
   const response = await client.messages.stream(params).finalMessage();
-  const text = textOf(response);
+  const text = stripFences(textOf(response));
 
   if (response.stop_reason === 'refusal') {
     const why = response.stop_details?.type === 'refusal' ? response.stop_details.explanation : undefined;
@@ -170,13 +171,14 @@ export function finish(
     const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`);
     throw new ExtractError(`resposta fora do schema: ${issues.join('; ')}`, JSON.stringify(raw));
   }
-  const converted = convert(parsed.data, convertOpts);
+  const output = parsed.data;
+  const converted = convert(output, convertOpts);
   return {
-    output: parsed.data,
+    output,
     project: converted.project,
     problems: converted.problems,
     warnings: converted.warnings,
-    report: reviewReport(parsed.data, converted),
+    report: reviewReport(output, converted),
     model,
     usage,
     pagesSent: [],
@@ -190,6 +192,12 @@ export function finish(
 export function apiErrorInfo(e: unknown): { status: number | undefined; message: string; authentication: boolean } | undefined {
   if (!(e instanceof Anthropic.APIError)) return undefined;
   return { status: e.status, message: e.message, authentication: e instanceof Anthropic.AuthenticationError };
+}
+
+/** Tira uma cerca de código (```json … ```) se o modelo a puser apesar da instrução. */
+export function stripFences(text: string): string {
+  const m = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/.exec(text);
+  return m?.[1] ?? text.trim();
 }
 
 function textOf(response: Anthropic.Message): string {

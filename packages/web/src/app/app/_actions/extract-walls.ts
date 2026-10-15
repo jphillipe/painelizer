@@ -13,6 +13,13 @@ export const extractWalls = actionClient.inputSchema(z.instanceof(FormData)).act
   const fields = uploadFieldsSchema.parse({
     level: form.get('level') ?? '',
     projectName: form.get('projectName') ?? '',
+    wallHeight: form.get('wallHeight') ?? '',
+    snow: form.get('snow') ?? '',
+    width: form.get('width') ?? '',
+    wind: form.get('wind') ?? '',
+    exposure: form.get('exposure') ?? '',
+    floors: form.get('floors') ?? '',
+    floorSpan: form.get('floorSpan') ?? '',
     pages: form.get('pages') ?? '',
     notes: form.get('notes') ?? '',
   });
@@ -24,8 +31,21 @@ export const extractWalls = actionClient.inputSchema(z.instanceof(FormData)).act
   }
   const pages = parsePages(fields.pages);
   const level = fields.level === '' ? undefined : Number(fields.level);
+  const building = {
+    ...(fields.snow === '' ? {} : { groundSnowLoad: Number(fields.snow) }),
+    ...(fields.width === '' ? {} : { buildingWidth: fields.width }),
+    ...(fields.wind === '' ? {} : { windSpeed: Number(fields.wind) }),
+    ...(fields.exposure === '' ? {} : { exposure: fields.exposure }),
+  };
+  const convert = {
+    ...(fields.wallHeight === '' ? {} : { wallHeight: fields.wallHeight }),
+    ...(Object.keys(building).length === 0 ? {} : { building }),
+    ...(fields.floors === '' ? {} : { floorsSupported: Number(fields.floors) }),
+    ...(fields.floorSpan === '' ? {} : { floorSpan: fields.floorSpan }),
+  };
   return fromFiles(files, {
     ...(pages === undefined ? {} : { pages }),
+    ...(Object.keys(convert).length === 0 ? {} : { convert }),
     hints: {
       ...(level === undefined ? {} : { level }),
       ...(fields.projectName === '' ? {} : { projectName: fields.projectName }),

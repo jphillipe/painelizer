@@ -3,7 +3,7 @@ export type { PageText, TextLine, TextRun, SheetInfo } from './pdf';
 export { ExtractionOutput, WallOut, OpeningOut, OpeningTypeOut, WallTypeOut, HeaderScheduleOut } from './schema';
 export { toProject, convert, reviewReport, derivedStudLengths } from './convert';
 export type { ConvertOptions, Converted, ReportOptions } from './convert';
-export { SYSTEM_PROMPT, buildUserContent } from './prompt';
+export { SYSTEM_PROMPT, FULL_SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserContent } from './prompt';
 export type { ExtractHints, PromptInput, PdfInput, ImageInput, ImageMediaType } from './prompt';
 export {
   extractWalls,

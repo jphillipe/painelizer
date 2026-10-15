@@ -1,8 +1,8 @@
 # 08 — Revisar com a fábrica
 
-Gerado por `pnpm hipoteses` em 2026-10-14. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
+Gerado por `pnpm hipoteses` em 2026-10-15. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
 
-**25 hipóteses em vigor**, 11 pendências respondidas.
+**27 hipóteses em vigor**, 11 pendências respondidas.
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
@@ -24,13 +24,15 @@ Gerado por `pnpm hipoteses` em 2026-10-14. Não edite à mão: a fonte é `05-pe
 | P27 | Altura da parede do Ringgold | parede 9'-1 1/8" (stud pré-cortado 104 5/8", piso ~10 7/8") | `packages/cli/examples/ringgold-checkpoint.json:2`, `packages/extract/test/fixtures/ringgold-output.json:2` |
 | P28 | RO do par de janelas tipo A | RO 58 1/2" x 72 1/2", topo do RO a 96 1/4" do subfloor | `packages/cli/examples/ringgold-checkpoint.json:2` |
 | P29 | RO da porta 1 (36x80 com batente metálico, 45 min) | 38" x 82 1/2", igual à porta de madeira (P4) | `packages/cli/examples/ringgold-checkpoint.json:2` |
-| P30 | Porta 1 e janela vizinhas na parede sul com 8 1/4" entre os RO | 1 jack por lado nas duas (aviso `HEADER_JACKS_BELOW_TABLE`). O motor põe 1 king da porta e 2 kings da janela com 3/4" de ar entre eles, em vez de king compartilhado — perguntar o que a fábrica faz | `packages/cli/examples/casa-exemplo.json:2` |
+| P30 | Porta 1 e janela vizinhas na parede sul com 8 1/4" entre os RO | 1 jack por lado nas duas (aviso `HEADER_JACKS_BELOW_TABLE`). O motor põe 1 king da porta e 2 kings da janela com 3/4" de ar entre eles, em vez de king compartilhado — perguntar o que a fábrica faz | `packages/cli/examples/casa-exemplo.json:2`, `packages/extract/test/client.test.ts:102`, `packages/extract/test/main.test.ts:122` |
 | P31 | Cargas do Ringgold para as tabelas | 30 psf, 29'-0" (profundidade do prédio), 130 mph exposição B; parede do 1º pavimento suporta 2 pavimentos (`floorsSupported: 2`, center-bearing). Se a I1 for portante (direção das vigas), muda o header | `packages/cli/examples/ringgold-checkpoint.json:2`, `packages/extract/test/fixtures/ringgold-output.json:2` |
 | P32 | Folga de RO de janela | +1/2" na largura e +3/4" na altura sobre o tamanho nominal do caixilho | `packages/cli/examples/casa-exemplo.json:2`, `packages/core/src/rules/catalog.ts:12`, `packages/core/src/rules/catalog.ts:26` |
 | P33 | Folga de RO de porta com batente de madeira | +2" x +2 1/2" | `packages/cli/examples/casa-exemplo.json:2`, `packages/cli/examples/ringgold-checkpoint.json:2`, `packages/core/src/rules/catalog.ts:28` |
 | P34 | Folga de RO de porta com batente metálico (HM) ou alumínio | +4 1/2" x +3" | `packages/cli/examples/ringgold-checkpoint.json:2`, `packages/core/src/rules/catalog.ts:12`, `packages/core/src/rules/catalog.ts:30`, `packages/core/src/rules/catalog.ts:32` |
 | P35 | Critério de divisão da parede em painéis | equilibrado — menor número de painéis que cabe em 240" (e no peso), depois o painel mais longo menor, usando só marcas múltiplas de 48" e, se não há divisão com elas, qualquer marca; `rules/split.ts` (`chooseBreaks`) | `packages/core/src/panelize/splitWall.ts:8`, `packages/core/src/rules/split.ts:11`, `packages/core/src/rules/split.ts:4`, `packages/core/test/fixtures/house-28x40.json:2`, `packages/core/test/fixtures/wall-480-split.json:2` |
 | P36 | Posição das emendas de plate | da esquerda, a maior peça que deixa o resto emendável; bottom sobre qualquer stud ou king; `splicePlates` em `rules/split.ts` | — |
+| P37 | Emenda da double top plate em painel cheio de aberturas | erro, como hoje; o revisor move a quebra do painel. Fixture candidato: `out/s19/real7/projeto.json` (fora do git) | — |
+| P38 | Porta colada ao início da parede (I12-U3-1 a 1'-9 3/8" do eixo, RO de 32") | erro, como hoje | — |
 
 ## Respondidas
 

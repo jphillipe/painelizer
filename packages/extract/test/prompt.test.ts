@@ -17,6 +17,11 @@ describe('SYSTEM_PROMPT — convenções do CLI e do framing', () => {
     expect(SYSTEM_PROMPT).toContain('`center`');
   });
 
+  it('janelas em par são uma abertura só, com tipo próprio no schedule (P28)', () => {
+    expect(SYSTEM_PROMPT).toContain('são UMA abertura');
+    expect(SYSTEM_PROMPT).toContain('`A2` = 2 × A');
+  });
+
   it('proíbe inventar cota e escolher header', () => {
     expect(SYSTEM_PROMPT).toMatch(/nunca invente cota/i);
     expect(SYSTEM_PROMPT).toContain('Não escolher header, jacks ou kings');
