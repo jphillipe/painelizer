@@ -42,6 +42,7 @@ export interface ExtractResult {
   output: ExtractionOutput;
   project: Converted['project'];
   problems: Converted['problems'];
+  warnings: Converted['warnings'];
   report: string;
   model: string;
   usage: { inputTokens: number; outputTokens: number };
@@ -122,6 +123,7 @@ export function finish(
     output: parsed.data,
     project: converted.project,
     problems: converted.problems,
+    warnings: converted.warnings,
     report: reviewReport(parsed.data, converted),
     model,
     usage,

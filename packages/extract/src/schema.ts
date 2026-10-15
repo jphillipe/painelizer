@@ -47,6 +47,10 @@ export const WallOut = z.object({
   exterior: z.boolean(),
   bearing: z.boolean().describe('Externa = true. Interna: só true se o estrutural ou a planta indicar.'),
   floorsSupported: z.number().int().min(0).nullable().describe('Pavimentos acima desta parede, se o projeto permitir saber.'),
+  floorSpan: z
+    .enum(['center', 'clear'])
+    .nullable()
+    .describe('Como o piso apoia nesta parede, só se as notas estruturais disserem: `center` (viga central) ou `clear` (vão livre).'),
   height: Measure.nullable().describe('Altura da parede (subfloor ao topo da double top plate) se diferente de `wallHeight`.'),
   level: z.number().int().min(1).nullable(),
   openings: z.array(OpeningOut),

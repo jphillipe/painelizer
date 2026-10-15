@@ -32,8 +32,12 @@ function essence(p: Project) {
 describe('convert — Ringgold em formato solto', () => {
   const result = convert(ringgold, { studLength: [92.625, 104.625] });
 
-  it('passa no parser do CLI sem problemas', () => {
-    expect(result.problems).toEqual([]);
+  it('passa no parser; o motor aponta só o caso P30 (porta e janela a 8 1/4" na S2) para o revisor', () => {
+    // O checkpoint resolve isto com `jackStuds: 1` nas duas aberturas; a extração não escolhe jacks (é do
+    // motor/engenheiro), então o problema tem que chegar ao humano pelo relatório, não sumir.
+    expect(result.problems).toHaveLength(1);
+    expect(result.problems[0]).toMatch(/^motor: parede S2: aberturas S2-D1 e S2-A: 8\.25" entre os RO/);
+    expect(result.warnings).toEqual([]);
   });
 
   it('bate com ringgold-checkpoint.json nas 4 paredes e 5 aberturas', () => {
@@ -84,7 +88,22 @@ describe('convert — formato de planta', () => {
     expect(p.date).toBe('2026-10-14');
     expect(p.revision).toBe('A');
     expect(p.config.headerHeight).toBe(82.5);
-    expect(p.config.building).toBeUndefined();
+    expect(p.config.building).toEqual({ groundSnowLoad: 30, buildingWidth: 336 });
+    // Sem vento no fixture: o motor avisa (kings não conferidos) e o aviso chega ao revisor.
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatch(/^1-W1-P1 WIND_SPEED_MISSING: /);
+    expect(result.problems).toEqual([]);
+  });
+
+  it('parede portante com janela e sem neve/largura: o motor reclama e o relatório mostra', () => {
+    const noLoads: ExtractionOutput = {
+      ...corner,
+      building: { groundSnowLoad: null, buildingWidth: null, windSpeed: null, exposure: null, species: null },
+    };
+    const r = convert(noLoads);
+    expect(r.problems).toHaveLength(1);
+    expect(r.problems[0]).toMatch(/^motor: parede W1, abertura W1-J1: .*config\.building/);
+    expect(reviewReport(noLoads, r)).toContain('- motor: parede W1, abertura W1-J1');
   });
 
   it('a altura comum vai para cada parede; stud 92 5/8" derivado', () => {
@@ -104,9 +123,14 @@ describe('convert — formato de planta', () => {
   });
 
   it('building só entra com neve e largura; só vento não basta', () => {
-    const partial: ExtractionOutput = { ...corner, building: { ...corner.building, windSpeed: 120 } };
+    const partial: ExtractionOutput = {
+      ...corner,
+      building: { groundSnowLoad: null, buildingWidth: null, windSpeed: 120, exposure: 'B', species: null },
+    };
     const cfg = toProject(partial)['config'] as Record<string, unknown>;
     expect(cfg).not.toHaveProperty('building');
+    const full = toProject(corner)['config'] as Record<string, unknown>;
+    expect(full['building']).toEqual({ groundSnowLoad: 30, buildingWidth: `28' - 0"` });
   });
 });
 
@@ -139,7 +163,15 @@ describe('reviewReport', () => {
     expect(report).toContain('- parede W1: confiança 0.50');
     expect(report).toContain('- abertura W1-J1 (W1): confiança 0.40');
     expect(report).toContain('- abertura W1-J1 (W1): sem posição');
-    expect(report).toContain('- CLI: ');
+    expect(report).toContain('- parser: ');
+  });
+
+  it('avisos do motor ganham seção própria', () => {
+    const r = convert(ringgold);
+    const withWarning = { ...r, warnings: ['1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo'] };
+    const report = reviewReport(ringgold, withWarning);
+    expect(report).toContain('## Avisos do motor\n\n- 1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo');
+    expect(reviewReport(ringgold, r)).not.toContain('## Avisos do motor');
   });
 
   it('sem nada abaixo do limiar, diz para conferir mesmo assim', () => {

@@ -50,8 +50,12 @@ S13: o motor resolve cantos, T, comprimento de plate e origem de layout) ou **so
 formatos não se misturam no mesmo arquivo. Montagem de canto e T em `config.corner` (`california` | `three-stud`)
 e `config.tee` (`ladder` | `backer`), S14; sem eles, California corner e ladder blocking (P5). Ver `packages/cli/examples/casa-exemplo.json` e `packages/cli/src/project.ts`.
 
-## Extrair paredes de um PDF (S18, biblioteca; o comando vem na S19)
-`packages/extract`: `extractWalls({ pdf, pages })` manda as páginas da planta (A-1xx) e do schedule (A-8xx) para a API
-do Claude e devolve o JSON de entrada do CLI, com confiança e evidência por parede e abertura e um relatório de
-revisão em Markdown. Precisa de `ANTHROPIC_API_KEY` no ambiente; a saída é revisada por humano antes de rodar o
-`build`. O core não chama IA: a extração fica fora do motor.
+## Extrair paredes de um PDF (S18/S19)
+```bash
+pnpm extract "docs/examples/planta.pdf" --out saida-extracao/
+```
+Manda a planta (A-1xx) e o schedule (A-8xx), escolhidos pelo carimbo (ou `--pages 3,15`), para a API do Claude e grava
+`projeto.json` (entrada do `build`, para revisar antes de rodar), `extracao.json` (resposta com confiança e evidência
+por parede e abertura), `revisao.md` (o que revisar) e `paginas/<n>.txt` (texto posicionado enviado). Precisa de
+`ANTHROPIC_API_KEY` no ambiente. Sem chave: `--dry-run` grava só o pedido, e `--response <json>` pós-processa uma
+resposta gravada. O core não chama IA: a extração fica em `packages/extract`, fora do motor.

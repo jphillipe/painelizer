@@ -32,6 +32,7 @@ Páginas de um PDF vetorial: a planta de um pavimento (A-1xx) e, quando houver, 
 - Altura do topo do RO (\`headerHeight\`) só se a elevação ou o schedule der head height; senão null. Peitoril de janela vai em \`openingTypes[].sillHeight\`.
 - Tipos de parede: leia a folha de partition types (stud 2x4 ou 2x6, externa ou interna) e dê \`wallType\` em cada parede com a tag que a planta usa; sem tag na parede, deduza pela nota geral ("all exterior walls are type X1") e diga isso em \`evidence\`.
 - \`bearing\`: externa é portante. Interna só é portante se o desenho disser; na dúvida, false e uma nota.
+- \`floorsSupported\` e \`floorSpan\`: só com evidência (número de pavimentos acima pelos cortes; apoio do piso pelas notas estruturais). Sem evidência, null e uma nota — o motor usa esses dois para escolher o header pela tabela do IRC.
 - Pavimento: \`level\` 1 para a planta do primeiro piso habitável (1st Floor), 2 para a de cima.
 - Altura da parede: dos cortes ou das notas (pé-direito + estrutura do piso). Sem isso, null.
 - Dados estruturais (neve, vento, largura, espécie) só se estiverem nas notas; a planta de arquiteto normalmente não traz — deixe null.

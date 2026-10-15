@@ -5,6 +5,7 @@
  */
 
 import { parseFeetInches } from 'core';
+import { buildProject, BuildError } from 'cli/build';
 import { projectFrom, ProjectError } from 'cli/project';
 import type { ExtractionOutput, OpeningOut, WallOut } from './schema';
 
@@ -18,8 +19,10 @@ export interface ConvertOptions {
 export interface Converted {
   /** JSON de entrada do CLI (`panelizer build`). */
   project: Record<string, unknown>;
-  /** Mensagens do `projectFrom` do CLI; vazio quando o JSON é válido. */
+  /** O que impede o `build`: erros do parser do CLI (`parser: …`) ou do motor (`motor: …`). Vazio = o build roda. */
   problems: string[];
+  /** Avisos do motor no build (`<painel> <código>: mensagem`); não impedem nada, mas o revisor precisa ver. */
+  warnings: string[];
 }
 
 const PLATE = 1.5;
@@ -57,6 +60,7 @@ function wallJson(w: WallOut, defaultHeight: string | null): Record<string, unkn
     exterior: w.exterior,
     bearing: w.bearing,
     floorsSupported: w.floorsSupported,
+    floorSpan: w.floorSpan,
     level: w.level,
     wallType: w.wallType,
     openings: w.openings.map(openingJson),
@@ -126,17 +130,26 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
   });
 }
 
-/** `toProject` seguido do parser do CLI; os erros dele viram `problems`. */
+/**
+ * `toProject` seguido do parser do CLI e do motor (`buildProject`, puro): erros viram `problems`, avisos
+ * viram `warnings`. O motor roda aqui para o revisor saber antes do `build` o que a planta extraída não
+ * resolve sozinha (header fora da tabela, aberturas coladas…).
+ */
 export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Converted {
   const project = toProject(out, opts);
   const problems: string[] = [];
+  const warnings: string[] = [];
   try {
-    projectFrom(project, out.projectName);
+    const parsed = projectFrom(project, out.projectName);
+    const built = buildProject(parsed);
+    for (const w of built.warnings) warnings.push(`${w.panelId} ${w.warning.code}: ${w.warning.message}`);
   } catch (e) {
-    if (e instanceof ProjectError || e instanceof RangeError) problems.push(e.message);
+    if (e instanceof ProjectError) problems.push(`parser: ${e.message}`);
+    else if (e instanceof BuildError) for (const p of e.problems) problems.push(`motor: ${p}`);
+    else if (e instanceof RangeError) problems.push(`motor: ${e.message}`);
     else throw e;
   }
-  return { project, problems };
+  return { project, problems, warnings };
 }
 
 export interface ReportOptions {
@@ -227,13 +240,20 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
     lines.push('');
   }
 
-  for (const p of converted.problems) review.push(`CLI: ${p}`);
+  for (const p of converted.problems) review.push(p);
 
   lines.push('## Revisar');
   lines.push('');
   if (review.length === 0) lines.push('Nada abaixo do limiar; conferir mesmo assim contra a planta.');
   for (const r of review) lines.push(`- ${r}`);
   lines.push('');
+
+  if (converted.warnings.length > 0) {
+    lines.push('## Avisos do motor');
+    lines.push('');
+    for (const w of converted.warnings) lines.push(`- ${w}`);
+    lines.push('');
+  }
 
   if (out.notes.length > 0) {
     lines.push('## Notas do modelo');

@@ -67,7 +67,9 @@ describe('extractWalls com cliente falso', () => {
     const sent = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
     expect(sent[0].model).toBe(DEFAULT_MODEL);
     expect(result.output.walls.map((w) => w.id)).toEqual(['N1', 'S1', 'S2', 'I1']);
-    expect(result.problems).toEqual([]);
+    expect(result.problems).toHaveLength(1); // P30: porta e janela a 8 1/4" na S2, para o revisor
+    expect(result.problems[0]).toMatch(/^motor: parede S2/);
+    expect(result.warnings).toEqual([]);
     expect(result.project['name']).toBe('26 Ringgold St');
     expect(result.report).toContain('# Extração — 26 Ringgold St');
     expect(result.model).toBe('claude-opus-5-5');
@@ -113,7 +115,7 @@ describe('extractWalls com cliente falso', () => {
 describe('finish — respostas gravadas', () => {
   it('mesmo pós-processamento da chamada real', () => {
     const r = finish(ringgoldOutput, undefined, 'gravado', { inputTokens: 0, outputTokens: 0 });
-    expect(r.problems).toEqual([]);
+    expect(r.problems.map((p) => p.slice(0, 17))).toEqual(['motor: parede S2:']);
     expect(r.model).toBe('gravado');
   });
 });
@@ -123,6 +125,6 @@ describe.skipIf(!process.env['ANTHROPIC_API_KEY'] || !existsSync(RINGGOLD))('ext
     const pdf = new Uint8Array(readFileSync(RINGGOLD));
     const result = await extractWalls({ pdf, pages: [3, 15], hints: { level: 1 } });
     expect(result.output.walls.length).toBeGreaterThanOrEqual(4);
-    expect(result.problems).toEqual([]);
+    expect(result.problems.filter((p) => p.startsWith('parser:'))).toEqual([]);
   }, 600_000);
 });

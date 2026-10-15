@@ -432,7 +432,22 @@ Os PDFs de referência são vetoriais (Revit): extrair texto e geometria do PDF 
   `corner-output.json` em planta) e cliente falso; a leitura do PDF real do Ringgold roda quando o arquivo existe
   (A-100 = página 3, A-800 = 15). A chamada real fica para a S19 e só roda com `ANTHROPIC_API_KEY`. Não há
   resposta real gravada: o fixture foi escrito à mão a partir do texto da A-100, então a S19 é quem valida o prompt.
-- [ ] **S19 — Script `panelizer extract <planta.pdf>`** gerando o JSON de entrada para revisão
+- [x] **S19 — Script `panelizer extract <planta.pdf>`** gerando o JSON de entrada para revisão
+  Feita em 2026-10-14, **sem chave da API** (decisão do humano: construir e testar com respostas gravadas; a
+  primeira chamada real fica para quando houver crédito). Virou `pnpm extract <planta.pdf> --out <dir>` no pacote
+  `extract` (não `panelizer extract`: o CLI depender do extract criaria ciclo, porque o extract valida com
+  `cli/project`). Sem `--pages`, escolhe a planta A-1xx e o schedule A-8xx pelo carimbo. Grava `projeto.json`
+  (entrada do `build`), `extracao.json`, `revisao.md` e `paginas/<n>.txt`. Dois modos sem rede: `--dry-run`
+  (texto posicionado + `pedido.json` com modelo, system prompt, schema e tamanhos; nada enviado) e `--response
+  <json>` (pós-processa uma resposta gravada). Chamada real exige `ANTHROPIC_API_KEY`; credencial recusada,
+  erro da API, recusa, corte e resposta fora do schema saem com mensagem própria (texto cru em
+  `resposta-bruta.txt`). O `convert` roda o parser do CLI **e o motor** (`buildProject`, puro) sobre o JSON
+  extraído: erros viram `problems` (`parser: …` / `motor: …`) e avisos viram `warnings`, os dois no stderr e em
+  `revisao.md`; os arquivos são gravados e o código de saída é 0: a saída é para revisão. Foi isso que mostrou
+  que a extração precisa de `floorSpan` (sem ele o header da janela A sai da tabela) e que o Ringgold extraído
+  chega ao revisor com o problema P30 (8 1/4" entre porta e janela na S2) em vez de `jackStuds: 1` escondido. Testes (11) com `Io` em memória e a
+  chamada à API injetada. Falta, com chave: rodar no Ringgold (páginas 3 e 15) e comparar com
+  `ringgold-checkpoint.json`.
 
 ## Fase 5 — App
 

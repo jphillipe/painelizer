@@ -2,54 +2,219 @@
   "$comment": "Resposta gravada (escrita à mão, S18) do que o modelo deve devolver para a A-100 + A-800 do 26 Ringgold St, nos mesmos 4 trechos de parede de packages/cli/examples/ringgold-checkpoint.json, em formato de parede solta (length). Cotas e tags copiadas do texto posicionado da A-100 (nota 8: cotas externas da face externa do stud; notas 9 e 10: portas e janelas cotadas ao eixo) e da A-800 (door schedule, partition types). Altura de parede e cargas são as hipóteses P27 e P31 do checkpoint. O teste em test/convert.test.ts exige que, convertido e lido pelo parser do CLI, isto bata com o arquivo do checkpoint nas 4 paredes e 5 aberturas.",
   "projectName": "26 Ringgold St",
   "level": 1,
-  "sheets": { "plan": "A-100", "schedule": "A-800", "elevations": null },
+  "sheets": {
+    "plan": "A-100",
+    "schedule": "A-800",
+    "elevations": null
+  },
   "origin": "Trechos isolados (formato por comprimento): cada parede medida do seu canto externo, no eixo.",
   "wallHeight": "9' - 1 1/8\"",
   "headerHeight": null,
-  "building": { "groundSnowLoad": 30, "buildingWidth": "29' - 0\"", "windSpeed": 130, "exposure": "B", "species": null },
+  "building": {
+    "groundSnowLoad": 30,
+    "buildingWidth": "29' - 0\"",
+    "windSpeed": 130,
+    "exposure": "B",
+    "species": null
+  },
   "wallTypes": [
-    { "tag": "X1", "section": "2x6", "exterior": true, "description": "Exterior wall, 2x6 @ 16\" o.c., R-21, 1/2\" plywood", "evidence": "A-800 partition type X1; A-100 nota 2 (all new exterior walls are type X1)" },
-    { "tag": "1", "section": "2x4", "exterior": false, "description": "Partition type 1 - interior wall, 2x4 @ 16\" o.c., 5/8\" GWB both sides, 1 HR", "evidence": "A-800 partition type 1; A-100 nota 3 (all interior walls type 1)" }
+    {
+      "tag": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "description": "Exterior wall, 2x6 @ 16\" o.c., R-21, 1/2\" plywood",
+      "evidence": "A-800 partition type X1; A-100 nota 2 (all new exterior walls are type X1)"
+    },
+    {
+      "tag": "1",
+      "section": "2x4",
+      "exterior": false,
+      "description": "Partition type 1 - interior wall, 2x4 @ 16\" o.c., 5/8\" GWB both sides, 1 HR",
+      "evidence": "A-800 partition type 1; A-100 nota 3 (all interior walls type 1)"
+    }
   ],
   "openingTypes": [
-    { "tag": "1", "kind": "door", "width": "3' - 0\"", "height": "6' - 8\"", "frame": "hm", "sillHeight": null, "roughWidth": "3' - 2\"", "roughHeight": "6' - 10 1/2\"", "description": "porta 1, WD/GLASS, batente metálico, 45 min (A-800)", "confidence": 0.9, "evidence": "A-800 door schedule: 1 SINGLE 36\" X 80\" WD/GLASS METAL 45 MINUTES FIRE RATED; RO da hipótese P29" },
-    { "tag": "A2", "kind": "window", "width": "4' - 10\"", "height": "6' - 0\"", "frame": null, "sillHeight": "1' - 11 3/4\"", "roughWidth": "4' - 10 1/2\"", "roughHeight": "6' - 0 1/2\"", "description": "par de janelas tipo A (vinyl casement c/ transom), A-800", "confidence": 0.7, "evidence": "A-800 window legend tipo A 2'-5\" x 6'-0\" em par; peitoril 2'-0\" na A-200 menos piso; RO da hipótese P28" },
-    { "tag": "U2", "kind": "door", "width": "3' - 0\"", "height": "6' - 8\"", "frame": "wood", "sillHeight": null, "roughWidth": null, "roughHeight": null, "description": "porta U2, WD (A-800)", "confidence": 1, "evidence": "A-800 door schedule: U2 SINGLE 36\" X 80\" WD WD 3'-0\" 6'-8\"" }
+    {
+      "tag": "1",
+      "kind": "door",
+      "width": "3' - 0\"",
+      "height": "6' - 8\"",
+      "frame": "hm",
+      "sillHeight": null,
+      "roughWidth": "3' - 2\"",
+      "roughHeight": "6' - 10 1/2\"",
+      "description": "porta 1, WD/GLASS, batente metálico, 45 min (A-800)",
+      "confidence": 0.9,
+      "evidence": "A-800 door schedule: 1 SINGLE 36\" X 80\" WD/GLASS METAL 45 MINUTES FIRE RATED; RO da hipótese P29"
+    },
+    {
+      "tag": "A2",
+      "kind": "window",
+      "width": "4' - 10\"",
+      "height": "6' - 0\"",
+      "frame": null,
+      "sillHeight": "1' - 11 3/4\"",
+      "roughWidth": "4' - 10 1/2\"",
+      "roughHeight": "6' - 0 1/2\"",
+      "description": "par de janelas tipo A (vinyl casement c/ transom), A-800",
+      "confidence": 0.7,
+      "evidence": "A-800 window legend tipo A 2'-5\" x 6'-0\" em par; peitoril 2'-0\" na A-200 menos piso; RO da hipótese P28"
+    },
+    {
+      "tag": "U2",
+      "kind": "door",
+      "width": "3' - 0\"",
+      "height": "6' - 8\"",
+      "frame": "wood",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "porta U2, WD (A-800)",
+      "confidence": 1,
+      "evidence": "A-800 door schedule: U2 SINGLE 36\" X 80\" WD WD 3'-0\" 6'-8\""
+    }
   ],
   "headerSchedule": [],
   "walls": [
     {
-      "id": "N1", "start": null, "end": null, "length": "16' - 0\"", "endsStart": null, "endsEnd": null,
-      "wallType": "X1", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 2, "height": null, "level": 1,
+      "id": "N1",
+      "start": null,
+      "end": null,
+      "length": "16' - 0\"",
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "height": null,
+      "level": 1,
       "openings": [
-        { "id": "N1-A", "tag": "A2", "type": null, "center": "8' - 5 7/8\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": null, "confidence": 1, "evidence": "A-100 y=62 [190] 8' - 5 7/8\" (eixo do par A a partir da quina NO, nota 10)" }
+        {
+          "id": "N1-A",
+          "tag": "A2",
+          "type": null,
+          "center": "8' - 5 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 1,
+          "evidence": "A-100 y=62 [190] 8' - 5 7/8\" (eixo do par A a partir da quina NO, nota 10)"
+        }
       ],
-      "confidence": 0.9, "evidence": "Parede norte, primeiros 16' da quina noroeste (A-100 cadeia de cotas y=62)"
+      "confidence": 0.9,
+      "evidence": "Parede norte, primeiros 16' da quina noroeste (A-100 cadeia de cotas y=62)"
     },
     {
-      "id": "S1", "start": null, "end": null, "length": "12' - 0\"", "endsStart": null, "endsEnd": null,
-      "wallType": "X1", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 2, "height": null, "level": 1,
+      "id": "S1",
+      "start": null,
+      "end": null,
+      "length": "12' - 0\"",
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "height": null,
+      "level": 1,
       "openings": [
-        { "id": "S1-A", "tag": "A2", "type": null, "center": "8' - 7\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": null, "confidence": 1, "evidence": "A-100 y=683 [198] 8' - 7\" (eixo do par A a partir da quina SO)" }
+        {
+          "id": "S1-A",
+          "tag": "A2",
+          "type": null,
+          "center": "8' - 7\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 1,
+          "evidence": "A-100 y=683 [198] 8' - 7\" (eixo do par A a partir da quina SO)"
+        }
       ],
-      "confidence": 0.9, "evidence": "Parede sul, primeiros 12' da quina sudoeste (A-100 cadeia y=683)"
+      "confidence": 0.9,
+      "evidence": "Parede sul, primeiros 12' da quina sudoeste (A-100 cadeia y=683)"
     },
     {
-      "id": "S2", "start": null, "end": null, "length": "12' - 0\"", "endsStart": null, "endsEnd": null,
-      "wallType": "X1", "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 2, "height": null, "level": 1,
+      "id": "S2",
+      "start": null,
+      "end": null,
+      "length": "12' - 0\"",
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": 2,
+      "floorSpan": "center",
+      "height": null,
+      "level": 1,
       "openings": [
-        { "id": "S2-D1", "tag": "1", "type": null, "center": "2' - 4 1/2\"", "offset": null, "roughWidth": null, "roughHeight": "6' - 10 1/2\"", "headerHeight": "6' - 10 1/2\"", "confidence": 0.9, "evidence": "A-100 y=683: 8' - 7\" + 5' - 9 1/2\" = 14' - 4 1/2\" da quina SO; menos 12' do trecho = 2' - 4 1/2\"; porta 80\" com RO 82 1/2\" (P4)" },
-        { "id": "S2-A", "tag": "A2", "type": null, "center": "7' - 1\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": null, "confidence": 0.9, "evidence": "A-100 y=683: 8' - 7\" + 5' - 9 1/2\" + 4' - 8 1/2\" = 19' - 1\"; menos 12' = 7' - 1\"" }
+        {
+          "id": "S2-D1",
+          "tag": "1",
+          "type": null,
+          "center": "2' - 4 1/2\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": "6' - 10 1/2\"",
+          "headerHeight": "6' - 10 1/2\"",
+          "confidence": 0.9,
+          "evidence": "A-100 y=683: 8' - 7\" + 5' - 9 1/2\" = 14' - 4 1/2\" da quina SO; menos 12' do trecho = 2' - 4 1/2\"; porta 80\" com RO 82 1/2\" (P4)"
+        },
+        {
+          "id": "S2-A",
+          "tag": "A2",
+          "type": null,
+          "center": "7' - 1\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.9,
+          "evidence": "A-100 y=683: 8' - 7\" + 5' - 9 1/2\" + 4' - 8 1/2\" = 19' - 1\"; menos 12' = 7' - 1\""
+        }
       ],
-      "confidence": 0.9, "evidence": "Parede sul, de 12' a 24' da quina sudoeste"
+      "confidence": 0.9,
+      "evidence": "Parede sul, de 12' a 24' da quina sudoeste"
     },
     {
-      "id": "I1", "start": null, "end": null, "length": "15' - 4\"", "endsStart": null, "endsEnd": null,
-      "wallType": "1", "section": "2x4", "exterior": false, "bearing": false, "floorsSupported": null, "height": null, "level": 1,
+      "id": "I1",
+      "start": null,
+      "end": null,
+      "length": "15' - 4\"",
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
       "openings": [
-        { "id": "I1-U2", "tag": "U2", "type": null, "center": "13' - 6\"", "offset": null, "roughWidth": null, "roughHeight": null, "headerHeight": "6' - 10 1/2\"", "confidence": 0.8, "evidence": "A-100 y=412 rot=90 [327] 1' - 10\" do eixo da porta à parede sul; 15' - 4\" − 1' - 10\" = 13' - 6\" do start (parede norte)" }
+        {
+          "id": "I1-U2",
+          "tag": "U2",
+          "type": null,
+          "center": "13' - 6\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": "6' - 10 1/2\"",
+          "confidence": 0.8,
+          "evidence": "A-100 y=412 rot=90 [327] 1' - 10\" do eixo da porta à parede sul; 15' - 4\" − 1' - 10\" = 13' - 6\" do start (parede norte)"
+        }
       ],
-      "confidence": 0.8, "evidence": "A-100 y=289 rot=90 [549] 15' - 2 3/4\" entre faces de GWB (nota 7) + 5/8\" de cada lado = 15' - 4\""
+      "confidence": 0.8,
+      "evidence": "A-100 y=289 rot=90 [549] 15' - 2 3/4\" entre faces de GWB (nota 7) + 5/8\" de cada lado = 15' - 4\""
     }
   ],
   "notes": [
