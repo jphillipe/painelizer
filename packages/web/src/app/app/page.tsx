@@ -1,8 +1,8 @@
-import { NewProjectView } from './_components/new-project-view';
 import { hasKey } from '@/services/extract.service';
-import { listExamples } from '@/services/panels.service';
+import { illustrationPlan, listExamples } from '@/services/panels.service';
+import { NewProjectView } from './_components/new-project-view';
 
-/** Tela principal: Server Component lê exemplos e a disponibilidade da IA pelos services. */
-export default function ViewerPage() {
-  return <NewProjectView examples={listExamples()} aiEnabled={hasKey()} />;
+/** Nova obra: Server Component lê exemplos, a disponibilidade da IA e a planta ilustrativa pelos services. */
+export default function NewProjectPage() {
+  return <NewProjectView examples={listExamples()} aiEnabled={hasKey()} illustration={illustrationPlan()} />;
 }

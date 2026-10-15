@@ -8,9 +8,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-navy-700",
+        default: "bg-primary text-primary-foreground hover:bg-navy-700 hover:-translate-y-px active:translate-y-0",
         // Ação principal da tela (docs/10-design.md §3): pill dourado com texto navy.
-        accent: "bg-accent text-accent-foreground hover:bg-gold-600 hover:text-paper",
+        accent: "bg-accent text-accent-foreground shadow-1 hover:bg-gold-600 hover:text-paper hover:-translate-y-px active:translate-y-0",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
         outline:

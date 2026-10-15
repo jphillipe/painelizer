@@ -1,40 +1,45 @@
 'use client';
 
-import { OctagonXIcon } from 'lucide-react';
+import { ArrowLeftIcon, OctagonXIcon, RotateCcwIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { generatePanels } from '../_actions/generate-panels';
-import { AdvancedImport } from './advanced-import';
-import { ResultView } from './result-view';
-import { SamplePicker } from './sample-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { UploadForm } from './upload-form';
-import { WallsReview } from './walls-review';
 import type { ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
+import { generatePanels } from '../_actions/generate-panels';
+import { AdvancedImport } from './advanced-import';
+import { PreviewCard } from './preview-card';
+import { ResultView } from './result-view';
+import { SamplePicker } from './sample-picker';
+import { StepBar, type StepId } from './step-bar';
+import { UploadForm } from './upload-form';
+import { WallsReview } from './walls-review';
 
 export interface NewProjectViewProps {
   examples: readonly Example[];
   aiEnabled: boolean;
+  illustration: string | undefined;
 }
 
 /**
- * Fluxo do usuário em três passos (docs/10-design.md §4): 01 desenhos → 02 revisão das paredes →
- * 03 painéis. Exemplo e arquivo de projeto pulam o passo 02.
+ * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos
+ * leva de volta aos passos concluídos. Estado fica no cliente até a S22 (projetos salvos com URL própria).
  */
-export function NewProjectView({ examples, aiEnabled }: NewProjectViewProps) {
+export function NewProjectView({ examples, aiEnabled, illustration }: NewProjectViewProps) {
+  const [step, setStep] = useState<StepId>(1);
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
   const [extracting, setExtracting] = useState(false);
   const [result, setResult] = useState<GenerateResult | undefined>(undefined);
-  const reviewRef = useRef<HTMLElement>(null);
-  const panelsRef = useRef<HTMLElement>(null);
 
   const generate = useAction(generatePanels, {
     onSuccess: ({ data }) => {
-      if (data) setResult(data);
+      if (data) {
+        setResult(data);
+        setStep(3);
+      }
     },
     onError: ({ error }) => toast.error(error.serverError ?? error.validationErrors?.projectText?._errors?.[0] ?? 'Could not generate panels.'),
   });
@@ -42,61 +47,92 @@ export function NewProjectView({ examples, aiEnabled }: NewProjectViewProps) {
   const onOutcome = (o: ExtractOutcome) => {
     setOutcome(o);
     setResult(undefined);
+    if (o.ok) setStep(2);
+    else toast.error(o.message);
   };
   const runProject = (projectText: string) => {
     if (projectText.trim() === '') return;
     generate.execute({ projectText });
   };
+  const startOver = () => {
+    setOutcome(undefined);
+    setResult(undefined);
+    setStep(1);
+  };
 
   useEffect(() => {
-    if (outcome) reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [outcome]);
-  useEffect(() => {
-    if (result) panelsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [result]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
+  const done: StepId[] = [...(outcome?.ok ? [1 as const] : []), ...(result ? [1 as const, 2 as const] : [])];
 
   return (
-    <div className="space-y-10">
-      <section className="no-print">
-        <p className="eyebrow">01 · Your drawings</p>
-        <h1 className="mt-2">From drawings to panels.</h1>
-        <p className="mt-3 mb-6 text-ink-2">Upload the plan set. The AI reads the walls; you check them; the engine builds every panel.</p>
-        <Card>
-          <CardContent className="space-y-6 pt-6">
-            <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onPendingChange={setExtracting} />
-            <Separator />
-            <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={runProject} />
-            <AdvancedImport onProjectText={runProject} onOutcome={onOutcome} />
-          </CardContent>
-        </Card>
-      </section>
+    <div className="space-y-8">
+      <header className="no-print space-y-3">
+        <p className="eyebrow">New project</p>
+        <h1>From drawings to panels.</h1>
+        <p className="max-w-2xl text-ink-2">
+          Upload the plan set. The AI reads the walls, you check them, and the engine builds every fabrication sheet. Nothing is
+          built before your review.
+        </p>
+      </header>
 
-      {outcome ? (
-        <section ref={reviewRef} className="no-print scroll-mt-6">
-          <p className="eyebrow">02 · Review walls</p>
-          <div className="mt-2">
-            {outcome.ok ? (
-              <WallsReview outcome={outcome} pending={generate.isPending} onGenerate={runProject} />
-            ) : (
-              <Alert variant={outcome.reason === 'no_key' ? 'warning' : 'destructive'}>
-                <OctagonXIcon />
-                <AlertTitle>{outcome.reason === 'no_key' ? 'AI extraction is off' : 'Extraction failed'}</AlertTitle>
-                <AlertDescription>
-                  <p>{outcome.message}</p>
-                  {outcome.rawText ? <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-ink">{outcome.rawText}</pre> : null}
-                </AlertDescription>
-              </Alert>
-            )}
+      <StepBar active={step} done={done} onGo={setStep} />
+
+      {step === 1 ? (
+        <section key="upload" className="step-enter no-print grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start">
+          <div className="space-y-4">
+            <div className="rounded-md border bg-card p-6 shadow-1">
+              <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onPendingChange={setExtracting} />
+            </div>
+            <div className="space-y-4 rounded-md border bg-card p-6">
+              <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={runProject} />
+              <Separator />
+              <AdvancedImport onProjectText={runProject} onOutcome={onOutcome} />
+            </div>
           </div>
+          <PreviewCard illustration={illustration} outcome={outcome} />
         </section>
       ) : null}
 
-      <section ref={panelsRef} className="scroll-mt-6">
-        <p className="eyebrow no-print">03 · Panels</p>
-        <div className="mt-2">
+      {step === 2 ? (
+        <section key="review" className="step-enter no-print space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="eyebrow">02 · Review walls</p>
+            <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
+              <ArrowLeftIcon /> Back to drawings
+            </Button>
+          </div>
+          {outcome?.ok ? (
+            <WallsReview outcome={outcome} pending={generate.isPending} onGenerate={runProject} />
+          ) : (
+            <Alert variant="destructive">
+              <OctagonXIcon />
+              <AlertTitle>Nothing to review</AlertTitle>
+              <AlertDescription>{outcome?.message ?? 'Upload drawings or pick a sample first.'}</AlertDescription>
+            </Alert>
+          )}
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section key="panels" className="step-enter space-y-4">
+          <div className="no-print flex flex-wrap items-center justify-between gap-3">
+            <p className="eyebrow">03 · Panels</p>
+            <div className="flex gap-2">
+              {outcome?.ok ? (
+                <Button variant="ghost" size="sm" onClick={() => setStep(2)}>
+                  <ArrowLeftIcon /> Back to review
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={startOver}>
+                <RotateCcwIcon /> Start over
+              </Button>
+            </div>
+          </div>
           <ResultView result={result} pending={generate.isPending} />
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

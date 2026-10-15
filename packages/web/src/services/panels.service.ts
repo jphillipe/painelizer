@@ -46,3 +46,11 @@ export function listExamples(): Example[] {
 export function exampleText(id: string): string | undefined {
   return EXAMPLES.find((e) => e.id === id)?.text;
 }
+
+/** Planta de painéis da casa 28x40 (o próprio motor), para a tela usar como ilustração antes de haver resultado. */
+export function illustrationPlan(): string | undefined {
+  const text = exampleText('house-28x40');
+  if (text === undefined) return undefined;
+  const r = generate(text);
+  return r.ok ? r.files.find((f) => f.path === 'plan.svg')?.content : undefined;
+}

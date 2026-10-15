@@ -54,8 +54,8 @@ export function WallsReview({ outcome, pending, onGenerate }: WallsReviewProps) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {outcome.walls.map((w) => (
-              <TableRow key={w.id}>
+            {outcome.walls.map((w, i) => (
+              <TableRow key={w.id} style={{ '--i': i } as React.CSSProperties} className="stagger transition-colors duration-200 hover:bg-paper-2">
                 <TableCell className="font-mono">{w.id}</TableCell>
                 <TableCell className="font-mono text-[13px]" title={w.evidence}>
                   {w.geometry}

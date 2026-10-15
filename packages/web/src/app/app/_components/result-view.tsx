@@ -89,14 +89,14 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
           ) : (
             <div className="grid gap-4 md:grid-cols-[180px_1fr]">
               <ul className="no-print max-h-[600px] divide-y divide-line-faint overflow-auto rounded-md border bg-card">
-                {result.panels.map((p) => (
-                  <li key={p.id}>
+                {result.panels.map((p, i) => (
+                  <li key={p.id} style={{ '--i': i } as React.CSSProperties} className="stagger">
                     <button
                       type="button"
                       onClick={() => setSelected(p.id)}
                       className={cn(
-                        'flex w-full items-center justify-between px-3 py-2 text-left font-mono text-[13px] hover:bg-paper-2',
-                        p.id === current?.panelId && 'bg-gold-100 text-navy-900',
+                        'flex w-full items-center justify-between border-l-2 border-transparent px-3 py-2 text-left font-mono text-[13px] transition-[background-color,border-color,padding] duration-200 ease-site hover:bg-paper-2 hover:pl-4',
+                        p.id === current?.panelId && 'border-gold bg-gold-100 text-navy-900',
                       )}
                     >
                       <span>{p.id}</span>
@@ -105,7 +105,7 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
                   </li>
                 ))}
               </ul>
-              {current ? <SvgView svg={current.svg} label={`Sheet ${current.panelId}`} /> : null}
+              {current ? <SvgView key={current.panelId} svg={current.svg} label={`Sheet ${current.panelId}`} className="animate-fade-in" /> : null}
             </div>
           )}
         </TabsContent>

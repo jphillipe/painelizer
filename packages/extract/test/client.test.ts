@@ -23,11 +23,14 @@ function fakeMessage(overrides: Record<string, unknown>): Anthropic.Message {
   } as unknown as Anthropic.Message;
 }
 
-/** Cliente sem rede: `messages.create` devolve a mensagem dada e guarda os parâmetros recebidos. */
+/** Cliente sem rede: `messages.stream(...).finalMessage()` devolve a mensagem dada; `create` guarda os parâmetros. */
 function fakeClient(message: Anthropic.Message) {
   const client = new Anthropic({ apiKey: 'test-key-never-used' });
-  const create = vi.fn(async () => message);
-  client.messages.create = create as unknown as typeof client.messages.create;
+  const create = vi.fn((params: unknown) => {
+    void params;
+    return { finalMessage: async () => message };
+  });
+  client.messages.stream = create as unknown as typeof client.messages.stream;
   return { client, create };
 }
 

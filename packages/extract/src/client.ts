@@ -7,8 +7,9 @@
  * Credencial: `new Anthropic()` lê `ANTHROPIC_API_KEY` (ou o perfil do `ant auth login`); nada é
  * gravado nem registrado aqui. De cada PDF vão só as páginas pedidas.
  *
- * Usa `messages.create` (não `messages.parse`) para ficar com o texto cru quando a resposta não bate
- * com o schema: o `parse` do SDK lança sem devolver o texto, e o texto é o que o humano precisa ver.
+ * Usa `messages.stream(...).finalMessage()` (não `messages.parse`) para ficar com o texto cru quando a
+ * resposta não bate com o schema: o `parse` do SDK lança sem devolver o texto, e o texto é o que o humano
+ * precisa ver; e streaming porque o SDK recusa chamadas sem stream que possam passar de 10 minutos.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -131,7 +132,8 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
 export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {}): Promise<ExtractResult> {
   const client = opts.client ?? new Anthropic();
   const { params, pagesSent } = await buildRequest(req, opts);
-  const response = await client.messages.create(params);
+  // Streaming: o SDK exige para respostas longas (max_tokens alto); `finalMessage` junta tudo.
+  const response = await client.messages.stream(params).finalMessage();
   const text = textOf(response);
 
   if (response.stop_reason === 'refusal') {

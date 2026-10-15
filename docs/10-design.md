@@ -98,7 +98,11 @@ de aviso (`HEADER_JACKS_BELOW_TABLE`) sempre em mono.
   `shadow-2 = 0 2px 6px rgba(10,20,40,.16), 0 24px 60px rgba(10,20,40,.22)` (dialogs).
 - Gutter horizontal `clamp(20px, 4vw, 40px)`; largura máxima de conteúdo 1200px; escala de espaço do
   Tailwind (4px).
-- Transições 200ms `cubic-bezier(.22,.61,.2,1)`; nada anima por mais de 300ms no app.
+- **Movimento**: easing do site `cubic-bezier(.22,.61,.2,1)` (`ease-site`). Hover e foco em 200 ms (cor, borda,
+  `translateY(-1px)` em botão, `-2px` + sombra em card com `lift`). Entrada de tela `step-enter` (fade + 12 px
+  de subida, 450 ms); listas entram em cascata com `stagger` (60 ms por item, via `--i`). Zona de soltar
+  responde ao hover (borda e cantos dourados, ícone sobe) e ao arraste (escala 1.01, ícone dourado). Componentes
+  do shadcn animam com `tw-animate-css`. `prefers-reduced-motion` desliga tudo.
 
 ## 3. Componentes (shadcn/ui, só os usados)
 
@@ -123,9 +127,16 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
 ### App shell
 - Header 64px, fundo navy-900, texto papel: logotipo "Panelizer" (Barlow 600) + "· National Lumber" (ink
   claro), nav à direita ("Viewer", "Extract", depois "Projects"). Link ativo com sublinhado gold.
-- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho em **passos empilhados**
-  com eyebrow numerado ("01 · Your drawings", "02 · Review walls", "03 · Panels"); cada passo novo rola para a
-  vista. Um passo que ainda não aconteceu mostra o estado vazio, nunca some.
+- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho seguem o **takeoff da
+  National Lumber**: cabeçalho (eyebrow + h1 + parágrafo), **barra de passos** numerada (círculo navy cheio no
+  ativo, sublinhado dourado; passos feitos também cheios), e o passo 1 em duas colunas 5/12 + 7/12: à esquerda
+  o card do formulário (zona de soltar arquivos tracejada com cantos marcados e ícone navy, "Project details",
+  collapsibles com `<details>`), à direita o **card de prévia** com cabeçalho navy, ilustração (a planta de
+  painéis da 28x40 gerada pelo motor), legenda em papel-2, título + parágrafo, três features numeradas e rodapé
+  navy; esse card vira status quando há leitura. **Cada passo é uma tela**: o passo ativo ocupa a área toda,
+  o anterior some; a barra de passos leva de volta aos concluídos (círculo com check), e as telas 2 e 3 têm
+  "Back" e "Start over". Até a S22 o estado fica no cliente (sem URL por passo); com projetos salvos, cada
+  passo ganha rota própria.
 - Rodapé mínimo: versão, "National Lumber · WR Group".
 
 ### Landing (futura, não implementar agora)

@@ -498,6 +498,10 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     componentes `UploadForm`, `WallsReview`, `SamplePicker`, `AdvancedImport`; `Viewer` orquestra. Conferido no
     browser sem chave: aviso, exemplo gerando painéis, resposta gravada do Ringgold virando tabela com o problema
     P30 e o botão desligado. Chamada real continua sem teste até haver chave. Testes: extract 56, web 20.
+    Visual refeito na mesma data a pedido do humano, no desenho do takeoff da National Lumber: `StepBar`,
+    `DropZone` (arrastar e soltar, lista com remover), "Project details" (pavimento, nome, páginas, notas
+    recolhidas), `PreviewCard` com a planta da 28x40 como ilustração. Componentes e actions da rota vivem em
+    `app/app/_components` e `app/app/_actions` (10-design §9).
   - [ ] **S20.3 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS.
     Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**

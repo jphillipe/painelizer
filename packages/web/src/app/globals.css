@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
  * Tema do Panelizer — tokens de docs/10-design.md (cores do site da National Lumber).
@@ -113,6 +114,66 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
   --ease-site: cubic-bezier(0.22, 0.61, 0.2, 1);
+
+  /* Movimento (docs/10-design.md §2): entradas de 350–450 ms, hovers de 200 ms, nada mais longo. */
+  --animate-fade-up: fade-up 0.45s var(--ease-site) both;
+  --animate-fade-in: fade-in 0.3s var(--ease-site) both;
+  --animate-pop: pop 0.35s var(--ease-site) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+/* Entrada de cada passo e de cada item de lista (stagger via --i). */
+@utility step-enter {
+  animation: var(--animate-fade-up);
+}
+@utility stagger {
+  animation: var(--animate-fade-up);
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+/* Cartão que levanta no hover. */
+@utility lift {
+  transition: transform 200ms var(--ease-site), box-shadow 200ms var(--ease-site), border-color 200ms var(--ease-site);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-enter,
+  .stagger,
+  .lift {
+    animation: none;
+    transition: none;
+  }
 }
 
 @layer base {

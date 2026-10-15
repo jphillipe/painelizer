@@ -7,3 +7,6 @@ out/
 .next/
 packages/web/next-env.d.ts
 *.tsbuildinfo
+.env
+.env.*
+!.env.example

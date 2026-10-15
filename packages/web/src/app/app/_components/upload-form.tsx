@@ -6,15 +6,16 @@ import { useAction } from 'next-safe-action/hooks';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { extractWalls } from '../_actions/extract-walls';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { uploadFieldsSchema, type UploadFields } from '@/schemas/extract';
-import { ACCEPTED_UPLOAD_EXTENSIONS, type ExtractOutcome } from '@/types/extract';
+import type { ExtractOutcome } from '@/types/extract';
+import { extractWalls } from '../_actions/extract-walls';
+import { DropZone } from './drop-zone';
 
 export interface UploadFormProps {
   aiEnabled: boolean;
@@ -22,17 +23,14 @@ export interface UploadFormProps {
   onPendingChange: (pending: boolean) => void;
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
+const AUTO = 'auto';
 
-/** Passo 01: os desenhos (PDFs e imagens, vários) → action `extractWalls` → revisão de paredes. */
+/** Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`. */
 export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const form = useForm<UploadFields>({
     resolver: zodResolver(uploadFieldsSchema),
-    defaultValues: { pages: '', level: '', notes: '' },
+    defaultValues: { level: '', projectName: '', pages: '', notes: '' },
   });
 
   const { execute, isPending } = useAction(extractWalls, {
@@ -51,99 +49,115 @@ export function UploadForm({ aiEnabled, onOutcome, onPendingChange }: UploadForm
     }
     const fd = new FormData();
     for (const f of files) fd.append('files', f);
-    fd.set('pages', fields.pages);
-    fd.set('level', fields.level);
-    fd.set('notes', fields.notes);
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v);
     execute(fd);
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(submit)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
         {aiEnabled ? null : (
           <Alert variant="warning">
             <TriangleAlertIcon />
             <AlertTitle>AI extraction is off on this server</AlertTitle>
-            <AlertDescription>
-              ANTHROPIC_API_KEY is not set. You can still try a sample below, or import a project file under Advanced.
-            </AlertDescription>
+            <AlertDescription>ANTHROPIC_API_KEY is not set. Try a sample below, or import a project file under Advanced.</AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="files">Drawings</Label>
-          <Input
-            id="files"
-            type="file"
-            multiple
-            accept={ACCEPTED_UPLOAD_EXTENSIONS.join(',')}
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          />
-          <p className="text-sm text-ink-3">
-            PDF (vector sets work best), PNG or JPG. Floor plan, wall types, door and window schedules, elevations.
-          </p>
-          {files.length > 0 ? (
-            <ul className="divide-y divide-line-faint rounded-md border bg-card text-sm">
-              {files.map((f) => (
-                <li key={`${f.name}-${f.size}`} className="flex items-center justify-between px-3 py-1.5">
-                  <span className="truncate font-mono text-[13px]">{f.name}</span>
-                  <span className="text-ink-3">{formatBytes(f.size)}</span>
-                </li>
-              ))}
+        <section className="space-y-3">
+          <h3>Your drawings</h3>
+          <DropZone files={files} onFiles={setFiles} disabled={isPending} />
+          <details className="text-sm">
+            <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
+              <li>Floor plan of the level to panelize, with dimensions readable.</li>
+              <li>Wall type sheet (partition types) and door and window schedules.</li>
+              <li>Elevations or sections when head heights and sill heights matter.</li>
+              <li>Structural notes (snow load, wind, species) if you have them: the engine sizes headers by code tables.</li>
             </ul>
-          ) : null}
-        </div>
+          </details>
+        </section>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <section className="space-y-4">
+          <h3>Project details</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Level</FormLabel>
+                  <Select value={field.value === '' ? undefined : field.value} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Identify from drawings" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={AUTO}>Identify from drawings</SelectItem>
+                      <SelectItem value="1">Level 1</SelectItem>
+                      <SelectItem value="2">Level 2</SelectItem>
+                      <SelectItem value="3">Level 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="projectName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Project name <span className="font-normal text-ink-3">(optional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g. Maple St duplex" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={form.control}
             name="pages"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>PDF pages (optional)</FormLabel>
+                <FormLabel>
+                  PDF pages <span className="font-normal text-ink-3">(optional)</span>
+                </FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="e.g. 3,15" className="font-mono" />
+                  <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
                 </FormControl>
                 <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Level (optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="1" inputMode="numeric" className="font-mono" />
-                </FormControl>
-                <FormDescription>Which floor to extract when the set has several.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes for the AI (optional)</FormLabel>
-              <FormControl>
-                <Textarea {...field} rows={2} placeholder="e.g. Ignore the garage. North is up." />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <details className="text-sm">
+            <summary className="cursor-pointer text-ink-2">Add notes for the AI (optional)</summary>
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="mt-2">
+                  <FormControl>
+                    <Textarea {...field} rows={3} placeholder="e.g. Ignore the garage. North is up." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </details>
+        </section>
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" variant="accent" disabled={!aiEnabled || isPending}>
             {isPending ? (
               <>
-                <Loader2Icon className="animate-spin" /> Extracting…
+                <Loader2Icon className="animate-spin" /> Reading the set…
               </>
             ) : (
               <>
