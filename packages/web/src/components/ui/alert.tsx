@@ -10,6 +10,9 @@ const alertVariants = cva(
         default: "bg-card text-card-foreground",
         destructive:
           "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 [&>svg]:text-current",
+        // docs/10-design.md §3: aviso em dourado escuro, sucesso em verde.
+        warning: "border-warning/40 bg-gold-100/60 text-warning *:data-[slot=alert-description]:text-ink [&>svg]:text-current",
+        success: "border-success/40 bg-card text-success *:data-[slot=alert-description]:text-ink [&>svg]:text-current",
       },
     },
     defaultVariants: {

@@ -248,7 +248,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
 
     let result: ExtractResult;
     if (args.dryRun) {
-      const params = await buildRequest(req, opts);
+      const { params } = await buildRequest(req, opts);
       const summary = {
         model: params.model,
         max_tokens: params.max_tokens,

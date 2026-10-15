@@ -8,23 +8,9 @@ import 'server-only';
 import { buildProject, BuildError } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError } from 'cli/project';
+import type { Example, GenerateResult } from '@/types/panels';
 
-export interface PanelSummary {
-  id: string;
-  wallId: string;
-  length: number;
-  pieces: number;
-  weightLb: number | undefined;
-}
-
-export interface GeneratedFile {
-  path: string;
-  content: string;
-}
-
-export type GenerateResult =
-  | { ok: true; projectName: string; panels: PanelSummary[]; files: GeneratedFile[]; warnings: string[] }
-  | { ok: false; problems: string[] };
+export type { Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
 
 /** Nunca lança por causa do projeto: JSON inválido, parser e motor viram `problems`. */
 export function generate(projectText: string): GenerateResult {
@@ -52,13 +38,9 @@ export function generate(projectText: string): GenerateResult {
   }
 }
 
-export interface ExampleInfo {
-  id: string;
-  label: string;
-}
-
-export function listExamples(): ExampleInfo[] {
-  return EXAMPLES.map((e) => ({ id: e.id, label: e.label }));
+/** Os exemplos do CLI, com o texto, para o formulário oferecer. */
+export function listExamples(): Example[] {
+  return EXAMPLES.map((e) => ({ id: e.id, label: e.label, text: e.text }));
 }
 
 export function exampleText(id: string): string | undefined {

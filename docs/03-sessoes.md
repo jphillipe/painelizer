@@ -472,14 +472,33 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     (risco 1 do plano não se materializou); `next dev` reescreveu `jsx: react-jsx` e o `include` do tsconfig.
     Testes (8): service com os 3 exemplos (234 peças da 28x40, 2 avisos do Ringgold, problemas do parser e do motor)
     e o ky. Sem modo escuro.
-  - [ ] **S20.1 — Visualizador.** Action `generatePanels` (zod + next-safe-action) → `panels.service.generate`;
-    `ProjectForm` (RHF, textarea JSON, abrir arquivo, select de exemplos, botão accent); `ResultView` com abas
-    Plan e Sheets; `files.ts` + testes. Pronto quando os 3 exemplos renderizam planta e folhas e JSON inválido ou
-    header fora da tabela aparecem como problemas legíveis.
-  - [ ] **S20.2 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS,
-    localStorage. Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
-  - [ ] **S20.3 — Upload de PDF + revisão.** `extract.service.ts` (deps injetáveis) + testes, actions
-    `extractWalls`/`finishResponse`, página `/app/extract`, handoff para `/app`. Pronto quando, sem chave, a página
-    mostra o aviso e uma resposta gravada vira projeto que gera painéis.
+  - [x] **S20.1 — Visualizador.** Feita em 2026-10-15. Action `generatePanels` (`src/actions`, zod em
+    `src/schemas/project.ts`, next-safe-action) → `panels.service.generate`; `ProjectForm` (react-hook-form +
+    zodResolver + `Form` do shadcn: select de exemplos, "Open file", textarea mono, botão accent com estado
+    "Generating…", erros por toast); `ResultView` (vazio, skeleton, `Problems` em Alert destructive, resumo com
+    Badges, `Warnings` em Alert `warning`, abas Plan e Sheets com lista de painéis, folha selecionada e "Show all");
+    `Viewer` (client) compõe os dois; a página é Server Component e passa os exemplos (com texto) pelo service.
+    Tipos do resultado em `src/types/panels.ts` (trafegam servidor → cliente sem importar core). `src/lib/files.ts`
+    (planOf, sheetsOf na ordem dos painéis, csvsOf, zipName, formatSize, sheetFileName igual ao `svgFileName` do
+    CLI — testado contra ele). Alert ganhou variantes `warning` e `success`; `Toaster` no layout. Conferido no browser
+    embutido: 28x40 gera 12 painéis / 234 peças / 16 arquivos com a planta e as folhas inline; JSON inválido mostra
+    o problema do parser; Ringgold mostra os 2 avisos de jacks. Testes do web: 13.
+  - [x] **S20.2 — Fluxo do usuário: upload multiarquivo e revisão de paredes.** Feita em 2026-10-15, trocada de
+    ordem com os downloads a pedido do humano ("o JSON na tela não faz sentido para o usuário"). Tela única `/app`
+    em três passos: 01 desenhos (upload de vários arquivos — PDF, PNG, JPG, WebP, GIF —, páginas opcionais,
+    pavimento, notas para a IA; sem chave, Alert e botão desligado), "Try with a sample" (gera na hora) e
+    "Advanced" recolhido (arquivo de projeto do CLI; resposta gravada da IA); 02 revisão (tabela de paredes com
+    geometria no eixo, seção, tipo, papel, aberturas com posição e confiança por badge, notas da IA, relatório
+    completo recolhido, problemas e avisos do motor, botão "Generate panels" desligado enquanto houver problema);
+    03 painéis (`ResultView` da S20.1). `/app/extract` deixou de existir. No `extract`: `ExtractRequest.sources`
+    (vários PDFs e imagens; PDF sem `pages` escolhe pelo carimbo ou manda todas até 20), prompt com bloco
+    `image` e nome de arquivo por página, `pagesSent` no resultado, `apiErrorInfo` para o app não depender do SDK.
+    No web: `extract.service.ts` (`fromFiles`, `fromRecorded`, `hasKey`, `toSource`; deps injetáveis; 8 testes),
+    `types/extract.ts` (`ExtractOutcome`, `WallReview`), actions `extractWalls` (FormData) e `finishResponse`,
+    componentes `UploadForm`, `WallsReview`, `SamplePicker`, `AdvancedImport`; `Viewer` orquestra. Conferido no
+    browser sem chave: aviso, exemplo gerando painéis, resposta gravada do Ringgold virando tabela com o problema
+    P30 e o botão desligado. Chamada real continua sem teste até haver chave. Testes: extract 56, web 20.
+  - [ ] **S20.3 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS.
+    Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

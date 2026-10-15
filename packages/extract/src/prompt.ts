@@ -1,8 +1,8 @@
 /**
- * O prompt da extração (S18). Determinístico: mesma entrada, mesmas mensagens. O system prompt é
- * fixo (cacheável); a parte variável — as páginas do PDF e o texto posicionado — vai na mensagem
- * do usuário. As convenções abaixo são as do CLI (`packages/cli/src/project.ts`) e de
- * `docs/02-framing.md`; mudou lá, muda aqui.
+ * O prompt da extração (S18, S20.2). Determinístico: mesma entrada, mesmas mensagens. O system prompt é
+ * fixo (cacheável); a parte variável — PDFs recortados, imagens e o texto posicionado — vai na mensagem do
+ * usuário. As convenções abaixo são as do CLI (`packages/cli/src/project.ts`) e de `docs/02-framing.md`;
+ * mudou lá, muda aqui.
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
@@ -20,7 +20,7 @@ export interface ExtractHints {
 export const SYSTEM_PROMPT = `Você lê plantas de arquitetura residencial americana (light wood frame) e produz a entrada de um motor de painelização de paredes. Trabalhe só com o que está no desenho: nunca invente cota, tag ou altura. O que não estiver no desenho fica null e vai para \`notes\`.
 
 ## Entrada
-Páginas de um PDF vetorial: a planta de um pavimento (A-1xx) e, quando houver, a folha de tipos de parede e schedules de portas e janelas (A-8xx). Junto vem o texto posicionado de cada página (x, y em pontos, y crescendo para baixo; \`rot=90\` ou \`rot=-90\` marca texto de cotas verticais). Use a imagem para entender a geometria e o texto posicionado para ler cada cota sem erro.
+Um ou mais arquivos do projeto: páginas de PDF vetorial (planta de um pavimento A-1xx e, quando houver, a folha de tipos de parede e schedules de portas e janelas A-8xx) e/ou imagens (fotos ou exportações da planta). Para cada página de PDF vem também o texto posicionado (x, y em pontos, y crescendo para baixo; \`rot=90\` ou \`rot=-90\` marca texto de cotas verticais). Use a imagem para entender a geometria e o texto posicionado para ler cada cota sem erro. Em imagem sem texto posicionado, leia as cotas pela imagem e baixe a confiança quando o texto estiver pequeno ou cortado.
 
 ## Convenções de saída
 - Medidas sempre como texto copiado do desenho (\`16' - 0"\`, \`8' - 5 7/8"\`, \`56"\`). Faça contas só quando a convenção abaixo exigir, e mostre a conta em \`evidence\`.
@@ -44,11 +44,24 @@ Páginas de um PDF vetorial: a planta de um pavimento (A-1xx) e, quando houver, 
 - Não arredondar cotas nem converter para decimal.
 - Não omitir paredes porque faltou cota: inclua com confiança baixa e explique em \`notes\`.`;
 
-export interface PromptInput {
-  /** PDF já recortado às páginas enviadas (ver `subsetPdf`). */
+export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+
+/** Um PDF já recortado às páginas enviadas, com o texto posicionado dessas páginas na mesma ordem. */
+export interface PdfInput {
+  name: string;
   pdf: Uint8Array;
-  /** Texto posicionado das mesmas páginas, na mesma ordem. */
   pages: readonly PageText[];
+}
+
+export interface ImageInput {
+  name: string;
+  data: Uint8Array;
+  mediaType: ImageMediaType;
+}
+
+export interface PromptInput {
+  pdfs: readonly PdfInput[];
+  images?: readonly ImageInput[];
   hints?: ExtractHints;
 }
 
@@ -60,17 +73,30 @@ function hintsText(h: ExtractHints | undefined): string {
   return parts.join('\n');
 }
 
-/** Conteúdo da mensagem do usuário: PDF recortado, texto posicionado de cada página, dicas e a ordem. */
+const toBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('base64');
+
+/**
+ * Conteúdo da mensagem do usuário: cada PDF como `document` seguido do texto posicionado de cada página,
+ * cada imagem como `image` precedida do nome, as dicas e a instrução final. Determinístico.
+ */
 export function buildUserContent(input: PromptInput): Anthropic.ContentBlockParam[] {
-  const blocks: Anthropic.ContentBlockParam[] = [
-    {
+  if (input.pdfs.length === 0 && (input.images?.length ?? 0) === 0) {
+    throw new RangeError('buildUserContent: nenhum PDF nem imagem');
+  }
+  const blocks: Anthropic.ContentBlockParam[] = [];
+  for (const doc of input.pdfs) {
+    blocks.push({
       type: 'document',
-      source: { type: 'base64', media_type: 'application/pdf', data: Buffer.from(input.pdf).toString('base64') },
-      title: 'Páginas selecionadas do projeto de arquitetura',
-    },
-  ];
-  for (const p of input.pages) {
-    blocks.push({ type: 'text', text: formatPageText(p) });
+      source: { type: 'base64', media_type: 'application/pdf', data: toBase64(doc.pdf) },
+      title: doc.name,
+    });
+    for (const p of doc.pages) {
+      blocks.push({ type: 'text', text: `## ${doc.name}\n${formatPageText(p)}` });
+    }
+  }
+  for (const img of input.images ?? []) {
+    blocks.push({ type: 'text', text: `## imagem: ${img.name}` });
+    blocks.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: toBase64(img.data) } });
   }
   const hints = hintsText(input.hints);
   blocks.push({

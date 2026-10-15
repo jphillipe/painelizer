@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-const NAV = [
-  { href: '/app', label: 'Viewer' },
-  { href: '/app/extract', label: 'Extract' },
-] as const;
+/** Rotas de `docs/10-design.md` §5; `/app/projects` entra na S22. */
+const NAV = [{ href: '/app', label: 'New project' }] as const;
 
 /** Header navy + conteúdo em container do site + rodapé mínimo (docs/10-design.md §4). */
 export function AppShell({ children }: { children: ReactNode }) {

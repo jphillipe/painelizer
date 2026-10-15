@@ -123,8 +123,9 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
 ### App shell
 - Header 64px, fundo navy-900, texto papel: logotipo "Panelizer" (Barlow 600) + "· National Lumber" (ink
   claro), nav à direita ("Viewer", "Extract", depois "Projects"). Link ativo com sublinhado gold.
-- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho em grid 2/5 + 3/5
-  (entrada à esquerda, resultado à direita); abaixo de 1024px vira uma coluna.
+- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho em **passos empilhados**
+  com eyebrow numerado ("01 · Your drawings", "02 · Review walls", "03 · Panels"); cada passo novo rola para a
+  vista. Um passo que ainda não aconteceu mostra o estado vazio, nunca some.
 - Rodapé mínimo: versão, "National Lumber · WR Group".
 
 ### Landing (futura, não implementar agora)
@@ -137,8 +138,7 @@ números grandes em Barlow Condensed com unidade em eyebrow. Rotas `/`, `/how-it
 | Rota | Conteúdo | Sessão |
 |---|---|---|
 | `/` | landing; por ora `redirect('/app')` | S20.0 |
-| `/app` | visualizador: JSON → painéis | S20.1–S20.2 |
-| `/app/extract` | PDF → JSON com IA (ou resposta gravada) | S20.3 |
+| `/app` | novo projeto: desenhos → revisão → painéis | S20.1–S20.3 |
 | `/app/projects`, `/app/projects/[id]` | projetos salvos | S22 |
 | `/login` | auth | S22 |
 
@@ -173,9 +173,28 @@ Server Component     →  service                                               
 - **Erros**: `handleServerError` do `actionClient` traduz `ProjectError`, `BuildError`, `ExtractError`,
   `ServiceError` e erros da API em mensagem; problemas de projeto não são erro de servidor, voltam em `data`
   como `{ ok: false, problems }` para a UI listar.
+- **O usuário nunca vê JSON**: a entrada é desenho (PDF, imagem) e a revisão é tabela; o formato do CLI fica em
+  "Advanced" recolhido. Tudo que veio da IA mostra confiança e evidência.
 - **Formulários**: schema zod em `src/schemas/*.ts` (compartilhado), `useForm` + `zodResolver` + `Form` do
   shadcn; `returnValidationErrors` para erro de campo. Upload: `FormData` com `z.instanceof(File)`;
   `serverActions.bodySizeLimit` 50 MB.
+
+## 9. Organização do código (`packages/web/src`)
+
+```
+app/<rota>/page.tsx      rota fina: Server Component lê pelos services e monta a view
+app/<rota>/_components/  a view e os componentes que só essa rota usa (pasta privada: `_` não vira rota)
+app/<rota>/_actions/     server actions (next-safe-action) só dessa rota, uma por arquivo
+components/              compartilhado entre rotas (app-shell) e `ui/` do shadcn
+services/                regra de negócio, só servidor
+schemas/                 zod compartilhado cliente/servidor
+types/                   tipos que trafegam servidor → cliente
+lib/                     utilidades puras (files, zip, http, safe-action, utils)
+```
+
+Regra: um componente ou action só sai de `app/<rota>/_*` para `components/` ou para uma pasta compartilhada
+quando uma segunda rota o usar. Imports dentro da rota são relativos (`./upload-form`, `../_actions/x`).
+Hoje: `app/app/` (nova obra: upload, revisão, resultado).
 
 ## 8. Acessibilidade e idioma
 
