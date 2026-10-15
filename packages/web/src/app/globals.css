@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/*
+ * Tema do Panelizer — tokens de docs/10-design.md (cores do site da National Lumber).
+ * Sem modo escuro nesta fase. Nunca usar hex solto em componente: só estes nomes.
+ */
+:root {
+  --navy-600: #2a5390;
+  --navy-700: #1e4173;
+  --navy-800: #16325a;
+  --navy-900: #102441;
+  --navy-950: #0a1428;
+  --gold-100: #f1e4c8;
+  --gold-300: #d9b36a;
+  --gold: #ba8b37;
+  --gold-btn: #c8a15b;
+  --gold-600: #a2782b;
+  --paper: #f6f4ee;
+  --paper-2: #efebe1;
+  --paper-3: #e7e1d3;
+  --white: #fcfbf7;
+  --ink: #152238;
+  --ink-2: #43506a;
+  --ink-3: #6b7890;
+  --muted-ink: #505d6c;
+  --line: rgba(16, 36, 65, 0.16);
+  --line-faint: rgba(16, 36, 65, 0.07);
+  --line-strong: rgba(16, 36, 65, 0.34);
+  --ok: #2e7d4f;
+  --err: #b3402a;
+
+  /* shadcn */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--white);
+  --card-foreground: var(--ink);
+  --popover: var(--white);
+  --popover-foreground: var(--ink);
+  --primary: var(--navy-900);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--navy-900);
+  --accent: var(--gold-btn);
+  --accent-foreground: var(--navy-900);
+  --muted: var(--paper-3);
+  --muted-foreground: var(--muted-ink);
+  --destructive: var(--err);
+  --destructive-foreground: var(--paper);
+  --success: var(--ok);
+  --warning: var(--gold-600);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--gold-300);
+  --radius: 3px;
+
+  --shadow-1: 0 1px 2px rgba(16, 36, 65, 0.06), 0 8px 28px rgba(16, 36, 65, 0.09);
+  --shadow-2: 0 2px 6px rgba(10, 20, 40, 0.16), 0 24px 60px rgba(10, 20, 40, 0.22);
+  --gutter: clamp(20px, 4vw, 40px);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-navy-600: var(--navy-600);
+  --color-navy-700: var(--navy-700);
+  --color-navy-800: var(--navy-800);
+  --color-navy-900: var(--navy-900);
+  --color-navy-950: var(--navy-950);
+  --color-gold-100: var(--gold-100);
+  --color-gold-300: var(--gold-300);
+  --color-gold: var(--gold);
+  --color-gold-600: var(--gold-600);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line-faint: var(--line-faint);
+  --color-line-strong: var(--line-strong);
+
+  --radius-sm: calc(var(--radius) - 1px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
+  --font-display: var(--font-barlow-condensed), var(--font-barlow), sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --ease-site: cubic-bezier(0.22, 0.61, 0.2, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    line-height: 1.55;
+  }
+  h1 {
+    @apply text-4xl font-medium tracking-[-1.26px];
+  }
+  h2 {
+    @apply text-2xl font-medium tracking-[-0.5px];
+  }
+  h3 {
+    @apply text-lg font-semibold;
+  }
+  code,
+  kbd,
+  pre {
+    @apply font-mono text-[13px];
+  }
+  :focus-visible {
+    outline: 2px solid var(--gold-300);
+    outline-offset: 2px;
+  }
+}
+
+@utility eyebrow {
+  @apply text-[13px] font-semibold uppercase tracking-[1.8px] text-gold-600;
+}
+
+@utility container-site {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Folhas e planta (SVG do core) */
+.sheet svg,
+.plan svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .sheet {
+    break-after: page;
+  }
+  @page {
+    size: letter landscape;
+    margin: 0.4in;
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "panelizer web: app Next.js (S20+). Visualizador de painéis, extração de PDF e, depois, projetos. Design em docs/10-design.md.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.8.1",
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "class-variance-authority": "^0.7.1",
+    "cli": "workspace:^",
+    "cn": "^0.4.0",
+    "core": "workspace:^",
+    "extract": "workspace:^",
+    "fflate": "^0.8.3",
+    "ky": "^1.14.0",
+    "lucide-react": "^1.57.0",
+    "next": "^16.4.1",
+    "next-safe-action": "^8.7.3",
+    "next-themes": "^0.4.6",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-hook-form": "^7.90.0",
+    "server-only": "^0.0.1",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

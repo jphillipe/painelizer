@@ -454,5 +454,32 @@ Os PDFs de referência são vetoriais (Revit): extrair texto e geometria do PDF 
 Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
 
 - [ ] **S20 — Next.js: página que carrega um JSON e mostra os SVGs e a planta**
+  Planejada em 2026-10-14 (plano aprovado pelo humano) em quatro subitens. Decisões do humano: `docs/10-design.md`
+  antes de qualquer componente (serve também para a landing futura); Tailwind CSS + shadcn/ui; formulários com
+  zod + react-hook-form; mutações só por server actions com next-safe-action; leituras em Server Components;
+  camada de services (só servidor) entre actions e core/extract; ky como único cliente HTTP (só em services, só
+  onde há HTTP de verdade); motor roda no servidor; cores do site da National Lumber; interface em inglês; só
+  localhost nesta fase; S20 inclui o upload de PDF (desligado com aviso sem `ANTHROPIC_API_KEY`).
+  - [x] **S20.0 — design.md + scaffold com tema.** Feita em 2026-10-14. `docs/10-design.md` (tokens lidos do DOM do
+    site: navy/gold/paper/ink, Barlow + Barlow Condensed + IBM Plex Mono, raio 3px/pill, sombras, gutter, mapa
+    para o tema do shadcn, componentes e estados, layout do shell e da landing, rotas, arquitetura de requisições).
+    `packages/web`: Next 16.4 (App Router, Turbopack), React 19, Tailwind v4 com `@theme` dos tokens, shadcn CLI 4
+    (`cn` do pacote `cn`, `radix-ui` unificado; Button com variante `accent` pill), fontes por `next/font`,
+    `AppShell`, `/` → `/app`, `/app` placeholder lendo os exemplos pelo service; `src/services/panels.service.ts`
+    (`generate`, `listExamples`, `exampleText`; único importador de `cli/*`), `src/lib/http.ts` (ky + `ServiceError`),
+    `src/lib/safe-action.ts` (`actionClient` com `handleServerError`); `cli/examples` exportado (3 exemplos como
+    texto, com teste no cli); `pnpm web`; `.claude/launch.json`. Turbopack resolveu `exports` → `.ts` sem ajuste
+    (risco 1 do plano não se materializou); `next dev` reescreveu `jsx: react-jsx` e o `include` do tsconfig.
+    Testes (8): service com os 3 exemplos (234 peças da 28x40, 2 avisos do Ringgold, problemas do parser e do motor)
+    e o ky. Sem modo escuro.
+  - [ ] **S20.1 — Visualizador.** Action `generatePanels` (zod + next-safe-action) → `panels.service.generate`;
+    `ProjectForm` (RHF, textarea JSON, abrir arquivo, select de exemplos, botão accent); `ResultView` com abas
+    Plan e Sheets; `files.ts` + testes. Pronto quando os 3 exemplos renderizam planta e folhas e JSON inválido ou
+    header fora da tabela aparecem como problemas legíveis.
+  - [ ] **S20.2 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS,
+    localStorage. Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
+  - [ ] **S20.3 — Upload de PDF + revisão.** `extract.service.ts` (deps injetáveis) + testes, actions
+    `extractWalls`/`finishResponse`, página `/app/extract`, handoff para `/app`. Pronto quando, sem chave, a página
+    mostra o aviso e uma resposta gravada vira projeto que gera painéis.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**
