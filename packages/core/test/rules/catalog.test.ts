@@ -43,10 +43,10 @@ describe('resolveOpening — catálogo', () => {
     expect(DEFAULT_ROUGH_OFFSET.wood).toEqual([2, 2.5]);
   });
 
-  it('batente metálico: folga maior (P34); RO explícito do fabricante manda sobre a folga', () => {
+  it('batente metálico: mesma folga da madeira (P34 revista); RO explícito do fabricante manda sobre a folga', () => {
     expect(resolveOpening({ id: 'p', tag: 'HM', offset: 10 }, catalog)).toMatchObject({
-      roughWidth: 40.5,
-      roughHeight: 87,
+      roughWidth: 38,
+      roughHeight: 86.5,
     });
     expect(resolveOpening({ id: 'j', tag: 'QK', offset: 10 }, catalog)).toMatchObject({
       roughWidth: 73,

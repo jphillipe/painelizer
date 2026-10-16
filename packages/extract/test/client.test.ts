@@ -99,9 +99,12 @@ describe('extractWalls com cliente falso', () => {
     const sent = create.mock.calls[0] as unknown as [Anthropic.MessageCreateParamsNonStreaming];
     expect(sent[0].model).toBe(DEFAULT_MODEL);
     expect(result.output.walls.map((w) => w.id)).toEqual(['N1', 'S1', 'S2', 'I1']);
-    expect(result.problems).toHaveLength(1); // P30: porta e janela a 8 1/4" na S2, para o revisor
-    expect(result.problems[0]).toMatch(/^motor: parede S2/);
-    expect(result.warnings).toEqual([]);
+    expect(result.problems).toEqual([]);
+    // P30: porta e janela a 8 1/4" na S2 — 1 jack por lado nas duas, com aviso para o revisor
+    expect(result.warnings.map((w) => w.slice(0, 40))).toEqual([
+      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
+      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
+    ]);
     expect(result.project['name']).toBe('26 Ringgold St');
     expect(result.report).toContain('# Extração — 26 Ringgold St');
     expect(result.model).toBe('claude-opus-5-5');
@@ -162,7 +165,8 @@ describe('stripFences', () => {
 describe('finish — respostas gravadas', () => {
   it('mesmo pós-processamento da chamada real', () => {
     const r = finish(ringgoldOutput, undefined, 'gravado', { inputTokens: 0, outputTokens: 0 });
-    expect(r.problems.map((p) => p.slice(0, 17))).toEqual(['motor: parede S2:']);
+    expect(r.problems).toEqual([]);
+    expect(r.warnings).toHaveLength(2);
     expect(r.model).toBe('gravado');
   });
 });

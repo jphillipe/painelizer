@@ -343,9 +343,9 @@ describe('parseProject', () => {
       {
         id: 'P1',
         type: 'door',
-        offset: 60 - 40.5 / 2,
-        roughWidth: 40.5,
-        roughHeight: 83,
+        offset: 60 - 38 / 2,
+        roughWidth: 38,
+        roughHeight: 82.5,
         header: { section: '2x8', plies: 2 },
         headerHeight: 82.5,
       },

@@ -54,7 +54,8 @@ describe('fromFiles', () => {
       { id: 'S2-A', kind: 'A2', position: `7' - 1"`, confidence: 0.9 },
     ]);
     expect(r.openingTypes.map((t) => t.tag)).toEqual(['1', 'A2', 'U2']);
-    expect(r.problems).toHaveLength(1); // P30 na S2
+    expect(r.problems).toEqual([]);
+    expect(r.warnings).toHaveLength(2); // P30 na S2: 1 jack por lado nas duas aberturas, com aviso
     expect(JSON.parse(r.projectText)).toMatchObject({ name: '26 Ringgold St' });
     expect(r.pagesSent).toEqual([{ name: 'plan.pdf', pages: [3, 15] }]);
     expect(r.model).toBe('fake');

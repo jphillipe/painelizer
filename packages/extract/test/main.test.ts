@@ -119,10 +119,9 @@ describe('run', () => {
     expect(code).toBe(0);
     expect(m.out).toHaveLength(1);
     expect(m.out[0]).toMatch(/^4 parede\(s\), 5 abertura\(s\) → .*saida \(gravado:resposta\.json; 0 tokens de entrada, 0 de saída\)$/);
-    // P30: o motor não fecha a S2 sem `jackStuds: 1`; vai para o revisor, não derruba o comando.
+    // P30: a S2 fecha com 1 jack por lado nas duas aberturas; os avisos vão para o revisor.
     expect(m.err).toHaveLength(2);
-    expect(m.err[0]).toMatch(/^problema: motor: parede S2/);
-    expect(m.err[1]).toMatch(/precisa de ajuste/);
+    for (const line of m.err) expect(line).toMatch(/^aviso: 1-S2-P1 HEADER_JACKS_BELOW_TABLE: .*hipótese P30/);
     const projeto = parseProject(m.files.get('projeto.json') as string, 'projeto');
     expect(projeto.walls.map((w) => w.id)).toEqual(['N1', 'S1', 'S2', 'I1']);
     expect(projeto.date).toBe('2026-10-14');
@@ -147,7 +146,8 @@ describe('run', () => {
     expect(code).toBe(0);
     expect(seen).toEqual([[1, 2], { level: 2, projectName: 'Casa', extra: 'só o térreo' }, { revision: 'B' }, { model: 'claude-sonnet-5-5', effort: 'low' }]);
     expect(m.out[1]).toMatch(/^4 parede\(s\), 5 abertura\(s\) → .*saida \(claude-sonnet-5-5; 10 tokens de entrada, 5 de saída\)$/);
-    expect(m.err.filter((l) => l.startsWith('aviso:'))).toEqual([]);
+    expect(m.err.filter((l) => l.startsWith('aviso:') && !l.includes('hipótese P30'))).toEqual([]);
+    expect(m.err.filter((l) => l.startsWith('problema:'))).toEqual([]);
   });
 
   it('problemas do CLI saem no stderr, mas os arquivos são gravados e o código é 0', async () => {

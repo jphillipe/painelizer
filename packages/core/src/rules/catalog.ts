@@ -10,7 +10,7 @@
  * - `type`: o da abertura, senão `kind` do catálogo. Sem nenhum → `Error`.
  * - RO: `roughWidth`/`roughHeight` da abertura; senão os do catálogo; senão tamanho nominal + folga
  *   default (`DEFAULT_ROUGH_OFFSET`, hipóteses P32–P34 a partir do Horace A-604/A-608 e da resposta P4):
- *   janela +1/2" x +3/4"; porta de madeira +2" x +2 1/2"; batente metálico ou alumínio +4 1/2" x +3".
+ *   janela +1/2" x +3/4"; porta +2" x +2 1/2", com batente de madeira, metálico ou alumínio (P34 revista).
  *   Altura de RO de porta é medida do subfloor (P4), por isso a folga vertical inclui a passagem do piso.
  * - Posição: `offset` (borda esquerda) da abertura; senão `center − roughWidth / 2`. Sem nenhum → `Error`.
  * - Header: `header` da abertura; senão `headerMark` no schedule (seção, plies, jacks); kings do schedule
@@ -27,10 +27,13 @@ export const DEFAULT_ROUGH_OFFSET: Readonly<Record<'window' | DoorFrame, readonl
   window: [0.5, 0.75],
   /** Horace A-608 det. 7: jamb 3/4" + shim 1/4" por lado; altura pela resposta P4 (80" → 82 1/2") (P33). */
   wood: [2, 2.5],
-  /** Batente hollow metal de 2" de face por lado + folga, altura com passagem do piso (P34). */
-  hm: [4.5, 3],
+  /**
+   * Batente hollow metal: igual à porta de madeira (P34, revista em 2026-10-15 com a P29 — a porta 1 do Ringgold
+   * não cabe ao lado do par de janelas com +4 1/2").
+   */
+  hm: [2, 2.5],
   /** Alumínio: tratado como o metálico (P34). */
-  al: [4.5, 3],
+  al: [2, 2.5],
 };
 
 /**

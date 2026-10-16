@@ -338,13 +338,21 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
       expectNoVerticalOverlap(panel.members);
     });
 
-    it('menos de 7.5" entre os RO: RangeError; os mesmos 6" cabem com 1 jack pedido na abertura (com aviso)', () => {
-      expect(() => panelizeWall(fWall(66), fConfig, FAKE)).toThrow(/mínimo 7\.5"/);
+    it('menos de 7.5" entre os RO: 1 jack por lado nas duas (P30), igual a pedir 1 jack na abertura, com aviso', () => {
       const oneJack = fWall(66);
       oneJack.openings = oneJack.openings.map((o) => ({ ...o, jackStuds: 1 }));
-      const panel = panelizeWall(oneJack, fConfig, FAKE);
-      expect(panel.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
-      expectNoVerticalOverlap(panel.members);
+      const asked = panelizeWall(oneJack, fConfig, FAKE);
+      expect(asked.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
+      expectNoVerticalOverlap(asked.members);
+
+      const auto = panelizeWall(fWall(66), fConfig, FAKE);
+      expect(auto.members).toEqual(asked.members);
+      expect(auto.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
+      expect(auto.warnings[0]!.message).toMatch(/win1: 1 jack por lado em vez de 2 — só 6" até o RO de door1 \(hipótese P30\)/);
+    });
+
+    it('RO a 4" (menos que jack + king + jack): RangeError', () => {
+      expect(() => panelizeWall(fWall(64), fConfig, FAKE)).toThrow(/win1 e door1: 4" .*mínimo/);
     });
   });
 });

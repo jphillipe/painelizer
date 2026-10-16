@@ -15,8 +15,9 @@
  *   Sem divisão possível → `RangeError` com a parede e o trecho sem candidato.
  * - **Lap da double top** (`lapEnd`, hipótese P23): a double top do painel i avança `lap` (48") sobre o
  *   seguinte e a do i+1 começa aí. Se o fim do avanço cair dentro de um header ou de uma faixa de T, encurta
- *   para `minLap`; se ainda cair, vai até a primeira marca de layout depois do obstáculo. O avanço nunca passa
- *   da quebra seguinte (ou do fim da double top da parede).
+ *   para `minLap`; se ainda cair, vai até o primeiro apoio depois do obstáculo — marca de layout ou centro de
+ *   stud/king de altura inteira (P37: o king logo depois do header, em vez de pular o header seguinte). O
+ *   avanço nunca passa da quebra seguinte (ou do fim da double top da parede).
  * - **Emenda de plate** (`splicePlates`, P14): plate mais longa que o maior `stockLengths` sai em
  *   `ceil(L / estoque)` peças cortadas sobre o centro de um stud de altura inteira do painel (cada peça apoia
  *   3/4"). Ordem: top plate (emenda defasada das pontas da double top), double top (defasada das emendas da
@@ -238,10 +239,19 @@ export function layoutMarks(length: number, spacing: number, origin: number): nu
   return out;
 }
 
+/** Centros dos studs e kings de altura inteira (em pé, não flat), crescentes: onde uma plate pode emendar. */
+export function supportCenters(members: readonly Member[]): number[] {
+  return members
+    .filter((m) => (m.role === 'stud' || m.role === 'kingStud') && m.orientation === 'vertical' && m.flat !== true)
+    .map((m) => m.x + verticalWidth(m) / 2)
+    .sort((a, b) => a - b);
+}
+
 /**
  * x (da parede) em que a double top do painel que termina em `b` acaba — e a do seguinte começa.
  *
  * @param limit    até onde o lap pode ir: a quebra seguinte, ou o fim da double top da parede
+ * @param marks    apoios em x da parede, crescentes: marcas de layout e centros de `supportCenters`
  * @throws RangeError nenhum fim de lap possível (painel seguinte curto demais ou obstáculo até o fim)
  */
 export function lapEnd(
@@ -292,10 +302,7 @@ export function splicePlates(
   const needs = (m: Member): boolean => PLATE_ROLES.has(m.role) && m.length > maxStock + LENGTH_EPS;
   if (!panel.members.some(needs)) return panel;
 
-  const supports = panel.members
-    .filter((m) => (m.role === 'stud' || m.role === 'kingStud') && m.orientation === 'vertical' && m.flat !== true)
-    .map((m) => m.x + verticalWidth(m) / 2)
-    .sort((a, b) => a - b);
+  const supports = supportCenters(panel.members);
   const ends = (role: Member['role']): number[] =>
     panel.members.filter((m) => m.role === role).flatMap((m) => [m.x, m.x + m.length]);
 

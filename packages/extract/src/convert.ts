@@ -44,7 +44,10 @@ export interface Converted {
   project: Record<string, unknown>;
   /** O que impede o `build`: erros do parser do CLI (`parser: …`) ou do motor (`motor: …`). Vazio = o build roda. */
   problems: string[];
-  /** Avisos do motor no build (`<painel> <código>: mensagem`); não impedem nada, mas o revisor precisa ver. */
+  /**
+   * Avisos (`<painel> <código>: mensagem`): da extração (abertura sem posição, fora do projeto) e do motor no
+   * build. Não impedem nada, mas o revisor precisa ver.
+   */
   warnings: string[];
 }
 
@@ -89,8 +92,29 @@ function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions
     floorSpan,
     level: w.level,
     wallType: w.wallType,
-    openings: w.openings.map(openingJson),
+    openings: w.openings.filter((o) => !isUnplaced(o)).map(openingJson),
   });
+}
+
+/** Abertura que o modelo leu sem eixo nem borda (não achou cota e não inventou). */
+function isUnplaced(o: OpeningOut): boolean {
+  return o.center === null && o.offset === null;
+}
+
+/**
+ * Aberturas sem posição ficam fora do projeto (decisão do humano, 2026-10-15): a parede sai em painéis sem
+ * elas e o revisor recebe um aviso por abertura, em vez de nada ser gerado até existir o editor.
+ */
+export function unplacedOpenings(out: ExtractionOutput): string[] {
+  return out.walls.flatMap((w) =>
+    w.openings
+      .filter(isUnplaced)
+      .map(
+        (o) =>
+          `extração ABERTURA_SEM_POSICAO: parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): a leitura não ` +
+          'achou a cota do eixo — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição',
+      ),
+  );
 }
 
 /** Pré-cortes derivados: altura de cada parede menos as três plates, sem repetição, crescente. */
@@ -167,7 +191,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
 export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Converted {
   const project = toProject(out, opts);
   const problems: string[] = [];
-  const warnings: string[] = [];
+  const warnings: string[] = unplacedOpenings(out);
   const noHeight = wallsWithoutHeight(out, opts);
   if (noHeight.length > 0) {
     // O parser do CLI reclamaria de `studLength`; a causa é a altura, e é isso que o revisor precisa saber.

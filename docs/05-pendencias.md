@@ -180,6 +180,8 @@ A-400 e A-800). O estrutural da SAB (5 pág.) não está no repositório; tudo a
   lado (2 + king + 2 = 9"), que não cabem. O estrutural resolve com header do projeto e 1 jack, ou a fábrica move
   a abertura? — hipótese: 1 jack por lado nas duas (aviso `HEADER_JACKS_BELOW_TABLE`). O motor põe 1 king da
   porta e 2 kings da janela com 3/4" de ar entre eles, em vez de king compartilhado — perguntar o que a fábrica faz.
+  Desde 2026-10-15 o motor aplica a hipótese sozinho em qualquer par de RO vizinhos apertado (`fitNeighborJacks`,
+  aviso "… hipótese P30"); se a fábrica responder outra coisa, é ali que muda.
 - [ ] **P31 — Cargas do Ringgold para as tabelas.** Neve no solo, largura e vento vêm das notas estruturais.
   — hipótese: 30 psf, 29'-0" (profundidade do prédio), 130 mph exposição B; parede do 1º pavimento suporta
   2 pavimentos (`floorsSupported: 2`, center-bearing). Se a I1 for portante (direção das vigas), muda o header.
@@ -192,7 +194,8 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
 - [ ] **P33 — Folga de RO de porta com batente de madeira.** A-608 det. 7: jamb 3/4" + shim 1/4" por lado
   (+2" na largura); na altura, a resposta P4 (porta 80" → RO 82 1/2" do subfloor). — hipótese: +2" x +2 1/2" — S12.5.
 - [ ] **P34 — Folga de RO de porta com batente metálico (HM) ou alumínio.** Batente HM de 2" de face por
-  lado mais folga de instalação; a spec 081113 remete ao fabricante. — hipótese: +4 1/2" x +3" — S12.5.
+  lado mais folga de instalação; a spec 081113 remete ao fabricante. — hipótese: +2" x +2 1/2", igual à madeira
+  (revista em 2026-10-15 pelo humano; era +4 1/2" x +3", que deixava a porta 1 do Ringgold sem lugar ao lado do par A2).
 
 ## Novas (abertas em 2026-10-13, S15 — divisão em painéis)
 - [ ] **P35 — Critério de divisão da parede em painéis.** A fábrica prefere o menor número de painéis com
@@ -214,9 +217,25 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   das outras emendas com estoque de 192". Opções: permitir emenda sobre king (já permite?) com defasagem menor,
   quebrar o painel em outro lugar (S15), ou aceitar plate de 20' quando o estoque tiver. — hipótese: erro,
   como hoje; o revisor move a quebra do painel. Fixture candidato: `out/s19/real7/projeto.json` (fora do git).
+  Causa achada em 2026-10-15: o painel tinha 144"; o lap da double top (P23) caiu no header da porta, e a regra
+  "primeira marca livre depois do obstáculo" pulou também o header do par de janelas, indo a 128" de lap (5.5 →
+  272). — hipótese nova: o lap bloqueado termina no primeiro apoio livre depois do obstáculo, marca ou centro de
+  king/stud de altura inteira (aqui o king em 193 3/4": lap 49 3/4", double top de 188 1/4" sem emenda). A
+  pergunta à fábrica continua: a ponta da double top pode cair sobre um king colado ao header?
 - [ ] **P38 — Porta colada ao início da parede (I12-U3-1 a 1'-9 3/8" do eixo, RO de 32").** A zona da
   abertura (king + jack) sai 3/8" antes do início da parede. Pode ser erro de leitura (eixo vs. face) ou a
-  porta realmente encostada no canto, caso em que o king vira o stud de canto. — hipótese: erro, como hoje.
+  porta realmente encostada no canto, caso em que o king vira o stud de canto. — hipótese: erro, como hoje;
+  até 1 1/2" a P40 desloca a porta (2026-10-15).
+- [ ] **P39 — Par de janelas A2 e porta 1 com 4 1/2" entre os RO (parede S2 do Ringgold).** A-100 cota 3'-2 5/8"
+  da face de E1 ao eixo do par e 4'-4 3/4" dele ao eixo da porta (as tags confirmam; não é erro de leitura). Com o
+  RO do par (58 1/2", P28) e o da porta (38", P29) sobram 4 1/2" = jack + 1 king + jack. A Tabela R602.7.5 (130 mph,
+  B) pede 2 kings do lado do par (vão > 4'). O estrutural especifica post, strap ou 1 king? — hipótese: 1 king
+  compartilhado (aviso `HEADER_KINGS_BELOW_TABLE`, "… hipótese P39"), automático em `mergeOpeningZones` com `fit`.
+  Com a folga HM antiga (+4 1/2", RO 40 1/2") sobravam 3 1/4" e nem isso cabia; a P34 revista dá os 38" da P29.
+- [ ] **P40 — Tolerância de leitura para abertura em conflito.** A leitura erra de 1/8" a ~1" (eixo das paredes 1B,
+  fechamento de cadeias), e isso basta para o RO tocar uma parede em T ou a zona passar da ponta da parede. A fábrica
+  aceita mover a abertura até um stud, ou isso tem que voltar ao arquiteto? — hipótese: o motor desloca o mínimo, até
+  1 1/2", com aviso `OPENING_NUDGED`; acima disso é erro (`rules/nudge.ts`).
 
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:

@@ -62,6 +62,57 @@ describe('splitWall — fixtures', () => {
   });
 });
 
+describe('splitWall — lap bloqueado por header (P23, P37)', () => {
+  // 32' 2x4 interna não portante; quebra na marca 192. P1: janela RO 100 em 66 (header 2-2x10), sem stud de altura
+  // inteira entre os kings 63.75 e 168.25. P2: porta RO 48 em 200, header 198.5–249.5 cobre 240 (lap 48) e 216 (24).
+  const wall: Wall = {
+    id: 'MIN',
+    length: 384,
+    height: 97.125,
+    section: '2x4',
+    exterior: false,
+    bearing: false,
+    openings: [
+      { id: 'J1', type: 'window', offset: 66, roughWidth: 100, roughHeight: 48, header: { section: '2x10', plies: 2 } },
+      { id: 'D1', type: 'door', offset: 200, roughWidth: 48, roughHeight: 82.5 },
+    ],
+  };
+  const dt = (ms: Member[]) => ms.filter((m) => m.role === 'doubleTopPlate').map((m) => [m.x, m.x + m.length]);
+
+  it('o lap termina no king logo depois do header da porta (250.25), não na marca 256; a double top do P1 emenda no king 63.75', () => {
+    const [p1, p2] = splitWall(wall, config);
+    expect(dt(p1!.members)).toEqual([[0, 63.75], [63.75, 250.25]]);
+    expect(dt(p2!.members)).toEqual([[58.25, 192]]);
+  });
+});
+
+describe('splitWall — abertura deslocada por tolerância (P40)', () => {
+  // Parede de 280" (2 painéis); porta RO 32 em 245.375: a zona passa 3/8" do fim. Volta para 245, com aviso no P2.
+  const wall: Wall = {
+    id: 'I12',
+    length: 280,
+    height: 97.125,
+    section: '2x4',
+    exterior: false,
+    bearing: false,
+    openings: [{ id: 'U3', type: 'door', offset: 245.375, roughWidth: 32, roughHeight: 82.5 }],
+  };
+
+  it('a porta sai em 245 da parede e o aviso OPENING_NUDGED fica no painel dela', () => {
+    expect(() => panelizeWall(wall, config)).toThrow(/sai da parede de 280/);
+    const panels = splitWall(wall, config);
+    const last = panels[panels.length - 1]!;
+    expect(last.openings!.map((o) => o.x + last.wallOffset!)).toEqual([245]);
+    expect(last.warnings[0]).toEqual({
+      code: 'OPENING_NUDGED',
+      message:
+        'parede I12, abertura U3: deslocada 0.375" para a esquerda (borda do RO de 245.375 para 245) — tocava o fim ' +
+        'da parede; confira a leitura (hipótese P40)',
+    });
+    expect(panels.slice(0, -1).flatMap((p) => p.warnings.map((w) => w.code))).not.toContain('OPENING_NUDGED');
+  });
+});
+
 describe('splitWall — parede de um painel só', () => {
   it('parede que cabe: um painel igual ao panelizeWall, com id {level}-{wallId}-P1 (S16), wallOffset 0 e peso', () => {
     const wall = plain.wall as Wall;

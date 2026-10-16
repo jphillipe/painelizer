@@ -38,7 +38,8 @@ import {
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
-import { mergeOpeningZones, type ZonePlan } from '../rules/zones';
+import { fitNeighborJacks, mergeOpeningZones, type ZonePlan } from '../rules/zones';
+import { nudgeOpenings } from '../rules/nudge';
 import { resolveOpeningHeader, type HeaderTables, type ResolvedHeader } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
 import { matchPrecut } from '../rules/precuts';
@@ -74,13 +75,75 @@ export function planOpenings(
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
 ): OpeningPlan {
-  const headers = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
-  const openings = wall.openings.map((o, i) => ({
-    ...o,
-    jackStuds: headers[i]!.jackStuds,
-    kingStuds: headers[i]!.kingStuds,
-  }));
-  return { headers, openings, plan: mergeOpeningZones(openings, config.studThickness) };
+  const resolved = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
+  const fit = fitNeighborJacks(
+    wall.openings.map((o, i) => ({ ...o, jackStuds: resolved[i]!.jackStuds, kingStuds: resolved[i]!.kingStuds })),
+    config.studThickness,
+  );
+  const openings = fit.openings;
+  const plan = mergeOpeningZones(openings, config.studThickness, { fit: true });
+
+  // Reduções por vizinhança apertada (P30, P39) viram avisos da abertura afetada.
+  const extra = new Map<string, Warning[]>();
+  const warn = (id: string, w: Warning): void => {
+    extra.set(id, [...(extra.get(id) ?? []), w]);
+  };
+  for (const r of fit.reduced) {
+    warn(r.openingId, {
+      code: 'HEADER_JACKS_BELOW_TABLE',
+      message:
+        `parede ${wall.id}, abertura ${r.openingId}: 1 jack por lado em vez de ${r.wanted} — só ${r.gap}" até o ` +
+        `RO de ${r.neighborId} (hipótese P30)`,
+    });
+  }
+  for (const r of plan.reducedKings ?? []) {
+    warn(r.curId, {
+      code: 'HEADER_KINGS_BELOW_TABLE',
+      message:
+        `parede ${wall.id}, aberturas ${r.prevId} e ${r.curId}: ${r.used} king(s) compartilhado(s) em vez de ` +
+        `${r.wanted} — só ${r.gap}" entre os RO (hipótese P39)`,
+    });
+  }
+  const headers = resolved.map((h, i) => {
+    const more = extra.get(wall.openings[i]!.id);
+    return more === undefined ? h : { ...h, jackStuds: openings[i]!.jackStuds!, warnings: [...h.warnings, ...more] };
+  });
+  return { headers, openings, plan };
+}
+
+/**
+ * Hipótese P40: aberturas que conflitam por até 1 1/2" com a ponta da parede ou com um T saem deslocadas
+ * (`rules/nudge.ts`), com aviso `OPENING_NUDGED`. Roda antes de tudo em `splitWall`.
+ */
+export function nudgeWall(
+  wall: Wall,
+  config: Config,
+  tables?: readonly HeaderTable[] | HeaderTables,
+): { wall: Wall; warnings: { offset: number; warning: Warning }[] } {
+  if (wall.openings.length === 0) return { wall, warnings: [] };
+  const resolved = wall.openings.map((o) => {
+    const h = resolveOpeningHeader(o, wall, config, tables);
+    return { ...o, jackStuds: h.jackStuds, kingStuds: h.kingStuds };
+  });
+  const { nudges } = nudgeOpenings(resolved, wall.length, teeStrips(wall.joints), config.studThickness);
+  if (nudges.length === 0) return { wall, warnings: [] };
+  const to = new Map(nudges.map((n) => [n.openingId, n.to]));
+  const warnings = nudges.map((n) => {
+    const d = n.to - n.from;
+    return {
+      offset: n.to,
+      warning: {
+        code: 'OPENING_NUDGED',
+        message:
+          `parede ${wall.id}, abertura ${n.openingId}: deslocada ${Math.abs(d)}" para a ${d < 0 ? 'esquerda' : 'direita'} ` +
+          `(borda do RO de ${n.from} para ${n.to}) — tocava ${n.reason}; confira a leitura (hipótese P40)`,
+      },
+    };
+  });
+  return {
+    wall: { ...wall, openings: wall.openings.map((o) => (to.has(o.id) ? { ...o, offset: to.get(o.id)! } : o)) },
+    warnings,
+  };
 }
 
 /**

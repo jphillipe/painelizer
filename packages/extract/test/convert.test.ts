@@ -32,12 +32,14 @@ function essence(p: Project) {
 describe('convert — Ringgold em formato solto', () => {
   const result = convert(ringgold, { studLength: [92.625, 104.625] });
 
-  it('passa no parser; o motor aponta só o caso P30 (porta e janela a 8 1/4" na S2) para o revisor', () => {
-    // O checkpoint resolve isto com `jackStuds: 1` nas duas aberturas; a extração não escolhe jacks (é do
-    // motor/engenheiro), então o problema tem que chegar ao humano pelo relatório, não sumir.
-    expect(result.problems).toHaveLength(1);
-    expect(result.problems[0]).toMatch(/^motor: parede S2: aberturas S2-D1 e S2-A: 8\.25" entre os RO/);
-    expect(result.warnings).toEqual([]);
+  it('passa no parser e no motor; o caso P30 (porta e janela a 8 1/4" na S2) chega ao revisor como aviso', () => {
+    // A extração não escolhe jacks (é do motor/engenheiro): o motor aplica a hipótese P30 (1 jack por lado nas
+    // duas, como o checkpoint) e o aviso tem que chegar ao humano pelo relatório, não sumir.
+    expect(result.problems).toEqual([]);
+    expect(result.warnings).toHaveLength(2);
+    for (const w of result.warnings) {
+      expect(w).toMatch(/^1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede S2, abertura S2-(D1|A): 1 jack por lado .*8\.25".*hipótese P30/);
+    }
   });
 
   it('bate com ringgold-checkpoint.json nas 4 paredes e 5 aberturas', () => {
@@ -215,7 +217,28 @@ describe('reviewReport', () => {
     expect(report).toContain('- parede W1: confiança 0.50');
     expect(report).toContain('- abertura W1-J1 (W1): confiança 0.40');
     expect(report).toContain('- abertura W1-J1 (W1): sem posição');
-    expect(report).toContain('- parser: ');
+    // Abertura sem posição não trava mais o parser: sai do projeto e vira aviso (decisão de 2026-10-15).
+    expect(converted.problems).toEqual([]);
+    expect(report).toContain('- extração ABERTURA_SEM_POSICAO: parede W1, abertura W1-J1');
+  });
+
+  it('abertura sem posição: fora do projeto, um aviso por abertura, e o resto da parede sai em painéis', () => {
+    const unplaced: ExtractionOutput = {
+      ...ringgold,
+      walls: ringgold.walls.map((w) =>
+        w.id === 'S2' ? { ...w, openings: w.openings.map((o) => (o.id === 'S2-D1' ? { ...o, center: null, offset: null } : o)) } : w,
+      ),
+    };
+    const r = convert(unplaced, { studLength: [92.625, 104.625] });
+    expect(r.problems).toEqual([]);
+    expect(r.warnings[0]).toBe(
+      'extração ABERTURA_SEM_POSICAO: parede S2, abertura S2-D1 (1): a leitura não achou a cota do eixo — os ' +
+        'painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição',
+    );
+    const s2 = (r.project['walls'] as { id: string; openings: { id: string }[] }[]).find((w) => w.id === 'S2')!;
+    expect(s2.openings.map((o) => o.id)).toEqual(['S2-A']);
+    // Sem a porta vizinha, a janela de S2 não precisa mais da hipótese P30.
+    expect(r.warnings.filter((w) => w.includes('hipótese P30'))).toEqual([]);
   });
 
   it('avisos do motor ganham seção própria', () => {
@@ -223,7 +246,7 @@ describe('reviewReport', () => {
     const withWarning = { ...r, warnings: ['1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo'] };
     const report = reviewReport(ringgold, withWarning);
     expect(report).toContain('## Avisos do motor\n\n- 1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo');
-    expect(reviewReport(ringgold, r)).not.toContain('## Avisos do motor');
+    expect(reviewReport(ringgold, { ...r, warnings: [] })).not.toContain('## Avisos do motor');
   });
 
   it('sem nada abaixo do limiar, diz para conferir mesmo assim', () => {

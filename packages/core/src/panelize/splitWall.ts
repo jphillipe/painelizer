@@ -42,11 +42,12 @@ import {
   layoutMarks,
   memberSpan,
   splicePlates,
+  supportCenters,
   validatePanelConfig,
   type LapObstacle,
 } from '../rules/split';
 import { memberWeightLb, panelWeight } from '../rules/weight';
-import { panelizeWall, planOpenings } from './panelizeWall';
+import { nudgeWall, panelizeWall, planOpenings } from './panelizeWall';
 
 const EPS = 1e-9;
 
@@ -54,7 +55,18 @@ const EPS = 1e-9;
  * @param tables tabelas injetadas (testes), como em `panelizeWall`
  * @throws RangeError os de `panelizeWall`; sem divisão possível; lap sem lugar; plate sem stud para emendar
  */
-export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
+export function splitWall(given: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
+  const nudged = nudgeWall(given, config, tables);
+  const panels = splitNudged(nudged.wall, config, tables);
+  // Aviso do deslocamento (P40) no painel que ficou com a abertura.
+  for (const { offset, warning } of nudged.warnings) {
+    const p = panels.find((q) => offset >= (q.wallOffset ?? 0) - EPS && offset < (q.wallOffset ?? 0) + q.length - EPS) ?? panels[0]!;
+    p.warnings.unshift(warning);
+  }
+  return panels;
+}
+
+function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
   const cfg = config.panel ?? DEFAULT_PANEL_CONFIG;
   validatePanelConfig(cfg);
   const stock = config.stockLengths ?? DEFAULT_STOCK_LENGTHS;
@@ -85,7 +97,9 @@ export function splitWall(wall: Wall, config: Config, tables?: readonly HeaderTa
 
   if (breaks.length === 0) return [finish({ ...whole, id: panelId(level, wall.id, 1), level }, wall.id, 0, stock, cfg)];
 
-  const marks = layoutMarks(wall.length, config.studSpacing, origin);
+  const marks = [...new Set([...layoutMarks(wall.length, config.studSpacing, origin), ...supportCenters(whole.members)])].sort(
+    (a, b) => a - b,
+  );
   const obstacles: LapObstacle[] = [
     ...whole.members
       .filter((m) => m.role === 'header')

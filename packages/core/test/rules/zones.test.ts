@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Opening } from '../../src/types';
-import { mergeOpeningZones } from '../../src/rules/zones';
+import { fitNeighborJacks, mergeOpeningZones } from '../../src/rules/zones';
 import windowDoor from '../fixtures/wall-144-window-door.json';
 
 const [win, door] = windowDoor.wall.openings as [Opening, Opening];
@@ -103,5 +103,84 @@ describe('mergeOpeningZones', () => {
 
   it('abertura inválida é rejeitada (validação de openingZone)', () => {
     expect(() => mergeOpeningZones([w('a', 20, 0)], 1.5)).toThrow(RangeError);
+  });
+
+  describe('fit (hipótese P39): kings compartilhados caem para o que cabe', () => {
+    // a: 2 kings (par de janelas acima de 4' a 130 mph B), b: 1 king; 1 jack cada; 4.5" entre os RO
+    const a = w('a', 20, 24, { kingStuds: 2 });
+    const b = w('b', 48.5, 24);
+
+    it('sem fit: 1 + 2 + 1 = 6" não cabe em 4.5" → RangeError', () => {
+      expect(() => mergeOpeningZones([a, b], 1.5)).toThrow(/aberturas a e b: 4\.5" .*\(mínimo 6"\)/);
+    });
+
+    it('com fit: 1 king compartilhado colado ao jack de a, kings externos de a continuam 2', () => {
+      expect(mergeOpeningZones([a, b], 1.5, { fit: true })).toEqual({
+        zones: [{ start: 15.5, end: 75.5, openingIds: ['a', 'b'] }],
+        kings: [15.5, 17, 45.5, 74],
+        reducedKings: [{ prevId: 'a', curId: 'b', gap: 4.5, wanted: 2, used: 1 }],
+      });
+    });
+
+    it('com fit e espaço para os 2: nada muda nem é listado', () => {
+      const plan = mergeOpeningZones([a, { ...b, offset: 50 }], 1.5, { fit: true });
+      expect(plan.kings).toEqual([15.5, 17, 45.5, 47, 75.5]);
+      expect(plan.reducedKings).toBeUndefined();
+    });
+
+    it('com fit e menos que jack + king + jack: RangeError', () => {
+      expect(() => mergeOpeningZones([a, { ...b, offset: 47 }], 1.5, { fit: true })).toThrow(/3" .*\(mínimo 6"\); nem 1 jack \+ 1 king \+ 1 jack \(4\.5"\) cabe/);
+    });
+  });
+});
+
+describe('fitNeighborJacks (hipótese P30)', () => {
+  const two = (id: string, offset: number) => w(id, offset, 24, { jackStuds: 2 });
+
+  it('6" entre RO com 2 jacks cada (2 + 1 + 2 = 7.5" não cabe): as duas passam a 1 jack', () => {
+    const { openings, reduced } = fitNeighborJacks([two('b', 50), two('a', 20)], 1.5);
+    expect(openings.map((o) => [o.id, o.jackStuds])).toEqual([
+      ['b', 1],
+      ['a', 1],
+    ]);
+    expect(reduced).toEqual([
+      { openingId: 'a', neighborId: 'b', gap: 6, wanted: 2 },
+      { openingId: 'b', neighborId: 'a', gap: 6, wanted: 2 },
+    ]);
+  });
+
+  it('7.5" cabe 2 + 1 + 2: nada muda (os kings, se faltar, são com o fit de mergeOpeningZones)', () => {
+    const { openings, reduced } = fitNeighborJacks([two('a', 20), two('b', 51.5)], 1.5);
+    expect(openings.map((o) => o.jackStuds)).toEqual([2, 2]);
+    expect(reduced).toEqual([]);
+  });
+
+  it('jacks caem antes dos kings: 8.25" com 2 jacks e 2 kings (2 + 2 + 2 = 9" não cabe) → 1 jack, kings ficam 2', () => {
+    const a = w('a', 20, 24, { jackStuds: 2, kingStuds: 2 });
+    const b = w('b', 52.25, 24, { jackStuds: 2 });
+    const fit = fitNeighborJacks([a, b], 1.5);
+    expect(fit.openings.map((o) => [o.jackStuds, o.kingStuds])).toEqual([
+      [1, 2],
+      [1, undefined],
+    ]);
+    // 1 + 2 + 1 = 6" cabe nos 8.25": o fit dos kings não precisa reduzir nada
+    expect(mergeOpeningZones(fit.openings, 1.5, { fit: true }).reducedKings).toBeUndefined();
+  });
+
+  it('só reduz quem tem mais de 1 jack', () => {
+    const { reduced } = fitNeighborJacks([two('a', 20), w('b', 49)], 1.5);
+    expect(reduced).toEqual([{ openingId: 'a', neighborId: 'b', gap: 5, wanted: 2 }]);
+  });
+
+  it('menos de 4.5" (nem jack + king + jack): não mexe — o erro é de mergeOpeningZones', () => {
+    const { openings, reduced } = fitNeighborJacks([two('a', 20), two('b', 48)], 1.5);
+    expect(openings.map((o) => o.jackStuds)).toEqual([2, 2]);
+    expect(reduced).toEqual([]);
+  });
+
+  it('não altera as aberturas recebidas', () => {
+    const input = [two('a', 20), two('b', 50)];
+    fitNeighborJacks(input, 1.5);
+    expect(input.map((o) => o.jackStuds)).toEqual([2, 2]);
   });
 });
