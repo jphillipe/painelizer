@@ -94,7 +94,7 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
         />
       </div>
       <p className="text-[13px] text-ink-3">
-        PDF, PNG or JPG · vector PDF sets read best · floor plan, wall types, door and window schedules, elevations
+        PDF, PNG or JPG · up to 300 MB · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
       </p>
       {files.length > 0 ? (
         <ul className="divide-y divide-line-faint rounded-md border bg-card text-sm">

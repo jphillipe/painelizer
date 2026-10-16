@@ -37,6 +37,8 @@ export interface SheetInfo {
   page: number;
   /** Número da folha no carimbo (`A-100`), quando encontrado. */
   sheet: string | undefined;
+  /** Textos do carimbo na coluna do número (título da folha, projeto, escritório); ausente se não há. */
+  title?: string;
 }
 
 const SHEET_PATTERN = /^[A-Z]{1,2}-\d{3}[A-Z]?$/;
@@ -132,7 +134,20 @@ export function formatPageText(pt: PageText): string {
   return [head, ...body].join('\n');
 }
 
-/** Número da folha de cada página: o texto `A-100`-like de maior altura (o do carimbo). */
+/** Distância em x (pt) do número da folha em que o texto ainda conta como título do carimbo. */
+const TITLE_COLUMN = 100;
+/** Faixa em y (pt, para cima a partir da base do número) onde fica o título da folha. */
+const TITLE_BELOW = 20;
+const TITLE_ABOVE = 160;
+/** Altura mínima do título em fração da altura do número: datas, escala e notas do carimbo ficam de fora. */
+const TITLE_MIN_RATIO = 0.25;
+
+/**
+ * Número da folha de cada página (o texto `A-100`-like de maior altura, o do carimbo) e o título: os textos
+ * logo acima do número (até 160 pt), na mesma coluna (±100 pt em x) e com pelo menos 1/4 da altura dele,
+ * de cima para baixo — "Exterior Elevations", "Door Schedule New Wing & Units". Ringgold e Horace têm o
+ * título ali; o nome do projeto e a tabela de revisões ficam mais acima e de fora.
+ */
 export async function listSheets(data: Uint8Array): Promise<SheetInfo[]> {
   const { doc, close } = await open(data);
   try {
@@ -140,29 +155,36 @@ export async function listSheets(data: Uint8Array): Promise<SheetInfo[]> {
     for (let n = 1; n <= doc.numPages; n++) {
       const p = await doc.getPage(n);
       const content = await p.getTextContent();
-      let best: { text: string; height: number } | undefined;
-      for (const item of content.items) {
-        if (!isTextItem(item)) continue;
+      let best: { text: string; height: number; x: number; y: number } | undefined;
+      const items = content.items.filter(isTextItem);
+      for (const item of items) {
         const text = item.str.trim();
         if (!SHEET_PATTERN.test(text)) continue;
-        if (!best || item.height > best.height) best = { text, height: item.height };
+        if (!best || item.height > best.height) {
+          best = { text, height: item.height, x: item.transform[4] as number, y: item.transform[5] as number };
+        }
       }
-      out.push({ page: n, sheet: best?.text });
+      const info: SheetInfo = { page: n, sheet: best?.text };
+      if (best !== undefined) {
+        const b = best;
+        const title = items
+          .filter((i) => i.str.trim() !== '' && !SHEET_PATTERN.test(i.str.trim()) && i.height >= TITLE_MIN_RATIO * b.height)
+          .filter((i) => {
+            const dx = (i.transform[4] as number) - b.x;
+            const dy = (i.transform[5] as number) - b.y;
+            return Math.abs(dx) <= TITLE_COLUMN && dy >= -TITLE_BELOW && dy <= TITLE_ABOVE;
+          })
+          .sort((a, c) => (c.transform[5] as number) - (a.transform[5] as number))
+          .map((i) => i.str.trim())
+          .join(' ');
+        if (title !== '') info.title = title;
+      }
+      out.push(info);
     }
     return out;
   } finally {
     await close();
   }
-}
-
-/**
- * Escolha padrão das páginas para a extração: a planta (`A-1xx`, a primeira) e o schedule de
- * aberturas e tipos de parede (`A-8xx`), quando existirem. Devolve páginas 1-based.
- */
-export function pickPages(sheets: readonly SheetInfo[]): { plan: number | undefined; schedule: number | undefined } {
-  const plan = sheets.find((s) => s.sheet !== undefined && /^A-1\d\d$/.test(s.sheet));
-  const schedule = sheets.find((s) => s.sheet !== undefined && /^A-8\d\d$/.test(s.sheet));
-  return { plan: plan?.page, schedule: schedule?.page };
 }
 
 /** Novo PDF só com as páginas pedidas (1-based, na ordem dada). */

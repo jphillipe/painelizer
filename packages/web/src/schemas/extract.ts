@@ -5,6 +5,9 @@ import type { ProjectData } from '@/types/extract';
 export const projectDataSchema = z.object({
   /** Altura da parede quando o conjunto não tem cortes; texto em pés-pol, validado pelo parser do CLI. */
   wallHeight: z.string().trim().max(32, 'Use feet and inches, e.g. 9\'-1 1/8"'),
+  /** Topo do RO e peitoril quando o projeto não dá (a leitura vence). */
+  headerHeight: z.string().trim().max(32, 'Use feet and inches, e.g. 6\'-10 1/2"'),
+  sillHeight: z.string().trim().max(32, 'Use feet and inches, e.g. 2\'-0"'),
   floors: z.string().trim().regex(/^$|^\d+$/, 'Whole number of floors above, e.g. 2'),
   floorSpan: z.enum(['', 'center', 'clear']),
   snow: z.string().trim().regex(/^$|^\d+(\.\d+)?$/, 'Snow load in psf, e.g. 30'),
@@ -27,6 +30,8 @@ export type UploadFields = z.infer<typeof uploadFieldsSchema>;
 /** Opções de conversão do extract a partir dos dados do projeto; campo vazio não entra. */
 export function toConvertOptions(d: ProjectData): {
   wallHeight?: string;
+  headerHeight?: string;
+  sillHeight?: string;
   floorsSupported?: number;
   floorSpan?: 'center' | 'clear';
   building?: { groundSnowLoad?: number; buildingWidth?: string; windSpeed?: number; exposure?: 'B' | 'C' | 'D' };
@@ -39,6 +44,8 @@ export function toConvertOptions(d: ProjectData): {
   };
   return {
     ...(d.wallHeight === '' ? {} : { wallHeight: d.wallHeight }),
+    ...(d.headerHeight === '' ? {} : { headerHeight: d.headerHeight }),
+    ...(d.sillHeight === '' ? {} : { sillHeight: d.sillHeight }),
     ...(d.floors === '' ? {} : { floorsSupported: Number(d.floors) }),
     ...(d.floorSpan === '' ? {} : { floorSpan: d.floorSpan }),
     ...(Object.keys(building).length === 0 ? {} : { building }),
@@ -46,7 +53,7 @@ export function toConvertOptions(d: ProjectData): {
 }
 
 export function pickProjectData(f: UploadFields): ProjectData {
-  return { wallHeight: f.wallHeight, floors: f.floors, floorSpan: f.floorSpan, snow: f.snow, width: f.width, wind: f.wind, exposure: f.exposure };
+  return { wallHeight: f.wallHeight, headerHeight: f.headerHeight, sillHeight: f.sillHeight, floors: f.floors, floorSpan: f.floorSpan, snow: f.snow, width: f.width, wind: f.wind, exposure: f.exposure };
 }
 
 /** Reaplicar dados do projeto à leitura já feita (sem nova chamada à IA). */

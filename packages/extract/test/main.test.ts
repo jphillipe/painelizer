@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { parseProject } from 'cli/project';
 import { finish } from '../src/client';
 import { parseArgs, run, USAGE, UsageError, type Deps, type Io } from '../src/main';
@@ -101,7 +102,7 @@ describe('run', () => {
     const m = memIo({ 'planta.pdf': await makePdf() });
     const deps: Deps = { extract: async () => { throw new Error('não deveria chamar'); } };
     expect(await run(['planta.pdf', '--out', 'saida', '--dry-run'], m.io, '/w', deps)).toBe(0);
-    expect(m.out[0]).toBe('páginas pelo carimbo: 1,2');
+    expect(m.out[0]).toBe('páginas pelo carimbo: 1=A-100 2=A-800');
     expect(m.out[1]).toMatch(/^dry-run: 2 página\(s\)/);
     expect([...m.files.keys()].sort()).toEqual(['paginas/1.txt', 'paginas/2.txt', 'pedido.json']);
     expect(m.files.get('paginas/1.txt')).toContain(`16' - 0"`);
@@ -168,13 +169,21 @@ describe('run', () => {
     expect(m.files.get('resposta-bruta.txt')).toBe('{"projectName":"x"}');
   });
 
-  it('sem folha A-1xx e sem --pages: sai 1 listando as folhas, sem gravar nada', async () => {
-    // PDF só com o schedule (A-800): não há planta para escolher pelo carimbo.
+  it('nenhuma folha útil pelo carimbo e sem --pages: sai 1, sem gravar nada', async () => {
+    // Só uma folha de detalhes (A-501): nada para ler.
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    doc.addPage([612, 792]).drawText('A-501', { x: 500, y: 40, size: 24, font });
+    const m = memIo({ 'planta.pdf': await doc.save() });
+    expect(await run(['planta.pdf', '--out', 'saida'], m.io, '/w', fakeDeps)).toBe(1);
+    expect(m.err[0]).toMatch(/nenhuma folha útil/);
+    expect(m.files.size).toBe(0);
+  });
+
+  it('PDF só com o schedule: vai a folha de schedule (A-8xx), sem exigir planta', async () => {
     const only = await subsetPdf(await makePdf(), [2]);
     const m = memIo({ 'planta.pdf': only });
-    expect(await run(['planta.pdf', '--out', 'saida'], m.io, '/w', fakeDeps)).toBe(1);
-    expect(m.err[0]).toMatch(/nenhuma folha A-1xx/);
-    expect(m.err[1]).toContain('1=A-800');
-    expect(m.files.size).toBe(0);
+    expect(await run(['planta.pdf', '--out', 'saida', '--dry-run'], m.io, '/w', fakeDeps)).toBe(0);
+    expect(m.out[0]).toBe('páginas pelo carimbo: 1=A-800');
   });
 });

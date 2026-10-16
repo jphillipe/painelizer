@@ -14,7 +14,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { convert, reviewReport, type ConvertOptions, type Converted } from './convert';
-import { listSheets, pageCount, pickPages, readPageText, subsetPdf, type PageText } from './pdf';
+import { listSheets, readPageText, subsetPdf, type PageText, type SheetInfo } from './pdf';
+import { AUTO_BYTE_BUDGET, AUTO_PAGE_BUDGET, choosePages, classifySheet, sheetFromFileName, type Candidate, type SheetCategory } from './select';
 import { buildUserContent, FULL_SYSTEM_PROMPT, type ExtractHints, type ImageMediaType, type PdfInput, type ImageInput } from './prompt';
 import { ExtractionOutput } from './schema';
 
@@ -66,6 +67,8 @@ export interface ExtractResult {
   usage: { inputTokens: number; outputTokens: number };
   /** Páginas efetivamente enviadas de cada PDF, na ordem de `sources`. */
   pagesSent: { name: string; pages: number[] }[];
+  /** Páginas que a seleção automática deixou de fora por orçamento (vazio quando tudo coube). */
+  pagesDropped: DroppedPage[];
 }
 
 export class ExtractError extends Error {
@@ -88,12 +91,76 @@ export function normalizeSources(req: ExtractRequest): ExtractSource[] {
   return out;
 }
 
-/** Páginas de um PDF quando não foram pedidas: carimbo (A-1xx, A-8xx) ou todas até o limite. */
-export async function autoPages(data: Uint8Array): Promise<number[]> {
-  const picked = pickPages(await listSheets(data));
-  if (picked.plan !== undefined) return picked.schedule === undefined ? [picked.plan] : [picked.plan, picked.schedule];
-  const n = await pageCount(data);
-  return Array.from({ length: Math.min(n, MAX_AUTO_PAGES) }, (_, i) => i + 1);
+/** Teto da API por requisição (32 MB, já com o base64). */
+export const API_REQUEST_LIMIT = 32 * 1024 * 1024;
+
+/** Uma página que ficou fora da seleção automática por orçamento. */
+export interface DroppedPage {
+  name: string;
+  page: number;
+  sheet: string | undefined;
+  category: SheetCategory;
+}
+
+/**
+ * Páginas de cada PDF sem `pages` pedidas, escolhidas juntas no conjunto todo (`select.ts`): por categoria
+ * do carimbo e do nome do arquivo, dentro do orçamento de páginas e bytes. PDF sem nenhum número de folha
+ * reconhecível (exportação, foto escaneada) entra com as primeiras `MAX_AUTO_PAGES` páginas como planta.
+ * Devolve, na ordem de `sources`, as páginas de cada PDF automático (`undefined` para imagem ou PDF com
+ * páginas pedidas) e as que ficaram de fora.
+ */
+export async function selectPages(
+  sources: readonly ExtractSource[],
+  level?: number,
+): Promise<{ pages: (number[] | undefined)[]; dropped: DroppedPage[]; sheets: Map<string, SheetInfo> }> {
+  const sheets = new Map<string, SheetInfo>();
+  const scanned: { source: number; info: SheetInfo; bytes: number }[] = [];
+  for (const [i, s] of sources.entries()) {
+    if (s.kind !== 'pdf' || s.pages !== undefined) continue;
+    const list = await listSheets(s.data);
+    const perPage = s.data.byteLength / Math.max(1, list.length);
+    // Folha de um arquivo só sem texto no carimbo (desenho exportado como vetor): o número vem do nome.
+    const fromName = list.length === 1 ? sheetFromFileName(s.name) : undefined;
+    for (const raw of list) {
+      const info = raw.sheet === undefined && fromName !== undefined ? { ...raw, sheet: fromName } : raw;
+      sheets.set(`${i}:${info.page}`, info);
+      scanned.push({ source: i, info, bytes: perPage });
+    }
+  }
+  // Nenhum carimbo no conjunto (fotos, exportações soltas): vão as primeiras páginas de cada PDF, como planta.
+  const anySheet = scanned.some((x) => x.info.sheet !== undefined);
+  const candidates: Candidate[] = scanned.map(({ source, info, bytes }) => ({
+    source,
+    page: info.page,
+    category: anySheet
+      ? classifySheet(info, sources[source]!.name, level)
+      : info.page <= MAX_AUTO_PAGES
+        ? 'plan'
+        : 'skip',
+    bytes,
+    ...(info.sheet === undefined ? {} : { sheet: info.sheet }),
+    titled: info.title !== undefined,
+  }));
+  const { chosen, dropped } = choosePages(candidates);
+  const pages = sources.map((s, i) =>
+    s.kind === 'pdf' && s.pages === undefined ? chosen.filter((c) => c.source === i).map((c) => c.page) : undefined,
+  );
+  return {
+    pages,
+    dropped: dropped.map((c) => ({
+      name: sources[c.source]!.name,
+      page: c.page,
+      sheet: sheets.get(`${c.source}:${c.page}`)?.sheet,
+      category: c.category,
+    })),
+    sheets,
+  };
+}
+
+/** Páginas automáticas de um PDF sozinho (ver `selectPages`). */
+export async function autoPages(data: Uint8Array, name = 'planta.pdf', level?: number): Promise<number[]> {
+  const { pages } = await selectPages([{ kind: 'pdf', name, data }], level);
+  return pages[0] ?? [];
 }
 
 /** Parâmetros da requisição, separados para teste e para `countTokens`. */
@@ -102,17 +169,34 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
   const pdfs: PdfInput[] = [];
   const images: ImageInput[] = [];
   const pagesSent: ExtractResult['pagesSent'] = [];
-  for (const s of sources) {
+  const selection = await selectPages(sources, req.hints?.level);
+  for (const [i, s] of sources.entries()) {
     if (s.kind === 'image') {
       images.push({ name: s.name, data: s.data, mediaType: s.mediaType });
       continue;
     }
-    const pages = s.pages === undefined ? await autoPages(s.data) : [...s.pages];
-    if (pages.length === 0) throw new RangeError(`${s.name}: nenhuma página pedida`);
+    const pages = s.pages === undefined ? selection.pages[i]! : [...s.pages];
+    if (pages.length === 0) {
+      // Seleção automática que não achou nada útil neste arquivo (capa, detalhes): ele fica de fora.
+      if (s.pages === undefined) continue;
+      throw new RangeError(`${s.name}: nenhuma página pedida`);
+    }
     const texts: PageText[] = [];
     for (const p of pages) texts.push(await readPageText(s.data, p));
     pdfs.push({ name: s.name, pdf: await subsetPdf(s.data, pages), pages: texts });
     pagesSent.push({ name: s.name, pages });
+  }
+  if (pdfs.length === 0 && images.length === 0) {
+    throw new RangeError('nenhuma folha útil reconhecida nos arquivos (planta, schedule, elevação, corte, estrutura); informe as páginas');
+  }
+  const base64 = (n: number) => Math.ceil(n / 3) * 4;
+  const total = pdfs.reduce((n, p) => n + base64(p.pdf.byteLength), 0) + images.reduce((n, im) => n + base64(im.data.byteLength), 0);
+  if (total > API_REQUEST_LIMIT) {
+    const mb = (n: number) => (n / (1024 * 1024)).toFixed(1);
+    throw new RangeError(
+      `as folhas escolhidas somam ${mb(total)} MB codificados, acima do limite de ${mb(API_REQUEST_LIMIT)} MB da API; ` +
+        'mande menos arquivos ou informe as páginas',
+    );
   }
   const params = {
     model: opts.model ?? DEFAULT_MODEL,
@@ -127,12 +211,12 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
     // Sem `output_config.format`: a API recusa a gramática deste schema; o formato vai no system prompt.
     output_config: { effort: opts.effort ?? 'high' },
   } satisfies Anthropic.MessageCreateParamsNonStreaming;
-  return { params, pagesSent };
+  return { params, pagesSent, pagesDropped: selection.dropped };
 }
 
 export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {}): Promise<ExtractResult> {
   const client = opts.client ?? new Anthropic();
-  const { params, pagesSent } = await buildRequest(req, opts);
+  const { params, pagesSent, pagesDropped } = await buildRequest(req, opts);
   // Streaming: o SDK exige para respostas longas (max_tokens alto); `finalMessage` junta tudo.
   const response = await client.messages.stream(params).finalMessage();
   const text = stripFences(textOf(response));
@@ -150,13 +234,25 @@ export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {
   } catch (e) {
     throw new ExtractError(`a resposta não é JSON: ${(e as Error).message}`, text);
   }
-  return {
-    ...finish(raw, req.convert, response.model, {
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-    }),
-    pagesSent,
-  };
+  const done = finish(raw, req.convert, response.model, {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+  });
+  return { ...done, warnings: [...droppedWarning(pagesDropped), ...done.warnings], pagesSent, pagesDropped };
+}
+
+/** Aviso das folhas que a seleção automática deixou de fora por orçamento. */
+export function droppedWarning(dropped: readonly DroppedPage[]): string[] {
+  if (dropped.length === 0) return [];
+  const list = dropped
+    .slice(0, 12)
+    .map((d) => `${d.sheet ?? `p.${d.page}`} (${d.category})`)
+    .join(', ');
+  return [
+    `extração FOLHAS_FORA: ${dropped.length} folha(s) útil(eis) ficaram fora do orçamento de ${AUTO_PAGE_BUDGET} páginas / ` +
+      `${AUTO_BYTE_BUDGET / (1024 * 1024)} MB: ${list}${dropped.length > 12 ? '…' : ''} — para incluí-las, mande menos ` +
+      'arquivos ou informe as páginas',
+  ];
 }
 
 /** Mesmo pós-processamento da chamada real, para respostas gravadas (fixtures) e para o CLI. */
@@ -182,6 +278,7 @@ export function finish(
     model,
     usage,
     pagesSent: [],
+    pagesDropped: [],
   };
 }
 

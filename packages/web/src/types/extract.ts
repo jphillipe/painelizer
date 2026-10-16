@@ -25,6 +25,10 @@ export interface WallReview {
 /** O que o humano informa e os desenhos não trazem; texto como no formulário ('' = não informado). */
 export interface ProjectData {
   wallHeight: string;
+  /** Base do header (topo do RO) do subfloor, quando o projeto não dá. */
+  headerHeight: string;
+  /** Peitoril das janelas do subfloor, quando as elevações não dão. */
+  sillHeight: string;
   floors: string;
   floorSpan: '' | 'center' | 'clear';
   snow: string;
@@ -33,7 +37,7 @@ export interface ProjectData {
   exposure: '' | 'B' | 'C' | 'D';
 }
 
-export const EMPTY_PROJECT_DATA: ProjectData = { wallHeight: '', floors: '', floorSpan: '', snow: '', width: '', wind: '', exposure: '' };
+export const EMPTY_PROJECT_DATA: ProjectData = { wallHeight: '', headerHeight: '', sillHeight: '', floors: '', floorSpan: '', snow: '', width: '', wind: '', exposure: '' };
 
 export type ExtractOutcome =
   | {

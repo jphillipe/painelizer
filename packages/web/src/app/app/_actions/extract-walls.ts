@@ -15,6 +15,8 @@ export const extractWalls = actionClient.inputSchema(z.instanceof(FormData)).act
     level: text('level'),
     projectName: text('projectName'),
     wallHeight: text('wallHeight'),
+    headerHeight: text('headerHeight'),
+    sillHeight: text('sillHeight'),
     floors: text('floors'),
     floorSpan: text('floorSpan'),
     snow: text('snow'),

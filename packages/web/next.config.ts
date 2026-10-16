@@ -9,7 +9,7 @@ const config: NextConfig = {
   outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
   experimental: {
     // Upload do PDF da planta por server action (S20.3).
-    serverActions: { bodySizeLimit: '50mb' },
+    serverActions: { bodySizeLimit: '300mb' },
   },
 };
 

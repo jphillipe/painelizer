@@ -237,6 +237,11 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   aceita mover a abertura até um stud, ou isso tem que voltar ao arquiteto? — hipótese: o motor desloca o mínimo, até
   1 1/2", com aviso `OPENING_NUDGED`; acima disso é erro (`rules/nudge.ts`).
 
+## Novas (abertas em 2026-10-15, leitura do conjunto inteiro)
+- [ ] **P41 — Orçamento de folhas por leitura.** Quantas folhas a fábrica aceita pagar por leitura (cada folha ~8 mil
+  tokens de entrada, mais o raciocínio)? Plantas de outros pavimentos e cortes ficam por último. — hipótese: 40 folhas e
+  22 MB por leitura (`select.ts`), o resto vira aviso `FOLHAS_FORA`; o humano pode escolher as páginas.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais

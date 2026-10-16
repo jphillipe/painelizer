@@ -255,3 +255,84 @@ describe('reviewReport', () => {
     expect(reviewReport(corner, convert(corner), { threshold: 0.95 })).toContain('- parede I1: confiança 0.90');
   });
 });
+
+describe('alturas: projeto, humano, padrão da fábrica (P2)', () => {
+  // Ringgold sem nenhuma altura: portas sem headerHeight, tipos de janela sem peitoril.
+  const bare: ExtractionOutput = {
+    ...ringgold,
+    headerHeight: null,
+    openingTypes: ringgold.openingTypes.map((t) => ({ ...t, sillHeight: null })),
+    walls: ringgold.walls.map((w) => ({ ...w, openings: w.openings.map((o) => ({ ...o, headerHeight: null })) })),
+  };
+  const config = (r: ReturnType<typeof convert>) => r.project['config'] as Record<string, unknown>;
+
+  it('nada no projeto nem do humano: topo do RO a 82 1/2" e um aviso com as aberturas', () => {
+    const r = convert(bare, { studLength: [92.625, 104.625] });
+    expect(config(r)['headerHeight']).toBe(`6' - 10 1/2"`);
+    const w = r.warnings.find((x) => x.startsWith('extração ALTURA_PADRAO'));
+    expect(w).toContain('5 abertura(s)');
+    expect(w).toContain('N1-A, S1-A, S2-D1, S2-A, I1-U2');
+  });
+
+  it('peitoril do humano: as janelas saem do aviso, as portas continuam', () => {
+    const r = convert(bare, { studLength: [92.625, 104.625], sillHeight: `2' - 0"` });
+    const types = config(r)['openingTypes'] as Record<string, { sillHeight?: string }>;
+    expect(types['A2']!.sillHeight).toBe(`2' - 0"`);
+    expect(types['1']!.sillHeight).toBeUndefined();
+    expect(r.warnings.find((x) => x.startsWith('extração ALTURA_PADRAO'))).toMatch(/2 abertura\(s\) .*: S2-D1, I1-U2 —/);
+  });
+
+  it('altura de header do humano: vale para o projeto e não há aviso', () => {
+    const r = convert(bare, { studLength: [92.625, 104.625], headerHeight: `7' - 0"` });
+    expect(config(r)['headerHeight']).toBe(`7' - 0"`);
+    expect(r.warnings.filter((x) => x.startsWith('extração ALTURA_PADRAO'))).toEqual([]);
+  });
+
+  it('a leitura vence o humano', () => {
+    const read = { ...bare, headerHeight: `6' - 8"` };
+    expect(config(convert(read, { headerHeight: `7' - 0"` }))['headerHeight']).toBe(`6' - 8"`);
+    const sill = { ...bare, openingTypes: bare.openingTypes.map((t) => (t.kind === 'window' ? { ...t, sillHeight: `1' - 6"` } : t)) };
+    const types = config(convert(sill, { sillHeight: `2' - 0"` }))['openingTypes'] as Record<string, { sillHeight?: string }>;
+    expect(types['A2']!.sillHeight).toBe(`1' - 6"`);
+  });
+});
+
+describe('abertura sem tag com medida incompleta', () => {
+  const withOpening = (o: Partial<ExtractionOutput['walls'][number]['openings'][number]>): ExtractionOutput => ({
+    ...ringgold,
+    walls: ringgold.walls.map((w) =>
+      w.id === 'I1'
+        ? { ...w, openings: [{ ...w.openings[0]!, id: 'I1-OP-1', tag: null, type: 'door', roughWidth: `3' - 0"`, roughHeight: null, headerHeight: null, ...o }] }
+        : w,
+    ),
+  });
+  const opening = (r: ReturnType<typeof convert>) =>
+    (r.project['walls'] as { id: string; openings: Record<string, unknown>[] }[]).find((w) => w.id === 'I1')!.openings;
+
+  it('vão (porta sem tag) com largura e sem altura: RO até a base do header do projeto, com aviso', () => {
+    const r = convert(withOpening({}), { studLength: [92.625, 104.625] });
+    expect(r.problems).toEqual([]);
+    expect(opening(r)[0]).toMatchObject({ id: 'I1-OP-1', roughWidth: `3' - 0"`, roughHeight: `6' - 10 1/2"` });
+    expect(r.warnings).toContain(
+      `extração ALTURA_RO_PORTA: parede I1, abertura I1-OP-1 (door): a leitura deu a largura do RO (3' - 0") mas não ` +
+        `a altura — RO do subfloor até a base do header, 6' - 10 1/2" (P4); confira`,
+    );
+  });
+
+  it('com altura de header informada, o vão vai até ela', () => {
+    const r = convert(withOpening({}), { studLength: [92.625, 104.625], headerHeight: `7' - 0"` });
+    expect(opening(r)[0]).toMatchObject({ roughHeight: `7' - 0"` });
+  });
+
+  it('sem tag e sem largura: fora do projeto, com aviso', () => {
+    const r = convert(withOpening({ roughWidth: null }), { studLength: [92.625, 104.625] });
+    expect(r.problems).toEqual([]);
+    expect(opening(r)).toEqual([]);
+    expect(r.warnings.find((w) => w.startsWith('extração ABERTURA_SEM_MEDIDA: parede I1, abertura I1-OP-1'))).toBeDefined();
+  });
+
+  it('janela sem tag e sem altura: fora (não há de onde tirar a altura)', () => {
+    const r = convert(withOpening({ type: 'window' }), { studLength: [92.625, 104.625] });
+    expect(opening(r)).toEqual([]);
+  });
+});

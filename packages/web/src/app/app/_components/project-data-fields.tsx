@@ -18,22 +18,56 @@ export function ProjectDataFields<T extends FieldValues & ProjectData>({ control
   const name = (k: keyof ProjectData) => k as Path<T>;
   return (
     <div className="space-y-4">
-      <FormField
-        control={control}
-        name={name('wallHeight')}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              Wall height <span className="font-normal text-ink-3">(if the set has no sections)</span>
-            </FormLabel>
-            <FormControl>
-              <Input {...field} placeholder={`e.g. 9'-1 1/8"`} className="font-mono sm:w-60" />
-            </FormControl>
-            {compact ? null : <FormDescription>Subfloor to top of the double top plate. Read from sections when they exist.</FormDescription>}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <FormField
+          control={control}
+          name={name('wallHeight')}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Wall height <span className="font-normal text-ink-3">(if no sections)</span>
+              </FormLabel>
+              <FormControl>
+                <Input {...field} placeholder={`e.g. 9'-1 1/8"`} className="font-mono" />
+              </FormControl>
+              {compact ? null : <FormDescription>Subfloor to top of the double top plate.</FormDescription>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={name('headerHeight')}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Header height <span className="font-normal text-ink-3">(top of RO)</span>
+              </FormLabel>
+              <FormControl>
+                <Input {...field} placeholder={`6'-10 1/2"`} className="font-mono" />
+              </FormControl>
+              {compact ? null : <FormDescription>From the subfloor. Empty: the drawings, else the factory standard.</FormDescription>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={name('sillHeight')}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Window sill height <span className="font-normal text-ink-3">(if no elevations)</span>
+              </FormLabel>
+              <FormControl>
+                <Input {...field} placeholder={`e.g. 2'-0"`} className="font-mono" />
+              </FormControl>
+              {compact ? null : <FormDescription>From the subfloor, for window types the drawings leave blank.</FormDescription>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <FormField
           control={control}

@@ -2,7 +2,7 @@
 
 Gerado por `pnpm hipoteses` em 2026-10-16. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
 
-**29 hipóteses em vigor**, 11 pendências respondidas.
+**30 hipóteses em vigor**, 11 pendências respondidas.
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
@@ -35,6 +35,7 @@ Gerado por `pnpm hipoteses` em 2026-10-16. Não edite à mão: a fonte é `05-pe
 | P38 | Porta colada ao início da parede (I12-U3-1 a 1'-9 3/8" do eixo, RO de 32") | erro, como hoje; até 1 1/2" a P40 desloca a porta (2026-10-15) | — |
 | P39 | Par de janelas A2 e porta 1 com 4 1/2" entre os RO (parede S2 do Ringgold) | 1 king compartilhado (aviso `HEADER_KINGS_BELOW_TABLE`, "… hipótese P39"), automático em `mergeOpeningZones` com `fit`. Com a folga HM antiga (+4 1/2", RO 40 1/2") sobravam 3 1/4" e nem isso cabia; a P34 revista dá os 38" da P29 | `packages/core/src/panelize/panelizeWall.ts:86`, `packages/core/src/rules/zones.ts:12`, `packages/core/src/rules/zones.ts:42`, `packages/core/src/rules/zones.ts:99` |
 | P40 | Tolerância de leitura para abertura em conflito | o motor desloca o mínimo, até 1 1/2", com aviso `OPENING_NUDGED`; acima disso é erro (`rules/nudge.ts`) | `packages/core/src/panelize/panelizeWall.ts:115`, `packages/core/src/panelize/splitWall.ts:61`, `packages/core/src/rules/nudge.ts:2` |
+| P41 | Orçamento de folhas por leitura | 40 folhas e 22 MB por leitura (`select.ts`), o resto vira aviso `FOLHAS_FORA`; o humano pode escolher as páginas | — |
 
 ## Respondidas
 

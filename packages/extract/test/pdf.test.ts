@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { formatPageText, listSheets, pageCount, pickPages, readPageText, subsetPdf } from '../src/pdf';
+import { formatPageText, listSheets, pageCount, readPageText, subsetPdf } from '../src/pdf';
+import { classifySheet } from '../src/select';
 import { makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
 
 const RINGGOLD = 'C:/Users/Phillipe/Desktop/painelizer/docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf';
@@ -61,21 +62,13 @@ describe('formatPageText', () => {
   });
 });
 
-describe('listSheets / pickPages / subsetPdf', () => {
+describe('listSheets / subsetPdf', () => {
   it('acha o número da folha pelo texto maior do carimbo', async () => {
     const sheets = await listSheets(await makePdf());
     expect(sheets).toEqual([
       { page: 1, sheet: 'A-100' },
       { page: 2, sheet: 'A-800' },
     ]);
-    expect(pickPages(sheets)).toEqual({ plan: 1, schedule: 2 });
-  });
-
-  it('pickPages sem schedule e sem planta', () => {
-    expect(pickPages([{ page: 1, sheet: 'A-200' }, { page: 2, sheet: undefined }])).toEqual({
-      plan: undefined,
-      schedule: undefined,
-    });
   });
 
   it('subsetPdf recorta só as páginas pedidas, na ordem', async () => {
@@ -98,10 +91,14 @@ describe('listSheets / pickPages / subsetPdf', () => {
 describe.skipIf(!existsSync(RINGGOLD))('26 Ringgold St (docs/examples, fora do git)', () => {
   const data = () => new Uint8Array(readFileSync(RINGGOLD));
 
-  it('15 páginas; A-100 é a 3 e A-800 é a 15', async () => {
+  it('15 páginas; o título do carimbo leva às folhas úteis (plantas, elevações, cortes, schedules)', async () => {
     const sheets = await listSheets(data());
     expect(sheets).toHaveLength(15);
-    expect(pickPages(sheets)).toEqual({ plan: 3, schedule: 15 });
+    expect(sheets[2]).toMatchObject({ sheet: 'A-100', title: expect.stringContaining('Floor Plans') });
+    expect(sheets[14]).toMatchObject({ sheet: 'A-800', title: expect.stringContaining('Schedules') });
+    const useful = sheets.filter((s) => classifySheet(s, '', 1) !== 'skip').map((s) => s.page);
+    expect(useful).toEqual(expect.arrayContaining([3, 6, 7, 9, 15]));
+    expect(useful).not.toContain(1);
   }, 60_000);
 
   it('a A-100 traz as cotas da parede norte e as notas de convenção', async () => {

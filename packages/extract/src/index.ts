@@ -1,4 +1,4 @@
-export { readPageText, formatPageText, listSheets, pickPages, subsetPdf, pageCount } from './pdf';
+export { readPageText, formatPageText, listSheets, subsetPdf, pageCount } from './pdf';
 export type { PageText, TextLine, TextRun, SheetInfo } from './pdf';
 export { ExtractionOutput, WallOut, OpeningOut, OpeningTypeOut, WallTypeOut, HeaderScheduleOut } from './schema';
 export { toProject, convert, reviewReport, derivedStudLengths } from './convert';
@@ -11,10 +11,15 @@ export {
   finish,
   normalizeSources,
   autoPages,
+  selectPages,
+  droppedWarning,
+  API_REQUEST_LIMIT,
   apiErrorInfo,
   ExtractError,
   DEFAULT_MODEL,
   DEFAULT_MAX_TOKENS,
   MAX_AUTO_PAGES,
 } from './client';
-export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, Effort } from './client';
+export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, Effort, DroppedPage } from './client';
+export { classifySheet, choosePages, AUTO_PAGE_BUDGET, AUTO_BYTE_BUDGET } from './select';
+export type { SheetCategory, Candidate } from './select';

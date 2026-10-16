@@ -13,8 +13,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { buildRequest, ExtractError, extractWalls, finish, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
-import { formatPageText, listSheets, pickPages, readPageText } from './pdf';
+import { buildRequest, droppedWarning, ExtractError, extractWalls, finish, selectPages, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
+import { formatPageText, readPageText } from './pdf';
 import { RESPONSE_SCHEMA } from './prompt';
 
 export const USAGE = `extract — planta em PDF → JSON de paredes do panelizer, para revisão
@@ -37,6 +37,8 @@ Opções:
   --date <texto>         carimbo das folhas (vai para projeto.json)
   --revision <texto>     idem
   --wall-height <medida> altura da parede (subfloor ao topo da double top) quando os desenhos não trazem cortes
+  --header-height <med> base do header (topo do RO) do subfloor quando o projeto não dá; sem isto, 82 1/2" (P2)
+  --sill-height <medida> peitoril das janelas do subfloor quando as elevações não dão
   --snow <psf>           carga de neve no solo, --width <medida> largura da edificação, --wind <mph>,
   --exposure <B|C|D>     dados do estrutural que o conjunto de arquiteto não traz (só onde a IA não leu)
   --floors <n>           pavimentos acima das paredes portantes; --floor-span <center|clear> apoio do piso
@@ -83,6 +85,8 @@ export interface ExtractArgs {
   date?: string;
   revision?: string;
   wallHeight?: string;
+  headerHeight?: string;
+  sillHeight?: string;
   snow?: number;
   width?: string;
   wind?: number;
@@ -185,6 +189,12 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       case '--wall-height':
         args.wallHeight = value();
         break;
+      case '--header-height':
+        args.headerHeight = value();
+        break;
+      case '--sill-height':
+        args.sillHeight = value();
+        break;
       case '--revision':
         args.revision = value();
         break;
@@ -266,18 +276,22 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
   }
 
   try {
-    // Páginas: explícitas ou pelo carimbo.
+    // Páginas: explícitas ou pelo carimbo (planta, schedules, estrutural, elevações e cortes; `select.ts`).
     let pages = args.pages;
     if (pages === undefined) {
-      const sheets = await listSheets(pdf);
-      const picked = pickPages(sheets);
-      if (picked.plan === undefined) {
-        io.stderr('erro: nenhuma folha A-1xx encontrada pelo carimbo; informe --pages');
-        io.stderr(`  folhas: ${sheets.map((s) => `${s.page}=${s.sheet ?? '?'}`).join(' ')}`);
+      const name = inputPath.split(/[\/]/).pop() ?? 'planta.pdf';
+      const selection = await selectPages([{ kind: 'pdf', name, data: pdf }], args.level);
+      pages = selection.pages[0] ?? [];
+      if (pages.length === 0) {
+        io.stderr('erro: nenhuma folha útil reconhecida pelo carimbo; informe --pages');
         return 1;
       }
-      pages = picked.schedule === undefined ? [picked.plan] : [picked.plan, picked.schedule];
-      io.stdout(`páginas pelo carimbo: ${pages.join(',')}`);
+      const label = (p: number) => {
+        const info = selection.sheets.get(`0:${p}`);
+        return `${p}=${info?.sheet ?? '?'}`;
+      };
+      io.stdout(`páginas pelo carimbo: ${pages.map(label).join(' ')}`);
+      for (const w of droppedWarning(selection.dropped)) io.stderr(`aviso: ${w}`);
     }
 
     io.mkdir(outDir);
@@ -289,6 +303,8 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
       date: args.date,
       revision: args.revision,
       wallHeight: args.wallHeight,
+      headerHeight: args.headerHeight,
+      sillHeight: args.sillHeight,
       building: Object.keys(building).length > 0 ? building : undefined,
       floorsSupported: args.floors,
       floorSpan: args.floorSpan,

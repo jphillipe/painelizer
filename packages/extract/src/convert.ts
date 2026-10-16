@@ -16,6 +16,10 @@ export interface ConvertOptions {
   studLength?: readonly number[];
   /** Altura de parede quando os desenhos não trazem cortes (o modelo deixa `wallHeight` null); medida em texto. */
   wallHeight?: string;
+  /** Base do header (topo do RO) do subfloor quando o projeto não dá; ausente = padrão da fábrica (P2). */
+  headerHeight?: string;
+  /** Peitoril das janelas do subfloor, para os tipos de janela em que o modelo não leu; medida em texto. */
+  sillHeight?: string;
   /** Dados do estrutural que o conjunto de arquiteto não traz; cada campo só entra onde o modelo deixou null. */
   building?: {
     groundSnowLoad?: number;
@@ -53,13 +57,66 @@ export interface Converted {
 
 const PLATE = 1.5;
 
+/** P2 (resposta da fábrica): topo dos RO a 82 1/2" do subfloor quando o projeto não indica outra altura. */
+export const FACTORY_HEADER_HEIGHT = `6' - 10 1/2"`;
+
+/** Altura de header do projeto: lida, senão informada pelo humano, senão a padrão da fábrica. */
+export function projectHeaderHeight(out: ExtractionOutput, opts: ConvertOptions): { value: string; factory: boolean } {
+  const given = out.headerHeight ?? opts.headerHeight;
+  return given === null || given === undefined ? { value: FACTORY_HEADER_HEIGHT, factory: true } : { value: given, factory: false };
+}
+
+/** Peitoril de um tipo de janela: lido, senão informado pelo humano. */
+function sillOf(t: ExtractionOutput['openingTypes'][number], opts: ConvertOptions): string | null {
+  return t.kind === 'window' ? (t.sillHeight ?? opts.sillHeight ?? null) : null;
+}
+
+/**
+ * Aviso das aberturas que ficam com a altura padrão da fábrica (P2) porque nem o projeto nem o humano deram:
+ * portas sem altura própria e janelas sem altura própria nem peitoril. Vazio quando a altura veio do projeto.
+ */
+export function defaultHeightWarnings(out: ExtractionOutput, opts: ConvertOptions = {}): string[] {
+  const header = projectHeaderHeight(out, opts);
+  if (!header.factory) return [];
+  const types = new Map(out.openingTypes.map((t) => [t.tag, t]));
+  const ids: string[] = [];
+  for (const w of out.walls) {
+    for (const o of w.openings) {
+      if (o.headerHeight !== null || isUnplaced(o) || isUnsized(o) || needsDoorHeight(o)) continue;
+      const t = o.tag === null ? undefined : types.get(o.tag);
+      const kind = t?.kind ?? o.type;
+      if (kind === 'window' && t !== undefined && sillOf(t, opts) !== null) continue;
+      ids.push(o.id);
+    }
+  }
+  if (ids.length === 0) return [];
+  return [
+    `extração ALTURA_PADRAO: ${ids.length} abertura(s) sem altura no projeto ficam com o topo do RO a ${FACTORY_HEADER_HEIGHT} ` +
+      `do subfloor (padrão da fábrica, P2): ${ids.slice(0, 10).join(', ')}${ids.length > 10 ? '…' : ''} — confira nas ` +
+      'elevações ou informe a altura do header / do peitoril',
+  ];
+}
+
 function strip<T extends Record<string, unknown>>(o: T): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(o)) if (v !== null && v !== undefined) out[k] = v;
   return out;
 }
 
-function openingJson(o: OpeningOut): Record<string, unknown> {
+/**
+ * Porta ou vão sem tag com a largura do RO lida e sem a altura: o RO vai do subfloor à base do header (P4), então
+ * a altura do RO é a altura de header do projeto. Só nesse caso; o resto continua como a leitura deu.
+ */
+function needsDoorHeight(o: OpeningOut): boolean {
+  return o.tag === null && o.type === 'door' && o.roughWidth !== null && o.roughHeight === null;
+}
+
+/** Abertura sem tag nem medida que dê o RO: não dá para enquadrar; fica fora com aviso, como a sem posição. */
+function isUnsized(o: OpeningOut): boolean {
+  return o.tag === null && !needsDoorHeight(o) && (o.roughWidth === null || o.roughHeight === null);
+}
+
+function openingJson(o: OpeningOut, headerHeight: string): Record<string, unknown> {
   return strip({
     id: o.id,
     tag: o.tag,
@@ -67,12 +124,12 @@ function openingJson(o: OpeningOut): Record<string, unknown> {
     center: o.center,
     offset: o.center === null ? o.offset : null,
     roughWidth: o.roughWidth,
-    roughHeight: o.roughHeight,
+    roughHeight: needsDoorHeight(o) ? (o.headerHeight ?? headerHeight) : o.roughHeight,
     headerHeight: o.headerHeight,
   });
 }
 
-function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions): Record<string, unknown> {
+function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions, headerHeight: string): Record<string, unknown> {
   const inPlan = w.start !== null && w.end !== null;
   const ends = strip({ start: w.endsStart, end: w.endsEnd });
   // Dados estruturais do humano só em parede portante e só onde o modelo não leu.
@@ -92,7 +149,7 @@ function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions
     floorSpan,
     level: w.level,
     wallType: w.wallType,
-    openings: w.openings.filter((o) => !isUnplaced(o)).map(openingJson),
+    openings: w.openings.filter((o) => !isUnplaced(o) && !isUnsized(o)).map((o) => openingJson(o, headerHeight)),
   });
 }
 
@@ -105,15 +162,31 @@ function isUnplaced(o: OpeningOut): boolean {
  * Aberturas sem posição ficam fora do projeto (decisão do humano, 2026-10-15): a parede sai em painéis sem
  * elas e o revisor recebe um aviso por abertura, em vez de nada ser gerado até existir o editor.
  */
-export function unplacedOpenings(out: ExtractionOutput): string[] {
+export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {}): string[] {
+  const header = projectHeaderHeight(out, opts).value;
   return out.walls.flatMap((w) =>
-    w.openings
-      .filter(isUnplaced)
-      .map(
-        (o) =>
-          `extração ABERTURA_SEM_POSICAO: parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): a leitura não ` +
-          'achou a cota do eixo — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição',
-      ),
+    w.openings.flatMap((o) => {
+      const what = `parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'})`;
+      if (isUnplaced(o)) {
+        return [
+          `extração ABERTURA_SEM_POSICAO: ${what}: a leitura não achou a cota do eixo — os painéis da parede saem ` +
+            'SEM esta abertura; enquadre na obra ou informe a posição',
+        ];
+      }
+      if (isUnsized(o)) {
+        return [
+          `extração ABERTURA_SEM_MEDIDA: ${what}: sem tag no schedule e sem largura/altura do RO na leitura — os ` +
+            'painéis da parede saem SEM esta abertura; enquadre na obra ou informe o RO',
+        ];
+      }
+      if (needsDoorHeight(o)) {
+        return [
+          `extração ALTURA_RO_PORTA: ${what}: a leitura deu a largura do RO (${o.roughWidth}) mas não a altura — ` +
+            `RO do subfloor até a base do header, ${o.headerHeight ?? header} (P4); confira`,
+        ];
+      }
+      return [];
+    }),
   );
 }
 
@@ -147,7 +220,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
       width: t.width,
       height: t.height,
       frame: t.kind === 'door' ? t.frame : null,
-      sillHeight: t.kind === 'window' ? t.sillHeight : null,
+      sillHeight: sillOf(t, opts),
       roughWidth: t.roughWidth,
       roughHeight: t.roughHeight,
       description: t.description,
@@ -168,7 +241,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
     studThickness: 1.5,
     plateThickness: 1.5,
     studLength: studLength.length > 0 ? studLength : null,
-    headerHeight: out.headerHeight,
+    headerHeight: projectHeaderHeight(out, opts).value,
     // O CLI exige neve e largura juntas; sem as duas, a tabela IRC não é consultada.
     building: building['groundSnowLoad'] !== undefined && building['buildingWidth'] !== undefined ? building : null,
     openingTypes: Object.keys(openingTypes).length > 0 ? openingTypes : null,
@@ -179,7 +252,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
     date: opts.date,
     revision: opts.revision,
     config,
-    walls: out.walls.map((w) => wallJson(w, height, opts)),
+    walls: out.walls.map((w) => wallJson(w, height, opts, projectHeaderHeight(out, opts).value)),
   });
 }
 
@@ -191,7 +264,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
 export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Converted {
   const project = toProject(out, opts);
   const problems: string[] = [];
-  const warnings: string[] = unplacedOpenings(out);
+  const warnings: string[] = [...unplacedOpenings(out, opts), ...defaultHeightWarnings(out, opts)];
   const noHeight = wallsWithoutHeight(out, opts);
   if (noHeight.length > 0) {
     // O parser do CLI reclamaria de `studLength`; a causa é a altura, e é isso que o revisor precisa saber.
