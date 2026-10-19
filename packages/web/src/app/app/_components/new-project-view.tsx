@@ -2,22 +2,25 @@
 
 import { ArrowLeftIcon, OctagonXIcon, RotateCcwIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { textFromDraft } from '@/lib/editor/draft';
+import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
 import type { ExtractJob, ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
 import { generatePanels } from '../_actions/generate-panels';
 import { AdvancedImport } from './advanced-import';
+import { useProjectCheck } from './editor/use-project-check';
+import { WallEditor } from './editor/wall-editor';
 import { ExtractProgress } from './extract-progress';
 import { PreviewCard } from './preview-card';
 import { ResultView } from './result-view';
 import { SamplePicker } from './sample-picker';
 import { StepBar, type StepId } from './step-bar';
 import { UploadForm } from './upload-form';
-import { WallsReview } from './walls-review';
 
 export interface NewProjectViewProps {
   examples: readonly Example[];
@@ -26,8 +29,9 @@ export interface NewProjectViewProps {
 }
 
 /**
- * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos
- * leva de volta aos passos concluídos. Estado fica no cliente até a S22 (projetos salvos com URL própria).
+ * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos leva de
+ * volta aos passos concluídos. O passo 02 é o editor (S21): o projeto vive no `editorReducer` (draft, seleção,
+ * histórico) e a leitura da IA (`outcome`) fica como proveniência. Estado no cliente até a S22.
  */
 export function NewProjectView({ examples, aiEnabled, illustration }: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(1);
@@ -35,6 +39,8 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
   const [job, setJob] = useState<ExtractJob | undefined>(undefined);
   const extracting = job !== undefined;
   const [result, setResult] = useState<GenerateResult | undefined>(undefined);
+  const [editor, dispatch] = useReducer(editorReducer, initialEditorState);
+  const check = useProjectCheck(editor.draft, editor.revision);
 
   const generate = useAction(generatePanels, {
     onSuccess: ({ data }) => {
@@ -46,19 +52,29 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
     onError: ({ error }) => toast.error(error.serverError ?? error.validationErrors?.projectText?._errors?.[0] ?? 'Could not generate panels.'),
   });
 
+  const openProject = (text: string, source: DraftSource) => {
+    dispatch({ type: 'load', text, source });
+    setResult(undefined);
+    setStep(2);
+  };
   const onOutcome = (o: ExtractOutcome) => {
     setOutcome(o);
-    setResult(undefined);
-    if (o.ok) setStep(2);
+    if (o.ok) openProject(o.projectText, 'extraction');
     else toast.error(o.message);
   };
-  const runProject = (projectText: string) => {
-    if (projectText.trim() === '') return;
-    generate.execute({ projectText });
+  const openFile = (text: string, source: DraftSource) => {
+    if (text.trim() === '') return;
+    setOutcome(undefined);
+    openProject(text, source);
+  };
+  const runProject = () => {
+    if (editor.draft === undefined) return;
+    generate.execute({ projectText: textFromDraft(editor.draft) });
   };
   const startOver = () => {
     setOutcome(undefined);
     setResult(undefined);
+    dispatch({ type: 'reset' });
     setStep(1);
   };
 
@@ -66,7 +82,8 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step, extracting]);
 
-  const done: StepId[] = [...(outcome?.ok ? [1 as const] : []), ...(result ? [1 as const, 2 as const] : [])];
+  const done: StepId[] = [...(editor.draft !== undefined ? [1 as const] : []), ...(result ? [1 as const, 2 as const] : [])];
+  const okOutcome = outcome?.ok ? outcome : undefined;
 
   return (
     <div className="space-y-8">
@@ -74,8 +91,8 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
         <p className="eyebrow">New project</p>
         <h1>From drawings to panels.</h1>
         <p className="max-w-2xl text-ink-2">
-          Upload the plan set. The AI reads the walls, you check them, and the engine builds every fabrication sheet. Nothing is
-          built before your review.
+          Upload the plan set. The AI reads the walls, you check and fix them in the editor, and the engine builds every
+          fabrication sheet. Nothing is built before your review.
         </p>
       </header>
 
@@ -94,9 +111,9 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
               <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} />
             </div>
             <div className="space-y-4 rounded-md border bg-card p-6">
-              <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={runProject} />
+              <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={(text) => openFile(text, 'sample')} />
               <Separator />
-              <AdvancedImport onProjectText={runProject} onOutcome={onOutcome} />
+              <AdvancedImport onProjectText={(text) => openFile(text, 'file')} onOutcome={onOutcome} />
             </div>
           </div>
           <PreviewCard illustration={illustration} outcome={outcome} />
@@ -107,17 +124,22 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
         <section key="review" className="step-enter no-print space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="eyebrow">02 · Review walls</p>
-            <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-              <ArrowLeftIcon /> Back to drawings
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
+                <ArrowLeftIcon /> Back to drawings
+              </Button>
+              <Button variant="outline" size="sm" onClick={startOver}>
+                <RotateCcwIcon /> Start over
+              </Button>
+            </div>
           </div>
-          {outcome?.ok ? (
-            <WallsReview outcome={outcome} pending={generate.isPending} onGenerate={runProject} onOutcome={onOutcome} />
+          {editor.draft !== undefined || editor.loadError !== undefined ? (
+            <WallEditor state={editor} dispatch={dispatch} outcome={okOutcome} check={check} pending={generate.isPending} onGenerate={runProject} onOutcome={onOutcome} />
           ) : (
             <Alert variant="destructive">
               <OctagonXIcon />
               <AlertTitle>Nothing to review</AlertTitle>
-              <AlertDescription>{outcome?.message ?? 'Upload drawings or pick a sample first.'}</AlertDescription>
+              <AlertDescription>{outcome && !outcome.ok ? outcome.message : 'Upload drawings or pick a sample first.'}</AlertDescription>
             </Alert>
           )}
         </section>
@@ -128,7 +150,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
           <div className="no-print flex flex-wrap items-center justify-between gap-3">
             <p className="eyebrow">03 · Panels</p>
             <div className="flex gap-2">
-              {outcome?.ok ? (
+              {editor.draft !== undefined ? (
                 <Button variant="ghost" size="sm" onClick={() => setStep(2)}>
                   <ArrowLeftIcon /> Back to review
                 </Button>

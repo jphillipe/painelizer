@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 // `server-only` lança fora do React Server; nos testes vira módulo vazio.
 vi.mock('server-only', () => ({}));
 
-const { exampleText, generate, listExamples } = await import('./panels.service');
+const { check, exampleText, generate, listExamples } = await import('./panels.service');
 
 describe('panels.service.generate', () => {
   it('casa-exemplo: 7 painéis, arquivos de lista e folhas, sem avisos', () => {
@@ -54,6 +54,26 @@ describe('panels.service.generate', () => {
     const r = generate(text);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.problems[0]).toMatch(/header fora da tabela/);
+  });
+});
+
+describe('panels.service.check', () => {
+  it('mesmos painéis e avisos do generate, sem arquivos', () => {
+    for (const id of ['casa-exemplo', 'house-28x40', 'ringgold-checkpoint']) {
+      const c = check(exampleText(id) as string);
+      const g = generate(exampleText(id) as string);
+      if (!c.ok || !g.ok) throw new Error('should build');
+      expect(c).toEqual({ ok: true, projectName: g.projectName, panels: g.panels, warnings: g.warnings });
+      expect('files' in c).toBe(false);
+    }
+  });
+
+  it('problemas iguais aos do generate', () => {
+    expect(check('{')).toEqual(generate('{'));
+    const bad = JSON.stringify({ name: 'x', config: { studSpacing: 16, studLength: [92.625] }, walls: [{ id: 'W1', length: 96, height: 97, section: '2x4', exterior: false, bearing: false, openings: [{ id: 'D', type: 'door', offset: 90, roughWidth: 38, roughHeight: 82.5 }] }] });
+    const r = check(bad);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.problems[0]).toMatch(/parede W1/);
   });
 });
 

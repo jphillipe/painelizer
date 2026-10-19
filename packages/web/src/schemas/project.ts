@@ -6,3 +6,6 @@ export const generatePanelsSchema = z.object({
 });
 
 export type GeneratePanelsInput = z.infer<typeof generatePanelsSchema>;
+
+/** Checagem do editor (S21): mesmo texto, sem gerar arquivos. */
+export const checkProjectSchema = generatePanelsSchema;

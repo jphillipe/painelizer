@@ -20,6 +20,11 @@ export type GenerateResult =
   | { ok: true; projectName: string; panels: PanelSummary[]; files: GeneratedFile[]; warnings: string[] }
   | { ok: false; problems: string[] };
 
+/** Checagem do editor (S21): o que o motor diria, sem os arquivos. */
+export type CheckResult =
+  | { ok: true; projectName: string; panels: PanelSummary[]; warnings: string[] }
+  | { ok: false; problems: string[] };
+
 export interface Example {
   id: string;
   label: string;

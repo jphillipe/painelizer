@@ -114,7 +114,7 @@ de aviso (`HEADER_JACKS_BELOW_TABLE`) sempre em mono.
 | Table | cabeçalho 13px uppercase ink-3; linhas com borda line-faint; números alinhados à direita em mono. |
 | Badge | `success` ok, `warning` gold-600, `destructive` err, `outline`; texto 12px/600 mono para códigos. |
 | Alert | `default` (info, borda navy), `destructive` (err), `warning` (gold-600). Mensagem do motor em `<pre>` mono dentro do Alert. |
-| Form, Input, Textarea, Select, Checkbox | sempre via `Form` do shadcn com react-hook-form; erro de campo em err 13px abaixo do campo; Textarea de JSON em mono 13px. |
+| Form, Input, Textarea, Select, Checkbox | formulários que **submetem** sempre via `Form` do shadcn com react-hook-form; erro de campo em err 13px abaixo do campo; Textarea de JSON em mono 13px. **Inspetores** (painel de propriedades do editor, S21) são a exceção: inputs controlados que confirmam campo a campo no blur/Enter e recebem valores de fora durante o arraste — o `reset()` do RHF briga com isso. |
 | Dialog | shadow-2, raio 3px; só para confirmações. |
 | Separator, Skeleton, Sonner | padrão. Toast só para resultado de ação assíncrona longa. |
 
@@ -126,7 +126,7 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
 
 ### App shell
 - Header 64px, fundo navy-900, texto papel: logotipo "Panelizer" (Barlow 600) + "· National Lumber" (ink
-  claro), nav à direita ("Viewer", "Extract", depois "Projects"). Link ativo com sublinhado gold.
+  claro), nav à direita ("New project", depois "Projects"). Link ativo com sublinhado gold.
 - Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho seguem o **takeoff da
   National Lumber**: cabeçalho (eyebrow + h1 + parágrafo), **barra de passos** numerada (círculo navy cheio no
   ativo, sublinhado dourado; passos feitos também cheios), e o passo 1 em duas colunas 5/12 + 7/12: à esquerda
@@ -176,7 +176,10 @@ Server Component     →  service                                               
   Revalidação por `revalidatePath`/`revalidateTag` dentro da action.
 - **Services** (`src/services/*.service.ts`, `import 'server-only'`): toda a regra de negócio do app.
   Funções puras ou com `deps` injetáveis, testadas no vitest sem Next. Nenhum componente importa `core`,
-  `cli` ou `extract`: só o service. `panels.service` (gerar), `extract.service` (PDF → JSON, resposta
+  `cli` ou `extract`: só o service. **Exceção única (S21):** `src/lib/editor/*` importa o `core` puro (units,
+  `frameWalls`, `resolveOpening`, geometria do eixo) para o editor validar e desenhar a planta no cliente sem
+  ida ao servidor; é a única camada do cliente que o faz, e os componentes importam só a lib. `cli` e `extract`
+  nunca entram no cliente; o motor continua rodando no servidor (`generatePanels`, `checkProject`). `panels.service` (gerar), `extract.service` (PDF → JSON, resposta
   gravada, checagem da chave), `projects.service` (S22).
 - **ky** (`src/lib/http.ts`): instância única (`prefixUrl`, `timeout`, `retry`, hooks que convertem erro
   HTTP em `ServiceError`), usada só dentro de services e só onde há HTTP de verdade. Motor e extração rodam
@@ -201,11 +204,12 @@ services/                regra de negócio, só servidor
 schemas/                 zod compartilhado cliente/servidor
 types/                   tipos que trafegam servidor → cliente
 lib/                     utilidades puras (files, zip, http, safe-action, utils)
+lib/editor/              modelo do editor (S21): draft do projeto, issues, estado, geometria — único lugar do cliente que importa core
 ```
 
 Regra: um componente ou action só sai de `app/<rota>/_*` para `components/` ou para uma pasta compartilhada
 quando uma segunda rota o usar. Imports dentro da rota são relativos (`./upload-form`, `../_actions/x`).
-Hoje: `app/app/` (nova obra: upload, revisão, resultado).
+Hoje: `app/app/` (nova obra: upload, editor, resultado); o editor vive em `app/app/_components/editor/`.
 
 ## 8. Acessibilidade e idioma
 

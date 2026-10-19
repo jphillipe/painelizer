@@ -37,15 +37,20 @@ export function csvsOf(files: readonly GeneratedFile[]): GeneratedFile[] {
   return files.filter((f) => f.path.endsWith('.csv'));
 }
 
-/** `Casa 28x40 (visão)` → `casa-28x40-visao-panels.zip`. */
-export function zipName(projectName: string): string {
+/** Slug ASCII do nome do projeto para nomes de arquivo (`casa-28x40-visao`); vazio vira `project`. */
+export function projectSlug(projectName: string): string {
   const slug = projectName
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return `${slug === '' ? 'project' : slug}-panels.zip`;
+  return slug === '' ? 'project' : slug;
+}
+
+/** `Casa 28x40 (visão)` → `casa-28x40-visao-panels.zip`. */
+export function zipName(projectName: string): string {
+  return `${projectSlug(projectName)}-panels.zip`;
 }
 
 /** Tamanho em bytes do texto em UTF-8, formatado (`1.2 KB`). */

@@ -34,7 +34,7 @@ export function AdvancedImport({ onProjectText, onOutcome }: AdvancedImportProps
         <div className="space-y-2">
           <Label htmlFor="project-file">Project file (.json)</Label>
           <Input id="project-file" type="file" accept=".json,application/json" onChange={(e) => void read(e.target.files?.[0], onProjectText)} />
-          <p className="text-ink-3">The engine’s own input format. Generates panels directly.</p>
+          <p className="text-ink-3">The engine’s own input format. Opens in the editor.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="response-file">Recorded AI response (.json)</Label>

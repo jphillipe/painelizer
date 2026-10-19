@@ -538,4 +538,65 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     browser embutido com a 28x40: 16 arquivos listados, zip de 38 KB com assinatura PK e nome
     `casa-28x40-visao-panels.zip`, `bom.csv` avulso, regras `@media print` presentes. Testes do web: 31.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**
+  Planejada em 2026-10-19 (plano aprovado pelo humano) em quatro subitens. Decisões do humano: core puro no cliente
+  só via `src/lib/editor/*` (validação geométrica instantânea; emenda em 10-design §7); checagem do motor com
+  debounce (action `checkProject`, ~600 ms, sem arquivos; Generate continua manual); canvas com seleção, arraste
+  de pontas e aberturas com snap (1", Shift 1/8"), pan/zoom, Delete/Esc/Ctrl+Z, parede nova por botão, sem
+  desenho livre. Hipóteses: passo 02 inteiro vira o editor (exemplos e Advanced caem nele); formato solto abre
+  sem canvas; unidade interna polegadas em número e serialização em número; inspetor sem react-hook-form;
+  catálogo (openingTypes/headerSchedule) só leitura nesta sessão.
+  - [x] **S21.0 — Modelo, issues, checagem; editor sem canvas nem edição.** Feita em 2026-10-19. `lib/editor/draft.ts`
+    (`ProjectDraft`, espelho tolerante do JSON do CLI com medidas em polegadas e forma de catálogo preservada;
+    `draftFromText`/`textFromDraft` com ida e volta testada contra `parseProject` nos 3 exemplos e na leitura
+    gravada do Ringgold; `$comment`/`wallType`/chaves desconhecidas sobrevivem; `nextWallId`/`nextOpeningId`),
+    `measure.ts` (pés-pol ↔ polegadas com sinal), `problems.ts` (`Issue` com parede/abertura/painel a partir das
+    strings do parser, do motor e da extração, por varredura de ids inteiros; `draftIssues` para o que o modelo já
+    sabe), `provenance.ts` (confiança e evidência da IA por id), `state.ts` (reducer com `load`/`reset`/`select`,
+    `commit` com histórico e transação de arraste, undo/redo). Service `check()` + action `checkProject` +
+    `CheckResult`; core exporta `axisOf`/`along`/`across`/`pointAt` e ganha `sideEffects: false`. Web:
+    `NewProjectView` com `useReducer` (exemplos, Advanced e extração caem no passo 2; Generate manda
+    `textFromDraft`); `editor/wall-editor.tsx` (cabeçalho com badges e status da checagem, downloads do draft,
+    `ProjectDataForm`, `IssuesList` clicável com "stale", `WallList` com seleção, notas e relatório da IA),
+    `useProjectCheck` (debounce 600 ms, resultado marcado pela revisão, resposta antiga descartada);
+    `walls-review.tsx` removido. Conferido no browser: 28x40 abre no passo 2 "Ready · 12 panels" e gera 12
+    painéis / 234 peças / 16 arquivos; Ringgold (solto) com os 2 avisos P30 em S2, clicar no aviso seleciona a
+    parede; leitura gravada sem altura dá 6 problemas por parede e o aviso da abertura sem posição, "Apply"
+    recarrega o draft e fica "Ready · 4 panels". Testes do web: 69 (eram 31). `next build` para conferir o
+    bundle do cliente não rodou (dev server ativo no mesmo `.next`) — fica para a S21.2, quando o core entra de
+    verdade no cliente pela geometria.
+  - [x] **S21.1 — Inspetor e edição (sem canvas).** Feita em 2026-10-19 em sessão autônoma ("faça a próxima
+    sessão"; sem regra de framing). Reducer completo em `lib/editor/state.ts` (`updateProject`/`updateConfig`/
+    `updateBuilding`, `updateWall`, `renameWall`, `moveEndpoint` — ao mover `start`, offsets, centros e studs extras
+    deslocam para as aberturas ficarem no lugar em planta —, `setWallLength`, `addWall` (continua da ponta `end` da
+    parede de referência virando 90° à esquerda, copia altura/seção/pavimento/papel, id pelo padrão dominante),
+    `removeWall`, `addOpening` (primeira tag do catálogo no centro, ou janela 36×48 sem catálogo), `updateOpening`,
+    `renameOpening`, `removeOpening`, `moveOpening`, `endTransaction`; patch com chave `undefined` apaga o campo;
+    arredondamento a 1/16"); `lib/editor/resolve.ts` (`resolveOpening` do core sobre o draft: RO, borda e altura
+    como o motor vê, largura para converter centro ↔ borda, `configFromDraft`). Componentes em
+    `_components/editor/`: `fields.tsx` (`CommitInput` genérico — confirma no blur/Enter, Esc reverte, erro inline,
+    valor de fora só entra sem foco; `MeasureInput`, `NumberInput`, `TextInput`, `MeasureListInput`, `EnumSelect`,
+    `BoolSelect`), `WallProperties` (id, tipo, pavimento, altura; geometria em planta com start/end/comprimento/cantos
+    ou solta com length/layoutOrigin; seção, posição, carga, pavimentos acima, apoio, largura; lista de aberturas;
+    proveniência; issues), `OpeningProperties` (linha resolvida; tamanho por tag ou RO manual; posição por centro ou
+    borda com conversão; alturas; header por marca, especificado ou tabela; jacks/kings), `ProjectProperties`
+    (carimbo, framing, painéis e estoque, building, catálogo e header schedule só leitura, `ProjectDataForm`),
+    `Inspector` (breadcrumb projeto › parede › abertura; remonta por id), `EditorToolbar` (add wall/opening, remove,
+    undo/redo, project settings), `useEditorShortcuts` (Delete/Backspace, Esc, Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, fora
+    de inputs e diálogos). `ProjectDataForm` ganhou `confirm`: com edições pendentes, abre `Dialog` "Discard your
+    edits?" antes de reconverter. `WallEditor` em duas colunas (issues + lista | inspetor sticky), badge "edited".
+    Defeito achado e corrigido no browser: Enter confirmava e o blur na mesma passada confirmava de novo com a prop
+    antiga (dois commits por edição) — `CommitInput` guarda o último valor confirmado num ref. Conferido no browser
+    (Ringgold): jacks 2 em S2-D1 tira o aviso P30 dela ("Ready · 4 panels", 1 aviso), Undo volta aos 2 avisos; Add
+    wall cria S3 depois da selecionada e a seleciona, rename para X9 reflete na lista e no breadcrumb, id repetido
+    mostra "Another wall has this id" sem mudar nada; stud spacing 24" nas configurações recheca o motor; leitura
+    gravada sem altura (4 problemas, Generate desligado) corrigida parede a parede (altura em N1 e S2, pré-corte
+    104 5/8" no projeto) fica "Ready · 2 panels" com os 2 avisos P30 e Generate ligado. Testes do web: 84.
+  - [ ] **S21.2 — Canvas estático.** `lib/editor/geometry.ts` (`planGeometry` via `frameWalls`, fallback eixo ± t/2
+    quando lança, aberturas, `continuation`) e `viewport.ts` (plan↔tela, fit, zoom, pan, snap) + testes;
+    `PlanCanvas` (SVG React com `data-wall-id`/`data-opening-id`, seleção, pan/zoom/fit, rótulos, norte, cor por
+    issue, filtro de pavimento); smoke test com `renderToStaticMarkup`. Browser: 28x40 e casa-exemplo com os cantos
+    como o motor enquadra; cruzar duas paredes pelo inspetor pinta as duas de vermelho sem sumir a casa.
+  - [ ] **S21.3 — Arraste e acabamento.** Arraste de ponta e de abertura com snap, rAF, undo coalescido por
+    transação, `lastGood` anti-flicker, "Add wall" continuando da ponta selecionada, cota da parede selecionada,
+    conversão center↔offset, estados vazio/carregando; marcar S21.
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

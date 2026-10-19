@@ -5,37 +5,58 @@
  */
 
 import 'server-only';
-import { buildProject, BuildError } from 'cli/build';
+import { buildProject, BuildError, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
-import { parseProject, ProjectError } from 'cli/project';
-import type { Example, GenerateResult } from '@/types/panels';
+import { parseProject, ProjectError, type Project } from 'cli/project';
+import type { CheckResult, Example, GenerateResult, PanelSummary } from '@/types/panels';
 
-export type { Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
+export type { CheckResult, Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
 
-/** Nunca lança por causa do projeto: JSON inválido, parser e motor viram `problems`. */
-export function generate(projectText: string): GenerateResult {
+type Run = { ok: true; project: Project; built: BuildResult } | { ok: false; problems: string[] };
+
+/** Parser + motor. Nunca lança por causa do projeto: JSON inválido, parser e motor viram `problems`. */
+function run(projectText: string): Run {
   try {
     const project = parseProject(projectText, 'project');
-    const built = buildProject(project);
-    return {
-      ok: true,
-      projectName: project.name,
-      panels: built.panels.map((p) => ({
-        id: p.id,
-        wallId: p.wallId,
-        length: p.length,
-        pieces: p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
-        weightLb: p.weightLb,
-      })),
-      files: built.files.map((f) => ({ path: f.path, content: f.content })),
-      warnings: built.warnings.map((w) => `${w.panelId} ${w.warning.code}: ${w.warning.message}`),
-    };
+    return { ok: true, project, built: buildProject(project) };
   } catch (e) {
     if (e instanceof ProjectError) return { ok: false, problems: [e.message] };
     if (e instanceof BuildError) return { ok: false, problems: e.problems };
     if (e instanceof RangeError) return { ok: false, problems: [e.message] };
     throw e;
   }
+}
+
+function summarize(built: BuildResult): { panels: PanelSummary[]; warnings: string[] } {
+  return {
+    panels: built.panels.map((p) => ({
+      id: p.id,
+      wallId: p.wallId,
+      length: p.length,
+      pieces: p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
+      weightLb: p.weightLb,
+    })),
+    warnings: built.warnings.map((w) => `${w.panelId} ${w.warning.code}: ${w.warning.message}`),
+  };
+}
+
+/** "Generate panels": painéis, arquivos (folhas, planta, listas) e avisos. */
+export function generate(projectText: string): GenerateResult {
+  const r = run(projectText);
+  if (!r.ok) return r;
+  return {
+    ok: true,
+    projectName: r.project.name,
+    ...summarize(r.built),
+    files: r.built.files.map((f) => ({ path: f.path, content: f.content })),
+  };
+}
+
+/** Checagem do editor (S21): o que o motor diria desta versão do projeto, sem mandar os arquivos. */
+export function check(projectText: string): CheckResult {
+  const r = run(projectText);
+  if (!r.ok) return r;
+  return { ok: true, projectName: r.project.name, ...summarize(r.built) };
 }
 
 /** Os exemplos do CLI, com o texto, para o formulário oferecer. */

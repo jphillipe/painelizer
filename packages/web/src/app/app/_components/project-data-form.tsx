@@ -3,9 +3,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
 import { projectDataSchema } from '@/schemas/extract';
 import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ProjectData } from '@/types/extract';
@@ -16,12 +18,18 @@ export interface ProjectDataFormProps {
   outcome: Extract<ExtractOutcome, { ok: true }>;
   onOutcome: (outcome: ExtractOutcome) => void;
   highlight: boolean;
+  /** Há edições no editor: aplicar reconstrói o projeto a partir da leitura e as descarta — confirmar antes (S21). */
+  confirm?: boolean;
 }
 
-/** Revisão: o que os desenhos não trazem, aplicado à leitura já feita sem chamar a IA de novo. */
-export function ProjectDataForm({ outcome, onOutcome, highlight }: ProjectDataFormProps) {
+/**
+ * Revisão: o que os desenhos não trazem, aplicado à leitura já feita sem chamar a IA de novo. O resultado
+ * recarrega o projeto no editor; com edições pendentes, pede confirmação.
+ */
+export function ProjectDataForm({ outcome, onOutcome, highlight, confirm = false }: ProjectDataFormProps) {
   // `given` pode faltar numa leitura feita antes desta tela existir.
   const form = useForm<ProjectData>({ resolver: zodResolver(projectDataSchema), defaultValues: { ...EMPTY_PROJECT_DATA, ...(outcome.given ?? {}) } });
+  const [pendingData, setPendingData] = useState<ProjectData | undefined>(undefined);
   const { execute, isPending } = useAction(applyProjectData, {
     onSuccess: ({ data }) => {
       if (!data) return;
@@ -38,16 +46,17 @@ export function ProjectDataForm({ outcome, onOutcome, highlight }: ProjectDataFo
       toast.error(error.serverError ?? fieldMsg ?? 'Could not apply the project data.');
     },
   });
+  const apply = (data: ProjectData): void => execute({ output: outcome.output, meta: { model: outcome.model, pagesSent: outcome.pagesSent ?? [] }, data });
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => execute({ output: outcome.output, meta: { model: outcome.model, pagesSent: outcome.pagesSent ?? [] }, data }))}
+        onSubmit={form.handleSubmit((data) => (confirm ? setPendingData(data) : apply(data)))}
         className={highlight ? 'rounded-md border border-warning/50 bg-gold-100/40 p-5' : 'rounded-md border bg-card p-5'}
       >
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <h3>Project data the drawings don’t have</h3>
-          <span className="text-sm text-ink-3">Applied instantly, no new AI call.</span>
+          <span className="text-sm text-ink-3">{confirm ? 'Rebuilds the project from the reading.' : 'Applied instantly, no new AI call.'}</span>
         </div>
         <ProjectDataFields control={form.control} compact />
         <div className="mt-4 flex items-center gap-3">
@@ -63,6 +72,31 @@ export function ProjectDataForm({ outcome, onOutcome, highlight }: ProjectDataFo
           {highlight ? <span className="text-sm text-ink-2">The engine needs at least the wall height.</span> : null}
         </div>
       </form>
+      <Dialog open={pendingData !== undefined} onOpenChange={(open) => !open && setPendingData(undefined)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard your edits?</DialogTitle>
+            <DialogDescription>
+              Applying project data rebuilds the project from the AI reading. Every change you made in the editor is discarded and the undo
+              history is cleared. Heights can also be set per wall in the editor without rebuilding.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingData(undefined)}>
+              Keep my edits
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingData !== undefined) apply(pendingData);
+                setPendingData(undefined);
+              }}
+            >
+              Rebuild from the reading
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

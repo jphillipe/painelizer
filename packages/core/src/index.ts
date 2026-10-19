@@ -90,6 +90,8 @@ export {
   type WallConnections,
 } from './house/connections';
 export { frameWalls, type FrameConnections, type TeeAt, type WallFrame } from './house/frame';
+// Geometria do eixo exposta para o editor de paredes do app (S21) desenhar com as mesmas regras do motor.
+export { across, along, axisOf, crossing, pointAt, type Axis } from './house/axis';
 export { panelizeFrame, panelizeHouse, type HouseResult } from './house/panelizeHouse';
 export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';

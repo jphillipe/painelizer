@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Example } from '@/types/panels';
 
-/** "Try with a sample": escolher um exemplo gera os painéis na hora. */
+/** "Try with a sample": escolher um exemplo abre o projeto no editor (S21). */
 export function SamplePicker({ examples, onPick, disabled }: { examples: readonly Example[]; onPick: (text: string) => void; disabled: boolean }) {
   return (
     <div className="space-y-2">
