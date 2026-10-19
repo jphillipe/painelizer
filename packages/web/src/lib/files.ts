@@ -55,3 +55,39 @@ export function formatSize(content: string): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
+
+export type FileKind = 'csv' | 'plan' | 'sheet' | 'other';
+
+export function fileKind(path: string): FileKind {
+  if (path.endsWith('.csv')) return 'csv';
+  if (path === 'plan.svg') return 'plan';
+  if (path.startsWith('panels/') && path.endsWith('.svg')) return 'sheet';
+  return 'other';
+}
+
+export function mimeOf(path: string): string {
+  if (path.endsWith('.csv')) return 'text/csv';
+  if (path.endsWith('.svg')) return 'image/svg+xml';
+  if (path.endsWith('.json')) return 'application/json';
+  return 'text/plain';
+}
+
+/** `panels/1-W01-P1.svg` → `1-W01-P1.svg`: nome do download avulso (o navegador não cria a pasta). */
+export function baseName(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+const LABELS: Readonly<Record<string, string>> = {
+  'cutlist.csv': 'Cut list, one section per panel',
+  'bom.csv': 'Bill of materials, consolidated',
+  'panels.csv': 'Panel index: wall, level, position, size, pieces, weight, warnings',
+  'plan.svg': 'Panel plan, top view',
+};
+
+/** O que há em cada arquivo, para a aba Files. Folha: "Fabrication sheet <id do painel>". */
+export function fileLabel(path: string, panelId?: string): string {
+  const fixed = LABELS[path];
+  if (fixed !== undefined) return fixed;
+  if (fileKind(path) === 'sheet') return `Fabrication sheet ${panelId ?? baseName(path).replace(/\.svg$/, '')}`;
+  return path;
+}

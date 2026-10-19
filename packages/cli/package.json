@@ -10,6 +10,7 @@
   "exports": {
     "./project": "./src/project.ts",
     "./build": "./src/build.ts",
+    "./main": "./src/main.ts",
     "./examples": "./src/examples.ts"
   },
   "scripts": {

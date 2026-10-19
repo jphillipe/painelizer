@@ -525,7 +525,17 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     em `outcome.output` sem nova chamada); os mesmos campos (`ProjectDataFields`) ficam opcionais no upload.
     Conferido no browser com resposta gravada sem altura: o card aparece destacado, "Apply" remove o problema de
     altura e o motor passa a apontar o que falta de verdade (header fora da tabela sem `floorSpan`).
-  - [ ] **S20.3 — Downloads, zip, impressão.** `zip.ts` (fflate) + teste, aba Files, "Download all", print CSS.
-    Pronto quando o zip descompacta na mesma árvore que `pnpm panelizer build` grava.
+  - [x] **S20.3 — Downloads, zip, impressão.** Feita em 2026-10-19 em sessão autônoma ("faça a próxima sessão";
+    sem regra de framing, abordagem não submetida). `src/lib/zip.ts` (`zipFiles`, fflate `zipSync` nível 6, `mtime`
+    opcional para zip determinístico) com teste que roda o CLI em memória (`cli/main` passou a ser exportado) e
+    confere que o zip descompacta na mesma árvore que `panelizer build --out` grava: mesmos caminhos, mesmo
+    conteúdo, `plan.svg` e 12 folhas da 28x40. `files.ts` ganhou `fileKind`, `mimeOf`, `baseName` e `fileLabel`
+    (o que há em cada arquivo, em inglês); `download.ts` ganhou `downloadBlob`/`downloadBytes`. `ResultView`: aba
+    **Files** (tabela arquivo / conteúdo / tamanho / download avulso, mesma ordem do CLI), "Download all" (zip
+    `<slug>-panels.zip`, no cabeçalho e na aba) e "Print sheets" (vai para Sheets com todas as folhas e chama
+    `window.print()` no render seguinte). Impressão: `.no-print` some (cabeçalho, badges, avisos, abas, lista),
+    `.sheet`/`.plan` sem card, uma folha por página carta paisagem, sem página em branco no fim. Conferido no
+    browser embutido com a 28x40: 16 arquivos listados, zip de 38 KB com assinatura PK e nome
+    `casa-28x40-visao-panels.zip`, `bom.csv` avulso, regras `@media print` presentes. Testes do web: 31.
 - [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { svgFileName } from 'cli/build';
 import type { GeneratedFile, PanelSummary } from '@/types/panels';
-import { csvsOf, formatSize, planOf, sheetFileName, sheetsOf, zipName } from './files';
+import { baseName, csvsOf, fileKind, fileLabel, formatSize, mimeOf, planOf, sheetFileName, sheetsOf, zipName } from './files';
 
 const files: GeneratedFile[] = [
   { path: 'cutlist.csv', content: 'a' },
@@ -40,5 +40,24 @@ describe('files', () => {
     expect(formatSize('abc')).toBe('3 B');
     expect(formatSize('x'.repeat(2048))).toBe('2.0 KB');
     expect(formatSize('ação')).toBe('6 B');
+  });
+
+  it('fileKind, mimeOf e baseName pela árvore do CLI', () => {
+    expect(files.map((f) => fileKind(f.path))).toEqual(['csv', 'csv', 'csv', 'plan', 'sheet', 'sheet']);
+    expect(fileKind('readme.txt')).toBe('other');
+    expect(mimeOf('cutlist.csv')).toBe('text/csv');
+    expect(mimeOf('panels/1-W01-P1.svg')).toBe('image/svg+xml');
+    expect(mimeOf('x.json')).toBe('application/json');
+    expect(mimeOf('x')).toBe('text/plain');
+    expect(baseName('panels/1-W01-P1.svg')).toBe('1-W01-P1.svg');
+    expect(baseName('bom.csv')).toBe('bom.csv');
+  });
+
+  it('fileLabel: fixos para CSV e planta, id do painel na folha, caminho no resto', () => {
+    expect(fileLabel('bom.csv')).toMatch(/Bill of materials/);
+    expect(fileLabel('plan.svg')).toMatch(/Panel plan/);
+    expect(fileLabel('panels/1-W01-P1.svg', '1-W01-P1')).toBe('Fabrication sheet 1-W01-P1');
+    expect(fileLabel('panels/W_1.svg')).toBe('Fabrication sheet W_1');
+    expect(fileLabel('other.txt')).toBe('other.txt');
   });
 });

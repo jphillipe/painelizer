@@ -277,8 +277,23 @@
   .no-print {
     display: none !important;
   }
+  main {
+    padding: 0;
+  }
+  /* Só a folha no papel: sem card, sem borda; uma folha por página, carta paisagem. */
+  .sheet,
+  .plan {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    break-inside: avoid;
+  }
   .sheet {
     break-after: page;
+  }
+  .sheet:last-child {
+    break-after: auto;
   }
   @page {
     size: letter landscape;
