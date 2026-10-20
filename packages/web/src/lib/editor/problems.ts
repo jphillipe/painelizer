@@ -21,6 +21,8 @@ export interface Issue {
   text: string;
   code?: string;
   wallId?: string;
+  /** Outras paredes citadas na mesma mensagem (`paredes N1 e S1 se cruzam`): contam nas duas. */
+  alsoWalls?: string[];
   openingId?: string;
   panelId?: string;
   /** Caminho do campo (`walls[2].openings[0].center`), quando a mensagem o traz. */
@@ -111,6 +113,8 @@ function locate(issue: Issue, text: string, ids: IdIndex): Issue {
   const found = idsInMessage(body, ids);
   if (found.wallId !== undefined) issue.wallId = found.wallId;
   if (found.openingId !== undefined) issue.openingId = found.openingId;
+  const others = wallIdsIn(body, ids).filter((w) => w !== issue.wallId);
+  if (issue.wallId !== undefined && others.length > 0) issue.alsoWalls = others;
   return issue;
 }
 
@@ -150,6 +154,16 @@ export function idsInMessage(text: string, ids: IdIndex, preferWall?: string): {
     }
   }
   return out;
+}
+
+/** Todas as paredes citadas numa mensagem como token inteiro (mais longas primeiro), na ordem em que aparecem. */
+export function wallIdsIn(text: string, ids: IdIndex): string[] {
+  const hits: { id: string; at: number }[] = [];
+  for (const id of [...ids.walls].sort((a, b) => b.length - a.length)) {
+    const m = whole(id).exec(text);
+    if (m !== null && !hits.some((h) => h.at <= m.index && m.index < h.at + h.id.length)) hits.push({ id, at: m.index });
+  }
+  return hits.sort((a, b) => a.at - b.at).map((h) => h.id);
 }
 
 /** O que o modelo já sabe antes do parser: campos obrigatórios ausentes, ids repetidos, formato misto, catálogo. */
@@ -202,9 +216,11 @@ export function draftIssues(draft: ProjectDraft, load: readonly DraftProblem[]):
 export function byWall(issues: readonly Issue[]): Map<string | undefined, Issue[]> {
   const out = new Map<string | undefined, Issue[]>();
   for (const i of issues) {
-    const list = out.get(i.wallId) ?? [];
-    list.push(i);
-    out.set(i.wallId, list);
+    for (const wallId of [i.wallId, ...(i.alsoWalls ?? [])]) {
+      const list = out.get(wallId) ?? [];
+      list.push(i);
+      out.set(wallId, list);
+    }
   }
   return out;
 }

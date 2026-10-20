@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { downloadText } from '@/lib/download';
 import { draftFormat, openingCount, textFromDraft } from '@/lib/editor/draft';
+import { geometryIssues, planGeometry, type PlanGeometry } from '@/lib/editor/geometry';
 import { byWall, countIssues, draftIssues, idIndex, parseEngineResult, parseWarning, type Issue } from '@/lib/editor/problems';
 import { provenanceIndex } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
@@ -16,6 +17,7 @@ import { ProjectDataForm } from '../project-data-form';
 import { EditorToolbar } from './editor-toolbar';
 import { Inspector } from './inspector';
 import { IssuesList } from './issues-list';
+import { PlanCanvas } from './plan-canvas';
 import { useEditorShortcuts } from './use-editor-shortcuts';
 import type { CheckState } from './use-project-check';
 import { WallList } from './wall-list';
@@ -40,14 +42,18 @@ const FORMAT_LABEL = { plan: 'in plan', loose: 'by length', mixed: 'mixed format
 export function WallEditor({ state, dispatch, outcome, check, pending, onGenerate, onOutcome }: WallEditorProps) {
   const { draft } = state;
   const provenance = useMemo(() => provenanceIndex(outcome?.walls), [outcome]);
+  const geometry = useMemo<PlanGeometry | undefined>(() => (draft === undefined ? undefined : planGeometry(draft)), [draft]);
   const issues = useMemo<Issue[]>(() => {
     if (draft === undefined) return [];
     const ids = idIndex(draft);
     const own = draftIssues(draft, state.loadProblems);
     const engine = check.result === undefined ? [] : parseEngineResult(check.result.ok ? { warnings: check.result.warnings } : { problems: check.result.problems }, ids);
+    // A geometria no cliente vê o mesmo erro que o motor dirá ("planta: …"): não repetir quando a checagem já chegou.
+    const said = new Set(engine.map((i) => i.text.replace(/^(planta|motor): /, '')));
+    const geo = geometry === undefined ? [] : geometryIssues(geometry, ids).filter((i) => !said.has(i.text));
     const reading = (outcome?.warnings ?? []).filter((w) => w.startsWith('extração ')).map((w) => parseWarning(w, ids));
-    return [...own, ...engine, ...reading];
-  }, [draft, state.loadProblems, check.result, outcome]);
+    return [...own, ...geo, ...engine, ...reading];
+  }, [draft, state.loadProblems, check.result, outcome, geometry]);
   const issuesByWall = useMemo(() => byWall(issues), [issues]);
   useEditorShortcuts(state, dispatch, draft !== undefined);
 
@@ -107,7 +113,10 @@ export function WallEditor({ state, dispatch, outcome, check, pending, onGenerat
       <EditorToolbar state={state} dispatch={dispatch} />
 
       <div className="grid gap-4 lg:grid-cols-[7fr_5fr] lg:items-start">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
+          {geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0) ? (
+            <PlanCanvas geometry={geometry} selection={state.selection} issuesByWall={issuesByWall} northAngle={draft.northAngle} fitKey={`${state.source ?? ''}:${name}:${draft.walls.length}`} onSelect={select} />
+          ) : null}
           <IssuesList issues={issues} stale={check.stale} checking={check.status === 'checking'} selection={state.selection} onSelect={select} />
           <WallList draft={draft} selection={state.selection} provenance={provenance} issuesByWall={issuesByWall} onSelect={select} />
           {outcome !== undefined && outcome.notes.length > 0 ? (
@@ -127,7 +136,7 @@ export function WallEditor({ state, dispatch, outcome, check, pending, onGenerat
             </details>
           ) : null}
         </div>
-        <div className="lg:sticky lg:top-4">
+        <div className="min-w-0 lg:sticky lg:top-4">
           <Inspector state={state} draft={draft} dispatch={dispatch} provenance={provenance} issues={issues} outcome={outcome} onOutcome={onOutcome} showProjectData={!needsData} />
         </div>
       </div>

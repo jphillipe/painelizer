@@ -23,7 +23,9 @@ describe('parseProblem: mensagens reais do motor e do parser', () => {
 
   it('build.ts: prefixo "parede X:" e "planta:"', () => {
     expect(parseProblem('parede S2: header fora da tabela R602.7(1) para a abertura S2-D1 (vão 58.5")', ids)).toMatchObject({ wallId: 'S2' });
-    expect(parseProblem('planta: paredes N1 e S1 se cruzam em (10, 20) — divida uma delas', ids)).toMatchObject({ source: 'engine', wallId: 'N1' });
+    const crossing = parseProblem('planta: paredes N1 e S1 se cruzam em (10, 20) — divida uma delas', ids);
+    expect(crossing).toMatchObject({ source: 'engine', wallId: 'N1', alsoWalls: ['S1'] });
+    expect([...byWall([crossing]).keys()]).toEqual(['N1', 'S1']);
   });
 
   it('connections.ts: id com hífen não casa dentro de outro id', () => {

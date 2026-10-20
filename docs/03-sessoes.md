@@ -591,11 +591,27 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     mostra "Another wall has this id" sem mudar nada; stud spacing 24" nas configurações recheca o motor; leitura
     gravada sem altura (4 problemas, Generate desligado) corrigida parede a parede (altura em N1 e S2, pré-corte
     104 5/8" no projeto) fica "Ready · 2 panels" com os 2 avisos P30 e Generate ligado. Testes do web: 84.
-  - [ ] **S21.2 — Canvas estático.** `lib/editor/geometry.ts` (`planGeometry` via `frameWalls`, fallback eixo ± t/2
-    quando lança, aberturas, `continuation`) e `viewport.ts` (plan↔tela, fit, zoom, pan, snap) + testes;
-    `PlanCanvas` (SVG React com `data-wall-id`/`data-opening-id`, seleção, pan/zoom/fit, rótulos, norte, cor por
-    issue, filtro de pavimento); smoke test com `renderToStaticMarkup`. Browser: 28x40 e casa-exemplo com os cantos
-    como o motor enquadra; cruzar duas paredes pelo inspetor pinta as duas de vermelho sem sumir a casa.
+  - [x] **S21.2 — Canvas estático.** Feita em 2026-10-19 em sessão autônoma ("faça a próxima sessão"; sem regra de
+    framing). `lib/editor/geometry.ts`: `planGeometry(draft, lastGood?)` monta a `House` do core (aberturas
+    resolvidas uma a uma; altura/seção/papel com default só para a planta), chama `frameWalls` e devolve por parede
+    as plates como o motor enquadra (retângulo na espessura real, `framed: true`), as aberturas como vãos (`s0`/`s1`
+    do `start`, retângulo; irresolvida tracejada com o que se sabe; sem posição, sem retângulo), `bounds`, pavimentos;
+    quando o core lança (paredes cruzadas, três pontas, `ends` em conflito) a casa não some: `houseError` com as
+    paredes citadas, fallback eixo ± t/2 em todas (`framed: false`) e, com `lastGood`, as não citadas mantêm as
+    plates anteriores; parede sem eixo (diagonal, pontas iguais) vai para `broken`. `geometryIssues` liga o erro a
+    todas as paredes citadas (`Issue.alsoWalls`, que `byWall` indexa também — "paredes W01 e W05 se cruzam" conta
+    nas duas). `viewport.ts`: planta ↔ tela sem transform CSS, `fitViewport`, `zoomAt` (âncora fixa), `panBy`,
+    `snap`. `PlanCanvas` (SVG React): paredes com a espessura real (externa gold-100, interna paper-3), aberturas
+    como vãos com batentes e linha de vidro, ids (rodados nas verticais), origem, seta do norte, cota da parede
+    selecionada, filtro de pavimento quando há mais de um, Fit; clique seleciona parede ou abertura pelos `data-*`
+    do próprio SVG (sincronizado com lista e inspetor), arrastar o fundo faz pan, roda dá zoom no ponteiro (listener
+    não passivo); reenquadra só quando outro projeto entra (`fitKey`), não a cada edição; parede com problema em
+    vermelho, com aviso em dourado escuro, não enquadrada tracejada. Issues de geometria entram na lista sem repetir
+    as do motor (`planta: …`). Smoke test com `renderToStaticMarkup` (vitest passou a incluir `*.test.tsx`; sem
+    jsdom). Conferido no browser com a 28x40: 5 paredes e 7 aberturas desenhadas, W01 com o avanço do canto
+    (485 1/2") e W02 encostando (27'-6 1/2"); clicar na parede e na abertura pela planta seleciona lista e inspetor;
+    `start y` de W05 = −50 cruza W01 → badge "plan doesn’t close", W01 e W05 vermelhas, as 5 tracejadas mas na tela;
+    Undo volta a "Ready · 12 panels". `next build` rodou limpo (bundle do cliente com o core). Testes do web: 101.
   - [ ] **S21.3 — Arraste e acabamento.** Arraste de ponta e de abertura com snap, rAF, undo coalescido por
     transação, `lastGood` anti-flicker, "Add wall" continuando da ponta selecionada, cota da parede selecionada,
     conversão center↔offset, estados vazio/carregando; marcar S21.
