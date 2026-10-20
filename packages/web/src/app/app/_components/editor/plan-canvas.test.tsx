@@ -22,10 +22,22 @@ describe('PlanCanvas (SSR)', () => {
     expect(html.match(/data-wall-id="/g)).toHaveLength(5);
     expect(html.match(/data-opening-id="/g)).toHaveLength(7);
     expect(html).toContain('data-wall-id="W02" data-selected="true"');
+    expect(html).not.toContain('data-handle'); // sem callbacks de arraste, sem alças
     expect(html).toContain('27&#x27;-6 1/2&quot;'); // plate de W02 (encosta em W01 e W03: 336 − 2 × 2.75), com as aspas escapadas pelo React
     expect(html).toContain('>N<');
     expect(html).toContain('0,0');
     expect(html).toContain('Plan, 5 walls');
+  });
+
+  it('com arraste ligado, a parede selecionada ganha alças nas duas pontas', () => {
+    const d = load(EXAMPLES[1]!.text);
+    const html = renderToStaticMarkup(
+      <PlanCanvas geometry={planGeometry(d)} selection={{ kind: 'wall', wallId: 'W01' }} issuesByWall={new Map()} fitKey="t" onSelect={() => {}} onEndpointDrag={() => {}} onOpeningDrag={() => {}} onDragEnd={() => {}} initialSize={{ width: 800, height: 600 }} />,
+    );
+    expect(html).toContain('data-handle="start"');
+    expect(html).toContain('data-handle="end"');
+    expect(html.match(/data-handle="/g)).toHaveLength(2);
+    expect(html).toContain('Shift = 1/8');
   });
 
   it('parede com problema fica vermelha; casa que não fecha mostra o badge e tracejado', () => {

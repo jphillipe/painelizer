@@ -4,11 +4,12 @@ import { MaximizeIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { OpeningGeom, PlanGeometry, WallGeom } from '@/lib/editor/geometry';
+import type { Point } from '@/lib/editor/draft';
+import { alongFromStart, draggedEndpoint, draggedOpeningStart, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
-import { fitViewport, panBy, planToScreen, rectToScreen, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
+import { fitViewport, panBy, planToScreen, rectToScreen, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
 import { cn } from '@/lib/utils';
 
 export interface PlanCanvasProps {
@@ -19,6 +20,10 @@ export interface PlanCanvasProps {
   /** Muda quando outro projeto entra (ou o número de paredes): reenquadra. Edições comuns não mexem no zoom. */
   fitKey: string;
   onSelect: (s: Selection) => void;
+  /** Arraste (S21.3): cada chamada leva o mesmo `txn` durante um arraste, para virar um undo só. */
+  onEndpointDrag?: ((wallId: string, end: 'start' | 'end', point: Point, txn: string) => void) | undefined;
+  onOpeningDrag?: ((wallId: string, openingId: string, s0: number, roughWidth: number, txn: string) => void) | undefined;
+  onDragEnd?: (() => void) | undefined;
   /** Tamanho antes de medir o container (SSR e testes). */
   initialSize?: Size | undefined;
   className?: string;
@@ -27,20 +32,34 @@ export interface PlanCanvasProps {
 const WHEEL_ZOOM = 0.0015;
 const CLICK_SLOP_PX = 3;
 const FIT_PADDING_PX = 40;
+const HANDLE_RADIUS = 6;
+const HANDLE_HIT_RADIUS = 12;
+
+type Drag =
+  | { kind: 'pan'; x: number; y: number; moved: boolean; target: EventTarget | null }
+  | { kind: 'endpoint'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; end: 'start' | 'end'; txn: string }
+  | { kind: 'opening'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; openingId: string; grabOffset: number; txn: string };
 
 /**
- * Planta do editor em SVG React (S21.2): paredes com a espessura real e as plates como o motor enquadra,
+ * Planta do editor em SVG React (S21.2/S21.3): paredes com a espessura real e as plates como o motor enquadra,
  * aberturas como vãos, ids, origem e norte. Clique seleciona parede ou abertura (hit-test pelos `data-*` do
- * próprio SVG); arrastar o fundo faz pan; a roda dá zoom na posição do ponteiro. Cada ponto é convertido com
- * o viewport em JS (sem transform CSS), por isso rótulos ficam em pé e traços em px. Arraste de peças: S21.3.
+ * próprio SVG); arrastar o fundo faz pan; a roda dá zoom na posição do ponteiro. A parede selecionada ganha
+ * alças nas pontas: arrastá-las move a ponta ao longo do eixo com snap de 1" (Shift = 1/8"); arrastar uma
+ * abertura desliza o RO pela parede. Um arraste = uma transação = um undo. Cada ponto é convertido com o
+ * viewport em JS (sem transform CSS), por isso rótulos ficam em pé e traços em px.
  */
-export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, initialSize, className }: PlanCanvasProps) {
+export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onDragEnd, initialSize, className }: PlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<Size | undefined>(initialSize);
   const [viewport, setViewport] = useState<Viewport | undefined>(() => (initialSize !== undefined && geometry.bounds !== undefined ? fitViewport(geometry.bounds, initialSize, FIT_PADDING_PX) : undefined));
   const [level, setLevel] = useState<number | 'all'>('all');
-  const drag = useRef<{ x: number; y: number; moved: boolean; target: EventTarget | null } | undefined>(undefined);
+  const drag = useRef<Drag | undefined>(undefined);
+  const frame = useRef<number | undefined>(undefined);
+  const pending = useRef<{ clientX: number; clientY: number; shift: boolean } | undefined>(undefined);
+  // Geometria e viewport mais recentes para o handler do rAF (o closure do evento pode estar velho).
+  const latest = useRef({ geometry, viewport });
+  latest.current = { geometry, viewport };
 
   // Tamanho real do container.
   useEffect(() => {
@@ -72,14 +91,71 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
       setViewport((v) => (v === undefined ? v : zoomAt(v, anchor, Math.exp(-e.deltaY * WHEEL_ZOOM))));
     };
     svg.addEventListener('wheel', onWheel, { passive: false });
-    return () => svg.removeEventListener('wheel', onWheel);
+    return () => {
+      svg.removeEventListener('wheel', onWheel);
+      if (frame.current !== undefined) cancelAnimationFrame(frame.current);
+    };
   }, []);
+
+  const toPlan = (clientX: number, clientY: number): Point | undefined => {
+    const svg = svgRef.current;
+    const v = latest.current.viewport;
+    if (svg === null || v === undefined) return undefined;
+    const rect = svg.getBoundingClientRect();
+    return screenToPlan(v, { x: clientX - rect.left, y: clientY - rect.top });
+  };
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>): void => {
     if (e.button !== 0 && e.button !== 1) return;
-    drag.current = { x: e.clientX, y: e.clientY, moved: false, target: e.target };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const el = e.target instanceof Element ? e.target : null;
+    const base = { x: e.clientX, y: e.clientY, moved: false, target: e.target };
+    const handleEl = el?.closest('[data-handle]');
+    const openingEl = el?.closest('[data-opening-id]');
+    const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
+    const txn = `drag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (handleEl !== null && handleEl !== undefined && wallId !== undefined && onEndpointDrag !== undefined) {
+      drag.current = { ...base, kind: 'endpoint', wallId, end: handleEl.getAttribute('data-handle') === 'start' ? 'start' : 'end', txn };
+    } else if (openingEl !== null && openingEl !== undefined && wallId !== undefined && onOpeningDrag !== undefined) {
+      const openingId = openingEl.getAttribute('data-opening-id') ?? '';
+      const wall = geometry.walls.find((w) => w.wallId === wallId);
+      const opening = wall?.openings.find((o) => o.openingId === openingId);
+      const p = toPlan(e.clientX, e.clientY);
+      if (wall !== undefined && opening !== undefined && p !== undefined && opening.rect !== undefined) {
+        drag.current = { ...base, kind: 'opening', wallId, openingId, grabOffset: alongFromStart(wall, p) - opening.s0, txn };
+      } else {
+        drag.current = { ...base, kind: 'pan' };
+      }
+    } else {
+      drag.current = { ...base, kind: 'pan' };
+    }
+    // Ponteiro sintético (testes) não tem id ativo: capturar é conveniência, não requisito.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* sem captura */
+    }
   };
+
+  const applyDrag = (): void => {
+    frame.current = undefined;
+    const d = drag.current;
+    const ev = pending.current;
+    pending.current = undefined;
+    if (d === undefined || ev === undefined || d.kind === 'pan') return;
+    const p = toPlan(ev.clientX, ev.clientY);
+    const wall = latest.current.geometry.walls.find((w) => w.wallId === d.wallId);
+    if (p === undefined || wall === undefined) return;
+    const step = ev.shift ? SNAP_FINE : SNAP_COARSE;
+    if (d.kind === 'endpoint') {
+      onEndpointDrag?.(d.wallId, d.end, draggedEndpoint(wall, d.end, p, step), d.txn);
+    } else {
+      const opening = wall.openings.find((o) => o.openingId === d.openingId);
+      if (opening === undefined) return;
+      const s0 = draggedOpeningStart(wall, opening, alongFromStart(wall, p), d.grabOffset, step);
+      if (s0 !== opening.s0) onOpeningDrag?.(d.wallId, d.openingId, s0, opening.s1 - opening.s0, d.txn);
+    }
+  };
+
   const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>): void => {
     const d = drag.current;
     if (d === undefined) return;
@@ -87,24 +163,42 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
     const dy = e.clientY - d.y;
     if (!d.moved && Math.hypot(dx, dy) < CLICK_SLOP_PX) return;
     d.moved = true;
-    d.x = e.clientX;
-    d.y = e.clientY;
-    setViewport((v) => (v === undefined ? v : panBy(v, dx, dy)));
+    if (d.kind === 'pan') {
+      d.x = e.clientX;
+      d.y = e.clientY;
+      setViewport((v) => (v === undefined ? v : panBy(v, dx, dy)));
+      return;
+    }
+    // Peça: no máximo um dispatch por quadro.
+    pending.current = { clientX: e.clientX, clientY: e.clientY, shift: e.shiftKey };
+    if (frame.current === undefined) frame.current = requestAnimationFrame(applyDrag);
   };
-  const onPointerUp = (e: ReactPointerEvent<SVGSVGElement>): void => {
+
+  const finishDrag = (e: ReactPointerEvent<SVGSVGElement>, cancelled: boolean): void => {
     const d = drag.current;
     drag.current = undefined;
-    if (d === undefined || d.moved) return;
+    if (frame.current !== undefined) {
+      cancelAnimationFrame(frame.current);
+      frame.current = undefined;
+      if (!cancelled) applyDrag();
+    }
+    pending.current = undefined;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (d === undefined) return;
+    if (d.kind !== 'pan' && d.moved) {
+      onDragEnd?.();
+      return;
+    }
+    if (d.moved || cancelled) return;
+    // Clique sem arraste: seleciona o que estava sob o ponteiro.
     const el = d.target instanceof Element ? d.target : null;
-    const openingEl = el?.closest('[data-opening-id]');
-    const wallEl = el?.closest('[data-wall-id]');
-    const wallId = wallEl?.getAttribute('data-wall-id') ?? undefined;
-    const openingId = openingEl?.getAttribute('data-opening-id') ?? undefined;
+    const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
+    const openingId = el?.closest('[data-opening-id]')?.getAttribute('data-opening-id') ?? undefined;
     if (wallId !== undefined && openingId !== undefined) onSelect({ kind: 'opening', wallId, openingId });
     else if (wallId !== undefined) onSelect({ kind: 'wall', wallId });
     else onSelect({ kind: 'none' });
-    e.currentTarget.releasePointerCapture(e.pointerId);
   };
+
   const fit = (): void => {
     if (size !== undefined && bounds !== undefined) setViewport(fitViewport(bounds, size, FIT_PADDING_PX));
   };
@@ -112,11 +206,13 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   const visible = geometry.walls.filter((w) => level === 'all' || w.level === level);
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
   const selectedOpening = selection.kind === 'opening' ? selection.openingId : undefined;
+  const selectedGeom = selectedWall === undefined ? undefined : visible.find((w) => w.wallId === selectedWall);
   const severity = (wallId: string): 'problem' | 'warning' | undefined => {
     const list = issuesByWall.get(wallId);
     if (list === undefined || list.length === 0) return undefined;
     return list.some((i) => i.severity === 'problem') ? 'problem' : 'warning';
   };
+  const draggable = onEndpointDrag !== undefined;
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -140,7 +236,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
             ))}
           </div>
         ) : null}
-        <span className="ml-auto text-[12px] text-ink-3">Click to select · drag to pan · scroll to zoom</span>
+        <span className="ml-auto text-[12px] text-ink-3">{draggable ? 'Click to select · drag ends and openings (Shift = 1/8") · drag the background to pan · scroll to zoom' : 'Click to select · drag to pan · scroll to zoom'}</span>
         <Button variant="ghost" size="xs" onClick={fit} title="Fit the plan in view">
           <MaximizeIcon /> Fit
         </Button>
@@ -155,16 +251,14 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
           className="block touch-none select-none cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={() => {
-            drag.current = undefined;
-          }}
+          onPointerUp={(e) => finishDrag(e, false)}
+          onPointerCancel={(e) => finishDrag(e, true)}
         >
           {viewport !== undefined && size !== undefined ? (
             <>
               <Origin viewport={viewport} />
               {visible.map((w) => (
-                <Wall key={w.wallId} wall={w} viewport={viewport} selected={selectedWall === w.wallId} selectedOpening={selectedWall === w.wallId ? selectedOpening : undefined} severity={severity(w.wallId)} />
+                <Wall key={w.wallId} wall={w} viewport={viewport} selected={selectedWall === w.wallId} selectedOpening={selectedWall === w.wallId ? selectedOpening : undefined} severity={severity(w.wallId)} draggable={draggable} />
               ))}
               {geometry.broken.map((b) => {
                 const a = planToScreen(viewport, b.start);
@@ -177,6 +271,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
                   </g>
                 );
               })}
+              {selectedGeom !== undefined && draggable ? <Handles wall={selectedGeom} viewport={viewport} /> : null}
               {northAngle !== undefined ? <North x={size.width - 28} y={28} angle={northAngle} /> : null}
             </>
           ) : null}
@@ -189,7 +284,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   );
 }
 
-function Wall({ wall, viewport, selected, selectedOpening, severity }: { wall: WallGeom; viewport: Viewport; selected: boolean; selectedOpening: string | undefined; severity: 'problem' | 'warning' | undefined }) {
+function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }: { wall: WallGeom; viewport: Viewport; selected: boolean; selectedOpening: string | undefined; severity: 'problem' | 'warning' | undefined; draggable: boolean }) {
   const r = rectToScreen(viewport, wall.rect);
   const stroke = severity === 'problem' ? 'var(--color-destructive)' : selected ? 'var(--color-gold)' : severity === 'warning' ? 'var(--color-warning)' : 'var(--color-navy-900)';
   const mid = planToScreen(viewport, { x: (wall.plateStart.x + wall.plateEnd.x) / 2, y: (wall.plateStart.y + wall.plateEnd.y) / 2 });
@@ -203,15 +298,33 @@ function Wall({ wall, viewport, selected, selectedOpening, severity }: { wall: W
       <title>{`${wall.wallId} · ${wall.section} · ${wall.exterior ? 'exterior' : 'interior'} · plate ${formatMeasure(wall.plateLength)}${wall.framed ? '' : ' (not framed: plan doesn’t close)'}`}</title>
       <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={wall.exterior ? 'var(--color-gold-100)' : 'var(--color-paper-3)'} stroke={stroke} strokeWidth={selected ? 2.5 : 1.25} strokeDasharray={wall.framed ? undefined : '5 3'} />
       {wall.openings.map((o) => (
-        <Opening key={o.openingId} wall={wall} opening={o} viewport={viewport} selected={selectedOpening === o.openingId} />
+        <Opening key={o.openingId} wall={wall} opening={o} viewport={viewport} selected={selectedOpening === o.openingId} draggable={draggable} />
       ))}
       <Label x={label.x} y={label.y} text={wall.wallId} tone={selected ? 'selected' : 'ink'} vertical={wall.dir === 'y' && labelOffset === 0} />
-      {selected ? <Label x={dim.x} y={dim.y} text={formatMeasure(wall.plateLength)} tone="muted" vertical={wall.dir === 'y'} /> : null}
+      {selected ? <Label x={dim.x} y={dim.y} text={`${formatMeasure(wall.plateLength)} plate · ${formatMeasure(wall.length)} axis`} tone="muted" vertical={wall.dir === 'y'} /> : null}
     </g>
   );
 }
 
-function Opening({ wall, opening, viewport, selected }: { wall: WallGeom; opening: OpeningGeom; viewport: Viewport; selected: boolean }) {
+/** Alças nas pontas da parede selecionada; o hit-test é o círculo maior transparente. */
+function Handles({ wall, viewport }: { wall: WallGeom; viewport: Viewport }) {
+  const cursor = wall.dir === 'x' ? 'ew-resize' : 'ns-resize';
+  return (
+    <g data-wall-id={wall.wallId} aria-hidden>
+      {(['start', 'end'] as const).map((end) => {
+        const p = planToScreen(viewport, wall[end]);
+        return (
+          <g key={end} data-handle={end} style={{ cursor }}>
+            <circle cx={p.x} cy={p.y} r={HANDLE_HIT_RADIUS} fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={HANDLE_RADIUS} fill="var(--color-gold)" stroke="var(--color-navy-900)" strokeWidth={1.5} />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+function Opening({ wall, opening, viewport, selected, draggable }: { wall: WallGeom; opening: OpeningGeom; viewport: Viewport; selected: boolean; draggable: boolean }) {
   if (opening.rect === undefined) return null;
   const r = rectToScreen(viewport, opening.rect);
   const horizontal = wall.dir === 'x';
@@ -219,7 +332,7 @@ function Opening({ wall, opening, viewport, selected }: { wall: WallGeom; openin
   const center = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   const wide = (horizontal ? r.w : r.h) > 22;
   return (
-    <g data-opening-id={opening.openingId} className="cursor-pointer">
+    <g data-opening-id={opening.openingId} style={{ cursor: draggable ? (horizontal ? 'ew-resize' : 'ns-resize') : 'pointer' }}>
       <title>{`${opening.openingId} · ${opening.type ?? '?'} · ${formatMeasure(opening.s1 - opening.s0)} wide, left edge ${formatMeasure(opening.s0)} from start${opening.error === undefined ? '' : ` · ${opening.error}`}`}</title>
       {/* Vão: apaga a parede; batentes nas duas pontas; janela ganha a linha do vidro no eixo. */}
       <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="var(--color-card)" stroke={selected ? stroke : 'none'} strokeWidth={2} strokeDasharray={opening.resolved ? undefined : '3 2'} />
@@ -237,7 +350,7 @@ function Opening({ wall, opening, viewport, selected }: { wall: WallGeom; openin
         </>
       )}
       {!opening.resolved ? <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={stroke} strokeWidth={1} strokeDasharray="3 2" /> : null}
-      {wide ? <Label x={horizontal ? center.x : center.x + r.w / 2 + 8} y={horizontal ? center.y - r.h / 2 - 7 : center.y} text={opening.openingId} tone={selected ? 'selected' : 'muted'} small vertical={!horizontal} /> : null}
+      {wide ? <Label x={horizontal ? center.x : center.x + r.w / 2 + 8} y={horizontal ? center.y - r.h / 2 - 7 : center.y} text={selected ? `${opening.openingId} · edge ${formatMeasure(opening.s0)}` : opening.openingId} tone={selected ? 'selected' : 'muted'} small vertical={!horizontal} /> : null}
     </g>
   );
 }

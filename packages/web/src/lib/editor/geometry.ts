@@ -243,6 +243,28 @@ export function endpointOnAxis(w: WallGeom, end: 'start' | 'end', p: Point): Poi
   return w.dir === 'x' ? { x: p.x, y: fixed.y } : { x: fixed.x, y: p.y };
 }
 
+/** Ponta arrastada: segue o ponteiro só ao longo do eixo, com a coordenada móvel arredondada a `step` (snap). */
+export function draggedEndpoint(w: WallGeom, end: 'start' | 'end', pointer: Point, step: number): Point {
+  const p = endpointOnAxis(w, end, pointer);
+  return w.dir === 'x' ? { x: snapTo(p.x, step), y: p.y } : { x: p.x, y: snapTo(p.y, step) };
+}
+
+/**
+ * Abertura arrastada: borda esquerda = posição do ponteiro no eixo menos onde ela foi pega (`grabOffset`),
+ * com snap e presa dentro da parede (entre `start` e `end`).
+ */
+export function draggedOpeningStart(w: WallGeom, o: OpeningGeom, along: number, grabOffset: number, step: number): number {
+  const width = o.s1 - o.s0;
+  const max = Math.max(0, w.length - width);
+  return Math.min(max, Math.max(0, snapTo(along - grabOffset, step)));
+}
+
+function snapTo(value: number, step: number): number {
+  if (!(step > 0)) return value;
+  const r = Math.round(value / step) * step;
+  return r === 0 ? 0 : r;
+}
+
 /** Problemas que só a geometria vê: casa que não fecha e paredes sem eixo. */
 export function geometryIssues(g: PlanGeometry, ids: IdIndex): Issue[] {
   const issues: Issue[] = [];

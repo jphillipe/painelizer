@@ -3,7 +3,7 @@ import { frameWalls, type House } from 'core';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject } from 'cli/project';
 import { draftFromText, type ProjectDraft } from './draft';
-import { alongFromStart, endpointOnAxis, geometryIssues, planGeometry, pointAlong, segmentRect, union } from './geometry';
+import { alongFromStart, draggedEndpoint, draggedOpeningStart, endpointOnAxis, geometryIssues, planGeometry, pointAlong, segmentRect, union } from './geometry';
 import { idIndex } from './problems';
 
 const load = (text: string): ProjectDraft => {
@@ -150,5 +150,25 @@ describe('helpers', () => {
     expect(endpointOnAxis(w03, 'end', { x: 12, y: 999 })).toEqual({ x: 12, y: 336 });
     const w02 = g.walls[1]!;
     expect(endpointOnAxis(w02, 'start', { x: 999, y: 12 })).toEqual({ x: 480, y: 12 });
+  });
+
+  it('draggedEndpoint: só no eixo, com snap de 1" ou 1/8"', () => {
+    const g = planGeometry(house28());
+    const w01 = g.walls[0]!; // (0,0) → (480,0)
+    expect(draggedEndpoint(w01, 'end', { x: 455.6, y: 30 }, 1)).toEqual({ x: 456, y: 0 });
+    expect(draggedEndpoint(w01, 'end', { x: 455.6, y: 30 }, 0.125)).toEqual({ x: 455.625, y: 0 });
+    expect(draggedEndpoint(w01, 'start', { x: -0.4, y: 30 }, 1)).toEqual({ x: 0, y: 0 });
+    const w02 = g.walls[1]!; // vertical em x=480
+    expect(draggedEndpoint(w02, 'end', { x: 12, y: 300.49 }, 1)).toEqual({ x: 480, y: 300 });
+  });
+
+  it('draggedOpeningStart: segue o ponteiro menos a pega, com snap, presa na parede', () => {
+    const g = planGeometry(house28());
+    const w01 = g.walls[0]!;
+    const p1 = w01.openings[0]!; // porta 168..206 (38 de largura)
+    expect(draggedOpeningStart(w01, p1, 200.3, 10, 1)).toBe(190);
+    expect(draggedOpeningStart(w01, p1, 200.3, 10, 0.125)).toBe(190.25);
+    expect(draggedOpeningStart(w01, p1, -50, 10, 1)).toBe(0);
+    expect(draggedOpeningStart(w01, p1, 900, 10, 1)).toBe(480 - 38);
   });
 });

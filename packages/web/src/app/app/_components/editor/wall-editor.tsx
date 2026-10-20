@@ -1,7 +1,7 @@
 'use client';
 
 import { DownloadIcon, Loader2Icon, OctagonXIcon } from 'lucide-react';
-import { useMemo, type Dispatch } from 'react';
+import { useEffect, useMemo, useRef, type Dispatch } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,13 @@ const FORMAT_LABEL = { plan: 'in plan', loose: 'by length', mixed: 'mixed format
 export function WallEditor({ state, dispatch, outcome, check, pending, onGenerate, onOutcome }: WallEditorProps) {
   const { draft } = state;
   const provenance = useMemo(() => provenanceIndex(outcome?.walls), [outcome]);
-  const geometry = useMemo<PlanGeometry | undefined>(() => (draft === undefined ? undefined : planGeometry(draft)), [draft]);
+  // Última geometria em que a casa fechava: no fallback (casa aberta no meio de um arraste), as paredes não
+  // citadas no erro mantêm as plates dela em vez de pular para o eixo nu (anti-flicker).
+  const lastGood = useRef<PlanGeometry | undefined>(undefined);
+  const geometry = useMemo<PlanGeometry | undefined>(() => (draft === undefined ? undefined : planGeometry(draft, lastGood.current)), [draft]);
+  useEffect(() => {
+    if (geometry !== undefined && geometry.houseError === undefined && geometry.walls.length > 0) lastGood.current = geometry;
+  }, [geometry]);
   const issues = useMemo<Issue[]>(() => {
     if (draft === undefined) return [];
     const ids = idIndex(draft);
@@ -115,7 +121,17 @@ export function WallEditor({ state, dispatch, outcome, check, pending, onGenerat
       <div className="grid gap-4 lg:grid-cols-[7fr_5fr] lg:items-start">
         <div className="min-w-0 space-y-4">
           {geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0) ? (
-            <PlanCanvas geometry={geometry} selection={state.selection} issuesByWall={issuesByWall} northAngle={draft.northAngle} fitKey={`${state.source ?? ''}:${name}:${draft.walls.length}`} onSelect={select} />
+            <PlanCanvas
+              geometry={geometry}
+              selection={state.selection}
+              issuesByWall={issuesByWall}
+              northAngle={draft.northAngle}
+              fitKey={`${state.source ?? ''}:${name}:${draft.walls.length}`}
+              onSelect={select}
+              onEndpointDrag={(wallId, end, point, txn) => dispatch({ type: 'moveEndpoint', wallId, end, point, txn })}
+              onOpeningDrag={(wallId, openingId, s0, roughWidth, txn) => dispatch({ type: 'moveOpening', wallId, openingId, s0, roughWidth, txn })}
+              onDragEnd={() => dispatch({ type: 'endTransaction' })}
+            />
           ) : null}
           <IssuesList issues={issues} stale={check.stale} checking={check.status === 'checking'} selection={state.selection} onSelect={select} />
           <WallList draft={draft} selection={state.selection} provenance={provenance} issuesByWall={issuesByWall} onSelect={select} />

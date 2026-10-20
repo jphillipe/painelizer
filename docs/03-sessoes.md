@@ -537,7 +537,7 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     `.sheet`/`.plan` sem card, uma folha por página carta paisagem, sem página em branco no fim. Conferido no
     browser embutido com a 28x40: 16 arquivos listados, zip de 38 KB com assinatura PK e nome
     `casa-28x40-visao-panels.zip`, `bom.csv` avulso, regras `@media print` presentes. Testes do web: 31.
-- [ ] **S21 — Editor de paredes (canvas SVG + painel de propriedades)**
+- [x] **S21 — Editor de paredes (canvas SVG + painel de propriedades)** — concluída em 2026-10-20 (S21.0–S21.3).
   Planejada em 2026-10-19 (plano aprovado pelo humano) em quatro subitens. Decisões do humano: core puro no cliente
   só via `src/lib/editor/*` (validação geométrica instantânea; emenda em 10-design §7); checagem do motor com
   debounce (action `checkProject`, ~600 ms, sem arquivos; Generate continua manual); canvas com seleção, arraste
@@ -612,7 +612,22 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     (485 1/2") e W02 encostando (27'-6 1/2"); clicar na parede e na abertura pela planta seleciona lista e inspetor;
     `start y` de W05 = −50 cruza W01 → badge "plan doesn’t close", W01 e W05 vermelhas, as 5 tracejadas mas na tela;
     Undo volta a "Ready · 12 panels". `next build` rodou limpo (bundle do cliente com o core). Testes do web: 101.
-  - [ ] **S21.3 — Arraste e acabamento.** Arraste de ponta e de abertura com snap, rAF, undo coalescido por
-    transação, `lastGood` anti-flicker, "Add wall" continuando da ponta selecionada, cota da parede selecionada,
-    conversão center↔offset, estados vazio/carregando; marcar S21.
+  - [x] **S21.3 — Arraste e acabamento.** Feita em 2026-10-20 em sessão autônoma ("faça o próximo item"; sem regra
+    de framing). `geometry.ts` ganhou `draggedEndpoint` (ponta segue o ponteiro só ao longo do eixo, coordenada
+    móvel com snap) e `draggedOpeningStart` (borda esquerda = ponteiro no eixo − onde a abertura foi pega, com snap,
+    presa entre as pontas da parede), testados. `PlanCanvas`: a parede selecionada ganha alças nas pontas
+    (`data-handle`, círculo de 6 px com área de clique de 12 px, cursor pelo eixo); arrastar a alça move a ponta
+    (`moveEndpoint`), arrastar uma abertura desliza o RO (`moveOpening`), arrastar o corpo de uma parede ou o fundo
+    faz pan; snap de 1" e 1/8" com Shift; no máximo um dispatch por quadro (`requestAnimationFrame`, com a geometria
+    e o viewport mais recentes num ref); cada arraste leva um `txn` próprio e termina com `endTransaction` — um
+    arraste = um undo; clique sem movimento (< 3 px) continua selecionando; `setPointerCapture` tolerante a ponteiro
+    sintético. `WallEditor` guarda a última geometria em que a casa fechava e a passa como `lastGood` (paredes não
+    citadas no erro mantêm as plates durante um arraste que abre a casa). Rótulo da parede selecionada mostra plate e
+    eixo; abertura selecionada mostra a borda. "Add wall" já continuava da ponta selecionada (S21.1) e a conversão
+    centro ↔ borda já existia no inspetor (S21.1). Conferido no browser com a 28x40 e eventos de ponteiro sintéticos:
+    arrastar a ponta de W01 −24,3" com 15 px de desvio vertical dá 38'-0" (só no eixo, snap 1"); Undo volta a 40'-0"
+    com um passo só; com Shift, −5,3" dá 37'-6 3/4"; arrastar P1 +30" leva a borda de 14'-0" a 16'-6" sem mudar a
+    seleção; arrastar o corpo de W03 faz pan e não edita; a checagem recalcula ("Ready · 11 panels" com W01 mais
+    curta). Testes do web: 104. Fica para depois da S22: editar o catálogo (openingTypes/headerSchedule) e
+    criar parede desenhando na planta.
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

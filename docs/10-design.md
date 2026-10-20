@@ -160,7 +160,8 @@ Rotas de API: **nenhuma**. Sem route handlers.
 SVG gerado pelo core entra inline (`dangerouslySetInnerHTML`, é código nosso), dentro de Card papel-2, com
 `svg { width: 100%; height: auto }`. A **planta do editor** (S21) não é o `plan.svg` do core: é SVG React desenhado
 pela geometria de `lib/editor` (plates pelo `frameWalls`), com os tokens do tema (`var(--color-…)`), clicável e com
-pan/zoom; `plan.svg` continua sendo a entrega (passo 03 e zip). As folhas mantêm o visual atual (não passam pelo tema; a fábrica lê a
+pan/zoom; a parede selecionada tem alças nas pontas (arrastar move a ponta no eixo, snap 1" / Shift 1/8") e as
+aberturas deslizam pela parede; `plan.svg` continua sendo a entrega (passo 03 e zip). As folhas mantêm o visual atual (não passam pelo tema; a fábrica lê a
 folha, não o site). Impressão: `@media print` esconde `.no-print`, cada `.sheet` com `break-after: page`,
 `@page { size: letter landscape; margin: 0.4in }`.
 
