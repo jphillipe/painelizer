@@ -135,6 +135,21 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(big).toContain('>Casa 28x40</text>');
   });
 
+  it('área de clique por painel (M3): um rect transparente por painel com data-panel-id, por cima de tudo', () => {
+    const hits = tags(svg, /<rect class="panel-hit"[^>]*>/g);
+    expect(hits).toHaveLength(12);
+    expect(hits.map((h) => attr(h, 'data-panel-id'))).toEqual(panels.map((p) => p.id));
+    // 1-W01-P1: do start (−2.75, 0) ao fim do primeiro painel, 5.5" de espessura.
+    const first = hits[0]!;
+    const p1 = panels[0]!;
+    expect(attr(first, 'x')).toBe(px(toPx(Math.min(p1.plan!.start.x, p1.plan!.end.x))));
+    expect(attr(first, 'y')).toBe(px(toPy(2.75)));
+    expect(attr(first, 'width')).toBe(px(Math.abs(p1.plan!.end.x - p1.plan!.start.x) * 2));
+    expect(attr(first, 'height')).toBe('11');
+    expect(svg.indexOf('<g class="panel-hits"')).toBeGreaterThan(svg.lastIndexOf('class="panel-id"'));
+    expect(tags(svg, /<text class="panel-id" data-panel-id="[^"]+"/g)).toHaveLength(12);
+  });
+
   it('determinístico e igual ao snapshot test/__snapshots__/house-28x40-plan.svg', async () => {
     expect(housePlanSvg(house, panels)).toBe(svg);
     await expect(svg).toMatchFileSnapshot('../__snapshots__/house-28x40-plan.svg');

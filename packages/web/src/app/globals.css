@@ -306,6 +306,26 @@
   display: block;
 }
 
+/* Planta de painéis clicável (M3): o core escreve `rect.panel-hit[data-panel-id]` sobre cada painel. */
+.plan-clickable .panel-hit {
+  cursor: pointer;
+  transition: fill-opacity 200ms var(--ease-site);
+  fill: var(--selection);
+  fill-opacity: 0;
+}
+.plan-clickable .panel-hit:hover {
+  fill-opacity: 0.18;
+}
+.plan .panel-hit[data-selected] {
+  fill: var(--selection);
+  fill-opacity: 0.28;
+}
+@media print {
+  .plan .panel-hit {
+    fill-opacity: 0 !important;
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;

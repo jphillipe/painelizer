@@ -2,7 +2,7 @@
 
 import { ArrowLeftIcon, HistoryIcon, OctagonXIcon, RotateCcwIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useWorkspaceLayout } from '@/components/shell-layout';
 import { textFromDraft } from '@/lib/editor/draft';
 import { describeAge, type SavedSession } from '@/lib/editor/persist';
 import { projectFileText, type ParsedProjectFile, type Reading } from '@/lib/editor/project-file';
+import { idIndex } from '@/lib/editor/problems';
 import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
 import type { ExtractJob, ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
@@ -114,6 +115,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
   const resultStale = result !== undefined && resultRevision !== editor.revision;
   const canRegenerate = check.status === 'done' && !check.stale && check.result?.ok === true && !generate.isPending;
   const projectFile = editor.draft === undefined ? undefined : projectFileText(editor.draft, okOutcome);
+  const ids = useMemo(() => (editor.draft === undefined ? undefined : idIndex(editor.draft)), [editor.draft]);
 
   const workspace = step === 2 && editor.draft !== undefined;
   useWorkspaceLayout(workspace);
@@ -153,14 +155,19 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
         />
       ) : (
         <div className="space-y-8">
-          <header className="no-print space-y-3">
-            <p className="eyebrow">New project</p>
-            <h1>From drawings to panels.</h1>
-            <p className="max-w-2xl text-ink-2">
-              Upload the plan set. The AI reads the walls, you check and fix them in the editor, and the engine builds every
-              fabrication sheet. Nothing is built before your review.
-            </p>
-          </header>
+          {step === 1 ? (
+            // O hero só no passo 01 (M3): nos outros, o eyebrow do passo já diz onde se está.
+            <header className="no-print space-y-3">
+              <p className="eyebrow">New project</p>
+              <h1>From drawings to panels.</h1>
+              <p className="max-w-2xl text-ink-2">
+                Upload the plan set. The AI reads the walls, you check and fix them in the editor, and the engine builds every
+                fabrication sheet. Nothing is built before your review.
+              </p>
+            </header>
+          ) : (
+            <h1 className="sr-only">{step === 2 ? 'Review walls' : 'Panels'}</h1>
+          )}
 
           <StepBar active={step} done={done} onGo={setStep} />
 
@@ -207,7 +214,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
                   </Button>
                 </div>
               </div>
-              <ResultView result={result} pending={generate.isPending} projectFile={projectFile} stale={resultStale} canRegenerate={canRegenerate} onRegenerate={runProject} />
+              <ResultView result={result} pending={generate.isPending} projectFile={projectFile} stale={resultStale} canRegenerate={canRegenerate} onRegenerate={runProject} ids={ids} />
             </section>
           ) : null}
         </div>

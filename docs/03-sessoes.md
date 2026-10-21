@@ -701,8 +701,21 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     ao editor; Generate → 15 arquivos com `project.panelizer.json` na aba Files; Back to review, remover W01,
     "Panels" pela barra → "Edited since these panels were generated" + "Generate again"; Start over → dialog,
     "Keep working" fica, confirmar limpa a sessão e volta ao passo 1. Capturas em `out/m2/`.
-  - [ ] **M3 — Resultado que mostra a entrega** (aba Materials com BOM e lista de corte, planta clicável →
-    folha, anterior/próximo, lightbox, avisos agrupados, hero só no passo 01). Toca `core/output/planSvg.ts`.
+  - [x] **M3 — Resultado que mostra a entrega.** Feita em 2026-10-20 (sem regra de framing). Core: `housePlanSvg`
+    escreve `rect.panel-hit[data-panel-id]` por painel por cima de tudo (teste novo; snapshot `house-28x40-plan.svg`
+    regenerado só por isso). CLI: `BuildResult.bom` e `.cutLists` tipados ao lado dos CSVs. Web: `GenerateResult`
+    ganha `bom`/`cutLists`; `plan-view.tsx` (planta clicável, destaque do selecionado), `result-materials.tsx`
+    (BOM por seção com subtotais, total, sobra máxima, peso; lista de corte por painel com link para a folha),
+    `result-sheets.tsx` (lista com peças/peso/avisos, anterior/próximo e ← →, Open em nova aba, Download e Print
+    da folha, lupa 100/150/200 %, cascata limitada e só na primeira montagem), `result-warnings.tsx` (avisos pelos
+    grupos e ajuda do editor, chip abre a folha), `result-view.tsx` com abas Plan · Sheets · Materials · Files,
+    resumo em uma linha e um só "Download all"; hero só no passo 01. Testes: core 12 (+1), cli 113, web 169
+    (+3: agrupamento da BOM, rótulo do estoque, avisos por painel) e o service confere BOM/cut lists da 28x40.
+    Conferido em 1440×900 (Chrome headless por CDP, `cdp-m3.mjs`): passo 03 sem o hero; 12 áreas de clique na
+    planta; clicar em 1-W03-P2 abre a aba Sheets nessa folha; → vai a 1-W03-P3; lupa abre com 100/150/200 %;
+    Materials: 234 peças a comprar, 2 019 ft, 15,5 % de sobra no máximo, 3 294 lb, BOM por seção com subtotais;
+    voltar à planta mostra o painel selecionado destacado; Ringgold: "2 warnings to review" agrupados ("Fewer
+    jack studs than the IRC table × 2") com o chip 1-S2-P1 abrindo a folha. Capturas em `out/m3/`.
   - [ ] **M4 — Motion no editor** (seleção/hover/halo animados, viewport interpolado em Fit, fade do inspetor,
     `commit-flash`, chip de status; `prefers-reduced-motion` cobrindo tudo).
   - [ ] **M5 — Facilidade de uso no editor** (zoom +/−, escala, grade, pinch, nudge por teclado, tooltips com

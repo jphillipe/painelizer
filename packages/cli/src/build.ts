@@ -17,7 +17,7 @@
  * juntos; um projeto com erro não gera nenhum arquivo — meia saída na fábrica é pior que nenhuma.
  */
 
-import { frameWalls, housePlanSvg, panelizeFrame, panelSvg, splitWall, type Panel, type WallFrame, type Warning } from 'core';
+import { cutList, frameWalls, housePlanSvg, panelizeFrame, panelSvg, splitWall, type BomLine, type CutLine, type Panel, type WallFrame, type Warning } from 'core';
 import { bomCsv, cutListCsv, panelsCsv, projectBom } from './csv';
 import type { Project } from './project';
 
@@ -32,6 +32,10 @@ export interface BuildResult {
   files: OutputFile[];
   /** Avisos por painel (`panel.warnings`), com o id do painel. */
   warnings: { panelId: string; warning: Warning }[];
+  /** Lista de material consolidada (a mesma de `bom.csv`), para quem mostra tabela em vez de CSV (M3). */
+  bom: BomLine[];
+  /** Lista de corte por painel, na ordem dos painéis (a mesma de `cutlist.csv`). */
+  cutLists: { panelId: string; lines: CutLine[] }[];
 }
 
 export class BuildError extends Error {
@@ -101,14 +105,13 @@ export function buildProject(project: Project): BuildResult {
     });
   }
 
+  let bom: BomLine[] = [];
   if (problems.length === 0) {
     try {
+      bom = projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths);
       files.unshift(
         { path: 'cutlist.csv', content: cutListCsv(panels) },
-        {
-          path: 'bom.csv',
-          content: bomCsv(projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths)),
-        },
+        { path: 'bom.csv', content: bomCsv(bom) },
         { path: 'panels.csv', content: panelsCsv(panels) },
         ...(project.house === undefined
           ? []
@@ -122,7 +125,8 @@ export function buildProject(project: Project): BuildResult {
   if (problems.length > 0) throw new BuildError(problems);
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));
-  return { panels, files, warnings };
+  const cutLists = panels.map((p) => ({ panelId: p.id, lines: cutList(p) }));
+  return { panels, files, warnings, bom, cutLists };
 }
 
 /** `W01-P1` → `W01-P1.svg`; qualquer caractere fora de [A-Za-z0-9._-] vira `_`. */

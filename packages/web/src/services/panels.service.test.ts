@@ -21,6 +21,12 @@ describe('panels.service.generate', () => {
     if (!r.ok) throw new Error(r.problems.join('\n'));
     expect(r.panels).toHaveLength(12);
     expect(r.panels.reduce((n, p) => n + p.pieces, 0)).toBe(234);
+    // M3: BOM e listas de corte tipadas, as mesmas dos CSVs.
+    expect(r.cutLists).toHaveLength(12);
+    expect(r.cutLists.reduce((n, c) => n + c.lines.reduce((m, l) => m + l.qty, 0), 0)).toBe(234);
+    expect(r.bom.length).toBeGreaterThan(0);
+    expect(r.bom.every((l) => ['commercial', 'precut', 'engineered', 'oversize'].includes(l.kind))).toBe(true);
+    expect(r.bom.some((l) => l.kind === 'precut' && l.stockLength === 92.625)).toBe(true);
     expect(r.files.some((f) => f.path === 'plan.svg')).toBe(true);
     expect(r.warnings).toEqual([]);
   });

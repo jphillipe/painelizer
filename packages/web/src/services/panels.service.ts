@@ -49,6 +49,16 @@ export function generate(projectText: string): GenerateResult {
     projectName: r.project.name,
     ...summarize(r.built),
     files: r.built.files.map((f) => ({ path: f.path, content: f.content })),
+    bom: r.built.bom.map((l) => ({
+      section: l.section,
+      stockLength: l.stockLength,
+      kind: l.engineered ? 'engineered' : l.oversize ? 'oversize' : l.precut ? 'precut' : 'commercial',
+      qty: l.qty,
+      cutTotal: l.cutTotal,
+      waste: l.waste,
+      wastePercent: l.wastePercent,
+    })),
+    cutLists: r.built.cutLists.map((c) => ({ panelId: c.panelId, lines: c.lines.map((x) => ({ role: x.role, section: x.section, length: x.length, qty: x.qty })) })),
   };
 }
 

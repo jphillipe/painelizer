@@ -16,8 +16,39 @@ export interface GeneratedFile {
   content: string;
 }
 
+/** Linha da lista de material (M3): o mesmo que `bom.csv`, tipado para a tabela da tela. */
+export interface BomRow {
+  section: string;
+  /** Polegadas: comercial, pré-corte, ou o próprio corte (engenheirado / oversize). */
+  stockLength: number;
+  kind: 'commercial' | 'precut' | 'engineered' | 'oversize';
+  /** Peças a comprar. */
+  qty: number;
+  /** Soma dos cortes atendidos (polegadas). */
+  cutTotal: number;
+  waste: number;
+  wastePercent: number;
+}
+
+/** Linha da lista de corte de um painel (`cutlist.csv`). */
+export interface CutRow {
+  role: string;
+  section: string;
+  length: number;
+  qty: number;
+}
+
 export type GenerateResult =
-  | { ok: true; projectName: string; panels: PanelSummary[]; files: GeneratedFile[]; warnings: string[] }
+  | {
+      ok: true;
+      projectName: string;
+      panels: PanelSummary[];
+      files: GeneratedFile[];
+      warnings: string[];
+      bom: BomRow[];
+      /** Por painel, na ordem dos painéis. */
+      cutLists: { panelId: string; lines: CutRow[] }[];
+    }
   | { ok: false; problems: string[] };
 
 /** Checagem do editor (S21): o que o motor diria, sem os arquivos. */

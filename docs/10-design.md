@@ -188,7 +188,8 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   aberta só com confiança < 0,9, evidência recolhida). Seleção `project` abre o Dialog de configurações.
 - **Abaixo de `lg`** (`useMediaQuery`, não CSS, para não montar o inspetor duas vezes): planta em cima (45dvh) e
   abas Walls / Issues / Reading / Inspector embaixo; selecionar pela lista abre a aba Inspector.
-- Passos 01 e 03 continuam no container de 1200 px com cabeçalho e barra de passos cheia.
+- Passos 01 e 03 continuam no container de 1200 px com a barra de passos cheia; o cabeçalho hero (eyebrow + h1 +
+  parágrafo) aparece só no passo 01 (M3) — nos outros, o eyebrow do passo ("03 · Panels") é o título.
 
 ### Landing (futura, não implementar agora)
 Mesmos tokens. Hero em navy-950 com eyebrow gold-300, h1 display em papel, parágrafo papel/80, CTA pill gold
@@ -212,9 +213,15 @@ SVG gerado pelo core entra inline (`dangerouslySetInnerHTML`, é código nosso),
 `svg { width: 100%; height: auto }`. A **planta do editor** (S21) não é o `plan.svg` do core: é SVG React desenhado
 pela geometria de `lib/editor` (plates pelo `frameWalls`), com os tokens do tema (`var(--color-…)`), clicável e com
 pan/zoom; a parede selecionada tem alças nas pontas (arrastar move a ponta no eixo, snap 1" / Shift 1/8") e as
-aberturas deslizam pela parede; `plan.svg` continua sendo a entrega (passo 03 e zip). As folhas mantêm o visual atual (não passam pelo tema; a fábrica lê a
-folha, não o site). Impressão: `@media print` esconde `.no-print`, cada `.sheet` com `break-after: page`,
-`@page { size: letter landscape; margin: 0.4in }`.
+aberturas deslizam pela parede; `plan.svg` continua sendo a entrega (passo 03 e zip). No passo 03 (M3) a mesma
+`plan.svg` é **clicável**: o core escreve um `rect.panel-hit[data-panel-id]` transparente por painel e o
+`PlanView` do app abre a folha no clique, com hover a 18 % e o selecionado a 28 % de `selection` (invisível no
+papel). O resultado tem quatro abas: **Plan**, **Sheets** (lista com peças/peso/avisos; anterior/próximo e ← →;
+Open, Download, Print da folha; lupa em Dialog cheio com 100/150/200 %; "Show all" para imprimir o conjunto),
+**Materials** (BOM por seção com subtotais e total, lista de corte por painel) e **Files**; avisos do motor
+passam pelos mesmos grupos e ajuda do editor, com chip por painel. As folhas mantêm o visual atual (não passam
+pelo tema; a fábrica lê a folha, não o site). Impressão: `@media print` esconde `.no-print`, cada `.sheet` com
+`break-after: page`, `@page { size: letter landscape; margin: 0.4in }`.
 
 ## 7. Arquitetura de requisições (padrão único)
 

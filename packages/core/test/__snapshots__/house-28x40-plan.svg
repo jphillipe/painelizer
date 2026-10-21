@@ -64,28 +64,42 @@
 <text class="opening-id" x="639.5" y="501.5" font-size="7" fill="#333" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 639.5 501.5)">P3</text>
 <line class="joint" x1="394" y1="787" x2="394" y2="764" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W01-P1 | 1-W01-P2</title></line>
 <line class="joint" x1="682" y1="787" x2="682" y2="764" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W01-P2 | 1-W01-P3</title></line>
-<text class="panel-id" x="250" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P1</text>
-<text class="panel-id" x="538" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P2</text>
-<text class="panel-id" x="879.5" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P3</text>
+<text class="panel-id" data-panel-id="1-W01-P1" x="250" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P1</text>
+<text class="panel-id" data-panel-id="1-W01-P2" x="538" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P2</text>
+<text class="panel-id" data-panel-id="1-W01-P3" x="879.5" y="790" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W01-P3</text>
 <text class="wall-id" x="591.5" y="761" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle">W01</text>
 <line class="joint" x1="1060" y1="397" x2="1083" y2="397" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W02-P1 | 1-W02-P2</title></line>
-<text class="panel-id" x="1086" y="583.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 1086 583.5)">1-W02-P1</text>
-<text class="panel-id" x="1086" y="253" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 1086 253)">1-W02-P2</text>
+<text class="panel-id" data-panel-id="1-W02-P1" x="1086" y="583.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 1086 583.5)">1-W02-P1</text>
+<text class="panel-id" data-panel-id="1-W02-P2" x="1086" y="253" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 1086 253)">1-W02-P2</text>
 <text class="wall-id" x="1057" y="439.5" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 1057 439.5)">W02</text>
 <line class="joint" x1="789" y1="115" x2="789" y2="92" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W03-P1 | 1-W03-P2</title></line>
 <line class="joint" x1="405" y1="115" x2="405" y2="92" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W03-P2 | 1-W03-P3</title></line>
-<text class="panel-id" x="933" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P1</text>
-<text class="panel-id" x="597" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P2</text>
-<text class="panel-id" x="255.5" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P3</text>
+<text class="panel-id" data-panel-id="1-W03-P1" x="933" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P1</text>
+<text class="panel-id" data-panel-id="1-W03-P2" x="597" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P2</text>
+<text class="panel-id" data-panel-id="1-W03-P3" x="255.5" y="89" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle">1-W03-P3</text>
 <text class="wall-id" x="591.5" y="118" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle">W03</text>
 <line class="joint" x1="100" y1="482" x2="123" y2="482" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W04-P1 | 1-W04-P2</title></line>
-<text class="panel-id" x="97" y="295.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 97 295.5)">1-W04-P1</text>
-<text class="panel-id" x="97" y="626" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 97 626)">1-W04-P2</text>
+<text class="panel-id" data-panel-id="1-W04-P1" x="97" y="295.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 97 295.5)">1-W04-P1</text>
+<text class="panel-id" data-panel-id="1-W04-P2" x="97" y="626" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 97 626)">1-W04-P2</text>
 <text class="wall-id" x="126" y="439.5" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 126 439.5)">W04</text>
 <line class="joint" x1="630" y1="386" x2="649" y2="386" stroke="#1f4e79" stroke-width="1.5"><title>junta 1-W05-P1 | 1-W05-P2</title></line>
-<text class="panel-id" x="652" y="578" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 578)">1-W05-P1</text>
-<text class="panel-id" x="652" y="247.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 247.5)">1-W05-P2</text>
+<text class="panel-id" data-panel-id="1-W05-P1" x="652" y="578" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 578)">1-W05-P1</text>
+<text class="panel-id" data-panel-id="1-W05-P2" x="652" y="247.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 247.5)">1-W05-P2</text>
 <text class="wall-id" x="627" y="439.5" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 627 439.5)">W05</text>
+<g class="panel-hits" fill="transparent" stroke="none">
+<rect class="panel-hit" data-panel-id="1-W01-P1" x="106" y="770" width="288" height="11"><title>1-W01-P1 · 12'-0&quot; · parede W01</title></rect>
+<rect class="panel-hit" data-panel-id="1-W01-P2" x="394" y="770" width="288" height="11"><title>1-W01-P2 · 12'-0&quot; · parede W01</title></rect>
+<rect class="panel-hit" data-panel-id="1-W01-P3" x="682" y="770" width="395" height="11"><title>1-W01-P3 · 16'-5 1/2&quot; · parede W01</title></rect>
+<rect class="panel-hit" data-panel-id="1-W02-P1" x="1066" y="397" width="11" height="373"><title>1-W02-P1 · 15'-6 1/2&quot; · parede W02</title></rect>
+<rect class="panel-hit" data-panel-id="1-W02-P2" x="1066" y="109" width="11" height="288"><title>1-W02-P2 · 12'-0&quot; · parede W02</title></rect>
+<rect class="panel-hit" data-panel-id="1-W03-P1" x="789" y="98" width="288" height="11"><title>1-W03-P1 · 12'-0&quot; · parede W03</title></rect>
+<rect class="panel-hit" data-panel-id="1-W03-P2" x="405" y="98" width="384" height="11"><title>1-W03-P2 · 16'-0&quot; · parede W03</title></rect>
+<rect class="panel-hit" data-panel-id="1-W03-P3" x="106" y="98" width="299" height="11"><title>1-W03-P3 · 12'-5 1/2&quot; · parede W03</title></rect>
+<rect class="panel-hit" data-panel-id="1-W04-P1" x="106" y="109" width="11" height="373"><title>1-W04-P1 · 15'-6 1/2&quot; · parede W04</title></rect>
+<rect class="panel-hit" data-panel-id="1-W04-P2" x="106" y="482" width="11" height="288"><title>1-W04-P2 · 12'-0&quot; · parede W04</title></rect>
+<rect class="panel-hit" data-panel-id="1-W05-P1" x="636" y="386" width="7" height="384"><title>1-W05-P1 · 16'-0&quot; · parede W05</title></rect>
+<rect class="panel-hit" data-panel-id="1-W05-P2" x="636" y="109" width="7" height="277"><title>1-W05-P2 · 11'-6 1/2&quot; · parede W05</title></rect>
+</g>
 <g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
 <line x1="106" y1="781" x2="106" y2="839"/>
 <line x1="1077" y1="781" x2="1077" y2="839"/>

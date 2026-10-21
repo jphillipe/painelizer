@@ -3,7 +3,7 @@
  * frente quando a coordenada é negativa; o editor guarda polegadas decimais e mostra pés-pol (core/units).
  */
 
-import { formatFeetInches } from 'core';
+import { formatFeetInches, formatInches } from 'core';
 import { measureValue } from './draft';
 
 export type MeasureParse = { ok: true; value: number | undefined } | { ok: false; message: string };
@@ -25,6 +25,11 @@ export function parseMeasureText(text: string, opts: { signed?: boolean } = {}):
 export function formatMeasure(n: number | undefined): string {
   if (n === undefined) return '';
   return n < 0 ? `-${formatFeetInches(-n)}` : formatFeetInches(n);
+}
+
+/** Polegadas → só polegadas com fração (`92 5/8"`), como a fábrica chama os pré-cortes. */
+export function formatInchesOnly(n: number): string {
+  return formatInches(n);
 }
 
 /** Ponto em planta para a lista: `(12'-0", 0")`. */

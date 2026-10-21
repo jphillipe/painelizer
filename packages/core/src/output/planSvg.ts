@@ -163,11 +163,21 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
     for (const p of w.panels) {
       const plan = p.plan!;
       const mid: Point = { x: (plan.start.x + plan.end.x) / 2, y: (plan.start.y + plan.end.y) / 2 };
-      out.push(labelAt(w, mid, outward, p.id, 10, PANEL_ID, 'panel-id', true, scale, P));
+      out.push(labelAt(w, mid, outward, p.id, 10, PANEL_ID, 'panel-id', true, scale, P, p.id));
     }
     const mid: Point = { x: (w.from.x + w.to.x) / 2, y: (w.from.y + w.to.y) / 2 };
     out.push(labelAt(w, mid, outward === 1 ? -1 : 1, w.wall.id, 11, WALL_ID, 'wall-id', false, scale, P));
   }
+
+  // Área de clique de cada painel (M3): retângulo transparente sobre o trecho da plate, com `data-panel-id`, por
+  // cima de tudo — quem embute a planta numa página pode destacar e abrir a folha do painel. Invisível no papel.
+  out.push('<g class="panel-hits" fill="transparent" stroke="none">');
+  for (const w of walls) {
+    for (const p of w.panels) {
+      out.push(panelHit(w, p, scale, P));
+    }
+  }
+  out.push('</g>');
 
   // Cotas externas totais.
   out.push(dimensionH(toPx(minX), toPx(maxX), dimY, toPy(minY), formatFeetInches(maxX - minX)));
@@ -302,13 +312,32 @@ function labelAt(
   bold: boolean,
   scale: number,
   P: (p: Point) => [number, number],
+  panelId?: string,
 ): string {
   const [x, y] = P(across(w, at, w.t / 2 + LABEL_GAP / scale, side));
   const rotate = w.dir === 'y' ? ` transform="rotate(-90 ${px(x)} ${px(y)})"` : '';
   const weight = bold ? ' font-weight="bold"' : '';
+  const data = panelId === undefined ? '' : ` data-panel-id="${esc(panelId)}"`;
   return (
-    `<text class="${cls}" x="${px(x)}" y="${px(y)}" font-size="${fontSize}"${weight} fill="${fill}" ` +
+    `<text class="${cls}"${data} x="${px(x)}" y="${px(y)}" font-size="${fontSize}"${weight} fill="${fill}" ` +
     `text-anchor="middle" dominant-baseline="middle"${rotate}>${esc(text)}</text>`
+  );
+}
+
+/** Retângulo transparente do trecho de plate de um painel (faces externas), com `data-panel-id` e `<title>`. */
+function panelHit(w: WallGeom, p: Panel, scale: number, P: (p: Point) => [number, number]): string {
+  const plan = p.plan!;
+  const corner: Point =
+    w.dir === 'x'
+      ? { x: Math.min(plan.start.x, plan.end.x), y: w.axis + w.t / 2 }
+      : { x: w.axis - w.t / 2, y: Math.max(plan.start.y, plan.end.y) };
+  const [x, y] = P(corner);
+  const along = Math.abs(w.dir === 'x' ? plan.end.x - plan.start.x : plan.end.y - plan.start.y);
+  const width = (w.dir === 'x' ? along : w.t) * scale;
+  const height = (w.dir === 'x' ? w.t : along) * scale;
+  return (
+    `<rect class="panel-hit" data-panel-id="${esc(p.id)}" x="${px(x)}" y="${px(y)}" width="${px(width)}" height="${px(height)}">` +
+    `<title>${esc(`${p.id} · ${formatFeetInches(p.length)} · parede ${w.wall.id}`)}</title></rect>`
   );
 }
 
