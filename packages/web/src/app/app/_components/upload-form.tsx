@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon, SparklesIcon, TriangleAlertIcon } from 'lucide-react';
 import { useAction } from 'next-safe-action/hooks';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -12,13 +12,16 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { estimateCost, formatUsd } from '@/lib/extract-cost';
 import { recordDuration } from '@/lib/extract-timing';
 import { uploadFieldsSchema, type UploadFields } from '@/schemas/extract';
-import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome } from '@/types/extract';
+import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome, type ExtractPreview } from '@/types/extract';
 import { extractWalls } from '../_actions/extract-walls';
+import { previewExtraction } from '../_actions/preview-extraction';
 import { DropZone } from './drop-zone';
 import { PdfPages } from './pdf-pages';
 import { ProjectDataFields } from './project-data-fields';
+import { SendPreview } from './send-preview';
 
 export interface UploadFormProps {
   aiEnabled: boolean;
@@ -32,27 +35,59 @@ export interface UploadFormProps {
 }
 
 const AUTO = 'auto';
+/** Acima disto a prévia (que sobe os arquivos) só sob pedido. */
+const AUTO_PREVIEW_BYTES = 40 * 1024 * 1024;
+const PREVIEW_DELAY_MS = 800;
 
-/** Páginas marcadas nas miniaturas → texto do campo (`3,15`), união entre os PDFs (o campo vale para todos). */
+/** Páginas marcadas nas miniaturas → texto do campo (`3,15`), união entre os PDFs (o campo vale para os sem marca). */
 export function pagesText(selected: ReadonlyMap<string, ReadonlySet<number>>): string {
   const all = new Set<number>();
   for (const s of selected.values()) for (const p of s) all.add(p);
   return [...all].sort((a, b) => a - b).join(',');
 }
 
+/** Páginas por arquivo (M7), como o FormData leva. */
+export function pagesByFileJson(selected: ReadonlyMap<string, ReadonlySet<number>>): string {
+  const out: Record<string, number[]> = {};
+  for (const [name, s] of selected) if (s.size > 0) out[name] = [...s].sort((a, b) => a - b);
+  return Object.keys(out).length === 0 ? '' : JSON.stringify(out);
+}
+
+/** Páginas que a prévia diz que vão, por arquivo (para as miniaturas marcarem). */
+export function sentPages(preview: ExtractPreview | undefined): Map<string, Set<number>> {
+  const out = new Map<string, Set<number>>();
+  if (preview === undefined || !preview.ok) return out;
+  for (const f of preview.files) if (f.kind === 'pdf') out.set(f.name, new Set(f.pages.map((p) => p.page)));
+  return out;
+}
+
+function newJobId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `job-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
  * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
  * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
+ * M7: prévia do que vai ser enviado (páginas, folhas fora, tamanho, custo estimado) antes de pagar; páginas por
+ * arquivo; a leitura leva um `jobId` para a tela de espera acompanhar e recolher depois de um F5.
  */
 export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFilesChange }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | undefined>(undefined);
   const [picked, setPicked] = useState<Map<string, Set<number>>>(new Map());
+  const [preview, setPreview] = useState<ExtractPreview | undefined>(undefined);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewWanted, setPreviewWanted] = useState(false);
   const startedAt = useRef(0);
+  const previewSeq = useRef(0);
   const form = useForm<UploadFields>({
     resolver: zodResolver(uploadFieldsSchema),
     defaultValues: { level: '', projectName: '', pages: '', notes: '', ...EMPTY_PROJECT_DATA },
   });
+  const pagesField = form.watch('pages');
+  const levelField = form.watch('level');
+  const totalBytes = files.reduce((n, f) => n + f.size, 0);
+  const previewAuto = totalBytes <= AUTO_PREVIEW_BYTES;
 
   const { execute, isPending } = useAction(extractWalls, {
     onSettled: () => onJobChange(undefined),
@@ -62,17 +97,49 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     },
     onError: ({ error }) => toast.error(error.serverError ?? 'Could not extract walls.'),
   });
+  const { executeAsync: runPreview } = useAction(previewExtraction);
+
+  const formData = (fields?: UploadFields): FormData => {
+    const fd = new FormData();
+    for (const f of files) fd.append('files', f);
+    if (fields !== undefined) for (const [k, v] of Object.entries(fields)) fd.set(k, v);
+    else {
+      fd.set('pages', pagesField);
+      fd.set('level', levelField);
+    }
+    fd.set('pagesByFile', pagesByFileJson(picked));
+    return fd;
+  };
+
+  // Prévia (M7): 800 ms depois da última mudança em arquivos, páginas ou pavimento; sem arquivos, nada.
+  useEffect(() => {
+    if (files.length === 0 || (!previewAuto && !previewWanted)) {
+      setPreview(undefined);
+      return;
+    }
+    const seq = (previewSeq.current += 1);
+    setPreviewing(true);
+    const timer = setTimeout(() => {
+      void runPreview(formData()).then((r) => {
+        if (seq !== previewSeq.current) return;
+        setPreviewing(false);
+        setPreview(r.data ?? { ok: false, message: r.serverError ?? 'Could not preview the set.' });
+      });
+    }, PREVIEW_DELAY_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, picked, pagesField, levelField, previewAuto, previewWanted]);
 
   const submit = (fields: UploadFields) => {
     if (files.length === 0) {
       setFilesError('Add at least one PDF or image.');
       return;
     }
-    const fd = new FormData();
-    for (const f of files) fd.append('files', f);
-    for (const [k, v] of Object.entries(fields)) fd.set(k, v);
+    const fd = formData(fields);
+    const jobId = newJobId();
+    fd.set('jobId', jobId);
     startedAt.current = Date.now();
-    onJobChange({ startedAt: startedAt.current, files: files.map((f) => ({ name: f.name, size: f.size })) });
+    onJobChange({ jobId, startedAt: startedAt.current, files: files.map((f) => ({ name: f.name, size: f.size })) });
     execute(fd);
   };
   const onFiles = (next: File[]): void => {
@@ -98,6 +165,8 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     form.setValue('pages', pagesText(next), { shouldDirty: true });
   };
 
+  const estimate = preview?.ok ? estimateCost(preview.pagesTotal, preview.images) : undefined;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
@@ -115,7 +184,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
         <section className="space-y-3">
           <h3>Your drawings</h3>
           <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError} />
-          <PdfPages files={files} selected={picked} onToggle={togglePage} />
+          <PdfPages files={files} selected={picked} sent={sentPages(preview)} onToggle={togglePage} />
           <details className="text-sm">
             <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
@@ -180,7 +249,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
                 <FormControl>
                   <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
                 </FormControl>
-                <FormDescription>Click page thumbnails above, or type numbers. Empty: the floor plan and schedule sheets are picked by their title block. Applies to every PDF sent.</FormDescription>
+                <FormDescription>Click page thumbnails above (per file), or type numbers here for every PDF without a click. Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -207,6 +276,10 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
           </details>
         </section>
 
+        {files.length > 0 ? (
+          <SendPreview preview={preview} previewing={previewing} estimate={estimate} needsRequest={!previewAuto && !previewWanted} totalBytes={totalBytes} onRequest={() => setPreviewWanted(true)} />
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" variant="accent" disabled={!aiEnabled || isPending}>
             {isPending ? (
@@ -215,7 +288,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
               </>
             ) : (
               <>
-                <SparklesIcon /> Extract walls with AI
+                <SparklesIcon /> Extract walls with AI{estimate !== undefined ? <span className="font-medium opacity-80"> · about {formatUsd(estimate.usd)}</span> : null}
               </>
             )}
           </Button>
@@ -224,7 +297,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
               or try a sample
             </Button>
           ) : null}
-          <span className="text-sm text-ink-3">The read takes several minutes. You review every wall before anything is built.</span>
+          <span className="text-sm text-ink-3">The read takes several minutes and can be cancelled. You review every wall before anything is built.</span>
         </div>
       </form>
     </Form>

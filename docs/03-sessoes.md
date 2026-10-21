@@ -762,7 +762,21 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     razão 0,8132, igual à esperada pela geometria da tela; "Set origin" move a origem; opacidade 70 % no
     atributo; girar 90° gravado; "Hide" tira a imagem e grava `visible: false`; reload → Resume → "Show" traz a
     imagem de volta (sessão de 538 KB). Capturas em `out/m6/`.
-  - [ ] **M7 — Extração honesta** (prévia das páginas e custo, progresso real, cancelar, job sobrevive ao reload).
+  - [x] **M7 — Extração honesta.** Feita em 2026-10-21 (sem regra de framing). `extract`: `previewExtraction`,
+    `ExtractOptions.signal`/`onProgress`, `apiErrorInfo().aborted`, `prepareSources` fatorado de `buildRequest`.
+    Web: `lib/extract-cost.ts` (estimativa calibrada nas leituras reais; 3 testes), `services/extract-jobs.ts`
+    (registro de jobs; 3 testes), `extract.service` com `preview`, `pagesByFile`, `jobId` e `cancelled` (3
+    testes), actions `previewExtraction`, `extractionProgress`, `cancelExtraction`, `extractionResult`
+    (`readUploadForm` compartilhado), `send-preview.tsx`, `UploadForm` com prévia debounced, páginas por arquivo
+    e `jobId`, `PdfPages` com "sends", `ExtractProgress` com fase, tokens, cancelar e retomada, `NewProjectView`
+    e `use-saved-session` retomando o job da sessão. Testes: extract 115, web 201 (eram 192). Sem chave de API
+    nesta máquina, a chamada real, o cancelamento ao vivo e a retomada após F5 ficaram cobertos só pelos testes
+    com `extract` falso; a prévia (que não precisa de chave) foi conferida no browser (1440×900 por CDP,
+    `cdp-m7.mjs`, PDF do Ringgold): "What will be sent · 2 pages · 1.4 MB encoded · p.1 A-100 Basement and 1st
+    Floor Plans · p.2 A-800 Wall Types, Schedules and Window Details · about US$ 1.54 (US$ 1.08–2.00)", botão
+    "Extract walls with AI · about US$ 1.54", as duas miniaturas com "sends"; marcar só a p.2 refaz a prévia
+    para 1 página / 570 KB / US$ 1.51 e o campo fica "2". Capturas em `out/m7/`. Fica para quando houver
+    crédito: uma leitura real com cancelamento e com F5 no meio.
   - [ ] **M8 — Desempenho da checagem** (`check` sem gerar SVG/CSV; memoização da geometria por parede).
   - [ ] **M9 — PDF e impressão** (`@resvg/resvg-js`, "x de y").
   - [ ] **M10 — Testes de interação** (jsdom + testing-library).

@@ -33,7 +33,7 @@ export interface SavedSessionApi {
  * de retomada. Um job de extração em voo também fica gravado: se a página recarregar no meio, o humano fica
  * sabendo que a leitura se perdeu (a server action não tem como entregar o resultado a uma página nova).
  */
-export function useSavedSession(editor: EditorState, reading: Reading | undefined, job: ExtractJob | undefined, onResume: (session: SavedSession) => void): SavedSessionApi {
+export function useSavedSession(editor: EditorState, reading: Reading | undefined, job: ExtractJob | undefined, onResume: (session: SavedSession) => void, onResumeJob?: (job: ExtractJob) => void): SavedSessionApi {
   const [saved, setSaved] = useState<SavedSession | undefined>(undefined);
   const pending = useRef<SavedSession | undefined>(undefined);
   const jobRef = useRef(job);
@@ -45,7 +45,10 @@ export function useSavedSession(editor: EditorState, reading: Reading | undefine
     const session = loadSession(store);
     if (session !== undefined) setSaved(session);
     const interrupted = loadJob(store, Date.now());
-    if (interrupted !== undefined) {
+    if (interrupted !== undefined && onResumeJob !== undefined && typeof (interrupted as { jobId?: unknown }).jobId === 'string') {
+      // M7: a leitura continua no servidor; a tela de espera volta e recolhe o resultado pelo job.
+      onResumeJob({ ...(interrupted as ExtractJob), resumed: true });
+    } else if (interrupted !== undefined) {
       clearJob(store);
       toast.warning(`The AI read started ${describeAge(interrupted.startedAt, Date.now())} was interrupted when this page reloaded.`, {
         description: 'Its result can’t be recovered. Upload the set again to read it.',

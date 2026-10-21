@@ -69,6 +69,22 @@ export function parsePages(s: string): number[] | undefined {
   return t.split(',').map((p) => Number(p.trim()));
 }
 
+/** Páginas por arquivo (M7), como JSON no FormData: `{ "A-100.pdf": [3, 15] }`. Lixo vira vazio. */
+export const pagesByFileSchema = z.record(z.string(), z.array(z.number().int().positive()));
+
+export function parsePagesByFile(s: string): Record<string, number[]> {
+  if (s.trim() === '') return {};
+  try {
+    const r = pagesByFileSchema.safeParse(JSON.parse(s));
+    return r.success ? r.data : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Consultas ao job de extração (M7). */
+export const jobIdSchema = z.object({ jobId: z.string().min(8).max(64) });
+
 /** Resposta gravada do modelo, como texto JSON (Advanced). */
 export const finishResponseSchema = z.object({
   responseJson: z.string().min(2, 'Paste or open the recorded response JSON.'),

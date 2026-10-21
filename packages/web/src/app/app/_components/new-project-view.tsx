@@ -17,6 +17,8 @@ import { editorReducer, initialEditorState, type DraftSource } from '@/lib/edito
 import { prefersReducedMotion } from '@/lib/motion';
 import type { ExtractJob, ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
+import { cancelExtraction } from '../_actions/cancel-extraction';
+import { extractionResult } from '../_actions/extraction-result';
 import { generatePanels } from '../_actions/generate-panels';
 import { AdvancedImport } from './advanced-import';
 import { ConfirmDialog } from './confirm-dialog';
@@ -81,11 +83,33 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
   }, []);
   const onOutcome = (o: ExtractOutcome) => {
     if (o.ok) openProject(o.projectText, 'extraction', o);
-    else {
+    else if (o.reason === 'cancelled') {
+      // M7: cancelar não é erro; o passo 01 volta com arquivos e campos intactos.
+      setOutcome(undefined);
+      toast(o.message);
+    } else {
       setOutcome(o);
       toast.error(o.message);
     }
   };
+  // M7: leitura em curso — cancelar e, para um job retomado depois de um F5, recolher o resultado do servidor.
+  const { execute: cancelRead } = useAction(cancelExtraction);
+  const { executeAsync: fetchResult } = useAction(extractionResult);
+  const onResumedDone = useCallback(async () => {
+    const current = job;
+    if (current === undefined) return;
+    const r = await fetchResult({ jobId: current.jobId });
+    setJob(undefined);
+    if (r.data === null || r.data === undefined) toast.warning('The read finished, but its result was already collected or has expired.');
+    else onOutcome(r.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job, fetchResult]);
+  const onResumedEnded = useCallback((status: 'failed' | 'cancelled' | 'unknown', message: string | undefined) => {
+    setJob(undefined);
+    if (status === 'unknown') toast.warning('The server no longer knows this read (it may have restarted). Upload the set again.');
+    else if (status === 'cancelled') toast(message ?? 'Read cancelled.');
+    else toast.error(message ?? 'The read failed.');
+  }, []);
   const openFile = (file: ParsedProjectFile) => {
     if (file.projectText.trim() === '') return;
     openProject(file.projectText, file.reading === undefined ? 'file' : 'extraction', file.reading);
@@ -110,7 +134,8 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
   const requestStartOver = () => (hasWork ? setConfirmingStartOver(true) : startOver());
 
   const onResume = useCallback((s: SavedSession) => openProject(s.text, s.source, s.reading, s.dirty), [openProject]);
-  const session = useSavedSession(editor, okOutcome, job, onResume);
+  const onResumeJob = useCallback((j: ExtractJob) => setJob(j), []);
+  const session = useSavedSession(editor, okOutcome, job, onResume, onResumeJob);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -187,7 +212,7 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
             <ResumeBanner saved={session.saved} onResume={session.resume} onDiscard={session.discard} />
           ) : null}
 
-          {step === 1 && job ? <ExtractProgress job={job} /> : null}
+          {step === 1 && job ? <ExtractProgress job={job} onCancel={() => cancelRead({ jobId: job.jobId })} onResumedDone={onResumedDone} onResumedEnded={onResumedEnded} /> : null}
 
           {step === 2 ? (
             // Com draft aberto o passo 02 é o workspace (retorno acima); aqui só o que não abriu.

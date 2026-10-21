@@ -1,7 +1,8 @@
 /**
  * Regra de negócio da extração (docs/10-design.md §7): arquivos do projeto (PDF, imagens) → IA → projeto
  * para revisão. Só servidor. Único lugar do app que importa `extract`. A chamada real fica em `deps`
- * para os testes injetarem uma falsa; a chave nunca sai do servidor.
+ * para os testes injetarem uma falsa; a chave nunca sai do servidor. M7: prévia sem chamar a API, páginas por
+ * arquivo, e a chamada registrada como job (progresso, cancelamento, resultado recolhível depois de um F5).
  */
 
 import 'server-only';
@@ -10,13 +11,15 @@ import {
   ExtractError,
   extractWalls,
   finish,
+  previewExtraction,
   type ExtractHints,
   type ExtractResult,
   type ExtractSource,
   type ImageMediaType,
 } from 'extract';
 import { toConvertOptions } from '@/schemas/extract';
-import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ProjectData, type WallReview } from '@/types/extract';
+import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ExtractPreview, type ProjectData, type WallReview } from '@/types/extract';
+import { createJob, finishJob, reportProgress } from './extract-jobs';
 
 export type { ExtractOutcome, OpeningReview, WallReview } from '@/types/extract';
 
@@ -29,6 +32,7 @@ export interface UploadedFile {
 
 export interface ExtractDeps {
   extract: typeof extractWalls;
+  preview?: typeof previewExtraction;
   hasKey: () => boolean;
 }
 
@@ -36,7 +40,7 @@ export function hasKey(): boolean {
   return (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== '';
 }
 
-export const defaultDeps: ExtractDeps = { extract: extractWalls, hasKey };
+export const defaultDeps: ExtractDeps = { extract: extractWalls, preview: previewExtraction, hasKey };
 
 const IMAGE_TYPES: Record<string, ImageMediaType> = {
   'image/png': 'image/png',
@@ -64,9 +68,23 @@ export function toSource(file: UploadedFile, pages: readonly number[] | undefine
 export interface FromFilesOptions {
   /** Páginas (1-based) a enviar de cada PDF; ausente = carimbo (A-1xx, A-8xx) ou todas. */
   pages?: readonly number[];
+  /** Páginas por arquivo (M7); vence `pages` para o arquivo que estiver aqui. */
+  pagesByFile?: Readonly<Record<string, readonly number[]>>;
   hints?: ExtractHints;
   /** O que o humano sabe e os desenhos não trazem (altura, estrutural); aplicado só onde o modelo deixou null. */
   given?: ProjectData;
+  /** Id do job (M7): registra progresso e cancelamento e guarda o resultado para um cliente que recarregou. */
+  jobId?: string;
+}
+
+function sourcesOf(files: readonly UploadedFile[], opts: Pick<FromFilesOptions, 'pages' | 'pagesByFile'>): ExtractSource[] | string {
+  const sources: ExtractSource[] = [];
+  for (const f of files) {
+    const s = toSource(f, opts.pagesByFile?.[f.name] ?? opts.pages);
+    if (typeof s === 'string') return s;
+    sources.push(s);
+  }
+  return sources;
 }
 
 export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesOptions = {}, deps: ExtractDeps = defaultDeps): Promise<ExtractOutcome> {
@@ -74,17 +92,15 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
     return {
       ok: false,
       reason: 'no_key',
-      message: 'AI extraction is off on this server: ANTHROPIC_API_KEY is not set. Try a sample, or import a project file under Advanced.',
+      message: 'AI reading is off on this server: no API key is configured. Open a project file, or ask whoever runs this server to add the key.',
     };
   }
   if (files.length === 0) return { ok: false, reason: 'input', message: 'Add at least one PDF or image.' };
   const given = opts.given ?? EMPTY_PROJECT_DATA;
-  const sources: ExtractSource[] = [];
-  for (const f of files) {
-    const s = toSource(f, opts.pages);
-    if (typeof s === 'string') return { ok: false, reason: 'input', message: s };
-    sources.push(s);
-  }
+  const sources = sourcesOf(files, opts);
+  if (typeof sources === 'string') return { ok: false, reason: 'input', message: sources };
+  const job = opts.jobId === undefined ? undefined : createJob(opts.jobId);
+  let outcome: ExtractOutcome;
   try {
     const result = await deps.extract(
       {
@@ -92,11 +108,37 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
         ...(opts.hints === undefined ? {} : { hints: opts.hints }),
         convert: toConvertOptions(given),
       },
-      {},
+      job === undefined ? {} : { signal: job.controller.signal, onProgress: (p) => reportProgress(job, p) },
     );
-    return toOutcome(result, given);
+    outcome = toOutcome(result, given);
   } catch (e) {
-    return failure(e);
+    outcome = failure(e);
+  }
+  if (job !== undefined) finishJob(job, outcome);
+  return outcome;
+}
+
+/**
+ * Prévia (M7): o que iria para a API — páginas de cada PDF (com folha e título), as que ficam fora, imagens e
+ * tamanho codificado — sem chamar a API e sem precisar da chave.
+ */
+export async function preview(files: readonly UploadedFile[], opts: Pick<FromFilesOptions, 'pages' | 'pagesByFile' | 'hints'> = {}, deps: ExtractDeps = defaultDeps): Promise<ExtractPreview> {
+  if (files.length === 0) return { ok: false, message: 'Add at least one PDF or image.' };
+  const sources = sourcesOf(files, opts);
+  if (typeof sources === 'string') return { ok: false, message: sources };
+  const run = deps.preview ?? previewExtraction;
+  try {
+    const info = await run({ sources, ...(opts.hints === undefined ? {} : { hints: opts.hints }) });
+    const out: Extract<ExtractPreview, { ok: true }>['files'] = sources.map((s) => ({
+      name: s.name,
+      kind: s.kind,
+      pages: info.sheets.filter((p) => p.name === s.name).map(({ page, sheet, title }) => ({ page, ...(sheet === undefined ? {} : { sheet }), ...(title === undefined ? {} : { title }) })),
+      dropped: info.pagesDropped.filter((d) => d.name === s.name).map((d) => ({ page: d.page, ...(d.sheet === undefined ? {} : { sheet: d.sheet }), category: d.category })),
+    }));
+    return { ok: true, files: out, pagesTotal: info.pagesSent.reduce((n, p) => n + p.pages.length, 0), images: info.images, encodedBytes: info.encodedBytes };
+  } catch (e) {
+    if (e instanceof RangeError || e instanceof SyntaxError) return { ok: false, message: e.message };
+    throw e;
   }
 }
 
@@ -114,8 +156,11 @@ function failure(e: unknown): ExtractOutcome {
     return { ok: false, reason: 'extraction', message: e.message, ...(e.rawText === undefined ? {} : { rawText: e.rawText }) };
   }
   const api = apiErrorInfo(e);
+  if (api?.aborted || (e instanceof Error && e.name === 'AbortError')) {
+    return { ok: false, reason: 'cancelled', message: 'Read cancelled. Nothing was kept; the API charges for what was sent.' };
+  }
   if (api?.authentication) {
-    return { ok: false, reason: 'api', message: 'The API rejected the server credential. Check ANTHROPIC_API_KEY.' };
+    return { ok: false, reason: 'api', message: 'The API rejected the server credential. Check the key configured on the server.' };
   }
   if (api) {
     return { ok: false, reason: 'api', message: `API error${api.status === undefined ? '' : ` ${api.status}`}: ${api.message}` };

@@ -64,16 +64,47 @@ export type ExtractOutcome =
     }
   | {
       ok: false;
-      reason: 'no_key' | 'input' | 'extraction' | 'api';
+      reason: 'no_key' | 'input' | 'extraction' | 'api' | 'cancelled';
       message: string;
       rawText?: string;
     };
 
-/** Leitura em andamento, para a tela de espera: quando começou e o que foi enviado. */
+/** Leitura em andamento, para a tela de espera: id do job no servidor (M7), quando começou e o que foi enviado. */
 export interface ExtractJob {
+  jobId: string;
   startedAt: number;
   files: { name: string; size: number }[];
+  /** Retomado da sessão depois de um F5: o resultado vem pelo job do servidor, não pela action original. */
+  resumed?: boolean;
 }
+
+/** Progresso de um job no servidor (M7), consultado pela tela de espera. */
+export interface ExtractProgressInfo {
+  status: 'running' | 'done' | 'failed' | 'cancelled' | 'unknown';
+  phase?: 'preparing' | 'waiting' | 'reading';
+  inputTokens?: number;
+  outputTokens: number;
+  elapsedMs: number;
+  message?: string;
+}
+
+/** Prévia do que será enviado (M7), antes de pagar. */
+export type ExtractPreview =
+  | {
+      ok: true;
+      files: {
+        name: string;
+        kind: 'pdf' | 'image';
+        /** Páginas que vão (PDF), com folha e título do carimbo quando lidos. */
+        pages: { page: number; sheet?: string; title?: string }[];
+        /** Páginas úteis que ficaram fora do orçamento, com a categoria. */
+        dropped: { page: number; sheet?: string; category: string }[];
+      }[];
+      pagesTotal: number;
+      images: number;
+      encodedBytes: number;
+    }
+  | { ok: false; message: string };
 
 export const ACCEPTED_UPLOAD_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
 export const ACCEPTED_UPLOAD_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif'] as const;

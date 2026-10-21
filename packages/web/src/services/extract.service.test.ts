@@ -4,7 +4,8 @@ import { ExtractError, finish, type ExtractRequest } from 'extract';
 import type { UploadedFile } from './extract.service';
 
 vi.mock('server-only', () => ({}));
-const { fromFiles, fromRecorded, toSource } = await import('./extract.service');
+const { fromFiles, fromRecorded, toSource, preview } = await import('./extract.service');
+const { registry, jobProgress, takeResult } = await import('./extract-jobs');
 
 const ringgoldRaw = JSON.parse(
   readFileSync('C:/Users/Phillipe/Desktop/painelizer/packages/extract/test/fixtures/ringgold-output.json', 'utf8'),
@@ -97,5 +98,54 @@ describe('fromRecorded', () => {
 
   it('fora do schema vira extraction', () => {
     expect(fromRecorded({ projectName: 'x' })).toMatchObject({ ok: false, reason: 'extraction' });
+  });
+});
+
+describe('M7: prévia, páginas por arquivo, job e cancelamento', () => {
+
+  it('preview monta as fontes (páginas por arquivo vencem as gerais) e devolve páginas, folhas fora e tamanho sem chave', async () => {
+    let seen: ExtractRequest | undefined;
+    const fakePreview = vi.fn(async (req: ExtractRequest) => {
+      seen = req;
+      return { pagesSent: [{ name: 'plan.pdf', pages: [3, 15] }], pagesDropped: [{ name: 'plan.pdf', page: 7, sheet: 'A-201', category: 'elevation' as const }], sheets: [{ name: 'plan.pdf', page: 3, sheet: 'A-100', title: 'First Floor Plan' }, { name: 'plan.pdf', page: 15, sheet: 'A-800' }], encodedBytes: 1234, images: 1 };
+    });
+    const r = await preview([pdf, png], { pages: [1], pagesByFile: { 'plan.pdf': [3, 15] } }, { extract: vi.fn(), preview: fakePreview, hasKey: () => false });
+    expect(seen?.sources?.[0]).toMatchObject({ kind: 'pdf', pages: [3, 15] });
+    expect(r).toMatchObject({ ok: true, pagesTotal: 2, images: 1, encodedBytes: 1234 });
+    if (!r.ok) throw new Error('prévia falhou');
+    expect(r.files[0]).toEqual({ name: 'plan.pdf', kind: 'pdf', pages: [{ page: 3, sheet: 'A-100', title: 'First Floor Plan' }, { page: 15, sheet: 'A-800' }], dropped: [{ page: 7, sheet: 'A-201', category: 'elevation' }] });
+    expect(r.files[1]).toMatchObject({ name: 'photo.PNG', kind: 'image', pages: [] });
+    expect(await preview([], {}, { extract: vi.fn(), preview: fakePreview, hasKey: () => true })).toMatchObject({ ok: false });
+    const failing = vi.fn(async () => {
+      throw new RangeError('nenhuma folha útil');
+    });
+    expect(await preview([pdf], {}, { extract: vi.fn(), preview: failing, hasKey: () => true })).toEqual({ ok: false, message: 'nenhuma folha útil' });
+  });
+
+  it('com jobId: registra o job, repassa signal e progresso, e guarda o resultado para ser recolhido', async () => {
+    registry().clear();
+    const extract = vi.fn(async (_req: ExtractRequest, opts: { signal?: AbortSignal; onProgress?: (p: { phase: 'reading'; outputTokens: number }) => void }) => {
+      expect(opts.signal).toBeInstanceOf(AbortSignal);
+      opts.onProgress?.({ phase: 'reading', outputTokens: 5000 });
+      expect(jobProgress('job-abcdefgh')).toMatchObject({ status: 'running', phase: 'reading', outputTokens: 5000 });
+      return finish(ringgoldRaw, undefined, 'fake', { inputTokens: 1, outputTokens: 2 });
+    });
+    const r = await fromFiles([pdf], { jobId: 'job-abcdefgh' }, { extract: extract as never, hasKey: () => true });
+    expect(r.ok).toBe(true);
+    expect(jobProgress('job-abcdefgh')).toMatchObject({ status: 'done' });
+    expect(takeResult('job-abcdefgh')).toBe(r);
+    expect(takeResult('job-abcdefgh')).toBeUndefined();
+  });
+
+  it('chamada abortada vira `cancelled` (não erro) e o job termina como cancelado', async () => {
+    registry().clear();
+    const extract = vi.fn(async () => {
+      const e = new Error('aborted');
+      e.name = 'AbortError';
+      throw e;
+    });
+    const r = await fromFiles([pdf], { jobId: 'job-cancel01' }, { extract, hasKey: () => true });
+    expect(r).toMatchObject({ ok: false, reason: 'cancelled' });
+    expect(jobProgress('job-cancel01')).toMatchObject({ status: 'cancelled' });
   });
 });

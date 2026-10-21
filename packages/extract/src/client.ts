@@ -50,12 +50,36 @@ export interface ExtractRequest {
   convert?: ConvertOptions;
 }
 
+/** Progresso da chamada (M7): fase e tokens de saída já recebidos (estimados pelo texto streamado). */
+export interface ExtractProgress {
+  phase: 'preparing' | 'waiting' | 'reading';
+  inputTokens?: number;
+  outputTokens: number;
+}
+
 export interface ExtractOptions {
   client?: Anthropic;
   model?: string;
   effort?: Effort;
   maxTokens?: number;
+  /** Cancela a chamada em curso (M7): o SDK lança `APIUserAbortError`. */
+  signal?: AbortSignal;
+  onProgress?: (p: ExtractProgress) => void;
 }
+
+/** O que a prévia mostra antes de pagar (M7): páginas que vão, as que ficam de fora e o tamanho codificado. */
+export interface ExtractPreviewInfo {
+  pagesSent: { name: string; pages: number[] }[];
+  pagesDropped: DroppedPage[];
+  /** Por página enviada: número da folha e título do carimbo, quando lidos. */
+  sheets: { name: string; page: number; sheet?: string; title?: string }[];
+  /** Bytes dos PDFs recortados e imagens, já em base64 (o que conta para o limite da API). */
+  encodedBytes: number;
+  images: number;
+}
+
+/** Tokens de saída por caractere de JSON streamado (as duas leituras reais deram ~3,6). */
+const CHARS_PER_OUTPUT_TOKEN = 3.6;
 
 export interface ExtractResult {
   output: ExtractionOutput;
@@ -163,8 +187,8 @@ export async function autoPages(data: Uint8Array, name = 'planta.pdf', level?: n
   return pages[0] ?? [];
 }
 
-/** Parâmetros da requisição, separados para teste e para `countTokens`. */
-export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {}) {
+/** Fontes prontas para a requisição: PDFs recortados com texto posicionado, imagens, e o que foi/ficou de fora. */
+async function prepareSources(req: ExtractRequest) {
   const sources = normalizeSources(req);
   const pdfs: PdfInput[] = [];
   const images: ImageInput[] = [];
@@ -190,7 +214,30 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
     throw new RangeError('nenhuma folha útil reconhecida nos arquivos (planta, schedule, elevação, corte, estrutura); informe as páginas');
   }
   const base64 = (n: number) => Math.ceil(n / 3) * 4;
-  const total = pdfs.reduce((n, p) => n + base64(p.pdf.byteLength), 0) + images.reduce((n, im) => n + base64(im.data.byteLength), 0);
+  const encodedBytes = pdfs.reduce((n, p) => n + base64(p.pdf.byteLength), 0) + images.reduce((n, im) => n + base64(im.data.byteLength), 0);
+  return { sources, pdfs, images, pagesSent, selection, encodedBytes };
+}
+
+/**
+ * Prévia sem chamar a API (M7): quais páginas vão, quais ficam de fora e quanto pesa — o que a tela mostra
+ * antes de o humano pagar a leitura. Mesma seleção e mesmo recorte da chamada real.
+ */
+export async function previewExtraction(req: ExtractRequest): Promise<ExtractPreviewInfo> {
+  const { sources, images, pagesSent, selection, encodedBytes } = await prepareSources(req);
+  const sheets: ExtractPreviewInfo['sheets'] = [];
+  for (const sent of pagesSent) {
+    const i = sources.findIndex((s) => s.name === sent.name);
+    for (const page of sent.pages) {
+      const info = selection.sheets.get(`${i}:${page}`);
+      sheets.push({ name: sent.name, page, ...(info?.sheet === undefined ? {} : { sheet: info.sheet }), ...(info?.title === undefined ? {} : { title: info.title }) });
+    }
+  }
+  return { pagesSent, pagesDropped: selection.dropped, sheets, encodedBytes, images: images.length };
+}
+
+/** Parâmetros da requisição, separados para teste e para `countTokens`. */
+export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {}) {
+  const { pdfs, images, pagesSent, selection, encodedBytes: total } = await prepareSources(req);
   if (total > API_REQUEST_LIMIT) {
     const mb = (n: number) => (n / (1024 * 1024)).toFixed(1);
     throw new RangeError(
@@ -216,9 +263,26 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
 
 export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {}): Promise<ExtractResult> {
   const client = opts.client ?? new Anthropic();
+  opts.onProgress?.({ phase: 'preparing', outputTokens: 0 });
   const { params, pagesSent, pagesDropped } = await buildRequest(req, opts);
-  // Streaming: o SDK exige para respostas longas (max_tokens alto); `finalMessage` junta tudo.
-  const response = await client.messages.stream(params).finalMessage();
+  opts.signal?.throwIfAborted();
+  opts.onProgress?.({ phase: 'waiting', outputTokens: 0 });
+  // Streaming: o SDK exige para respostas longas (max_tokens alto); `finalMessage` junta tudo. O progresso (M7)
+  // vem do texto que chega: tokens de saída estimados por caractere; a entrada, do `message_start`.
+  const stream = client.messages.stream(params, opts.signal === undefined ? {} : { signal: opts.signal });
+  if (opts.onProgress !== undefined) {
+    const report = opts.onProgress;
+    let chars = 0;
+    let inputTokens: number | undefined;
+    stream.on('streamEvent', (e) => {
+      if (e.type === 'message_start') inputTokens = e.message.usage.input_tokens;
+    });
+    stream.on('text', (delta) => {
+      chars += delta.length;
+      report({ phase: 'reading', outputTokens: Math.round(chars / CHARS_PER_OUTPUT_TOKEN), ...(inputTokens === undefined ? {} : { inputTokens }) });
+    });
+  }
+  const response = await stream.finalMessage();
   const text = stripFences(textOf(response));
 
   if (response.stop_reason === 'refusal') {
@@ -286,9 +350,9 @@ export function finish(
  * Erro da API da Anthropic (autenticação, limite, 5xx…) em forma neutra, para quem chama não precisar
  * depender do SDK. `undefined` para qualquer outro erro.
  */
-export function apiErrorInfo(e: unknown): { status: number | undefined; message: string; authentication: boolean } | undefined {
+export function apiErrorInfo(e: unknown): { status: number | undefined; message: string; authentication: boolean; aborted: boolean } | undefined {
   if (!(e instanceof Anthropic.APIError)) return undefined;
-  return { status: e.status, message: e.message, authentication: e instanceof Anthropic.AuthenticationError };
+  return { status: e.status, message: e.message, authentication: e instanceof Anthropic.AuthenticationError, aborted: e instanceof Anthropic.APIUserAbortError };
 }
 
 /** Tira uma cerca de código (```json … ```) se o modelo a puser apesar da instrução. */

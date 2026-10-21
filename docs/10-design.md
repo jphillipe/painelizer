@@ -150,7 +150,10 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   o card do formulário (zona de soltar arquivos tracejada com cantos marcados e ícone navy, "Project details",
   collapsibles com `<details>`; a zona lista o que recusou e por quê, mostra o total dos 300 MB e o erro de
   "sem arquivo" embaixo dela; cada PDF solto ganha **miniaturas das páginas** (pdf.js no cliente), e clicar numa
-  marca a folha no campo "PDF pages"; "or try a sample" ao lado do botão só quando os exemplos existem — exemplos
+  marca a folha no campo "PDF pages" (por arquivo); o card **"What will be sent"** (M7) lista, antes de pagar, as
+  páginas que vão de cada PDF com folha e título, as que ficaram fora do orçamento, imagens, tamanho e o custo
+  estimado com faixa, e o botão leva "· about US$ X"; a tela de espera mostra a fase e os tokens que já
+  chegaram, tem "Cancel the read" e volta sozinha depois de um F5; "or try a sample" ao lado do botão só quando os exemplos existem — exemplos
   e "Advanced › Recorded response" aparecem só em desenvolvimento ou com `PANELIZER_DEV_TOOLS=1`), à direita o
   **card de prévia** com cabeçalho navy, ilustração (a planta de
   painéis da 28x40 gerada pelo motor), legenda em papel-2, título + parágrafo, três features numeradas e rodapé

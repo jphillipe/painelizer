@@ -8,6 +8,7 @@ export type { ExtractHints, PromptInput, PdfInput, ImageInput, ImageMediaType } 
 export {
   extractWalls,
   buildRequest,
+  previewExtraction,
   finish,
   normalizeSources,
   autoPages,
@@ -20,6 +21,6 @@ export {
   DEFAULT_MAX_TOKENS,
   MAX_AUTO_PAGES,
 } from './client';
-export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, Effort, DroppedPage } from './client';
+export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, ExtractProgress, ExtractPreviewInfo, Effort, DroppedPage } from './client';
 export { classifySheet, choosePages, AUTO_PAGE_BUDGET, AUTO_BYTE_BUDGET } from './select';
 export type { SheetCategory, Candidate } from './select';
