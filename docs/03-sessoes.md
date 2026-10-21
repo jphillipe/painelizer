@@ -794,5 +794,18 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     pages…" enquanto renderiza) e **PDF** por folha na aba Sheets (`<id>.pdf`); `window.print()` continua.
     Conferido no browser com a 28x40: 13 páginas 792×612 pt, 1,3 MB; folha avulsa 90 KB. Testes: web 209
     (eram 206); `@resvg/resvg-js` em `serverExternalPackages`.
-  - [ ] **M10 — Testes de interação** (jsdom + testing-library).
+  - [x] **M10 — Testes de interação.** Feita em 2026-10-21 (sem regra de framing). `jsdom` + `@testing-library/react`
+    + `user-event` no vitest do web, ligados por arquivo (`// @vitest-environment jsdom` nos `*.dom.test.tsx`; os
+    testes puros continuam em node). Sete arquivos, 25 testes: `CommitInput` (Enter + blur = um commit, blur
+    formata, Esc reverte, erro inline mantém o foco, valor de fora só sem foco), atalhos como teclas de verdade
+    (Delete com botão em foco não apaga, input desliga tudo, Ctrl+Z/Y, Esc, N, O, ] [, ?, desmontar), `useProjectCheck`
+    com a action mockada (debounce, resposta velha descartada, texto igual não vai, erro), `PlanCanvas` por pointer
+    events (clique seleciona, alça move a ponta no eixo com snap 1" e 1/8" com Shift, um dispatch por quadro, mesma
+    transação, pan não seleciona, cancel não fecha), `useSavedSession` com o `localStorage` do jsdom (grava em 500 ms,
+    retomada, discard, reset, beforeunload, job perdido), `ResultSheets` (Next/Previous, ← →, lista, Show all, PDF)
+    e `StepBar` (só passo concluído e não ativo leva a algum lugar). **Dois bugs pegos e corrigidos**: Esc no campo
+    confirmava o texto digitado (o blur que o Esc provoca via o texto velho; flag `reverting`) e "Reviewed" reenviava
+    o projeto ao motor (`$reviewed` ficava no texto; `engineText` agora tira toda chave `$…`, `withoutEditorKeys`).
+    Conferido no browser: Esc volta ao valor e não cria undo; Reviewed sem POST. Testes: web 234 (eram 209).
+    Playwright fica para depois da S22.
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

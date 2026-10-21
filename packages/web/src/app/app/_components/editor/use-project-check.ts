@@ -2,8 +2,7 @@
 
 import { useAction } from 'next-safe-action/hooks';
 import { useEffect, useRef, useState } from 'react';
-import { textFromDraft, type ProjectDraft } from '@/lib/editor/draft';
-import { withoutUnderlay } from '@/lib/editor/underlay';
+import { textFromDraft, withoutEditorKeys, type ProjectDraft } from '@/lib/editor/draft';
 import type { CheckResult } from '@/types/panels';
 import { checkProject } from '../../_actions/check-project';
 
@@ -20,9 +19,13 @@ export interface CheckState {
 
 export const CHECK_DELAY_MS = 600;
 
-/** O que vai ao motor: o draft sem o underlay (M6: a imagem pesa e o motor não a lê). */
+/**
+ * O que vai ao motor: o draft sem as chaves `$…` do editor (`$underlay`, `$reviewed`), que o parser do CLI ignora.
+ * M6 tirava só o underlay (a imagem pesa); M10 mostrou que marcar "Reviewed" ainda mudava o texto e reenviava o
+ * projeto — agora qualquer edição que o motor não enxerga não vai ao servidor.
+ */
 export function engineText(draft: ProjectDraft): string {
-  return textFromDraft(withoutUnderlay(draft));
+  return textFromDraft(withoutEditorKeys(draft));
 }
 
 /**

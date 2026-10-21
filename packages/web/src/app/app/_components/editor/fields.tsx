@@ -58,6 +58,9 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
   // Último valor confirmado: Enter confirma e tira o foco na mesma passada, antes de o React re-renderizar;
   // sem isto o blur compararia com a prop antiga e confirmaria de novo (dois commits, dois undos).
   const committed = useRef<T>(value);
+  // Esc reverte e tira o foco; o blur que isso provoca ainda vê o texto digitado no closure e confirmaria (M10
+  // pegou: Esc confirmava em vez de reverter). O flag faz esse blur só soltar o foco.
+  const reverting = useRef(false);
 
   // Valor novo de fora (outro campo, undo, arraste): só entra no texto quando o campo não está em foco.
   useEffect(() => {
@@ -104,6 +107,10 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
       }}
       onBlur={() => {
         focused.current = false;
+        if (reverting.current) {
+          reverting.current = false;
+          return;
+        }
         commitNow();
       }}
       onKeyDown={(e) => {
@@ -114,6 +121,7 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
           e.preventDefault();
           setText(format(committed.current));
           setError(undefined);
+          reverting.current = true;
           e.currentTarget.blur();
         }
       }}

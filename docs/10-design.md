@@ -309,6 +309,12 @@ Regra: um componente ou action só sai de `app/<rota>/_*` para `components/` ou 
 quando uma segunda rota o usar. Imports dentro da rota são relativos (`./upload-form`, `../_actions/x`).
 Hoje: `app/app/` (nova obra: upload, editor, resultado); o editor vive em `app/app/_components/editor/`.
 
+**Testes** (vitest): `*.test.ts(x)` roda em node — lib, services, schemas e componentes por
+`renderToStaticMarkup`; `*.dom.test.tsx` (M10) declara `// @vitest-environment jsdom` e usa
+`@testing-library/react` + `user-event` para o que só o DOM mostra: foco e blur do `CommitInput`, atalhos como
+teclas, pointer events do `PlanCanvas` (rAF falso), `localStorage` da sessão, navegação de folhas, barra de passos.
+Server actions nos hooks são mockadas em `next-safe-action/hooks`. Sem e2e ainda (Playwright depois da S22).
+
 ## 8. Acessibilidade e idioma
 
 `<html lang="en">`. Contraste mínimo 4,5:1 no texto e 3:1 em foco, traço e ícone (WCAG AA), **medido**, não

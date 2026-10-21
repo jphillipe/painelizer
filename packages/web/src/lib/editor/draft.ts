@@ -609,6 +609,32 @@ export function jsonFromDraft(d: ProjectDraft): Record<string, unknown> {
   });
 }
 
+const withoutDollarKeys = (extra: Extra | undefined): Extra | undefined => {
+  if (extra === undefined) return undefined;
+  const kept = Object.fromEntries(Object.entries(extra).filter(([k]) => !k.startsWith('$')));
+  return Object.keys(kept).length === 0 ? undefined : kept;
+};
+const stripExtra = <T extends { extra?: Extra }>(x: T): T => {
+  const extra = withoutDollarKeys(x.extra);
+  if (extra === x.extra) return x;
+  const { extra: _e, ...rest } = x;
+  return (extra === undefined ? rest : { ...rest, extra }) as T;
+};
+
+/**
+ * O draft como o motor o vê (M10): sem as chaves `$…` que só o editor usa (`$underlay` na raiz, `$reviewed` nas
+ * paredes). O parser do CLI as ignora, mas o texto muda com elas e a checagem com debounce as tomava por edição.
+ */
+export function withoutEditorKeys(d: ProjectDraft): ProjectDraft {
+  const walls = d.walls.map((w) => {
+    const openings = w.openings.map(stripExtra);
+    const same = openings.every((o, i) => o === w.openings[i]);
+    return stripExtra(same ? w : { ...w, openings });
+  });
+  const same = walls.every((w, i) => w === d.walls[i]);
+  return stripExtra(same ? d : { ...d, walls });
+}
+
 export function textFromDraft(d: ProjectDraft): string {
   return JSON.stringify(jsonFromDraft(d), null, 2);
 }
