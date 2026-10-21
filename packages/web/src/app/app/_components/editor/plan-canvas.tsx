@@ -1,16 +1,23 @@
 'use client';
 
-import { MaximizeIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { MaximizeIcon, OctagonXIcon } from 'lucide-react';
+import { useEffect, useImperativeHandle, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Point } from '@/lib/editor/draft';
-import { alongFromStart, draggedEndpoint, draggedOpeningStart, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
+import { alongFromStart, draggedEndpoint, draggedOpeningStart, segmentRect, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
-import { fitViewport, panBy, planToScreen, rectToScreen, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
+import { centerOn, fitViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
 import { cn } from '@/lib/utils';
+
+/** Comandos de quem está fora do canvas (S21.4): a lista de paredes traz a selecionada para a vista. */
+export interface PlanCanvasHandle {
+  fit: () => void;
+  /** Centraliza a parede só se ela não está inteira na tela; nunca aproxima. */
+  focusWall: (wallId: string) => void;
+}
 
 export interface PlanCanvasProps {
   geometry: PlanGeometry;
@@ -27,6 +34,11 @@ export interface PlanCanvasProps {
   /** Tamanho antes de medir o container (SSR e testes). */
   initialSize?: Size | undefined;
   className?: string;
+  /** Workspace (S21.4): preenche a altura do painel pai em vez do 4:3; a dica de uso vai para o rodapé. */
+  fill?: boolean;
+  /** Toolbar do editor, à direita da barra da planta. */
+  toolbar?: ReactNode;
+  ref?: Ref<PlanCanvasHandle>;
 }
 
 const WHEEL_ZOOM = 0.0015;
@@ -48,7 +60,7 @@ type Drag =
  * abertura desliza o RO pela parede. Um arraste = uma transação = um undo. Cada ponto é convertido com o
  * viewport em JS (sem transform CSS), por isso rótulos ficam em pé e traços em px.
  */
-export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onDragEnd, initialSize, className }: PlanCanvasProps) {
+export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onDragEnd, initialSize, className, fill = false, toolbar, ref }: PlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<Size | undefined>(initialSize);
@@ -202,6 +214,23 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   const fit = (): void => {
     if (size !== undefined && bounds !== undefined) setViewport(fitViewport(bounds, size, FIT_PADDING_PX));
   };
+  useImperativeHandle(
+    ref,
+    () => ({
+      fit,
+      focusWall: (wallId) => {
+        const { geometry: g, viewport: v } = latest.current;
+        if (v === undefined || size === undefined) return;
+        const wall = g.walls.find((w) => w.wallId === wallId);
+        const broken = wall === undefined ? g.broken.find((b) => b.wallId === wallId) : undefined;
+        const rect = wall?.rect ?? (broken === undefined ? undefined : segmentRect(broken.start, broken.end, 5.5));
+        if (rect === undefined || rectVisible(v, rect, size)) return;
+        setViewport(centerOn(v, rect, size, FIT_PADDING_PX));
+      },
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [size?.width, size?.height, bounds],
+  );
 
   const visible = geometry.walls.filter((w) => level === 'all' || w.level === level);
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
@@ -214,14 +243,20 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   };
   const draggable = onEndpointDrag !== undefined;
 
+  const hint = draggable ? 'Click to select · drag ends and openings (Shift = 1/8") · drag the background to pan · scroll to zoom' : 'Click to select · drag to pan · scroll to zoom';
+
   return (
-    <div className={cn('space-y-2', className)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="eyebrow mr-1">Plan</p>
-        <Badge variant="secondary">{geometry.walls.length} walls</Badge>
+    <div className={cn(fill ? 'flex h-full min-h-0 flex-col gap-2' : 'space-y-2', className)}>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {fill ? null : (
+          <>
+            <p className="eyebrow mr-1">Plan</p>
+            <Badge variant="secondary">{geometry.walls.length} walls</Badge>
+          </>
+        )}
         {geometry.houseError !== undefined ? (
-          <Badge className="bg-destructive text-paper" title={geometry.houseError}>
-            plan doesn’t close
+          <Badge variant="destructive" title={geometry.houseError}>
+            <OctagonXIcon /> Plan doesn’t close
           </Badge>
         ) : null}
         {geometry.levels.length > 1 ? (
@@ -236,12 +271,12 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
             ))}
           </div>
         ) : null}
-        <span className="ml-auto text-[12px] text-ink-3">{draggable ? 'Click to select · drag ends and openings (Shift = 1/8") · drag the background to pan · scroll to zoom' : 'Click to select · drag to pan · scroll to zoom'}</span>
         <Button variant="ghost" size="xs" onClick={fit} title="Fit the plan in view">
           <MaximizeIcon /> Fit
         </Button>
+        {fill ? <div className="ml-auto flex items-center gap-1">{toolbar}</div> : <span className="ml-auto text-[12px] text-ink-3">{hint}</span>}
       </div>
-      <div ref={containerRef} className="relative aspect-[4/3] min-h-[360px] w-full overflow-hidden rounded-md border bg-paper-2">
+      <div ref={containerRef} className={cn('relative w-full overflow-hidden rounded-md border bg-paper-2', fill ? 'min-h-0 flex-1' : 'aspect-[4/3] min-h-[360px]')}>
         <svg
           ref={svgRef}
           role="img"
@@ -280,13 +315,16 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
           <p className="absolute inset-0 flex items-center justify-center text-sm text-ink-3">Nothing to draw yet.</p>
         ) : null}
       </div>
+      {fill ? <p className="shrink-0 truncate text-[12px] text-ink-3">{hint}</p> : null}
     </div>
   );
 }
 
 function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }: { wall: WallGeom; viewport: Viewport; selected: boolean; selectedOpening: string | undefined; severity: 'problem' | 'warning' | undefined; draggable: boolean }) {
   const r = rectToScreen(viewport, wall.rect);
-  const stroke = severity === 'problem' ? 'var(--color-destructive)' : selected ? 'var(--color-gold)' : severity === 'warning' ? 'var(--color-warning)' : 'var(--color-navy-900)';
+  // Cor do traço = estado (problema err, aviso gold-700, normal navy); seleção é um halo navy-600 por fora,
+  // para parede selecionada e parede com aviso nunca se confundirem (M1, docs/10-design.md §2).
+  const stroke = severity === 'problem' ? 'var(--color-destructive)' : severity === 'warning' ? 'var(--color-warning)' : 'var(--color-navy-900)';
   const mid = planToScreen(viewport, { x: (wall.plateStart.x + wall.plateEnd.x) / 2, y: (wall.plateStart.y + wall.plateEnd.y) / 2 });
   const thickPx = wall.thickness * viewport.scale;
   // Rótulo fora da parede quando ela é fina na tela: deslocado perpendicularmente ao eixo.
@@ -296,7 +334,8 @@ function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }
   return (
     <g data-wall-id={wall.wallId} data-selected={selected || undefined} className="cursor-pointer">
       <title>{`${wall.wallId} · ${wall.section} · ${wall.exterior ? 'exterior' : 'interior'} · plate ${formatMeasure(wall.plateLength)}${wall.framed ? '' : ' (not framed: plan doesn’t close)'}`}</title>
-      <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={wall.exterior ? 'var(--color-gold-100)' : 'var(--color-paper-3)'} stroke={stroke} strokeWidth={selected ? 2.5 : 1.25} strokeDasharray={wall.framed ? undefined : '5 3'} />
+      {selected ? <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={0.22} strokeLinejoin="round" pointerEvents="none" /> : null}
+      <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={wall.exterior ? 'var(--color-gold-100)' : 'var(--color-paper-3)'} stroke={selected && severity === undefined ? 'var(--color-selection)' : stroke} strokeWidth={selected ? 2 : 1.25} strokeDasharray={wall.framed ? undefined : '5 3'} />
       {wall.openings.map((o) => (
         <Opening key={o.openingId} wall={wall} opening={o} viewport={viewport} selected={selectedOpening === o.openingId} draggable={draggable} />
       ))}
@@ -316,7 +355,7 @@ function Handles({ wall, viewport }: { wall: WallGeom; viewport: Viewport }) {
         return (
           <g key={end} data-handle={end} style={{ cursor }}>
             <circle cx={p.x} cy={p.y} r={HANDLE_HIT_RADIUS} fill="transparent" />
-            <circle cx={p.x} cy={p.y} r={HANDLE_RADIUS} fill="var(--color-gold)" stroke="var(--color-navy-900)" strokeWidth={1.5} />
+            <circle cx={p.x} cy={p.y} r={HANDLE_RADIUS} fill="var(--color-selection)" stroke="var(--color-card)" strokeWidth={2} />
           </g>
         );
       })}
@@ -328,13 +367,14 @@ function Opening({ wall, opening, viewport, selected, draggable }: { wall: WallG
   if (opening.rect === undefined) return null;
   const r = rectToScreen(viewport, opening.rect);
   const horizontal = wall.dir === 'x';
-  const stroke = opening.resolved ? (selected ? 'var(--color-gold)' : 'var(--color-navy-900)') : 'var(--color-destructive)';
+  const stroke = opening.resolved ? (selected ? 'var(--color-selection)' : 'var(--color-navy-900)') : 'var(--color-destructive)';
   const center = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   const wide = (horizontal ? r.w : r.h) > 22;
   return (
     <g data-opening-id={opening.openingId} style={{ cursor: draggable ? (horizontal ? 'ew-resize' : 'ns-resize') : 'pointer' }}>
       <title>{`${opening.openingId} · ${opening.type ?? '?'} · ${formatMeasure(opening.s1 - opening.s0)} wide, left edge ${formatMeasure(opening.s0)} from start${opening.error === undefined ? '' : ` · ${opening.error}`}`}</title>
       {/* Vão: apaga a parede; batentes nas duas pontas; janela ganha a linha do vidro no eixo. */}
+      {selected ? <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={0.22} strokeLinejoin="round" pointerEvents="none" /> : null}
       <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="var(--color-card)" stroke={selected ? stroke : 'none'} strokeWidth={2} strokeDasharray={opening.resolved ? undefined : '3 2'} />
       {horizontal ? (
         <>
@@ -356,7 +396,7 @@ function Opening({ wall, opening, viewport, selected, draggable }: { wall: WallG
 }
 
 function Label({ x, y, text, tone, small = false, vertical = false }: { x: number; y: number; text: string; tone: 'ink' | 'muted' | 'selected' | 'destructive'; small?: boolean; vertical?: boolean }) {
-  const fill = tone === 'ink' ? 'var(--color-ink)' : tone === 'muted' ? 'var(--color-ink-2)' : tone === 'selected' ? 'var(--color-gold-600)' : 'var(--color-destructive)';
+  const fill = tone === 'ink' ? 'var(--color-ink)' : tone === 'muted' ? 'var(--color-ink-2)' : tone === 'selected' ? 'var(--color-selection)' : 'var(--color-destructive)';
   return (
     <text
       x={x}

@@ -268,10 +268,10 @@ function snapTo(value: number, step: number): number {
 /** Problemas que só a geometria vê: casa que não fecha e paredes sem eixo. */
 export function geometryIssues(g: PlanGeometry, ids: IdIndex): Issue[] {
   const issues: Issue[] = [];
-  for (const b of g.broken) issues.push({ severity: 'problem', source: 'geometry', text: b.error, wallId: b.wallId });
+  for (const b of g.broken) issues.push({ severity: 'problem', source: 'geometry', kind: 'wall.noAxis', text: b.error, wallId: b.wallId });
   if (g.houseError !== undefined && g.broken.length === 0) {
     const [wallId, ...alsoWalls] = wallIdsIn(g.houseError, ids);
-    const issue: Issue = { severity: 'problem', source: 'geometry', text: g.houseError };
+    const issue: Issue = { severity: 'problem', source: 'geometry', kind: 'plan.open', text: g.houseError };
     if (wallId !== undefined) issue.wallId = wallId;
     if (alsoWalls.length > 0) issue.alsoWalls = alsoWalls;
     issues.push(issue);

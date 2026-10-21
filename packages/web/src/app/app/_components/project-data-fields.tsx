@@ -4,169 +4,209 @@ import type { Control, FieldValues, Path } from 'react-hook-form';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { RequiredField } from '@/lib/editor/requirements';
 import type { ProjectData } from '@/types/extract';
+import { cn } from '@/lib/utils';
 
 const AUTO = 'auto';
 const SPAN_LABELS: Record<string, string> = { [AUTO]: 'Not known', center: 'Center bearing', clear: 'Clear span' };
 const EXPOSURE_LABELS: Record<string, string> = { [AUTO]: 'Not known', B: 'B', C: 'C', D: 'D' };
 
 /**
+ * `full`: upload (com descrições). `compact`: configurações do projeto (sem descrições). `setup`: card "Before you
+ * review" (S21.4) — os campos que o motor exige deste projeto em destaque (`required`), o resto em "Optional".
+ */
+export type ProjectDataLayout = 'full' | 'compact' | 'setup';
+
+type FieldKey = keyof ProjectData;
+const REQUIRED_KEY: Record<RequiredField, FieldKey> = { wallHeight: 'wallHeight', snow: 'snow', width: 'width', floors: 'floors', floorSpan: 'floorSpan' };
+/** Ordem dos campos no card de setup. */
+const SETUP_ORDER: FieldKey[] = ['wallHeight', 'floors', 'floorSpan', 'snow', 'width', 'wind', 'exposure', 'headerHeight', 'sillHeight'];
+
+interface FieldProps<T extends FieldValues & ProjectData> {
+  control: Control<T>;
+  describe: boolean;
+  required?: boolean;
+}
+
+/**
  * Campos do que os desenhos não trazem (docs/04-decisoes 2026-10-15): altura da parede e dados do estrutural.
  * Usado no upload (antes da leitura) e na revisão (depois, sem nova chamada à IA). `T` é o formulário que os contém.
  */
-export function ProjectDataFields<T extends FieldValues & ProjectData>({ control, compact = false }: { control: Control<T>; compact?: boolean }) {
-  const name = (k: keyof ProjectData) => k as Path<T>;
+export function ProjectDataFields<T extends FieldValues & ProjectData>({
+  control,
+  compact = false,
+  layout,
+  required = [],
+}: {
+  control: Control<T>;
+  compact?: boolean;
+  layout?: ProjectDataLayout;
+  /** `setup`: o que o motor exige deste projeto (lib/editor/requirements). */
+  required?: readonly RequiredField[];
+}) {
+  const mode: ProjectDataLayout = layout ?? (compact ? 'compact' : 'full');
+  const describe = mode === 'full';
+  if (mode === 'setup') {
+    const req = new Set<FieldKey>(required.map((r) => REQUIRED_KEY[r]));
+    const main = SETUP_ORDER.filter((k) => req.has(k));
+    const rest = SETUP_ORDER.filter((k) => !main.includes(k));
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="mb-2 text-[13px] font-semibold text-ink-2">Required for this project</p>
+          <div className={cn('grid gap-4', main.length > 1 && 'sm:grid-cols-2 lg:grid-cols-3')}>
+            {main.map((k) => (
+              <Field key={k} name={k} control={control} describe={false} required={req.has(k)} />
+            ))}
+          </div>
+        </div>
+        <details className="group rounded-md border bg-paper-2/60 p-3 open:bg-paper-2/60">
+          <summary className="cursor-pointer text-sm font-semibold text-ink-2 select-none">
+            Optional <span className="font-normal text-ink-3">— the engine has a default or the drawings may answer; fill in if the structural notes say</span>
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {rest.map((k) => (
+              <Field key={k} name={k} control={control} describe={false} />
+            ))}
+          </div>
+        </details>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <FormField
-          control={control}
-          name={name('wallHeight')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Wall height <span className="font-normal text-ink-3">(if no sections)</span>
-              </FormLabel>
-              <FormControl>
-                <Input {...field} placeholder={`e.g. 9'-1 1/8"`} className="font-mono" />
-              </FormControl>
-              {compact ? null : <FormDescription>Subfloor to top of the double top plate.</FormDescription>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('headerHeight')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Header height <span className="font-normal text-ink-3">(top of RO)</span>
-              </FormLabel>
-              <FormControl>
-                <Input {...field} placeholder={`6'-10 1/2"`} className="font-mono" />
-              </FormControl>
-              {compact ? null : <FormDescription>From the subfloor. Empty: the drawings, else the factory standard.</FormDescription>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('sillHeight')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Window sill height <span className="font-normal text-ink-3">(if no elevations)</span>
-              </FormLabel>
-              <FormControl>
-                <Input {...field} placeholder={`e.g. 2'-0"`} className="font-mono" />
-              </FormControl>
-              {compact ? null : <FormDescription>From the subfloor, for window types the drawings leave blank.</FormDescription>}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <Field name="wallHeight" control={control} describe={describe} />
+        <Field name="headerHeight" control={control} describe={describe} />
+        <Field name="sillHeight" control={control} describe={describe} />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <FormField
-          control={control}
-          name={name('floors')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Floors above this level</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="2" inputMode="numeric" className="font-mono" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('floorSpan')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Floor span</FormLabel>
-              <Select value={(field.value as string) || AUTO} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue>{SPAN_LABELS[(field.value as string) || AUTO]}</SelectValue>
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={AUTO}>Not known</SelectItem>
-                  <SelectItem value="center">Center bearing</SelectItem>
-                  <SelectItem value="clear">Clear span</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('snow')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Snow load (psf)</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="30" inputMode="decimal" className="font-mono" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('width')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Building width</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder={`29'`} className="font-mono" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('wind')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Wind (mph)</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="130" inputMode="numeric" className="font-mono" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={name('exposure')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Exposure</FormLabel>
-              <Select value={(field.value as string) || AUTO} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue>{EXPOSURE_LABELS[(field.value as string) || AUTO]}</SelectValue>
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={AUTO}>Not known</SelectItem>
-                  <SelectItem value="B">B</SelectItem>
-                  <SelectItem value="C">C</SelectItem>
-                  <SelectItem value="D">D</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <Field name="floors" control={control} describe={describe} />
+        <Field name="floorSpan" control={control} describe={describe} />
+        <Field name="snow" control={control} describe={describe} />
+        <Field name="width" control={control} describe={describe} />
+        <Field name="wind" control={control} describe={describe} />
+        <Field name="exposure" control={control} describe={describe} />
       </div>
     </div>
   );
 }
+
+function Field<T extends FieldValues & ProjectData>({ name, control, describe, required = false }: FieldProps<T> & { name: FieldKey }) {
+  switch (name) {
+    case 'wallHeight':
+      return (
+        <TextField control={control} name={name} required={required} label="Wall height" hint={required ? undefined : '(if no sections)'} placeholder={`e.g. 9'-1 1/8"`} description={describe || required ? 'Subfloor to top of the double top plate.' : undefined} />
+      );
+    case 'headerHeight':
+      return <TextField control={control} name={name} required={required} label="Header height" hint="(top of RO)" placeholder={`6'-10 1/2"`} description={describe ? 'From the subfloor. Empty: the drawings, else the factory standard.' : undefined} />;
+    case 'sillHeight':
+      return <TextField control={control} name={name} required={required} label="Window sill height" hint="(if no elevations)" placeholder={`e.g. 2'-0"`} description={describe ? 'From the subfloor, for window types the drawings leave blank.' : undefined} />;
+    case 'floors':
+      return <TextField control={control} name={name} required={required} label="Floors above this level" placeholder="2" inputMode="numeric" description={required ? 'Bearing walls: picks the row of the IRC header table.' : undefined} />;
+    case 'snow':
+      return <TextField control={control} name={name} required={required} label="Snow load (psf)" placeholder="30" inputMode="decimal" description={required ? 'Ground snow load from the structural notes.' : undefined} />;
+    case 'width':
+      return <TextField control={control} name={name} required={required} label="Building width" placeholder={`29'`} description={required ? 'Depth of the building the floor joists span.' : undefined} />;
+    case 'wind':
+      return <TextField control={control} name={name} required={required} label="Wind (mph)" placeholder="130" inputMode="numeric" description={describe ? undefined : 'Empty: 1 king stud per side, with a warning.'} />;
+    case 'floorSpan':
+      return (
+        <SelectField control={control} name={name} required={required} label="Floor span" labels={SPAN_LABELS} options={['center', 'clear']} description={required ? 'Do the floor joists rest on a center bearing wall or beam, or span the whole width? Not known = worst case, and the header falls outside the table.' : 'Not known = worst case; headers may fall outside the table.'} />
+      );
+    case 'exposure':
+      return <SelectField control={control} name={name} required={required} label="Exposure" labels={EXPOSURE_LABELS} options={['B', 'C', 'D']} />;
+  }
+}
+
+function TextField<T extends FieldValues & ProjectData>({
+  control,
+  name,
+  label,
+  hint,
+  placeholder,
+  inputMode,
+  description,
+  required,
+}: {
+  control: Control<T>;
+  name: FieldKey;
+  label: string;
+  hint?: string | undefined;
+  placeholder: string;
+  inputMode?: 'numeric' | 'decimal' | undefined;
+  description?: string | undefined;
+  required: boolean;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name as Path<T>}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className={required ? 'font-semibold' : undefined}>
+            {label} {hint !== undefined ? <span className="font-normal text-ink-3">{hint}</span> : null}
+            {required ? <span className="font-normal text-gold-700"> · required</span> : null}
+          </FormLabel>
+          <FormControl>
+            <Input {...field} placeholder={placeholder} inputMode={inputMode} className={cn('font-mono', required && 'border-line-strong bg-card')} aria-required={required || undefined} />
+          </FormControl>
+          {description !== undefined ? <FormDescription>{description}</FormDescription> : null}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function SelectField<T extends FieldValues & ProjectData>({
+  control,
+  name,
+  label,
+  labels,
+  options,
+  description,
+  required = false,
+}: {
+  control: Control<T>;
+  name: FieldKey;
+  label: string;
+  labels: Record<string, string>;
+  options: readonly string[];
+  description?: string | undefined;
+  required?: boolean;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name as Path<T>}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className={required ? 'font-semibold' : undefined}>
+            {label}
+            {required ? <span className="font-normal text-gold-700"> · required</span> : null}
+          </FormLabel>
+          <Select value={(field.value as string) || AUTO} onValueChange={(v) => field.onChange(v === AUTO ? '' : v)}>
+            <FormControl>
+              <SelectTrigger className={cn('w-full', required && 'border-line-strong bg-card')} aria-required={required || undefined}>
+                <SelectValue>{labels[(field.value as string) || AUTO]}</SelectValue>
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              <SelectItem value={AUTO}>{labels[AUTO]}</SelectItem>
+              {options.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {labels[o]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {description !== undefined ? <FormDescription>{description}</FormDescription> : null}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+

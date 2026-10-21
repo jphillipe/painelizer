@@ -193,6 +193,16 @@ describe('edição de aberturas', () => {
     expect(wallById(draftOf(c), 'I1')?.openings.at(-1)).toEqual({ id: 'I1-O1', tag: '1', center: 92 });
   });
 
+  it('addOpening com preset (abertura que a leitura não posicionou): id e tag da leitura; id ocupado ou tag desconhecida caem no padrão', () => {
+    const tags = Object.keys(draftOf(loose()).config.openingTypes ?? {});
+    const p = editorReducer(loose(), { type: 'addOpening', wallId: 'I1', preset: { id: 'I1-U2-1', tag: tags[1] } });
+    expect(wallById(draftOf(p), 'I1')?.openings.at(-1)).toEqual({ id: 'I1-U2-1', tag: tags[1], center: 92 });
+    expect(p.selection).toEqual({ kind: 'opening', wallId: 'I1', openingId: 'I1-U2-1' });
+    const taken = wallById(draftOf(loose()), 'I1')!.openings[0]?.id ?? 'I1-O1';
+    const q = editorReducer(p, { type: 'addOpening', wallId: 'I1', preset: { id: taken, tag: 'NOPE' } });
+    expect(wallById(draftOf(q), 'I1')?.openings.at(-1)).toMatchObject({ id: 'I1-O1', tag: tags[0] });
+  });
+
   it('updateOpening, renameOpening, moveOpening (center ou offset conforme a forma)', () => {
     const s0 = run(loaded(), { type: 'select', selection: { kind: 'opening', wallId: 'W01', openingId: 'J1' } });
     const s1 = editorReducer(s0, { type: 'updateOpening', wallId: 'W01', openingId: 'J1', patch: { jackStuds: 2, header: undefined } });

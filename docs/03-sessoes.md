@@ -453,7 +453,7 @@ Os PDFs de referência são vetoriais (Revit): extrair texto e geometria do PDF 
 
 Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
 
-- [ ] **S20 — Next.js: página que carrega um JSON e mostra os SVGs e a planta**
+- [x] **S20 — Next.js: página que carrega um JSON e mostra os SVGs e a planta** (S20.0–S20.3 concluídas em 2026-10-19)
   Planejada em 2026-10-14 (plano aprovado pelo humano) em quatro subitens. Decisões do humano: `docs/10-design.md`
   antes de qualquer componente (serve também para a landing futura); Tailwind CSS + shadcn/ui; formulários com
   zod + react-hook-form; mutações só por server actions com next-safe-action; leituras em Server Components;
@@ -630,4 +630,71 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     seleção; arrastar o corpo de W03 faz pan e não edita; a checagem recalcula ("Ready · 11 panels" com W01 mais
     curta). Testes do web: 104. Fica para depois da S22: editar o catálogo (openingTypes/headerSchedule) e
     criar parede desenhando na planta.
+  - [x] **S21.4 — Workspace do editor (UX do passo 02).** Feita em 2026-10-20 (plano aprovado pelo humano; sem
+    regra de framing). Motivo: o passo 02 era uma coluna longa com tudo ao mesmo tempo (8 badges, formulário de 9
+    campos, planta 4:3, 30 problemas iguais em mono, tabela de 30 × 8, notas e relatório da IA, Generate no fim) e
+    o humano não conseguia usar. Decisões do humano: workspace full-bleed (não a coluna de 1200 px) e card único
+    "Before you review" quando a leitura chega sem altura. Lib: `Issue.kind` (família: `wall.height`,
+    `opening.position`, `config.studLength`, `plan.open`…; problemas de carga em `config.*` entram na família do
+    campo), `lib/editor/issue-groups.ts` (`groupIssues` por kind / código / texto com ids trocados por `▢`,
+    `ISSUE_TITLES` em inglês para kinds, códigos da extração e do motor, ação `projectData` / `projectSettings` /
+    `openWall`, `needsProjectData`), `wall-filters.ts` (All / Needs attention / Low confidence),
+    `viewport.ts` (`rectVisible`, `centerOn` sem aproximar). Shell: `components/shell-layout.tsx` (contexto de modo
+    `page` / `workspace`, `useWorkspaceLayout`), `AppShell` por ele, utilitário `workspace-pane`,
+    `lib/use-media-query.ts`, `ui/dropdown-menu.tsx`. Editor: `wall-editor.tsx` vira a camada de dados e renderiza
+    `workspace.tsx` (estado só de interface: aba, card dispensado; remonta por projeto), `editor-top-bar.tsx`,
+    `navigator.tsx` (Tabs com `forceMount`), `wall-rows.tsx`, `issue-groups-list.tsx`, `reading-panel.tsx`,
+    `project-settings-dialog.tsx` (seleção `project` = dialog aberto), `issue-callout.tsx`; `PlanCanvas` ganha
+    `fill`, `toolbar` e o handle `{ fit, focusWall }` (React 19 `ref` como prop); `EditorToolbar` `embedded`;
+    `StepBar` `compact`; `Section` de `fields.tsx` `collapsible`/`defaultOpen`; `ProjectDataFields` `layout`
+    (`full` / `compact` / `setup`) e `ProjectDataForm` `variant` (`card` / `setup`, com `onSkip`). Removidos
+    `wall-list.tsx` e `issues-list.tsx`. `docs/10-design.md` §3 (Tabs, DropdownMenu, Dialog) e §4 ("Workspace do
+    editor"). Conferido no browser (1024×768): 28x40 abre no workspace sem rolagem da página, "Ready · 12 panels"
+    e Generate ligados no topo, clicar W01 na lista seleciona e abre o inspetor com Framing recolhida; leitura
+    gravada do Ringgold sem altura abre na aba Issues com "Wall height is missing × 26" (era 26 linhas) e o card
+    "Before you review" no centro; "Set heights per wall instead" mostra a planta e "Fill in project data" traz o
+    card de volta; Project settings abre em dialog rolável. Testes do web: 119 (eram 104).
+    Correção na mesma data (humano: campos "opcionais" sem os quais não gera; card voltava depois do Apply):
+    `lib/editor/requirements.ts` (`projectDataNeeds`: altura; e, para parede portante com abertura sem header
+    próprio, neve + largura, pavimentos acima e vão do piso) decide o que o card pede como obrigatório e quando
+    ele aparece (só pelo draft, nunca pela mensagem do motor); `ProjectDataFields` `layout="setup"` recebe
+    `required` ("Required for this project" + "Optional"), `ProjectDataForm` valida o obrigatório antes de
+    aplicar; `draftIssues` ganha `config.building` e `wall.floorsSupported`, `locate` dá a mesma família às
+    mensagens do motor e `dropRepeated` tira a repetição. Conferido com a leitura nova do Ringgold
+    (`ringgold-st-multifamily-reading.json`, 28 paredes): card pede 5 campos; com 9'-1 1/8", 2 pavimentos,
+    center bearing, 30 psf e 29' → "Ready · 41 panels", 34 avisos, sem o card voltar. Testes do web: 124.
+    Ajuda e conserto rápido dos avisos (mesma data, pedido do humano): `lib/editor/issue-help.ts` (`ISSUE_HELP`
+    por código/família/texto, `quickFixFor`, `readingWarningResolved`), `issue-groups-list.tsx` mostra o que
+    aconteceu e como resolver, chips por abertura, campo de vento e de altura de header, botão "Add <id>" para a
+    abertura sem posição (`addOpening` com `preset` no reducer); `issue-callout.tsx` mostra o "como resolver".
+    Conferido no browser: "Add I9-U2-1" cria a porta U2 no centro de I9, seleciona e abre o inspetor, e o aviso
+    some; vento 130 na lista tira os 19 `WIND_SPEED_MISSING`. Testes do web: 128.
+- [ ] **Revisão do app (2026-10-20)** — diagnóstico completo e plano em `docs/11-revisao-app.md` (aprovado pelo
+  humano). Dez itens, cada um uma sessão; a ordem em relação à S22 é decisão do humano. Nenhum toca regra de framing.
+  - [x] **M1 — Tokens, contraste e semântica de cor.** Feita em 2026-10-20 na sessão da revisão. Seleção = navy-600
+    (halo na planta, fundo + borda nas listas); aviso = gold-700/gold-100; ink-3 escurecido; gold-700 e ok-700 novos;
+    foco único navy-600 no `:focus-visible` global (componentes do shadcn sem anel próprio; `.on-navy` no header);
+    Badge em chip claro com ícone (`success`/`warning`/`destructive`); Alert com `role` por variante; Skeleton
+    papel-3; Card 3px + shadow-1 em uso; Tabs `line` no resultado; Table com cabeçalho ink-2; botões pequenos pill;
+    hover de outline/ghost em papel-2; `--color-line`/`gold-btn`/`ok`/`err`/`selection` no `@theme`;
+    `src/app/theme.test.ts` (24 casos) mede os pares de uso real. `10-design` §2, §3, §4, §7 e §8 corrigidos com os
+    valores medidos. Testes do web: 152 (eram 128). Conferido em 1440×900 (Chrome headless dirigido por CDP, porque
+    o browser embutido ficou com 199 px de altura): upload, editor 28x40 com W01 selecionada (halo e alças navy,
+    linha da lista com fundo/borda navy, separador da toolbar visível, chip "Ready · 12 panels" claro com ícone),
+    Ringgold na aba Issues (chip "2 warnings" gold-100 ≠ seleção), passo 03 (tabs sublinhadas em gold, badges
+    claros, botões pill, folha selecionada em navy). Capturas em `out/m1/` (fora do git).
+  - [ ] **M2 — Não perder trabalho** (auto-save em `localStorage` + resume, `beforeunload`, confirmação em Start over,
+    passo 2/3 em `done`, `UploadForm` não desmontado, Backspace só com foco no canvas, arquivo `.panelizer.json`).
+  - [ ] **M3 — Resultado que mostra a entrega** (aba Materials com BOM e lista de corte, planta clicável →
+    folha, anterior/próximo, lightbox, avisos agrupados, hero só no passo 01). Toca `core/output/planSvg.ts`.
+  - [ ] **M4 — Motion no editor** (seleção/hover/halo animados, viewport interpolado em Fit, fade do inspetor,
+    `commit-flash`, chip de status; `prefers-reduced-motion` cobrindo tudo).
+  - [ ] **M5 — Facilidade de uso no editor** (zoom +/−, escala, grade, pinch, nudge por teclado, tooltips com
+    atalhos, prev/next, "Reviewed" por parede, dialog de configurações sem campos duplicados, elevação esquemática
+    do projeto solto, mobile, passo 01 com miniaturas de PDF).
+  - [ ] **M6 — Planta do arquiteto por baixo** (`$underlay` calibrado por dois pontos).
+  - [ ] **M7 — Extração honesta** (prévia das páginas e custo, progresso real, cancelar, job sobrevive ao reload).
+  - [ ] **M8 — Desempenho da checagem** (`check` sem gerar SVG/CSV; memoização da geometria por parede).
+  - [ ] **M9 — PDF e impressão** (`@resvg/resvg-js`, "x de y").
+  - [ ] **M10 — Testes de interação** (jsdom + testing-library).
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

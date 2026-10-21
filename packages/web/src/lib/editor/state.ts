@@ -69,7 +69,8 @@ export type EditorAction =
   /** Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento e papel; em planta, continua da ponta `end` virando 90°. */
   | { type: 'addWall'; afterWallId?: string }
   | { type: 'removeWall'; wallId: string }
-  | { type: 'addOpening'; wallId: string }
+  /** `preset` (S21.4): id e tag que a leitura já tinha para uma abertura que ficou fora do projeto (sem posição). */
+  | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
   | { type: 'removeOpening'; wallId: string; openingId: string }
   | { type: 'updateOpening'; wallId: string; openingId: string; patch: Patch<Omit<DraftOpening, 'id' | 'extra'>> }
   | { type: 'renameOpening'; wallId: string; openingId: string; newId: string }
@@ -215,10 +216,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case 'addOpening': {
       const w = d.walls.find((x) => x.id === action.wallId);
       if (w === undefined) return state;
-      const id = nextOpeningId(d, w.id);
+      const preset = action.preset ?? {};
+      const id = preset.id !== undefined && preset.id !== '' && isIdFree(d, preset.id, 'opening') ? preset.id : nextOpeningId(d, w.id);
       const length = w.length ?? (w.start !== undefined && w.end !== undefined ? Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y) : undefined);
       const mid = length === undefined ? 48 : length / 2;
-      const firstTag = Object.keys(d.config.openingTypes ?? {})[0];
+      const tags = Object.keys(d.config.openingTypes ?? {});
+      const firstTag = preset.tag !== undefined && tags.includes(preset.tag) ? preset.tag : tags[0];
       const opening: DraftOpening =
         firstTag !== undefined
           ? { id, tag: firstTag, center: round1(mid) }

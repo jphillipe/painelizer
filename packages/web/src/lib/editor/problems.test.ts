@@ -103,7 +103,9 @@ describe('draftIssues', () => {
     expect(texts).toContain('opening J: rough opening size is missing (no schedule tag)');
     expect(texts).toContain('opening J: position is missing (center or left edge)');
     expect(texts).toContain('opening K: header "H9" is not in the header schedule');
-    expect(issues.find((i) => i.text.startsWith('opening K'))).toMatchObject({ wallId: 'W1', openingId: 'K', source: 'draft' });
+    expect(issues.find((i) => i.text.startsWith('opening K'))).toMatchObject({ wallId: 'W1', openingId: 'K', source: 'draft', kind: 'opening.headerMark' });
+    expect(issues.find((i) => i.text === 'wall W1: duplicate id')).toMatchObject({ kind: 'wall.duplicateId' });
+    expect(issues.every((i) => typeof i.kind === 'string')).toBe(true);
     expect(countIssues(issues).problems).toBe(issues.length);
   });
 

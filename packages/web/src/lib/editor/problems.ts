@@ -19,6 +19,8 @@ export interface Issue {
   source: IssueSource;
   /** Mensagem original, sem tradução. */
   text: string;
+  /** Família da issue do próprio editor (`wall.height`, `opening.position`, `plan.open`…): agrupa na lista (S21.4). */
+  kind?: string;
   code?: string;
   wallId?: string;
   /** Outras paredes citadas na mesma mensagem (`paredes N1 e S1 se cruzam`): contam nas duas. */
@@ -92,9 +94,14 @@ function locate(issue: Issue, text: string, ids: IdIndex): Issue {
     if (src) {
       const tag = src[1]!;
       issue.source = tag === 'parser' ? 'parser' : tag === 'altura' || tag === 'lista de material' ? 'project' : 'engine';
+      if (tag === 'planta') issue.kind = 'plan.open'; // mesma família do erro que a geometria vê no cliente
       body = body.slice(src[0].length);
-      if (issue.source === 'project') return issue; // lista paredes por nome, mas o problema é do projeto inteiro
     }
+    // O motor pede o mesmo que o draft já apontou: mesma família, para a lista não mostrar duas vezes.
+    if (/sem config\.building/.test(body)) issue.kind = 'config.building';
+    else if (/sem wall\.floorsSupported/.test(body)) issue.kind = 'wall.floorsSupported';
+    else if (/^altura: /.test(text)) issue.kind = 'wall.height';
+    if (issue.source === 'project') return issue; // lista paredes por nome, mas o problema é do projeto inteiro
   }
   const path = PATH_RE.exec(body);
   if (path) {
@@ -169,44 +176,60 @@ export function wallIdsIn(text: string, ids: IdIndex): string[] {
 /** O que o modelo já sabe antes do parser: campos obrigatórios ausentes, ids repetidos, formato misto, catálogo. */
 export function draftIssues(draft: ProjectDraft, load: readonly DraftProblem[]): Issue[] {
   const ids = idIndex(draft);
-  const issues: Issue[] = load.map((p) => locate({ severity: 'problem', source: 'draft', text: p.path === '' ? p.text : `${p.path}: ${p.text}` }, p.path, ids));
-  const problem = (text: string, loc: { wallId?: string; openingId?: string } = {}): void => {
-    issues.push({ severity: 'problem', source: 'draft', text, ...loc });
+  // Problema de carga num campo do config entra na família desse campo (`config.studLength` null e "precut
+  // stud lengths are missing" são a mesma coisa para o humano).
+  const issues: Issue[] = load.map((p) => {
+    const issue: Issue = { severity: 'problem', source: 'draft', text: p.path === '' ? p.text : `${p.path}: ${p.text}` };
+    const config = /^(?:project\.)?(config\.[A-Za-z]+)/.exec(p.path);
+    if (config) issue.kind = config[1]!;
+    return locate(issue, p.path, ids);
+  });
+  const problem = (kind: string, text: string, loc: { wallId?: string; openingId?: string } = {}): void => {
+    issues.push({ severity: 'problem', source: 'draft', kind, text, ...loc });
   };
   const c = draft.config;
-  if (c.studSpacing === undefined) problem('config.studSpacing: stud spacing is missing (16" is the usual value)');
-  if (c.studLength === undefined || c.studLength.length === 0) problem('config.studLength: precut stud lengths are missing (wall height minus three plates)');
+  if (c.studSpacing === undefined) problem('config.studSpacing', 'config.studSpacing: stud spacing is missing (16" is the usual value)');
+  if (c.studLength === undefined || c.studLength.length === 0) problem('config.studLength', 'config.studLength: precut stud lengths are missing (wall height minus three plates)');
   const format = draftFormat(draft);
-  if (format === 'mixed') problem('walls: some walls are in plan (start/end) and some by length — use one format');
-  if (format === 'empty') problem('walls: the project has no walls');
+  if (format === 'mixed') problem('walls.mixed', 'walls: some walls are in plan (start/end) and some by length — use one format');
+  if (format === 'empty') problem('walls.empty', 'walls: the project has no walls');
   const seen = new Set<string>();
   const openingIds = new Set<string>();
   for (const w of draft.walls) {
     const loc = { wallId: w.id };
-    if (seen.has(w.id)) problem(`wall ${w.id}: duplicate id`, loc);
+    if (seen.has(w.id)) problem('wall.duplicateId', `wall ${w.id}: duplicate id`, loc);
     seen.add(w.id);
     if (isPlanWall(w)) {
-      if (w.start === undefined || w.end === undefined) problem(`wall ${w.id}: needs both start and end`, loc);
-      if (w.length !== undefined) problem(`wall ${w.id}: a wall in plan has no length (it comes from start/end)`, loc);
-      if (w.layoutOrigin !== undefined) problem(`wall ${w.id}: a wall in plan has no layoutOrigin (it comes from the corners)`, loc);
+      if (w.start === undefined || w.end === undefined) problem('wall.ends', `wall ${w.id}: needs both start and end`, loc);
+      if (w.length !== undefined) problem('wall.planLength', `wall ${w.id}: a wall in plan has no length (it comes from start/end)`, loc);
+      if (w.layoutOrigin !== undefined) problem('wall.planLayoutOrigin', `wall ${w.id}: a wall in plan has no layoutOrigin (it comes from the corners)`, loc);
     } else if (w.length === undefined) {
-      problem(`wall ${w.id}: length is missing`, loc);
+      problem('wall.length', `wall ${w.id}: length is missing`, loc);
     }
-    if (w.height === undefined) problem(`wall ${w.id}: height is missing`, loc);
-    if (w.section === undefined) problem(`wall ${w.id}: section is missing (2x4 or 2x6)`, loc);
-    if (w.exterior === undefined) problem(`wall ${w.id}: exterior / interior is not set`, loc);
-    if (w.bearing === undefined) problem(`wall ${w.id}: bearing / non-bearing is not set`, loc);
+    if (w.height === undefined) problem('wall.height', `wall ${w.id}: height is missing`, loc);
+    if (w.section === undefined) problem('wall.section', `wall ${w.id}: section is missing (2x4 or 2x6)`, loc);
+    if (w.exterior === undefined) problem('wall.exterior', `wall ${w.id}: exterior / interior is not set`, loc);
+    if (w.bearing === undefined) problem('wall.bearing', `wall ${w.id}: bearing / non-bearing is not set`, loc);
+    // Header pela tabela IRC (core/rules/openingHeader.ts): parede portante com abertura sem header próprio
+    // precisa de config.building (neve + largura) e de floorsSupported. O motor diria o mesmo, 600 ms depois.
+    if (w.bearing === true && w.openings.some((o) => o.header === undefined && o.headerMark === undefined)) {
+      const b = c.building;
+      if (b === undefined || b.groundSnowLoad === undefined || b.buildingWidth === undefined) {
+        problem('config.building', `wall ${w.id}: bearing wall with openings needs config.building (snow load and building width) for the IRC header table`, loc);
+      }
+      if (w.floorsSupported === undefined) problem('wall.floorsSupported', `wall ${w.id}: floors above the wall are missing (IRC header table)`, loc);
+    }
     for (const o of w.openings) {
       const oloc = { wallId: w.id, openingId: o.id };
-      if (openingIds.has(o.id)) problem(`opening ${o.id}: duplicate id (opening ids are unique in the project)`, oloc);
+      if (openingIds.has(o.id)) problem('opening.duplicateId', `opening ${o.id}: duplicate id (opening ids are unique in the project)`, oloc);
       openingIds.add(o.id);
-      if (o.tag !== undefined && c.openingTypes?.[o.tag] === undefined) problem(`opening ${o.id}: type "${o.tag}" is not in the opening schedule`, oloc);
-      if (o.headerMark !== undefined && c.headerSchedule?.[o.headerMark] === undefined) problem(`opening ${o.id}: header "${o.headerMark}" is not in the header schedule`, oloc);
+      if (o.tag !== undefined && c.openingTypes?.[o.tag] === undefined) problem('opening.tag', `opening ${o.id}: type "${o.tag}" is not in the opening schedule`, oloc);
+      if (o.headerMark !== undefined && c.headerSchedule?.[o.headerMark] === undefined) problem('opening.headerMark', `opening ${o.id}: header "${o.headerMark}" is not in the header schedule`, oloc);
       if (o.tag === undefined) {
-        if (o.type === undefined) problem(`opening ${o.id}: window or door? (no schedule tag)`, oloc);
-        if (o.roughWidth === undefined || o.roughHeight === undefined) problem(`opening ${o.id}: rough opening size is missing (no schedule tag)`, oloc);
+        if (o.type === undefined) problem('opening.type', `opening ${o.id}: window or door? (no schedule tag)`, oloc);
+        if (o.roughWidth === undefined || o.roughHeight === undefined) problem('opening.size', `opening ${o.id}: rough opening size is missing (no schedule tag)`, oloc);
       }
-      if (o.center === undefined && o.offset === undefined) problem(`opening ${o.id}: position is missing (center or left edge)`, oloc);
+      if (o.center === undefined && o.offset === undefined) problem('opening.position', `opening ${o.id}: position is missing (center or left edge)`, oloc);
     }
   }
   return issues;

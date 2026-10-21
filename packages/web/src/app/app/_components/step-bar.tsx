@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 
 export type StepId = 1 | 2 | 3;
 
-const STEPS: { id: StepId; label: string }[] = [
-  { id: 1, label: 'Upload drawings' },
-  { id: 2, label: 'Review walls' },
-  { id: 3, label: 'Panels' },
+const STEPS: { id: StepId; label: string; short: string }[] = [
+  { id: 1, label: 'Upload drawings', short: 'Drawings' },
+  { id: 2, label: 'Review walls', short: 'Review' },
+  { id: 3, label: 'Panels', short: 'Panels' },
 ];
 
 export interface StepBarProps {
@@ -16,12 +16,14 @@ export interface StepBarProps {
   /** Passos já concluídos: clicáveis para voltar. */
   done: readonly StepId[];
   onGo: (step: StepId) => void;
+  /** Versão de uma linha para a top bar do workspace (S21.4): pills pequenos, rótulos curtos. */
+  compact?: boolean;
 }
 
 /** Barra de passos como no takeoff da National Lumber: círculo numerado, ativo cheio em navy com sublinhado dourado. */
-export function StepBar({ active, done, onGo }: StepBarProps) {
+export function StepBar({ active, done, onGo, compact = false }: StepBarProps) {
   return (
-    <ol className="no-print grid grid-cols-3 border-y border-line-faint" aria-label="Steps">
+    <ol className={cn('no-print', compact ? 'flex items-center gap-1' : 'grid grid-cols-3 border-y border-line-faint')} aria-label="Steps">
       {STEPS.map((s) => {
         const isActive = s.id === active;
         const isDone = done.includes(s.id);
@@ -32,8 +34,10 @@ export function StepBar({ active, done, onGo }: StepBarProps) {
               type="button"
               disabled={!clickable}
               onClick={() => onGo(s.id)}
+              title={compact ? s.label : undefined}
               className={cn(
-                'flex w-full items-center gap-3 px-2 py-4 text-left text-sm transition-colors duration-200',
+                'flex w-full items-center text-left transition-colors duration-200',
+                compact ? 'gap-1.5 rounded-pill px-1.5 py-1 text-[13px]' : 'gap-3 px-2 py-4 text-sm',
                 isActive ? 'text-ink' : 'text-ink-3',
                 clickable && 'cursor-pointer hover:text-ink',
                 !clickable && 'cursor-default',
@@ -41,20 +45,22 @@ export function StepBar({ active, done, onGo }: StepBarProps) {
             >
               <span
                 className={cn(
-                  'flex size-7 shrink-0 items-center justify-center rounded-pill border text-[13px] font-semibold transition-[background-color,border-color,transform] duration-300 ease-site',
+                  'flex shrink-0 items-center justify-center rounded-pill border font-semibold transition-[background-color,border-color,transform] duration-300 ease-site',
+                  compact ? 'size-5 text-[11px]' : 'size-7 text-[13px]',
                   isActive || isDone ? 'border-navy-900 bg-navy-900 text-paper' : 'border-line-strong bg-card text-ink-2',
-                  isActive && 'scale-110',
+                  isActive && !compact && 'scale-110',
                 )}
               >
-                {isDone && !isActive ? <CheckIcon className="size-3.5" /> : s.id}
+                {isDone && !isActive ? <CheckIcon className={compact ? 'size-3' : 'size-3.5'} /> : s.id}
               </span>
-              <span className={cn('font-medium', isActive && 'font-semibold')}>{s.label}</span>
+              <span className={cn('font-medium', isActive && 'font-semibold', compact && !isActive && 'hidden sm:inline')}>{compact ? s.short : s.label}</span>
             </button>
             <span
               aria-hidden
               className={cn(
                 'absolute inset-x-0 bottom-0 h-0.5 origin-left bg-gold transition-transform duration-300 ease-site',
                 isActive ? 'scale-x-100' : 'scale-x-0',
+                compact && 'inset-x-1.5',
               )}
             />
           </li>

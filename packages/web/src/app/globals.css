@@ -16,18 +16,23 @@
   --gold: #ba8b37;
   --gold-btn: #c8a15b;
   --gold-600: #a2782b;
+  /* Texto dourado pequeno (eyebrow 13px, aviso): gold-600 dá 3,63:1 sobre papel; gold-700 dá 5,24:1 (M1, 2026-10-20). */
+  --gold-700: #82601f;
   --paper: #f6f4ee;
   --paper-2: #efebe1;
   --paper-3: #e7e1d3;
   --white: #fcfbf7;
   --ink: #152238;
   --ink-2: #43506a;
-  --ink-3: #6b7890;
+  /* Era #6b7890 (4,05:1 sobre papel, 3,74 sobre paper-2); #56637b dá 5,09:1 sobre paper-2 e 4,65 sobre paper-3. */
+  --ink-3: #56637b;
   --muted-ink: #505d6c;
   --line: rgba(16, 36, 65, 0.16);
   --line-faint: rgba(16, 36, 65, 0.07);
   --line-strong: rgba(16, 36, 65, 0.34);
   --ok: #2e7d4f;
+  /* Texto verde sobre fundo claro (chip de sucesso): ok dá 4,27:1 sobre ok/10; ok-700 dá 4,97. */
+  --ok-700: #2a7148;
   --err: #b3402a;
 
   /* shadcn */
@@ -48,10 +53,14 @@
   --destructive: var(--err);
   --destructive-foreground: var(--paper);
   --success: var(--ok);
-  --warning: var(--gold-600);
+  /* Aviso em texto e traço: gold-700 (gold-600 reprova em texto pequeno). Fundo de aviso = gold-100. */
+  --warning: var(--gold-700);
   --border: var(--line);
   --input: var(--line);
-  --ring: var(--gold-300);
+  /* Foco: navy-600 (6,97:1 sobre papel). gold-300 (1,8:1) só vale sobre navy — ver `.on-navy`. */
+  --ring: var(--navy-600);
+  /* Seleção (planta, listas): navy-600 — nunca dourado, que é aviso e ação principal. */
+  --selection: var(--navy-600);
   --radius: 3px;
 
   --shadow-1: 0 1px 2px rgba(16, 36, 65, 0.06), 0 8px 28px rgba(16, 36, 65, 0.09);
@@ -91,14 +100,21 @@
   --color-gold-300: var(--gold-300);
   --color-gold: var(--gold);
   --color-gold-600: var(--gold-600);
+  --color-gold-700: var(--gold-700);
+  --color-gold-btn: var(--gold-btn);
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
   --color-paper-3: var(--paper-3);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
   --color-line-faint: var(--line-faint);
   --color-line-strong: var(--line-strong);
+  --color-ok: var(--ok);
+  --color-ok-700: var(--ok-700);
+  --color-err: var(--err);
+  --color-selection: var(--selection);
 
   --radius-sm: calc(var(--radius) - 1px);
   --radius-md: var(--radius);
@@ -229,7 +245,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
@@ -249,20 +265,37 @@
   pre {
     @apply font-mono text-[13px];
   }
+  /* Um único estilo de foco no app (os componentes do shadcn não trazem anel próprio). */
   :focus-visible {
-    outline: 2px solid var(--gold-300);
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 }
 
+/* Sobre fundo navy (header), o anel de foco é dourado claro. */
+@utility on-navy {
+  & :focus-visible,
+  &:focus-visible {
+    outline-color: var(--gold-300);
+  }
+}
+
 @utility eyebrow {
-  @apply text-[13px] font-semibold uppercase tracking-[1.8px] text-gold-600;
+  @apply text-[13px] font-semibold uppercase tracking-[1.8px] text-gold-700;
 }
 
 @utility container-site {
   max-width: 1200px;
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/* Painel do workspace do editor (S21.4): rola sozinho dentro da altura da janela. */
+@utility workspace-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 /* Folhas e planta (SVG do core) */

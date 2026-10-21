@@ -1,6 +1,6 @@
 'use client';
 
-import { DownloadIcon, PrinterIcon } from 'lucide-react';
+import { CircleCheckIcon, DownloadIcon, PrinterIcon, TriangleAlertIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Problems, Warnings } from './problems';
 import { SvgView } from './svg-view';
@@ -79,9 +79,13 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
         <Badge variant="secondary">{pieces} pieces to cut</Badge>
         <Badge variant="secondary">{result.files.length} files</Badge>
         {result.warnings.length > 0 ? (
-          <Badge className="bg-warning text-paper">{result.warnings.length} warnings</Badge>
+          <Badge variant="warning">
+            <TriangleAlertIcon /> {result.warnings.length} warning{result.warnings.length === 1 ? '' : 's'}
+          </Badge>
         ) : (
-          <Badge className="bg-success text-paper">no warnings</Badge>
+          <Badge variant="success">
+            <CircleCheckIcon /> no warnings
+          </Badge>
         )}
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={printSheets} disabled={sheets.length === 0}>
@@ -97,10 +101,16 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-        <TabsList className="no-print">
-          <TabsTrigger value="plan">Plan</TabsTrigger>
-          <TabsTrigger value="sheets">Sheets</TabsTrigger>
-          <TabsTrigger value="files">Files</TabsTrigger>
+        <TabsList variant="line" className="no-print h-auto gap-0 border-b border-line">
+          <TabsTrigger value="plan" className="h-9 flex-none rounded-none px-3 after:bottom-0">
+            Plan
+          </TabsTrigger>
+          <TabsTrigger value="sheets" className="h-9 flex-none rounded-none px-3 after:bottom-0">
+            Sheets
+          </TabsTrigger>
+          <TabsTrigger value="files" className="h-9 flex-none rounded-none px-3 after:bottom-0">
+            Files
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="plan" className="pt-3">
           {plan === undefined ? (
@@ -132,7 +142,7 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
                       onClick={() => setSelected(p.id)}
                       className={cn(
                         'flex w-full items-center justify-between border-l-2 border-transparent px-3 py-2 text-left font-mono text-[13px] transition-[background-color,border-color,padding] duration-200 ease-site hover:bg-paper-2 hover:pl-4',
-                        p.id === current?.panelId && 'border-gold bg-gold-100 text-navy-900',
+                        p.id === current?.panelId && 'border-selection bg-selection/8 text-navy-900',
                       )}
                     >
                       <span>{p.id}</span>

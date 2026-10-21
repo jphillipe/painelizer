@@ -10,8 +10,8 @@ import type { Issue } from '@/lib/editor/problems';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
 import { resolveDraftOpening } from '@/lib/editor/resolve';
 import type { EditorAction, Selection } from '@/lib/editor/state';
-import { cn } from '@/lib/utils';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
+import { IssueCallout } from './issue-callout';
 
 export interface WallPropertiesProps {
   draft: ProjectDraft;
@@ -20,10 +20,12 @@ export interface WallPropertiesProps {
   issues: readonly Issue[];
   dispatch: Dispatch<EditorAction>;
   onSelect: (s: Selection) => void;
+  /** Workspace (S21.4): issues no topo, seções recolhíveis (Framing fechada quando não tem issue), leitura da IA em uma linha. */
+  collapsible?: boolean;
 }
 
 /** Painel de propriedades da parede: identidade, geometria (planta ou solta), framing, aberturas, proveniência. */
-export function WallProperties({ draft, wall, provenance, issues, dispatch, onSelect }: WallPropertiesProps) {
+export function WallProperties({ draft, wall, provenance, issues, dispatch, onSelect, collapsible = false }: WallPropertiesProps) {
   const id = wall.id;
   const set = (patch: Extract<EditorAction, { type: 'updateWall' }>['patch']): void => dispatch({ type: 'updateWall', wallId: id, patch });
   const plan = isPlanWall(wall);
@@ -34,11 +36,14 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
     set({ ends: Object.keys(ends).length === 0 ? undefined : ends });
   };
   const length = wall.length ?? (wall.start !== undefined && wall.end !== undefined ? Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y) : undefined);
+  const framingIssue = issues.some((i) => /section|exterior|bearing|floors|building|king|header|wind/i.test(i.kind ?? i.code ?? i.text));
 
   return (
     <div className="space-y-6">
+      {collapsible ? <IssueCallout issues={issues} /> : null}
       <Section
         title="Wall"
+        collapsible={collapsible}
         actions={
           <Button variant="ghost" size="xs" className="text-destructive" onClick={() => dispatch({ type: 'removeWall', wallId: id })}>
             <Trash2Icon /> Remove wall
@@ -61,7 +66,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
         </div>
       </Section>
 
-      <Section title={plan ? 'Geometry (axis, from the project origin)' : 'Geometry (by length)'}>
+      <Section title={plan ? 'Geometry (axis, from the project origin)' : 'Geometry (by length)'} collapsible={collapsible}>
         {plan ? (
           <div className="grid grid-cols-2 gap-3">
             <Field id={`w-${id}-sx`} label="Start x">
@@ -100,7 +105,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
         )}
       </Section>
 
-      <Section title="Framing">
+      <Section title="Framing" collapsible={collapsible} defaultOpen={!collapsible || framingIssue || wall.section === undefined || wall.exterior === undefined || wall.bearing === undefined}>
         <div className="grid grid-cols-2 gap-3">
           <Field id={`w-${id}-section`} label="Section">
             <EnumSelect id={`w-${id}-section`} value={wall.section} noneLabel="Not set" options={SECTION_OPTIONS} onChange={(v) => set({ section: v as DraftWall['section'] })} />
@@ -125,6 +130,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
 
       <Section
         title={`Openings (${wall.openings.length})`}
+        collapsible={collapsible}
         actions={
           <Button variant="outline" size="xs" onClick={() => dispatch({ type: 'addOpening', wallId: id })}>
             <PlusIcon /> Add opening
@@ -153,18 +159,25 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
       </Section>
 
       {provenance !== undefined ? (
-        <Section title="From the AI reading">
+        <Section title="From the AI reading" collapsible={collapsible} defaultOpen={!collapsible || confidenceTone(provenance.confidence) !== 'success'}>
           <div className="space-y-1 text-[13px]">
             <p>
-              Confidence <Badge className={cn('font-mono', TONE_CLASS[confidenceTone(provenance.confidence)])}>{provenance.confidence.toFixed(2)}</Badge>
+              Confidence <Badge variant={TONE_VARIANT[confidenceTone(provenance.confidence)]} className="font-mono">{provenance.confidence.toFixed(2)}</Badge>
               {provenance.wallType !== null ? <span className="ml-2 text-ink-3">type {provenance.wallType}</span> : null}
             </p>
-            <p className="text-ink-2">{provenance.evidence}</p>
+            {collapsible ? (
+              <details className="text-ink-2">
+                <summary className="cursor-pointer text-ink-3 select-none">Evidence</summary>
+                <p className="mt-1">{provenance.evidence}</p>
+              </details>
+            ) : (
+              <p className="text-ink-2">{provenance.evidence}</p>
+            )}
           </div>
         </Section>
       ) : null}
 
-      {issues.length > 0 ? (
+      {issues.length > 0 && !collapsible ? (
         <Section title={`Issues on this wall (${issues.length})`}>
           <ul className="space-y-1 font-mono text-[12px]">
             {issues.map((i, n) => (
@@ -191,4 +204,5 @@ const SPAN_OPTIONS = [
   { value: 'center', label: 'Center bearing' },
   { value: 'clear', label: 'Clear span' },
 ] as const;
-export const TONE_CLASS = { success: 'bg-success text-paper', warning: 'bg-warning text-paper', destructive: 'bg-destructive text-paper' } as const;
+/** Confiança da IA → variante do Badge (chip claro, docs/10-design.md §3). */
+export const TONE_VARIANT = { success: 'success', warning: 'warning', destructive: 'destructive' } as const;

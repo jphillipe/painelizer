@@ -35,23 +35,29 @@ cliente HTTP; camada de services; interface em inglês.
 | gold-300 | `#D9B36A` | anel de foco, texto dourado em fundo navy |
 | **gold** | `#BA8B37` | **acento**: eyebrows, ícones, linhas de destaque |
 | gold-btn | `#C8A15B` | fundo do botão de acento (pill) |
-| gold-600 | `#A2782B` | eyebrow em fundo papel, hover do acento |
+| gold-600 | `#A2782B` | ícones dourados, traços; **nunca texto abaixo de 18px** (3,6:1 sobre papel) |
+| gold-700 | `#82601F` | texto dourado pequeno: eyebrow (13px), aviso, "· required" (5,2:1 sobre papel; 4,6 sobre gold-100). Token nosso, não do site (M1, 2026-10-20) |
 | **paper** | `#F6F4EE` | **fundo de página** |
 | paper-2 | `#EFEBE1` | fundo secundário, cards em fundo papel |
-| paper-3 | `#E7E1D3` | muted, separadores grossos |
+| paper-3 | `#E7E1D3` | muted, separadores grossos, Skeleton |
 | white | `#FCFBF7` | cards sobre papel quando precisam contrastar |
 | **ink** | `#152238` | **texto** |
-| ink-2 | `#43506A` | texto secundário |
-| ink-3 | `#6B7890` | texto terciário, placeholders |
+| ink-2 | `#43506A` | texto secundário; cabeçalho de tabela; qualquer texto informativo ≤ 13px em card |
+| ink-3 | `#56637B` | texto terciário, hints, placeholders, estados vazios — **mínimo 12px**. Era `#6B7890` do site (4,05:1 sobre papel, 3,74 sobre paper-2: reprova); o nosso dá 5,1 sobre paper-2 e 4,65 sobre paper-3 |
 | muted | `#505D6C` | legendas |
-| line | `rgba(16,36,65,.16)` | bordas |
+| line | `rgba(16,36,65,.16)` | bordas (exposta como `--color-line`: `border-line`, `bg-line`) |
 | line-faint | `rgba(16,36,65,.07)` | divisórias finas |
-| line-strong | `rgba(16,36,65,.34)` | bordas de input em foco sem anel |
-| ok | `#2E7D4F` | sucesso |
-| err | `#B3402A` | erro, destrutivo |
-| warn | `#A2782B` (gold-600) | aviso: dourado escuro, não amarelo genérico |
+| line-strong | `rgba(16,36,65,.34)` | bordas de input em foco (o anel de foco global vem por cima) |
+| ok | `#2E7D4F` | sucesso: fundo cheio, ícone, ponto |
+| ok-700 | `#2A7148` | texto verde sobre fundo claro (chip `success`: 5,0:1 sobre ok/10) |
+| err | `#B3402A` | erro, destrutivo (4,8:1 sobre err/10; 5,2 com texto papel) |
+| warn | `#82601F` (gold-700) | aviso: dourado escuro, não amarelo genérico; fundo de aviso = gold-100 |
+| **selection** | `#2A5390` (navy-600) | **seleção** na planta e nas listas (halo a 22 %, fundo a 8 %, borda esquerda). Nunca dourado: dourado é aviso e ação principal |
+| ring | navy-600 | anel de foco (7,0:1 sobre papel; gold-300 dava 1,8:1). Sobre navy, `.on-navy` troca para gold-300 |
 
-Fundo de página é sempre papel; branco puro não existe. Modo escuro: **não nesta fase** (sem `.dark`).
+Fundo de página é sempre papel; branco puro não existe (`text-white`/`bg-black` são proibidos; o overlay do Dialog
+é navy-950/50). Modo escuro: **não nesta fase** (sem `.dark`). **Um matiz, um significado:** dourado = ação
+principal (gold-btn) e aviso (gold-700/gold-100); navy-600 = seleção e foco; err = problema; ok = pronto.
 
 ### Mapeamento para o tema do shadcn (`globals.css`, `:root`)
 
@@ -64,14 +70,17 @@ Fundo de página é sempre papel; branco puro não existe. Modo escuro: **não n
 --accent      gold-btn     --accent-foreground navy-900
 --muted       paper-3      --muted-foreground muted
 --destructive err          (foreground paper)
---success     ok           (token extra, Badge/Alert "success")
---warning     gold-600     (token extra, Badge/Alert "warning")
---border      line         --input line         --ring gold-300
+--success     ok           (token extra, Badge/Alert "success"; texto em ok-700)
+--warning     gold-700     (token extra, Badge/Alert "warning"; fundo gold-100)
+--selection   navy-600     (token extra: planta, listas)
+--border      line         --input line         --ring navy-600
 --radius      3px
 ```
-Tailwind v4: tudo em `@theme inline` como `--color-*`, mais `--font-sans`, `--font-display`, `--font-mono`
-e `--shadow-1`, `--shadow-2`. Classes utilitárias usam só esses nomes (`bg-primary`, `text-accent`…); nunca
-hex solto em componente.
+Tailwind v4: tudo em `@theme inline` como `--color-*` (inclusive `line`, `gold-btn`, `gold-700`, `ok`, `ok-700`,
+`err`, `selection`), mais `--font-sans`, `--font-display`, `--font-mono` e `--shadow-1`, `--shadow-2`. Classes
+utilitárias usam só esses nomes (`bg-primary`, `text-accent`…); nunca hex solto em componente.
+`packages/web/src/app/theme.test.ts` lê os tokens de `globals.css` e falha quando um par de uso real cai abaixo
+de 4,5:1 (texto) ou 3:1 (foco, traço, ícone) — mudar um token é mudar o teste junto.
 
 ### Tipografia
 
@@ -108,14 +117,16 @@ de aviso (`HEADER_JACKS_BELOW_TABLE`) sempre em mono.
 
 | Componente | Variantes e regras |
 |---|---|
-| Button | `default` navy pill (texto papel); `accent` gold pill (texto navy) para a ação principal da tela; `outline` borda line; `ghost`; `link` navy com "↗" quando abre outra página. Altura 40px, texto 15px/600. Loading: spinner + texto no passado contínuo ("Generating…"). |
-| Card | fundo white, borda line, raio 3px, shadow-1; `CardHeader` com eyebrow opcional. |
-| Tabs | sublinhado gold de 2px na ativa; texto 14px/600. |
-| Table | cabeçalho 13px uppercase ink-3; linhas com borda line-faint; números alinhados à direita em mono. |
-| Badge | `success` ok, `warning` gold-600, `destructive` err, `outline`; texto 12px/600 mono para códigos. |
-| Alert | `default` (info, borda navy), `destructive` (err), `warning` (gold-600). Mensagem do motor em `<pre>` mono dentro do Alert. |
+| Button | `default` navy pill (texto papel); `accent` gold pill (texto navy; hover = gold com o mesmo navy, 5,1:1) para a ação principal da tela; `outline` borda line; `ghost`; `link` navy com "↗" quando abre outra página. **Todo tamanho é pill** (xs/sm/lg também). Hover de `outline`/`ghost`/`secondary` é papel-2/papel-3 — dourado é só o accent. Altura 40px, texto 15px/600. Transição 200ms `ease-site`. Loading: spinner + texto no passado contínuo ("Generating…"). Foco: só o anel global (`:focus-visible` em `globals.css`, navy-600 2px + offset 2px); nenhum componente traz anel próprio. |
+| Card | fundo white, borda line, raio 3px, shadow-1 (`ui/card.tsx` é a única forma de card: nada de `rounded-md border bg-card` à mão). |
+| Tabs | variante `line`: sublinhado gold de 2px na ativa; texto 14px/600 ink-2 → ink. É a única variante em uso (resultado e navegador). No navegador do workspace (S21.4) o conteúdo fica montado (`forceMount` + `hidden`): listas não reanimam a cada troca e a região `aria-live` das issues continua existindo em outra aba. |
+| DropdownMenu | menu `⋯` da top bar do workspace (downloads, configurações, "Start over"); fundo white, borda line, shadow-1. |
+| Table | cabeçalho 13px uppercase ink-2 (ink-3 reprova em 13px); linhas com borda line-faint, hover papel-2; números alinhados à direita em mono; `<th scope>`. |
+| Badge | **chip claro**: `success` (ok/10 + texto ok-700), `warning` (gold-100 + texto gold-700), `destructive` (err/10 + texto err), cada um com borda do tom a 30 % e **ícone** (CircleCheck / TriangleAlert / OctagonX) — a cor nunca é o único sinal; `outline`, `secondary`. Texto 12px/600, mono para códigos. Fundo cheio só nos contadores pequenos do navegador (paper sobre err, 5,2:1). |
+| Alert | `default` (info, borda navy), `destructive` (err), `warning` (gold-700 sobre gold-100), `success`. Raio 3px. `role="alert"` só no destrutivo; os outros são `status` (não interrompem o leitor de tela ao montar). Mensagem do motor em `<pre>` mono dentro do Alert. |
+| Skeleton | papel-3 pulsando; nunca dourado. |
 | Form, Input, Textarea, Select, Checkbox | formulários que **submetem** sempre via `Form` do shadcn com react-hook-form; erro de campo em err 13px abaixo do campo; Textarea de JSON em mono 13px. **Inspetores** (painel de propriedades do editor, S21) são a exceção: inputs controlados que confirmam campo a campo no blur/Enter e recebem valores de fora durante o arraste — o `reset()` do RHF briga com isso. |
-| Dialog | shadow-2, raio 3px; só para confirmações. |
+| Dialog | fundo white, shadow-2, raio 3px, overlay navy-950/50; para confirmações e para as **configurações do projeto** no workspace (S21.4: dialog rolável, `max-h-[85dvh]`, campos confirmam no blur como no inspetor). |
 | Separator, Skeleton, Sonner | padrão. Toast só para resultado de ação assíncrona longa. |
 
 Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a ação sugerida), **carregando**
@@ -138,6 +149,40 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   "Back" e "Start over". Até a S22 o estado fica no cliente (sem URL por passo); com projetos salvos, cada
   passo ganha rota própria.
 - Rodapé mínimo: versão, "National Lumber · WR Group".
+
+### Workspace do editor (passo 02, S21.4)
+Exceção ao container de 1200 px: com um projeto aberto, o passo 02 é um **workspace** que ocupa a largura toda e a
+altura da janela (`h-dvh`, header de 64 px descontado, sem rodapé); a página não rola, cada painel rola sozinho
+(`workspace-pane`). O `AppShell` troca de modo pelo contexto `ShellLayoutProvider` (`useWorkspaceLayout`), porque
+o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`, `xl`: 300/360):
+- **Top bar** (56 px, fundo white, borda line): `StepBar` compacta (pills de 20 px, rótulos curtos; continua
+  levando aos passos feitos), nome do projeto como `h1` (18px/600), "N walls · N openings" em ink-3, **um chip de
+  status** com `aria-live` (`Checking…` outline / `N to fix` err / `Ready · N panels` ok + `N warnings` gold-600),
+  a frase do que falta ("Fix 3 problems first."), **"Generate panels"** accent sempre visível, menu `⋯`
+  (Download project file, Download AI reading, Project settings, Start over).
+- **Navegador** (esquerda, fundo white): abas Walls / Issues / Reading. Walls = lista compacta (id mono · papel ·
+  seção · nº de aberturas · comprimento · contadores de issue em err/gold-600 · ponto de confiança da IA), chips de
+  filtro All / Needs attention / Low confidence, a parede selecionada expande as aberturas; selecionar pela lista
+  centraliza a planta só se a parede não está visível (nunca aproxima). Issues = **grupos** (um item por família:
+  título em inglês, `× N`, uma frase "o que aconteceu" + "como resolver" em negrito (`lib/editor/issue-help.ts`),
+  chips de ids clicáveis — da abertura quando a issue é dela —, conserto rápido inline quando existe (campo de
+  vento, campo de altura de header, botão "Add <id>" para abertura sem posição), botão de ação, textos originais
+  em "Details"); problemas antes de avisos. Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
+- **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com Fit, pavimentos e a toolbar do editor
+  à direita; dica de uso no rodapé). Projeto solto (sem planta) mostra um painel tracejado com a toolbar. Leitura
+  da IA à qual falta o que o motor exige (`lib/editor/requirements.ts`: altura; neve, largura, pavimentos acima e
+  vão do piso quando há parede portante com abertura sem header próprio) mostra, no lugar da planta, o card
+  **"Before you review"** (eyebrow + h2 + lista do que falta e por quê + "Required for this project" com os
+  campos marcados `· required` + "Optional" recolhido + "Apply and open the editor" accent + link "Skip — set it
+  per wall instead"). O obrigatório é validado antes de aplicar; o card só existe enquanto o draft tem obrigatório
+  faltando (nunca por mensagem do motor), e os grupos de issues dessas famílias o reabrem por "Fill in project data".
+- **Inspetor** (direita, fundo white, 16 px de padding, sem moldura): breadcrumb, **issues do item no topo** em
+  callout (err/5% ou gold-100/40, título em inglês + texto original mono), seções em `<details>` com eyebrow e
+  chevron (Wall, Geometry e Openings abertas; Framing fechada quando completa e sem issue; "From the AI reading"
+  aberta só com confiança < 0,9, evidência recolhida). Seleção `project` abre o Dialog de configurações.
+- **Abaixo de `lg`** (`useMediaQuery`, não CSS, para não montar o inspetor duas vezes): planta em cima (45dvh) e
+  abas Walls / Issues / Reading / Inspector embaixo; selecionar pela lista abre a aba Inspector.
+- Passos 01 e 03 continuam no container de 1200 px com cabeçalho e barra de passos cheia.
 
 ### Landing (futura, não implementar agora)
 Mesmos tokens. Hero em navy-950 com eyebrow gold-300, h1 display em papel, parágrafo papel/80, CTA pill gold
@@ -194,7 +239,7 @@ Server Component     →  service                                               
   "Advanced" recolhido. Tudo que veio da IA mostra confiança e evidência.
 - **Formulários**: schema zod em `src/schemas/*.ts` (compartilhado), `useForm` + `zodResolver` + `Form` do
   shadcn; `returnValidationErrors` para erro de campo. Upload: `FormData` com `z.instanceof(File)`;
-  `serverActions.bodySizeLimit` 50 MB.
+  `serverActions.bodySizeLimit` 300 MB (conjunto inteiro de folhas, S20.2).
 
 ## 9. Organização do código (`packages/web/src`)
 
@@ -216,7 +261,12 @@ Hoje: `app/app/` (nova obra: upload, editor, resultado); o editor vive em `app/a
 
 ## 8. Acessibilidade e idioma
 
-`<html lang="en">`. Contraste mínimo 4.5:1 no texto (navy sobre papel 12.6:1; navy sobre gold-btn 6.1:1;
-gold-600 sobre papel 4.6:1 — por isso o eyebrow em papel usa gold-600, não gold). Foco visível: anel 2px
-gold-300 com offset 2px. Toda ação assíncrona anuncia o resultado (toast ou texto `aria-live`). Tabelas com
-`<th scope>`; SVGs inline com `role="img"` e `aria-label` com o id do painel.
+`<html lang="en">`. Contraste mínimo 4,5:1 no texto e 3:1 em foco, traço e ícone (WCAG AA), **medido**, não
+estimado (valores de 2026-10-20; o teste `theme.test.ts` recalcula): navy sobre papel 14,1; navy sobre
+gold-btn 6,4; ink-2 sobre white 7,8; ink-3 (`#56637B`) sobre paper-2 5,1; gold-700 sobre papel 5,2 e sobre
+gold-100 4,6; navy-600 sobre papel 7,0. Reprovados e por isso proibidos em texto pequeno: gold-600 sobre papel
+(3,6 — a versão anterior deste doc dizia 4,6, estava errada), o ink-3 antigo `#6B7890` (4,05), paper sobre
+gold-600 (3,6), gold-300 como anel de foco (1,8). Foco visível: anel 2px navy-600 com offset 2px (`.on-navy`:
+gold-300 sobre o header). Seleção (navy-600) e aviso (gold-700) nunca dividem matiz, e todo estado tem ícone
+além da cor. Toda ação assíncrona anuncia o resultado (toast ou texto `aria-live`). Tabelas com `<th scope>`;
+SVGs inline com `role="img"` e `aria-label` com o id do painel.

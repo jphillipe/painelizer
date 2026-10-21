@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronRightIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -269,14 +270,29 @@ export function BoolSelect({ id, value, onChange, trueLabel, falseLabel, noneLab
   );
 }
 
-export function Section({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
+export function Section({ title, children, actions, collapsible = false, defaultOpen = true }: { title: string; children: ReactNode; actions?: ReactNode; collapsible?: boolean; defaultOpen?: boolean }) {
+  if (!collapsible) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="eyebrow">{title}</p>
+          {actions}
+        </div>
+        {children}
+      </section>
+    );
+  }
+  // Inspetor do workspace (S21.4): seções recolhíveis; `open` só no primeiro render (o usuário manda depois).
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="eyebrow">{title}</p>
-        {actions}
-      </div>
+    <details className="group/section space-y-3" open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 select-none [&::-webkit-details-marker]:hidden">
+        <span className="eyebrow flex items-center gap-1">
+          <ChevronRightIcon className="size-3.5 transition-transform duration-200 group-open/section:rotate-90" aria-hidden />
+          {title}
+        </span>
+        {actions !== undefined ? <span onClick={(e) => e.preventDefault()}>{actions}</span> : null}
+      </summary>
       {children}
-    </section>
+    </details>
   );
 }

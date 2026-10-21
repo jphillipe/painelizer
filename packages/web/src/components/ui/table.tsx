@@ -22,7 +22,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("[&_tr]:border-b [&_tr]:border-line", className)}
       {...props}
     />
   )
@@ -56,7 +56,8 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        // docs/10-design.md §3: linhas com borda line-faint.
+        "border-b border-line-faint transition-colors hover:bg-paper-2 has-aria-expanded:bg-paper-2 data-[state=selected]:bg-paper-2",
         className
       )}
       {...props}
@@ -69,7 +70,8 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // docs/10-design.md §3: cabeçalho 13px uppercase (ink-2: 13px reprova em ink-3).
+        "h-10 px-2 text-left align-middle text-[13px] font-semibold uppercase tracking-[1.2px] whitespace-nowrap text-ink-2 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}

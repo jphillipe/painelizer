@@ -59,6 +59,25 @@ export function panBy(v: Viewport, dx: number, dy: number): Viewport {
   return { ...v, tx: v.tx + dx, ty: v.ty + dy };
 }
 
+/** O retângulo de planta está inteiro na tela, com `marginPx` de folga? (S21.4: a lista só centraliza se não está.) */
+export function rectVisible(v: Viewport, r: Rect, size: Size, marginPx = 24): boolean {
+  const s = rectToScreen(v, r);
+  return s.x >= marginPx && s.y >= marginPx && s.x + s.w <= size.width - marginPx && s.y + s.h <= size.height - marginPx;
+}
+
+/**
+ * Centraliza `r` na tela mantendo a escala; se não cabe nessa escala, enquadra (`fitViewport`) sem passar da
+ * escala atual — a lista nunca aproxima, só traz a parede para a vista.
+ */
+export function centerOn(v: Viewport, r: Rect, size: Size, paddingPx = 48): Viewport {
+  const fitsW = r.w * v.scale <= Math.max(size.width - 2 * paddingPx, 1);
+  const fitsH = r.h * v.scale <= Math.max(size.height - 2 * paddingPx, 1);
+  const scale = fitsW && fitsH ? v.scale : Math.min(v.scale, fitViewport(r, size, paddingPx).scale);
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  return { scale, tx: size.width / 2 - cx * scale, ty: size.height / 2 + cy * scale };
+}
+
 /** Arredonda ao múltiplo de `step` mais próximo (negativos inclusive). */
 export function snap(value: number, step: number): number {
   if (!(step > 0)) return value;

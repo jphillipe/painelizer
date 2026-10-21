@@ -6,7 +6,9 @@ import { useEffect, useReducer, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useWorkspaceLayout } from '@/components/shell-layout';
 import { textFromDraft } from '@/lib/editor/draft';
 import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
 import type { ExtractJob, ExtractOutcome } from '@/types/extract';
@@ -85,6 +87,25 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
   const done: StepId[] = [...(editor.draft !== undefined ? [1 as const] : []), ...(result ? [1 as const, 2 as const] : [])];
   const okOutcome = outcome?.ok ? outcome : undefined;
 
+  const workspace = step === 2 && editor.draft !== undefined;
+  useWorkspaceLayout(workspace);
+
+  if (workspace) {
+    return (
+      <WallEditor
+        state={editor}
+        dispatch={dispatch}
+        outcome={okOutcome}
+        check={check}
+        pending={generate.isPending}
+        onGenerate={runProject}
+        onOutcome={onOutcome}
+        steps={<StepBar active={step} done={done} onGo={setStep} compact />}
+        onStartOver={startOver}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <header className="no-print space-y-3">
@@ -107,20 +128,21 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
           className={extracting ? 'hidden' : 'step-enter no-print grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start'}
         >
           <div className="space-y-4">
-            <div className="rounded-md border bg-card p-6 shadow-1">
+            <Card className="gap-0 p-6">
               <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} />
-            </div>
-            <div className="space-y-4 rounded-md border bg-card p-6">
+            </Card>
+            <Card className="gap-4 p-6">
               <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={(text) => openFile(text, 'sample')} />
               <Separator />
               <AdvancedImport onProjectText={(text) => openFile(text, 'file')} onOutcome={onOutcome} />
-            </div>
+            </Card>
           </div>
           <PreviewCard illustration={illustration} outcome={outcome} />
         </section>
       ) : null}
 
       {step === 2 ? (
+        // Com draft aberto o passo 02 é o workspace (retorno acima); aqui só o que não abriu.
         <section key="review" className="step-enter no-print space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="eyebrow">02 · Review walls</p>
@@ -133,15 +155,11 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
               </Button>
             </div>
           </div>
-          {editor.draft !== undefined || editor.loadError !== undefined ? (
-            <WallEditor state={editor} dispatch={dispatch} outcome={okOutcome} check={check} pending={generate.isPending} onGenerate={runProject} onOutcome={onOutcome} />
-          ) : (
-            <Alert variant="destructive">
-              <OctagonXIcon />
-              <AlertTitle>Nothing to review</AlertTitle>
-              <AlertDescription>{outcome && !outcome.ok ? outcome.message : 'Upload drawings or pick a sample first.'}</AlertDescription>
-            </Alert>
-          )}
+          <Alert variant="destructive">
+            <OctagonXIcon />
+            <AlertTitle>{editor.loadError !== undefined ? 'This project can’t be opened' : 'Nothing to review'}</AlertTitle>
+            <AlertDescription>{editor.loadError ?? (outcome && !outcome.ok ? outcome.message : 'Upload drawings or pick a sample first.')}</AlertDescription>
+          </Alert>
         </section>
       ) : null}
 

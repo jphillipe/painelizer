@@ -54,7 +54,7 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
         </div>
       </Section>
 
-      {outcome !== undefined && showProjectData ? <ProjectDataForm outcome={outcome} onOutcome={onOutcome} highlight={false} confirm={dirty} /> : null}
+      {outcome !== undefined && showProjectData ? <ProjectDataForm outcome={outcome} onOutcome={onOutcome} confirm={dirty} /> : null}
 
       <Section title="Framing">
         <div className="grid grid-cols-2 gap-3">

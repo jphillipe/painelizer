@@ -7,6 +7,7 @@ import { openingById, wallById, type ProjectDraft } from '@/lib/editor/draft';
 import type { Issue } from '@/lib/editor/problems';
 import type { WallProvenance } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState, Selection } from '@/lib/editor/state';
+import { cn } from '@/lib/utils';
 import type { ExtractOutcome } from '@/types/extract';
 import { OpeningProperties } from './opening-properties';
 import { ProjectProperties } from './project-properties';
@@ -21,16 +22,21 @@ export interface InspectorProps {
   outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
   onOutcome: (outcome: ExtractOutcome) => void;
   showProjectData: boolean;
+  /**
+   * Workspace (S21.4): sem moldura (o painel já é a moldura) e as configurações do projeto vivem num dialog —
+   * a seleção `project` mostra o estado vazio aqui.
+   */
+  flat?: boolean;
 }
 
 /** Painel de propriedades: muda com a seleção (projeto, parede, abertura). Remonta por id para zerar campos. */
-export function Inspector({ state, draft, dispatch, provenance, issues, outcome, onOutcome, showProjectData }: InspectorProps) {
+export function Inspector({ state, draft, dispatch, provenance, issues, outcome, onOutcome, showProjectData, flat = false }: InspectorProps) {
   const sel = state.selection;
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
   const crumb = (
     <nav className="flex flex-wrap items-center gap-1 text-[13px] text-ink-3" aria-label="Selection">
-      <Button variant="link" size="xs" className="h-auto px-0 text-[13px]" onClick={() => select({ kind: 'project' })}>
-        {draft.name ?? 'Project'}
+      <Button variant="link" size="xs" className="h-auto max-w-full px-0 text-[13px]" onClick={() => select({ kind: 'project' })}>
+        <span className="truncate">{draft.name ?? 'Project'}</span>
       </Button>
       {sel.kind === 'wall' || sel.kind === 'opening' ? (
         <>
@@ -50,10 +56,10 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
   );
 
   let body: React.ReactNode;
-  if (sel.kind === 'none') {
+  if (sel.kind === 'none' || (sel.kind === 'project' && flat)) {
     body = (
       <div className="space-y-3 text-[13px] text-ink-3">
-        <p>Select a wall in the list to edit it, or open the project settings.</p>
+        <p>{flat ? 'Pick a wall on the plan or in the list to edit it.' : 'Select a wall in the list to edit it, or open the project settings.'}</p>
         <Button variant="outline" size="sm" onClick={() => select({ kind: 'project' })}>
           Project settings
         </Button>
@@ -75,6 +81,7 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
           issues={issues.filter((i) => i.wallId === wall.id && i.openingId === undefined)}
           dispatch={dispatch}
           onSelect={select}
+          collapsible={flat}
         />
       );
     } else {
@@ -91,15 +98,16 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
             provenance={provenance.get(wall.id)?.openings.get(opening.id)}
             issues={issues.filter((i) => i.wallId === wall.id && i.openingId === opening.id)}
             dispatch={dispatch}
+            collapsible={flat}
           />
         );
     }
   }
 
   return (
-    <aside className="space-y-4 rounded-md border bg-card p-4 shadow-1" aria-label="Properties">
+    <div className={cn('space-y-4', flat ? 'p-4' : 'rounded-md border bg-card p-4 shadow-1')} aria-label="Properties">
       {crumb}
       {body}
-    </aside>
+    </div>
   );
 }

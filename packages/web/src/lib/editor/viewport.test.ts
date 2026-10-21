@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitViewport, panBy, planToScreen, rectToScreen, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
+import { centerOn, fitViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
 
 describe('viewport', () => {
   const v: Viewport = { scale: 2, tx: 100, ty: 500 };
@@ -38,6 +38,24 @@ describe('viewport', () => {
     expect(again.y).toBeCloseTo(anchor.y);
     expect(zoomAt(v, anchor, 1000).scale).toBe(ZOOM_LIMITS.max);
     expect(zoomAt(v, anchor, 0.0001).scale).toBe(ZOOM_LIMITS.min);
+  });
+
+  it('rectVisible e centerOn: centraliza mantendo a escala; só reduz quando a parede não cabe', () => {
+    const size = { width: 1000, height: 700 };
+    const r = { x: 300, y: 0, w: 100, h: 5.5 };
+    expect(rectVisible(v, { x: 10, y: 10, w: 20, h: 20 }, size)).toBe(true);
+    expect(rectVisible(v, { x: 10, y: 10, w: 20, h: 20 }, { width: 150, height: 100 })).toBe(false);
+    expect(rectVisible(v, r, size)).toBe(true);
+    const c = centerOn(v, r, size);
+    expect(c.scale).toBe(v.scale);
+    const mid = planToScreen(c, { x: 350, y: 2.75 });
+    expect(mid.x).toBeCloseTo(500);
+    expect(mid.y).toBeCloseTo(350);
+    expect(rectVisible(c, r, size)).toBe(true);
+    const big = centerOn(v, { x: 0, y: 0, w: 2000, h: 10 }, size);
+    expect(big.scale).toBeLessThan(v.scale);
+    expect(big.scale).toBeCloseTo(fitViewport({ x: 0, y: 0, w: 2000, h: 10 }, size).scale);
+    expect(centerOn({ scale: 0.1, tx: 0, ty: 0 }, { x: 0, y: 0, w: 2000, h: 10 }, size).scale).toBe(0.1);
   });
 
   it('panBy e snap', () => {

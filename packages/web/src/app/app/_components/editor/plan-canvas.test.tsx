@@ -52,6 +52,18 @@ describe('PlanCanvas (SSR)', () => {
     expect(w05.slice(0, 600)).toContain('var(--color-destructive)');
   });
 
+  it('fill (workspace): sem 4:3, toolbar na barra e a dica no rodapé', () => {
+    const d = load(EXAMPLES[1]!.text);
+    const html = renderToStaticMarkup(
+      <PlanCanvas fill toolbar={<button type="button">tool</button>} geometry={planGeometry(d)} selection={{ kind: 'none' }} issuesByWall={new Map()} fitKey="t" onSelect={() => {}} onEndpointDrag={() => {}} initialSize={{ width: 800, height: 600 }} />,
+    );
+    expect(html).not.toContain('aspect-[4/3]');
+    expect(html).toContain('min-h-0 flex-1');
+    expect(html).toContain('>tool<');
+    expect(html).toContain('Shift = 1/8');
+    expect(html).not.toContain('eyebrow'); // "Plan" + badge de paredes só fora do workspace
+  });
+
   it('sem tamanho inicial (SSR real) desenha o container e nada dentro; projeto solto avisa', () => {
     const d = load(EXAMPLES[1]!.text);
     const html = renderToStaticMarkup(<PlanCanvas geometry={planGeometry(d)} selection={{ kind: 'none' }} issuesByWall={new Map()} fitKey="t" onSelect={() => {}} />);
