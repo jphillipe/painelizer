@@ -265,3 +265,22 @@ describe('M5: moveWall e setReviewed', () => {
     expect(wallById(draftOf(off), 'W02')!.extra).toBeUndefined();
   });
 });
+
+describe('M6: underlay', () => {
+  const u = { version: 1 as const, source: { name: 'a.pdf', page: 1 }, image: 'data:image/png;base64,AA', width: 10, height: 10, scale: 1, origin: { x: 0, y: 0 }, rotation: 0 as const, opacity: 0.35, visible: true };
+  it('setUnderlay grava em `$underlay` com histórico; remover apaga a chave; a vista muda sem undo nem dirty', () => {
+    const s = editorReducer(loaded(), { type: 'setUnderlay', underlay: u });
+    expect(draftOf(s).extra?.['$underlay']).toMatchObject({ source: { name: 'a.pdf' } });
+    expect(s.dirty).toBe(true);
+    expect(canUndo(s)).toBe(true);
+    const viewed = editorReducer({ ...s, dirty: false }, { type: 'setUnderlayView', opacity: 0.6, visible: false });
+    expect(viewed.dirty).toBe(false);
+    expect(viewed.past).toEqual(s.past);
+    expect(viewed.revision).toBe(s.revision + 1);
+    expect(draftOf(viewed).extra?.['$underlay']).toMatchObject({ opacity: 0.6, visible: false });
+    expect(editorReducer(viewed, { type: 'setUnderlayView', opacity: 0.6 })).toBe(viewed);
+    const gone = editorReducer(viewed, { type: 'setUnderlay', underlay: undefined });
+    expect(draftOf(gone).extra?.['$underlay']).toBeUndefined();
+    expect(editorReducer(loaded(), { type: 'setUnderlayView', opacity: 0.5 })).toEqual(loaded());
+  });
+});

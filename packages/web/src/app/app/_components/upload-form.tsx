@@ -27,6 +27,8 @@ export interface UploadFormProps {
   onJobChange: (job: ExtractJob | undefined) => void;
   /** "or try a sample" na linha do botão (M5): leva ao seletor de exemplos, quando ele existe. */
   onSample?: (() => void) | undefined;
+  /** Arquivos atuais, para o editor oferecer a planta por baixo (M6). */
+  onFilesChange?: ((files: File[]) => void) | undefined;
 }
 
 const AUTO = 'auto';
@@ -42,7 +44,7 @@ export function pagesText(selected: ReadonlyMap<string, ReadonlySet<number>>): s
  * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
  * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
  */
-export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample }: UploadFormProps) {
+export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFilesChange }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | undefined>(undefined);
   const [picked, setPicked] = useState<Map<string, Set<number>>>(new Map());
@@ -75,6 +77,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample }: Uplo
   };
   const onFiles = (next: File[]): void => {
     setFiles(next);
+    onFilesChange?.(next);
     if (next.length > 0) setFilesError(undefined);
     // Arquivo removido: suas páginas marcadas saem do campo.
     const names = new Set(next.map((f) => f.name));

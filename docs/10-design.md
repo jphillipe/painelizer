@@ -188,8 +188,11 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;
   dentro da planta, barra de escala no canto inferior esquerdo, legenda no direito, grade de 12" quando o zoom
   passa de 1 px/pol, cota junto ao cursor durante o arraste; o canvas é focável: setas movem a seleção, +/− F
-  zoom e Fit; dois dedos fazem pinch e pan). Projeto solto (sem planta) mostra a **elevação esquemática** da
-  parede selecionada (M5), com os RO clicáveis. Leitura
+  zoom e Fit; dois dedos fazem pinch e pan). **Planta do arquiteto por baixo** (M6): menu "Drawing" na barra
+  põe uma página do PDF (ou imagem) atrás das paredes a 35 % (opacidade ajustável), com escala por dois pontos,
+  origem por um ponto e giro de 90°; durante a calibração uma faixa navy sobre a planta diz o próximo clique. A
+  imagem fica no projeto (`$underlay`) e no arquivo `.panelizer.json`. Projeto solto (sem planta) mostra a
+  **elevação esquemática** da parede selecionada (M5), com os RO clicáveis. Leitura
   da IA à qual falta o que o motor exige (`lib/editor/requirements.ts`: altura; neve, largura, pavimentos acima e
   vão do piso quando há parede portante com abertura sem header próprio) mostra, no lugar da planta, o card
   **"Before you review"** (eyebrow + h2 + lista do que falta e por quê + "Required for this project" com os

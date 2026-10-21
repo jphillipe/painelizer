@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useWorkspaceLayout } from '@/components/shell-layout';
-import { textFromDraft } from '@/lib/editor/draft';
+import { engineText } from './editor/use-project-check';
 import { describeAge, type SavedSession } from '@/lib/editor/persist';
 import { projectFileText, type ParsedProjectFile, type Reading } from '@/lib/editor/project-file';
 import { idIndex } from '@/lib/editor/problems';
@@ -50,6 +50,8 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
   const [step, setStep] = useState<StepId>(1);
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
   const [job, setJob] = useState<ExtractJob | undefined>(undefined);
+  // Arquivos do passo 01 (M6): a planta por baixo das paredes escolhe entre eles.
+  const [uploaded, setUploaded] = useState<File[]>([]);
   const extracting = job !== undefined;
   const [result, setResult] = useState<GenerateResult | undefined>(undefined);
   // Revisão do draft de que `result` saiu: editar depois marca o resultado como desatualizado.
@@ -94,7 +96,7 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
   const runProject = () => {
     if (editor.draft === undefined) return;
     generatedFrom.current = editor.revision;
-    generate.execute({ projectText: textFromDraft(editor.draft) });
+    generate.execute({ projectText: engineText(editor.draft) });
   };
   const startOver = () => {
     setConfirmingStartOver(false);
@@ -130,7 +132,7 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
     <section key="upload" className={uploadVisible ? 'step-enter no-print mt-8 grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start' : 'hidden'} aria-hidden={!uploadVisible}>
       <div className="space-y-4">
         <Card className="gap-0 p-6">
-          <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} onSample={devTools ? () => document.getElementById('sample')?.focus() : undefined} />
+          <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} onFilesChange={setUploaded} onSample={devTools ? () => document.getElementById('sample')?.focus() : undefined} />
         </Card>
         {devTools ? (
           <Card className="lift gap-4 p-6">
@@ -161,6 +163,7 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
           onOutcome={onOutcome}
           steps={<StepBar active={step} done={done} onGo={setStep} compact />}
           onStartOver={requestStartOver}
+          sourceFiles={uploaded}
         />
       ) : (
         <div className="space-y-8">

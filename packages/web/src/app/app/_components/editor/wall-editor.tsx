@@ -30,13 +30,15 @@ export interface WallEditorProps {
   /** `StepBar` compacta para a top bar do workspace. */
   steps: ReactNode;
   onStartOver: () => void;
+  /** Arquivos soltos no passo 01 (M6: planta por baixo). */
+  sourceFiles?: readonly File[] | undefined;
 }
 
 /**
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
  * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
  */
-export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles }: WallEditorProps) {
   const { draft } = state;
   // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
   const latest = useRef(state);
@@ -148,6 +150,7 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
       steps={steps}
       onStartOver={onStartOver}
       help={{ open: helpOpen, onOpenChange: setHelpOpen }}
+      sourceFiles={sourceFiles}
     />
   );
 }

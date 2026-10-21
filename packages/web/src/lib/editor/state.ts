@@ -21,6 +21,7 @@ import {
   type Point,
   type ProjectDraft,
 } from './draft';
+import { UNDERLAY_KEY, underlayOf, type Underlay } from './underlay';
 
 export type Selection =
   | { kind: 'none' }
@@ -74,6 +75,10 @@ export type EditorAction =
   | { type: 'moveWall'; wallId: string; dx: number; dy: number; txn?: string }
   /** Marca de revisão humana (M5): `$reviewed` no `extra` da parede — o CLI ignora chaves com `$`. */
   | { type: 'setReviewed'; wallId: string; reviewed: boolean }
+  /** Planta do arquiteto por baixo (M6): imagem e calibração em `$underlay` na raiz; `undefined` remove. Undoável. */
+  | { type: 'setUnderlay'; underlay: Underlay | undefined }
+  /** Só opacidade/visibilidade do underlay: muda o draft sem histórico nem `dirty` (é vista, não edição). */
+  | { type: 'setUnderlayView'; opacity?: number; visible?: boolean }
   /** `preset` (S21.4): id e tag que a leitura já tinha para uma abertura que ficou fora do projeto (sem posição). */
   | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
   | { type: 'removeOpening'; wallId: string; openingId: string }
@@ -234,6 +239,19 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       const start = round({ x: w.start.x + action.dx, y: w.start.y + action.dy });
       const end = round({ x: w.end.x + action.dx, y: w.end.y + action.dy });
       return commit(state, mapWall(d, action.wallId, () => ({ ...w, start, end })), action.txn);
+    }
+    case 'setUnderlay': {
+      const extra = { ...(d.extra ?? {}) };
+      if (action.underlay === undefined) delete extra[UNDERLAY_KEY];
+      else extra[UNDERLAY_KEY] = action.underlay;
+      return commit(state, Object.keys(extra).length === 0 ? omit(d, 'extra') : { ...d, extra });
+    }
+    case 'setUnderlayView': {
+      const current = underlayOf(d);
+      if (current === undefined) return state;
+      const next: Underlay = { ...current, ...(action.opacity === undefined ? {} : { opacity: action.opacity }), ...(action.visible === undefined ? {} : { visible: action.visible }) };
+      if (next.opacity === current.opacity && next.visible === current.visible) return state;
+      return { ...state, draft: { ...d, extra: { ...(d.extra ?? {}), [UNDERLAY_KEY]: next } }, revision: state.revision + 1 };
     }
     case 'setReviewed': {
       const w = d.walls.find((x) => x.id === action.wallId);

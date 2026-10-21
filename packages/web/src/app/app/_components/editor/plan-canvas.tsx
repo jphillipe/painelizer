@@ -10,6 +10,7 @@ import { alongFromStart, draggedEndpoint, draggedOpeningStart, segmentRect, type
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
+import { svgMatrix, type Underlay } from '@/lib/editor/underlay';
 import type { LevelFilter } from '@/lib/editor/wall-filters';
 import { centerOn, fitViewport, gridStep, lerpViewport, panBy, planToScreen, rectToScreen, rectVisible, scaleBar, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
 import { easeSite, prefersReducedMotion, VIEWPORT_ANIMATION_MS } from '@/lib/motion';
@@ -50,6 +51,13 @@ export interface PlanCanvasProps {
   fill?: boolean;
   /** Toolbar do editor, à direita da barra da planta. */
   toolbar?: ReactNode;
+  /** Planta do arquiteto por baixo das paredes (M6). */
+  underlay?: Underlay | undefined;
+  /** Calibração do underlay: cliques viram pontos (em planta), não seleção; Esc cancela. */
+  onCalibrationPoint?: ((p: Point) => void) | undefined;
+  onCalibrationCancel?: (() => void) | undefined;
+  /** Faixa de instrução sobre a planta (calibração). */
+  overlay?: ReactNode;
   ref?: Ref<PlanCanvasHandle>;
 }
 
@@ -84,7 +92,8 @@ interface Pinch {
  * M5: botões de zoom, barra de escala, grade de 12" a partir de 1 px/pol, legenda, dois dedos (pinch e pan),
  * teclado (setas = nudge da seleção, +/− zoom, F = Fit) com o canvas focável, cota junto ao cursor no arraste.
  */
-export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onWallNudge, onDragEnd, level: levelProp, onLevel, initialSize, className, fill = false, toolbar, ref }: PlanCanvasProps) {
+export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onWallNudge, onDragEnd, level: levelProp, onLevel, initialSize, className, fill = false, toolbar, underlay, onCalibrationPoint, onCalibrationCancel, overlay, ref }: PlanCanvasProps) {
+  const calibrating = onCalibrationPoint !== undefined;
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<Size | undefined>(initialSize);
@@ -306,6 +315,12 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
       return;
     }
     if (d.moved || cancelled) return;
+    // Calibrando o underlay (M6): o clique é um ponto, não uma seleção.
+    if (onCalibrationPoint !== undefined) {
+      const p = toPlan(e.clientX, e.clientY);
+      if (p !== undefined) onCalibrationPoint(p);
+      return;
+    }
     // Clique sem arraste: seleciona o que estava sob o ponteiro.
     const el = d.target instanceof Element ? d.target : null;
     const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
@@ -344,6 +359,11 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   // Teclado com o canvas em foco (M5): setas movem a seleção, +/− zoom, F enquadra.
   const onKeyDown = (e: ReactKeyboardEvent<SVGSVGElement>): void => {
     if (e.ctrlKey || e.metaKey) return;
+    if (e.key === 'Escape' && calibrating) {
+      e.preventDefault();
+      onCalibrationCancel?.();
+      return;
+    }
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       zoomBy(ZOOM_STEP);
@@ -481,7 +501,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
           tabIndex={0}
           width="100%"
           height="100%"
-          className="block touch-none select-none cursor-grab outline-none active:cursor-grabbing"
+          className={cn('block touch-none select-none outline-none', calibrating ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing')}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={(e) => finishDrag(e, false)}
@@ -492,6 +512,9 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
           {viewport !== undefined && size !== undefined ? (
             <>
               {grid !== undefined ? <Grid viewport={viewport} step={grid} /> : null}
+              {underlay !== undefined && underlay.visible ? (
+                <image href={underlay.image} width={underlay.width} height={underlay.height} transform={svgMatrix(underlay, viewport)} opacity={underlay.opacity} preserveAspectRatio="none" pointerEvents="none" data-underlay aria-hidden />
+              ) : null}
               <Origin viewport={viewport} />
               {visible.map((w) => (
                 <Wall key={w.wallId} wall={w} viewport={viewport} selected={selectedWall === w.wallId} selectedOpening={selectedWall === w.wallId ? selectedOpening : undefined} severity={severity(w.wallId)} draggable={draggable} />
@@ -514,9 +537,10 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
             </>
           ) : null}
         </svg>
-        {geometry.walls.length === 0 && geometry.broken.length === 0 ? (
+        {geometry.walls.length === 0 && geometry.broken.length === 0 && underlay === undefined ? (
           <p className="absolute inset-0 flex items-center justify-center text-sm text-ink-3">Nothing to draw yet.</p>
         ) : null}
+        {overlay}
         <Legend className="absolute right-2 bottom-2" />
       </div>
       {fill ? <p className="shrink-0 truncate text-[12px] text-ink-3">{hint}</p> : null}

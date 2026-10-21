@@ -24,6 +24,9 @@ import { PlanCanvas, type PlanCanvasHandle } from './plan-canvas';
 import { ProjectSettingsDialog } from './project-settings-dialog';
 import { ReadingPanel } from './reading-panel';
 import { ShortcutsDialog } from './shortcuts-dialog';
+import { CalibrationBanner, UnderlayControls, calibrationPoint, withPixelAt, type Calibration } from './underlay-controls';
+import { UnderlayDialog } from './underlay-dialog';
+import { underlayOf, type Underlay } from '@/lib/editor/underlay';
 import { WallElevation } from './wall-elevation';
 import type { CheckState } from './use-project-check';
 import { WallRows } from './wall-rows';
@@ -55,6 +58,8 @@ export interface WorkspaceProps {
   onStartOver: () => void;
   /** Lista de atalhos (M5), aberta por ? (WallEditor) ou pelo botão da toolbar. */
   help: { open: boolean; onOpenChange: (open: boolean) => void };
+  /** Arquivos soltos no passo 01, para a planta por baixo (M6). */
+  sourceFiles?: readonly File[] | undefined;
 }
 
 /**
@@ -63,12 +68,27 @@ export interface WorkspaceProps {
  * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
  * outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help }: WorkspaceProps) {
+export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [] }: WorkspaceProps) {
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
   // Pavimento (M5): um só filtro para a planta e a lista.
   const [level, setLevel] = useState<LevelFilter>('all');
+  // Planta do arquiteto por baixo (M6): dialog de escolha e calibração em curso.
+  const [underlayOpen, setUnderlayOpen] = useState(false);
+  const [calibration, setCalibration] = useState<Calibration | undefined>(undefined);
+  const underlay = underlayOf(draft);
+  const setUnderlay = (u: Underlay | undefined): void => dispatch({ type: 'setUnderlay', underlay: u });
+  const onCalibrationPoint = (p: { x: number; y: number }): void => {
+    if (underlay === undefined || calibration === undefined) return;
+    const px = calibrationPoint(underlay, p);
+    if (calibration.kind === 'origin') {
+      setUnderlay(withPixelAt(underlay, px, { x: 0, y: 0 }));
+      setCalibration(undefined);
+    } else if (calibration.points.length < 2) {
+      setCalibration({ kind: 'scale', points: [...calibration.points, px] });
+    }
+  };
   const canvas = useRef<PlanCanvasHandle>(null);
 
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
@@ -89,14 +109,20 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     { label: 'Start over', separator: true, destructive: true, onSelect: onStartOver },
   ];
 
-  const toolbar = <EditorToolbar state={state} dispatch={dispatch} embedded onHelp={() => help.onOpenChange(true)} />;
+  const toolbar = (
+    <>
+      <UnderlayControls underlay={underlay} calibration={calibration} onCalibration={setCalibration} onChoose={() => setUnderlayOpen(true)} onChange={setUnderlay} onView={(view) => dispatch({ type: 'setUnderlayView', ...view })} />
+      <span className="mx-1 h-4 w-px bg-line" aria-hidden />
+      <EditorToolbar state={state} dispatch={dispatch} embedded onHelp={() => help.onOpenChange(true)} />
+    </>
+  );
   const selectedWall = state.selection.kind === 'wall' || state.selection.kind === 'opening' ? wallById(draft, state.selection.wallId) : undefined;
   const reviewed = outcome !== undefined || reviewedCount(draft.walls) > 0 ? { done: reviewedCount(draft.walls), total: draft.walls.length } : undefined;
   const center = setupVisible ? (
     <Card className="step-enter workspace-pane flex-1 gap-0 p-6 md:p-8">
       <ProjectDataForm outcome={outcome} onOutcome={onOutcome} variant="setup" needs={needs} confirm={state.dirty} onSkip={() => setDismissed(true)} />
     </Card>
-  ) : geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0) ? (
+  ) : geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0 || (underlay !== undefined && geometry.format !== 'loose')) ? (
     <PlanCanvas
       ref={canvas}
       fill
@@ -113,6 +139,10 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
       onDragEnd={() => dispatch({ type: 'endTransaction' })}
       level={level}
       onLevel={setLevel}
+      underlay={underlay}
+      onCalibrationPoint={calibration === undefined ? undefined : onCalibrationPoint}
+      onCalibrationCancel={() => setCalibration(undefined)}
+      overlay={underlay !== undefined && calibration !== undefined ? <CalibrationBanner underlay={underlay} calibration={calibration} onCalibration={setCalibration} onChange={setUnderlay} /> : undefined}
     />
   ) : (
     <div className="flex h-full min-h-0 flex-col gap-2">
@@ -188,6 +218,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
         </div>
       )}
       <ShortcutsDialog open={help.open} onOpenChange={help.onOpenChange} />
+      <UnderlayDialog open={underlayOpen} onOpenChange={setUnderlayOpen} sourceFiles={sourceFiles} bounds={geometry?.bounds} onPick={setUnderlay} />
       <ProjectSettingsDialog open={settingsOpen} onOpenChange={(open) => !open && select({ kind: 'none' })} draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} />
     </div>
   );

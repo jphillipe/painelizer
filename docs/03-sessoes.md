@@ -748,7 +748,20 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     lista de atalhos; "Reviewed" marca W02 e a top bar diz "1 of 5 reviewed", a lista ganha "Not reviewed 4";
     settings com um só "Ground snow load (psf)"; Ringgold S2 mostra "Elevation of S2" com 2 RO; em 375 px a top
     bar tem 83 px (duas linhas) e os rótulos da toolbar somem. Capturas em `out/m5/`.
-  - [ ] **M6 — Planta do arquiteto por baixo** (`$underlay` calibrado por dois pontos).
+  - [x] **M6 — Planta do arquiteto por baixo.** Feita em 2026-10-21 (sem regra de framing). `lib/editor/underlay.ts`
+    (tipo, `underlayOf`/`withoutUnderlay`, `imageToPlan`/`planToImage`, `initialTransform`, `scaleFromPoints`,
+    `withScale`, `withPixelAt`, `rotated`, `svgMatrix`; 7 testes), reducer `setUnderlay` (undoável) e
+    `setUnderlayView` (sem histórico), `lib/pdf-render.ts` (pdf.js e imagens no cliente), `underlay-dialog.tsx`
+    (arquivos do passo 01 ou do disco, página em miniatura, render a 2 400 px), `underlay-controls.tsx` (menu
+    "Drawing": opacidade, mostrar/ocultar, escala por dois pontos, origem, girar, trocar, remover; faixa de
+    instrução sobre a planta), `PlanCanvas` com `<image>` atrás da grade e modo de calibração (clique = ponto,
+    Esc cancela, cursor em cruz), `use-project-check` com `engineText` (sem o underlay) e sem chamada quando o
+    texto não mudou. Testes do web: 192 (eram 184). Conferido em 1440×900 por CDP (`cdp-m6.mjs`, PDF do
+    Ringgold pela entrada de arquivo do dialog): página 1 vira `<image data-underlay>` de 2 400 × 1 553 px
+    (400 KB) do tamanho da casa; "Set scale" mostra a faixa, dois cliques a 200 px e "10'-0"" mudam a escala na
+    razão 0,8132, igual à esperada pela geometria da tela; "Set origin" move a origem; opacidade 70 % no
+    atributo; girar 90° gravado; "Hide" tira a imagem e grava `visible: false`; reload → Resume → "Show" traz a
+    imagem de volta (sessão de 538 KB). Capturas em `out/m6/`.
   - [ ] **M7 — Extração honesta** (prévia das páginas e custo, progresso real, cancelar, job sobrevive ao reload).
   - [ ] **M8 — Desempenho da checagem** (`check` sem gerar SVG/CSV; memoização da geometria por parede).
   - [ ] **M9 — PDF e impressão** (`@resvg/resvg-js`, "x de y").
