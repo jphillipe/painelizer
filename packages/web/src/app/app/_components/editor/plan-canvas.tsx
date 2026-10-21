@@ -9,8 +9,13 @@ import { alongFromStart, draggedEndpoint, draggedOpeningStart, segmentRect, type
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
-import { centerOn, fitViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
+import { centerOn, fitViewport, lerpViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, SNAP_COARSE, SNAP_FINE, zoomAt, type Size, type Viewport } from '@/lib/editor/viewport';
+import { easeSite, prefersReducedMotion, VIEWPORT_ANIMATION_MS } from '@/lib/motion';
 import { cn } from '@/lib/utils';
+
+/** Transições do traço (M4): seleção, aviso e hover mudam de cor sem pular. */
+const STROKE_TRANSITION = { transition: 'stroke 200ms var(--ease-site), stroke-width 200ms var(--ease-site)' } as const;
+const HALO_TRANSITION = { transition: 'stroke-opacity 200ms var(--ease-site)' } as const;
 
 /** Comandos de quem está fora do canvas (S21.4): a lista de paredes traz a selecionada para a vista. */
 export interface PlanCanvasHandle {
@@ -68,6 +73,8 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   const [level, setLevel] = useState<number | 'all'>('all');
   const drag = useRef<Drag | undefined>(undefined);
   const frame = useRef<number | undefined>(undefined);
+  // Animação do viewport (Fit, centralizar pela lista): cancelada por qualquer gesto do humano.
+  const anim = useRef<number | undefined>(undefined);
   const pending = useRef<{ clientX: number; clientY: number; shift: boolean } | undefined>(undefined);
   // Geometria e viewport mais recentes para o handler do rAF (o closure do evento pode estar velho).
   const latest = useRef({ geometry, viewport });
@@ -98,6 +105,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
     if (svg === null) return;
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
+      cancelAnim();
       const rect = svg.getBoundingClientRect();
       const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       setViewport((v) => (v === undefined ? v : zoomAt(v, anchor, Math.exp(-e.deltaY * WHEEL_ZOOM))));
@@ -106,8 +114,32 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
     return () => {
       svg.removeEventListener('wheel', onWheel);
       if (frame.current !== undefined) cancelAnimationFrame(frame.current);
+      cancelAnim();
     };
   }, []);
+
+  const cancelAnim = (): void => {
+    if (anim.current !== undefined) {
+      cancelAnimationFrame(anim.current);
+      anim.current = undefined;
+    }
+  };
+  /** Vai ao viewport `target` em 250 ms com a curva do site (M4); com `prefers-reduced-motion`, ou sem viewport ainda, pula. */
+  const animateTo = (target: Viewport): void => {
+    cancelAnim();
+    const from = latest.current.viewport;
+    if (from === undefined || prefersReducedMotion() || typeof requestAnimationFrame !== 'function') {
+      setViewport(target);
+      return;
+    }
+    const start = performance.now();
+    const step = (now: number): void => {
+      const t = Math.min(1, (now - start) / VIEWPORT_ANIMATION_MS);
+      setViewport(lerpViewport(from, target, easeSite(t)));
+      anim.current = t < 1 ? requestAnimationFrame(step) : undefined;
+    };
+    anim.current = requestAnimationFrame(step);
+  };
 
   const toPlan = (clientX: number, clientY: number): Point | undefined => {
     const svg = svgRef.current;
@@ -119,6 +151,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>): void => {
     if (e.button !== 0 && e.button !== 1) return;
+    cancelAnim();
     const el = e.target instanceof Element ? e.target : null;
     const base = { x: e.clientX, y: e.clientY, moved: false, target: e.target };
     const handleEl = el?.closest('[data-handle]');
@@ -212,7 +245,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   };
 
   const fit = (): void => {
-    if (size !== undefined && bounds !== undefined) setViewport(fitViewport(bounds, size, FIT_PADDING_PX));
+    if (size !== undefined && bounds !== undefined) animateTo(fitViewport(bounds, size, FIT_PADDING_PX));
   };
   useImperativeHandle(
     ref,
@@ -225,7 +258,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
         const broken = wall === undefined ? g.broken.find((b) => b.wallId === wallId) : undefined;
         const rect = wall?.rect ?? (broken === undefined ? undefined : segmentRect(broken.start, broken.end, 5.5));
         if (rect === undefined || rectVisible(v, rect, size)) return;
-        setViewport(centerOn(v, rect, size, FIT_PADDING_PX));
+        animateTo(centerOn(v, rect, size, FIT_PADDING_PX));
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,7 +339,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
                   </g>
                 );
               })}
-              {selectedGeom !== undefined && draggable ? <Handles wall={selectedGeom} viewport={viewport} /> : null}
+              {selectedGeom !== undefined && draggable ? <Handles key={selectedGeom.wallId} wall={selectedGeom} viewport={viewport} /> : null}
               {northAngle !== undefined ? <North x={size.width - 28} y={28} angle={northAngle} /> : null}
             </>
           ) : null}
@@ -332,10 +365,11 @@ function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }
   const label = wall.dir === 'x' ? { x: mid.x, y: mid.y - labelOffset } : { x: mid.x + labelOffset, y: mid.y };
   const dim = wall.dir === 'x' ? { x: mid.x, y: mid.y + thickPx / 2 + 14 } : { x: mid.x - thickPx / 2 - 14, y: mid.y };
   return (
-    <g data-wall-id={wall.wallId} data-selected={selected || undefined} className="cursor-pointer">
+    <g data-wall-id={wall.wallId} data-selected={selected || undefined} data-severity={severity} className="cursor-pointer">
       <title>{`${wall.wallId} · ${wall.section} · ${wall.exterior ? 'exterior' : 'interior'} · plate ${formatMeasure(wall.plateLength)}${wall.framed ? '' : ' (not framed: plan doesn’t close)'}`}</title>
-      {selected ? <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={0.22} strokeLinejoin="round" pointerEvents="none" /> : null}
-      <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={wall.exterior ? 'var(--color-gold-100)' : 'var(--color-paper-3)'} stroke={selected && severity === undefined ? 'var(--color-selection)' : stroke} strokeWidth={selected ? 2 : 1.25} strokeDasharray={wall.framed ? undefined : '5 3'} />
+      {/* Halo de seleção sempre presente: entra e sai em 200 ms (M4). */}
+      <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={selected ? 0.22 : 0} strokeLinejoin="round" pointerEvents="none" style={HALO_TRANSITION} />
+      <rect className="wall-body" x={r.x} y={r.y} width={r.w} height={r.h} fill={wall.exterior ? 'var(--color-gold-100)' : 'var(--color-paper-3)'} stroke={selected && severity === undefined ? 'var(--color-selection)' : stroke} strokeWidth={selected ? 2 : 1.25} strokeDasharray={wall.framed ? undefined : '5 3'} style={STROKE_TRANSITION} />
       {wall.openings.map((o) => (
         <Opening key={o.openingId} wall={wall} opening={o} viewport={viewport} selected={selectedOpening === o.openingId} draggable={draggable} />
       ))}
@@ -349,7 +383,7 @@ function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }
 function Handles({ wall, viewport }: { wall: WallGeom; viewport: Viewport }) {
   const cursor = wall.dir === 'x' ? 'ew-resize' : 'ns-resize';
   return (
-    <g data-wall-id={wall.wallId} aria-hidden>
+    <g data-wall-id={wall.wallId} aria-hidden className="handle-pop">
       {(['start', 'end'] as const).map((end) => {
         const p = planToScreen(viewport, wall[end]);
         return (
@@ -374,18 +408,18 @@ function Opening({ wall, opening, viewport, selected, draggable }: { wall: WallG
     <g data-opening-id={opening.openingId} style={{ cursor: draggable ? (horizontal ? 'ew-resize' : 'ns-resize') : 'pointer' }}>
       <title>{`${opening.openingId} · ${opening.type ?? '?'} · ${formatMeasure(opening.s1 - opening.s0)} wide, left edge ${formatMeasure(opening.s0)} from start${opening.error === undefined ? '' : ` · ${opening.error}`}`}</title>
       {/* Vão: apaga a parede; batentes nas duas pontas; janela ganha a linha do vidro no eixo. */}
-      {selected ? <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={0.22} strokeLinejoin="round" pointerEvents="none" /> : null}
+      <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke="var(--color-selection)" strokeWidth={8} strokeOpacity={selected ? 0.22 : 0} strokeLinejoin="round" pointerEvents="none" style={HALO_TRANSITION} />
       <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="var(--color-card)" stroke={selected ? stroke : 'none'} strokeWidth={2} strokeDasharray={opening.resolved ? undefined : '3 2'} />
       {horizontal ? (
         <>
-          <line x1={r.x} y1={r.y} x2={r.x} y2={r.y + r.h} stroke={stroke} strokeWidth={1.25} />
-          <line x1={r.x + r.w} y1={r.y} x2={r.x + r.w} y2={r.y + r.h} stroke={stroke} strokeWidth={1.25} />
+          <line x1={r.x} y1={r.y} x2={r.x} y2={r.y + r.h} className="opening-jamb" stroke={stroke} strokeWidth={1.25} style={STROKE_TRANSITION} />
+          <line x1={r.x + r.w} y1={r.y} x2={r.x + r.w} y2={r.y + r.h} className="opening-jamb" stroke={stroke} strokeWidth={1.25} style={STROKE_TRANSITION} />
           {opening.type === 'window' ? <line x1={r.x} y1={center.y} x2={r.x + r.w} y2={center.y} stroke={stroke} strokeWidth={1} /> : null}
         </>
       ) : (
         <>
-          <line x1={r.x} y1={r.y} x2={r.x + r.w} y2={r.y} stroke={stroke} strokeWidth={1.25} />
-          <line x1={r.x} y1={r.y + r.h} x2={r.x + r.w} y2={r.y + r.h} stroke={stroke} strokeWidth={1.25} />
+          <line x1={r.x} y1={r.y} x2={r.x + r.w} y2={r.y} className="opening-jamb" stroke={stroke} strokeWidth={1.25} style={STROKE_TRANSITION} />
+          <line x1={r.x} y1={r.y + r.h} x2={r.x + r.w} y2={r.y + r.h} className="opening-jamb" stroke={stroke} strokeWidth={1.25} style={STROKE_TRANSITION} />
           {opening.type === 'window' ? <line x1={center.x} y1={r.y} x2={center.x} y2={r.y + r.h} stroke={stroke} strokeWidth={1} /> : null}
         </>
       )}

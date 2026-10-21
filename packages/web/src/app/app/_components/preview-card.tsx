@@ -10,7 +10,7 @@ export interface PreviewCardProps {
 export function PreviewCard({ illustration, outcome }: PreviewCardProps) {
   const read = outcome?.ok ? outcome : undefined;
   return (
-    <aside className="overflow-hidden rounded-md border bg-card shadow-1">
+    <aside className="lift overflow-hidden rounded-md border bg-card shadow-1">
       <div className="bg-navy-900 px-6 py-4 text-lg font-semibold text-paper">{read ? 'Walls read from your set' : 'Your walls appear here'}</div>
       {read ? (
         <div className="space-y-3 px-6 py-5">

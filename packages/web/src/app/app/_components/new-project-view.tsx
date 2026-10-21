@@ -14,6 +14,7 @@ import { describeAge, type SavedSession } from '@/lib/editor/persist';
 import { projectFileText, type ParsedProjectFile, type Reading } from '@/lib/editor/project-file';
 import { idIndex } from '@/lib/editor/problems';
 import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
+import { prefersReducedMotion } from '@/lib/motion';
 import type { ExtractJob, ExtractOutcome } from '@/types/extract';
 import type { Example, GenerateResult } from '@/types/panels';
 import { generatePanels } from '../_actions/generate-panels';
@@ -108,7 +109,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
   const session = useSavedSession(editor, okOutcome, job, onResume);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }, [step, extracting]);
 
   const done = doneSteps(editor.draft !== undefined, result !== undefined);
@@ -129,7 +130,7 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
         <Card className="gap-0 p-6">
           <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} />
         </Card>
-        <Card className="gap-4 p-6">
+        <Card className="lift gap-4 p-6">
           <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={openSample} />
           <Separator />
           <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />

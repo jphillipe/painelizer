@@ -92,25 +92,25 @@ export function EditorTopBar({ name, walls, openings, check, problems, warnings,
   );
 }
 
-/** Chips de status em chip claro com ícone (docs/10-design.md §3): a cor nunca é o único sinal. */
+/** Chips de status em chip claro com ícone (docs/10-design.md §3): a cor nunca é o único sinal. Cada troca de estado entra com `pop` (M4). */
 function StatusChip({ check, problems, warnings }: { check: CheckState; problems: number; warnings: number }) {
   if (check.status === 'error') {
     return (
-      <Badge variant="destructive">
+      <Badge key="error" variant="destructive" className="animate-pop">
         <OctagonXIcon /> Check failed
       </Badge>
     );
   }
   if (problems > 0) {
     return (
-      <Badge variant="destructive">
+      <Badge key="problems" variant="destructive" className="animate-pop">
         <OctagonXIcon /> {problems} to fix
       </Badge>
     );
   }
   if (check.status === 'checking' || check.stale || check.status === 'idle') {
     return (
-      <Badge variant="outline">
+      <Badge key="checking" variant="outline">
         <Loader2Icon className="animate-spin" /> Checking…
       </Badge>
     );
@@ -118,11 +118,11 @@ function StatusChip({ check, problems, warnings }: { check: CheckState; problems
   const panels = check.result?.ok ? check.result.panels.length : 0;
   return (
     <>
-      <Badge variant="success">
+      <Badge key="ready" variant="success" className="animate-pop">
         <CircleCheckIcon /> Ready · {panels} panels
       </Badge>
       {warnings > 0 ? (
-        <Badge variant="warning">
+        <Badge key="warnings" variant="warning" className="animate-pop">
           <TriangleAlertIcon /> {warnings} warning{warnings === 1 ? '' : 's'}
         </Badge>
       ) : null}

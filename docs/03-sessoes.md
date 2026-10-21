@@ -716,8 +716,20 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     Materials: 234 peças a comprar, 2 019 ft, 15,5 % de sobra no máximo, 3 294 lb, BOM por seção com subtotais;
     voltar à planta mostra o painel selecionado destacado; Ringgold: "2 warnings to review" agrupados ("Fewer
     jack studs than the IRC table × 2") com o chip 1-S2-P1 abrindo a folha. Capturas em `out/m3/`.
-  - [ ] **M4 — Motion no editor** (seleção/hover/halo animados, viewport interpolado em Fit, fade do inspetor,
-    `commit-flash`, chip de status; `prefers-reduced-motion` cobrindo tudo).
+  - [x] **M4 — Motion no editor.** Feita em 2026-10-21 (sem regra de framing). `lib/motion.ts` (`cubicBezier`,
+    `easeSite`, `prefersReducedMotion`, 250 ms) e `lerpViewport` em `viewport.ts`, testados; `PlanCanvas`: Fit e
+    `focusWall` animados por rAF (cancelados por ponteiro/roda), halo de seleção sempre presente com transição de
+    opacidade, `wall-body`/`opening-jamb` com transição de traço, `data-severity` e hover por CSS, alças com
+    `handle-pop`; `Inspector` com fade por seleção; `CommitInput` com `commit-flash`; `StatusChip` com `pop` por
+    estado; workspace e card de setup com `step-enter`; `lift` nos cards de exemplo e prévia; regra global de
+    `prefers-reduced-motion` em `globals.css` + `motion-reduce:` em botão e zona de soltar + `scrollTo` sem
+    `smooth`. Testes do web: 173 (eram 169); o smoke do canvas passou a conferir `data-severity`. `10-design` §2
+    atualizado. Conferido em 1440×900 (Chrome headless por CDP, `cdp-m4.mjs`): halos a 0 nas 5 paredes e 0,22
+    na selecionada; transição inline no `wall-body`; alças com `handle-pop`; inspetor dentro de `.animate-fade-in`;
+    chip "Ready" com `animate-pop`; hover em W03 dá traço `rgb(42, 83, 144)` a 1,75 px; Fit depois de 6 cliques
+    de roda passa por 17 larguras distintas em ~38 quadros (de 1 937 px a 658 px); altura 9'-0" confirmada com
+    Enter põe `commit-flash` no campo, que some em 1 s; com `prefers-reduced-motion` emulado, `step-enter` dura
+    1e-5 s e o Fit vai direto (2 larguras distintas). Captura em `out/m4/`.
   - [ ] **M5 — Facilidade de uso no editor** (zoom +/−, escala, grade, pinch, nudge por teclado, tooltips com
     atalhos, prev/next, "Reviewed" por parede, dialog de configurações sem campos duplicados, elevação esquemática
     do projeto solto, mobile, passo 01 com miniaturas de PDF).

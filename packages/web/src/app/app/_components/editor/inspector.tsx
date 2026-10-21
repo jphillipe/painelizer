@@ -104,10 +104,14 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
     }
   }
 
+  // Troca de item (M4): o conteúdo entra em fade curto; a chave muda com a seleção, não com cada edição.
+  const bodyKey = sel.kind === 'wall' ? `wall:${sel.wallId}` : sel.kind === 'opening' ? `opening:${sel.wallId}/${sel.openingId}` : sel.kind;
   return (
     <div className={cn('space-y-4', flat ? 'p-4' : 'rounded-md border bg-card p-4 shadow-1')} aria-label="Properties">
       {crumb}
-      {body}
+      <div key={bodyKey} className="animate-fade-in">
+        {body}
+      </div>
     </div>
   );
 }

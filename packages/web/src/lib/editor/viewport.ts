@@ -78,6 +78,12 @@ export function centerOn(v: Viewport, r: Rect, size: Size, paddingPx = 48): View
   return { scale, tx: size.width / 2 - cx * scale, ty: size.height / 2 + cy * scale };
 }
 
+/** Viewport entre `a` (t = 0) e `b` (t = 1), para Fit e centralização animados (M4). */
+export function lerpViewport(a: Viewport, b: Viewport, t: number): Viewport {
+  const k = clamp(t, 0, 1);
+  return { scale: a.scale + (b.scale - a.scale) * k, tx: a.tx + (b.tx - a.tx) * k, ty: a.ty + (b.ty - a.ty) * k };
+}
+
 /** Arredonda ao múltiplo de `step` mais próximo (negativos inclusive). */
 export function snap(value: number, step: number): number {
   if (!(step > 0)) return value;

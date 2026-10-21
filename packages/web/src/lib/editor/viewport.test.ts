@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOn, fitViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
+import { centerOn, fitViewport, lerpViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
 
 describe('viewport', () => {
   const v: Viewport = { scale: 2, tx: 100, ty: 500 };
@@ -66,5 +66,17 @@ describe('viewport', () => {
     expect(snap(0.3, 1)).toBe(0);
     expect(Object.is(snap(-0.3, 1), 0)).toBe(true);
     expect(snap(7.3, 0)).toBe(7.3);
+  });
+});
+
+describe('lerpViewport (M4)', () => {
+  it('interpola escala e deslocamento; t fora de [0, 1] é cortado', () => {
+    const a: Viewport = { scale: 1, tx: 0, ty: 0 };
+    const b: Viewport = { scale: 3, tx: 100, ty: -40 };
+    expect(lerpViewport(a, b, 0)).toEqual(a);
+    expect(lerpViewport(a, b, 1)).toEqual(b);
+    expect(lerpViewport(a, b, 0.5)).toEqual({ scale: 2, tx: 50, ty: -20 });
+    expect(lerpViewport(a, b, -1)).toEqual(a);
+    expect(lerpViewport(a, b, 2)).toEqual(b);
   });
 });

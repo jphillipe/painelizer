@@ -107,11 +107,17 @@ de aviso (`HEADER_JACKS_BELOW_TABLE`) sempre em mono.
   `shadow-2 = 0 2px 6px rgba(10,20,40,.16), 0 24px 60px rgba(10,20,40,.22)` (dialogs).
 - Gutter horizontal `clamp(20px, 4vw, 40px)`; largura máxima de conteúdo 1200px; escala de espaço do
   Tailwind (4px).
-- **Movimento**: easing do site `cubic-bezier(.22,.61,.2,1)` (`ease-site`). Hover e foco em 200 ms (cor, borda,
-  `translateY(-1px)` em botão, `-2px` + sombra em card com `lift`). Entrada de tela `step-enter` (fade + 12 px
-  de subida, 450 ms); listas entram em cascata com `stagger` (60 ms por item, via `--i`). Zona de soltar
-  responde ao hover (borda e cantos dourados, ícone sobe) e ao arraste (escala 1.01, ícone dourado). Componentes
-  do shadcn animam com `tw-animate-css`. `prefers-reduced-motion` desliga tudo.
+- **Movimento**: easing do site `cubic-bezier(.22,.61,.2,1)` (`ease-site`; em JS, `easeSite` de `lib/motion.ts`).
+  Hover e foco em 200 ms (cor, borda, `translateY(-1px)` em botão, `-2px` + sombra em card com `lift`). Entrada
+  de tela `step-enter` (fade + 12 px de subida, 450 ms); listas entram em cascata com `stagger` (60 ms por item,
+  via `--i`, no máximo 12 itens e só na primeira montagem). Zona de soltar responde ao hover (borda e cantos
+  dourados, ícone sobe) e ao arraste (escala 1.01, ícone dourado). Componentes do shadcn animam com
+  `tw-animate-css`. **Editor (M4)**: seleção na planta é um halo que entra/sai em 200 ms; traços mudam de cor com
+  transição; hover em navy-600; alças entram com `pop`; Fit e centralizar interpolam o viewport em 250 ms e
+  qualquer gesto cancela; o inspetor entra em fade a cada seleção; campo confirmado pisca em verde 600 ms
+  (`commit-flash`); o chip de status entra com `pop` a cada estado. Nada em loop fora da espera da extração.
+  `prefers-reduced-motion`: regra global zera toda animação e transição; animações em JS consultam
+  `prefersReducedMotion()` e pulam para o fim.
 
 ## 3. Componentes (shadcn/ui, só os usados)
 

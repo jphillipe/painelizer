@@ -179,8 +179,37 @@
   transition: transform 200ms var(--ease-site), box-shadow 200ms var(--ease-site), border-color 200ms var(--ease-site);
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-1);
+    box-shadow: 0 2px 6px rgba(16, 36, 65, 0.08), 0 14px 36px rgba(16, 36, 65, 0.14);
   }
+}
+
+/* Editor (M4): alças da parede selecionada entram com `pop`; campo confirmado pisca em verde. */
+@utility handle-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: var(--animate-pop);
+}
+@utility commit-flash {
+  animation: commit-flash 600ms var(--ease-site) both;
+}
+@keyframes commit-flash {
+  0% {
+    border-color: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ok) 28%, transparent);
+  }
+  100% {
+    border-color: var(--line);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Planta do editor: hover em parede e abertura que não estão selecionadas nem com issue (CSS vence o atributo). */
+[data-plan-canvas] g[data-wall-id]:not([data-selected]):not([data-severity]):hover > .wall-body {
+  stroke: var(--selection);
+  stroke-width: 1.75;
+}
+[data-plan-canvas] g[data-opening-id]:hover > .opening-jamb {
+  stroke: var(--selection);
 }
 
 /*
@@ -228,15 +257,21 @@
   }
 }
 
+/*
+ * Menos movimento (M4): tudo — entradas, cascatas, hovers, spinners, shadcn/tw-animate, barra de progresso —
+ * termina na hora. As animações em JS (viewport da planta, scroll) consultam `prefersReducedMotion()`.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .step-enter,
-  .stagger,
-  .lift {
-    animation: none;
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
   .frame-piece {
-    animation: none;
+    animation: none !important;
   }
   .frame-scan {
     display: none;

@@ -84,7 +84,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
 
   const toolbar = <EditorToolbar state={state} dispatch={dispatch} embedded />;
   const center = setupVisible ? (
-    <Card className="workspace-pane flex-1 gap-0 p-6 md:p-8">
+    <Card className="step-enter workspace-pane flex-1 gap-0 p-6 md:p-8">
       <ProjectDataForm outcome={outcome} onOutcome={onOutcome} variant="setup" needs={needs} confirm={state.dirty} onSkip={() => setDismissed(true)} />
     </Card>
   ) : geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0) ? (
@@ -148,7 +148,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
   const inspector = <Inspector state={state} draft={draft} dispatch={dispatch} provenance={provenance} issues={issues} outcome={outcome} onOutcome={onOutcome} showProjectData={false} flat />;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="step-enter flex min-h-0 flex-1 flex-col">
       <EditorTopBar name={name} walls={draft.walls.length} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} />
       {wide ? (
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_360px]">

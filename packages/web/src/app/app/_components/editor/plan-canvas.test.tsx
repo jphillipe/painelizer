@@ -49,7 +49,9 @@ describe('PlanCanvas (SSR)', () => {
     expect(html).toContain('plan doesn’t close');
     expect(html).toContain('stroke-dasharray="5 3"');
     const w05 = html.slice(html.indexOf('data-wall-id="W05"'));
-    expect(w05.slice(0, 600)).toContain('var(--color-destructive)');
+    // M4: o halo de seleção (sempre presente, opacidade 0) vem antes do corpo da parede.
+    expect(w05.slice(0, 1000)).toContain('var(--color-destructive)');
+    expect(w05).toContain('data-severity="problem"');
   });
 
   it('fill (workspace): sem 4:3, toolbar na barra e a dica no rodapé', () => {

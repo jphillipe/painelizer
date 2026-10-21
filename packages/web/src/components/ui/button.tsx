@@ -12,9 +12,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-navy-700 hover:-translate-y-px active:translate-y-0",
+        default: "bg-primary text-primary-foreground hover:bg-navy-700 hover:-translate-y-px active:translate-y-0 motion-reduce:hover:translate-y-0",
         // Ação principal da tela: pill dourado com texto navy; no hover escurece e mantém o navy (5,1:1).
-        accent: "bg-accent text-accent-foreground shadow-1 hover:bg-gold hover:-translate-y-px active:translate-y-0",
+        accent: "bg-accent text-accent-foreground shadow-1 hover:bg-gold hover:-translate-y-px active:translate-y-0 motion-reduce:hover:translate-y-0",
         destructive: "bg-destructive text-paper hover:bg-destructive/90",
         outline: "border bg-background shadow-xs hover:border-line-strong hover:bg-paper-2 hover:text-ink",
         secondary: "bg-secondary text-secondary-foreground hover:bg-paper-3",

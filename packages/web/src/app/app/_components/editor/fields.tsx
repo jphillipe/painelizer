@@ -52,6 +52,8 @@ export interface CommitInputProps<T> {
 export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Object.is, placeholder, disabled, mono = true, className, inputMode, 'aria-label': ariaLabel }: CommitInputProps<T>) {
   const [text, setText] = useState(() => format(value));
   const [error, setError] = useState<string | undefined>(undefined);
+  // Valor novo confirmado pisca em verde por 600 ms (M4): o único outro sinal era o chip "Checking…" na top bar.
+  const [flashing, setFlashing] = useState(false);
   const focused = useRef(false);
   // Último valor confirmado: Enter confirma e tira o foco na mesma passada, antes de o React re-renderizar;
   // sem isto o blur compararia com a prop antiga e confirmaria de novo (dois commits, dois undos).
@@ -79,6 +81,7 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
     else {
       committed.current = r.value;
       onCommit(r.value);
+      setFlashing(true);
     }
     return true;
   };
@@ -93,7 +96,8 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
       inputMode={inputMode}
       aria-label={ariaLabel}
       aria-invalid={error !== undefined || undefined}
-      className={cn('h-8 text-[13px]', mono && 'font-mono', className)}
+      className={cn('h-8 text-[13px]', mono && 'font-mono', flashing && 'commit-flash', className)}
+      onAnimationEnd={() => setFlashing(false)}
       onChange={(e) => setText(e.target.value)}
       onFocus={() => {
         focused.current = true;

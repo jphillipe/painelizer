@@ -59,7 +59,7 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
           'group relative flex cursor-pointer items-center gap-5 rounded-md border border-dashed border-line-strong bg-paper-2 px-6 py-7',
           'transition-[border-color,background-color,transform,box-shadow] duration-200 ease-site',
           'hover:border-gold hover:bg-gold-100/50 hover:shadow-1 focus-visible:border-gold',
-          over && 'scale-[1.01] border-gold bg-gold-100/70 shadow-1',
+          over && 'scale-[1.01] border-gold bg-gold-100/70 shadow-1 motion-reduce:scale-100',
           disabled && 'cursor-not-allowed opacity-60 hover:border-line-strong hover:bg-paper-2 hover:shadow-none',
         )}
       >
@@ -71,7 +71,7 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
           className={cn(
             'flex size-12 shrink-0 items-center justify-center rounded-md bg-navy-900 text-paper transition-transform duration-200 ease-site',
             'group-hover:-translate-y-0.5 group-hover:scale-105',
-            over && 'scale-110 bg-gold-600',
+            over && 'scale-110 bg-gold-600 motion-reduce:scale-100',
           )}
         >
           <UploadIcon className={cn('size-5 transition-transform duration-200', over && '-translate-y-0.5')} />
