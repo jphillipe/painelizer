@@ -777,7 +777,14 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     "Extract walls with AI · about US$ 1.54", as duas miniaturas com "sends"; marcar só a p.2 refaz a prévia
     para 1 página / 570 KB / US$ 1.51 e o campo fica "2". Capturas em `out/m7/`. Fica para quando houver
     crédito: uma leitura real com cancelamento e com F5 no meio.
-  - [ ] **M8 — Desempenho da checagem** (`check` sem gerar SVG/CSV; memoização da geometria por parede).
+  - [x] **M8 — Desempenho da checagem.** Feita em 2026-10-21 (sem regra de framing). Medição primeiro
+    (`lib/editor/perf.test.ts`: casa sintética de 27 paredes; o cliente gasta ~1 ms por edição, então a
+    memoização por parede do plano não foi feita). `cli/build.ts`: `panelizeProject` (painéis + problemas +
+    nome repetido + BOM) fatorado de `buildProject`; `panels.service.check` usa só ele — `services/panels.perf.test.ts`
+    mede 53 painéis: generate 30 ms, check 12 ms, com painéis e avisos idênticos. Abortar pedido em voo não é
+    possível com server actions; fica o descarte de resposta velha e o "texto igual não vai" da M6. Testes: cli 113,
+    web 206 (eram 201). Achado para a fábrica (não mexido, é framing): T dos dois lados no mesmo ponto de uma
+    parede (cruzamento em +) é recusado pelo motor ("layoutPlates: cuts sobrepõe"); ver 04-decisoes.
   - [ ] **M9 — PDF e impressão** (`@resvg/resvg-js`, "x de y").
   - [ ] **M10 — Testes de interação** (jsdom + testing-library).
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

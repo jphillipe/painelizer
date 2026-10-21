@@ -5,9 +5,10 @@
  */
 
 import 'server-only';
-import { buildProject, BuildError, type BuildResult } from 'cli/build';
+import { buildProject, BuildError, panelizeProject, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError, type Project } from 'cli/project';
+import type { Panel } from 'core';
 import type { CheckResult, Example, GenerateResult, PanelSummary } from '@/types/panels';
 
 export type { CheckResult, Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
@@ -20,23 +21,27 @@ function run(projectText: string): Run {
     const project = parseProject(projectText, 'project');
     return { ok: true, project, built: buildProject(project) };
   } catch (e) {
-    if (e instanceof ProjectError) return { ok: false, problems: [e.message] };
-    if (e instanceof BuildError) return { ok: false, problems: e.problems };
-    if (e instanceof RangeError) return { ok: false, problems: [e.message] };
-    throw e;
+    return { ok: false, problems: problemsOf(e) };
   }
 }
 
-function summarize(built: BuildResult): { panels: PanelSummary[]; warnings: string[] } {
+function problemsOf(e: unknown): string[] {
+  if (e instanceof ProjectError) return [e.message];
+  if (e instanceof BuildError) return e.problems;
+  if (e instanceof RangeError) return [e.message];
+  throw e;
+}
+
+function summarize(panels: readonly Panel[]): { panels: PanelSummary[]; warnings: string[] } {
   return {
-    panels: built.panels.map((p) => ({
+    panels: panels.map((p) => ({
       id: p.id,
       wallId: p.wallId,
       length: p.length,
       pieces: p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
       weightLb: p.weightLb,
     })),
-    warnings: built.warnings.map((w) => `${w.panelId} ${w.warning.code}: ${w.warning.message}`),
+    warnings: panels.flatMap((p) => p.warnings.map((w) => `${p.id} ${w.code}: ${w.message}`)),
   };
 }
 
@@ -47,7 +52,7 @@ export function generate(projectText: string): GenerateResult {
   return {
     ok: true,
     projectName: r.project.name,
-    ...summarize(r.built),
+    ...summarize(r.built.panels),
     files: r.built.files.map((f) => ({ path: f.path, content: f.content })),
     bom: r.built.bom.map((l) => ({
       section: l.section,
@@ -62,11 +67,20 @@ export function generate(projectText: string): GenerateResult {
   };
 }
 
-/** Checagem do editor (S21): o que o motor diria desta versão do projeto, sem mandar os arquivos. */
+/**
+ * Checagem do editor (S21): o que o motor diria desta versão do projeto, sem mandar os arquivos. M8: só a
+ * painelização (`panelizeProject`), sem desenhar folha nem escrever CSV — era o `buildProject` inteiro a cada
+ * pausa de 600 ms, e o tempo ia quase todo nas folhas SVG.
+ */
 export function check(projectText: string): CheckResult {
-  const r = run(projectText);
-  if (!r.ok) return r;
-  return { ok: true, projectName: r.project.name, ...summarize(r.built) };
+  try {
+    const project = parseProject(projectText, 'project');
+    const { panels, problems } = panelizeProject(project);
+    if (problems.length > 0) return { ok: false, problems };
+    return { ok: true, projectName: project.name, ...summarize(panels) };
+  } catch (e) {
+    return { ok: false, problems: problemsOf(e) };
+  }
 }
 
 /** Os exemplos do CLI, com o texto, para o formulário oferecer. */

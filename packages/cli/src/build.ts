@@ -47,7 +47,32 @@ export class BuildError extends Error {
   }
 }
 
-export function buildProject(project: Project): BuildResult {
+/**
+ * Só a painelização (M8): os painéis do projeto e os problemas do motor, sem folhas SVG nem CSV. É o que a
+ * checagem com debounce do editor paga a cada pausa; `buildProject` continua daqui para gerar os arquivos.
+ * Inclui o que pode derrubar o `build` sem desenhar nada: nome de arquivo repetido e lista de material inválida.
+ */
+export function panelizeProject(project: Project): { panels: Panel[]; problems: string[]; bom: BomLine[] } {
+  const { panels, problems } = panelize(project);
+  const usedNames = new Map<string, string>();
+  for (const panel of panels) {
+    const name = svgFileName(panel.id);
+    const clash = usedNames.get(name);
+    if (clash !== undefined) problems.push(`painéis "${clash}" e "${panel.id}" gerariam o mesmo arquivo panels/${name}`);
+    usedNames.set(name, panel.id);
+  }
+  let bom: BomLine[] = [];
+  if (problems.length === 0) {
+    try {
+      bom = projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths);
+    } catch (e) {
+      problems.push(`lista de material: ${(e as Error).message}`);
+    }
+  }
+  return { panels, problems, bom };
+}
+
+function panelize(project: Project): { panels: Panel[]; problems: string[] } {
   const panels: Panel[] = [];
   const problems: string[] = [];
 
@@ -83,17 +108,16 @@ export function buildProject(project: Project): BuildResult {
       }
     }
   }
+  return { panels, problems };
+}
+
+export function buildProject(project: Project): BuildResult {
+  const { panels, problems, bom } = panelizeProject(project);
+  if (problems.length > 0) throw new BuildError(problems);
 
   const files: OutputFile[] = [];
-  const usedNames = new Map<string, string>();
   for (const panel of panels) {
     const name = svgFileName(panel.id);
-    const clash = usedNames.get(name);
-    if (clash !== undefined) {
-      problems.push(`painéis "${clash}" e "${panel.id}" gerariam o mesmo arquivo panels/${name}`);
-      continue;
-    }
-    usedNames.set(name, panel.id);
     files.push({
       path: `panels/${name}`,
       content: panelSvg(panel, {
@@ -105,24 +129,12 @@ export function buildProject(project: Project): BuildResult {
     });
   }
 
-  let bom: BomLine[] = [];
-  if (problems.length === 0) {
-    try {
-      bom = projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths);
-      files.unshift(
-        { path: 'cutlist.csv', content: cutListCsv(panels) },
-        { path: 'bom.csv', content: bomCsv(bom) },
-        { path: 'panels.csv', content: panelsCsv(panels) },
-        ...(project.house === undefined
-          ? []
-          : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
-      );
-    } catch (e) {
-      problems.push(`lista de material: ${(e as Error).message}`);
-    }
-  }
-
-  if (problems.length > 0) throw new BuildError(problems);
+  files.unshift(
+    { path: 'cutlist.csv', content: cutListCsv(panels) },
+    { path: 'bom.csv', content: bomCsv(bom) },
+    { path: 'panels.csv', content: panelsCsv(panels) },
+    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
+  );
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));
   const cutLists = panels.map((p) => ({ panelId: p.id, lines: cutList(p) }));
