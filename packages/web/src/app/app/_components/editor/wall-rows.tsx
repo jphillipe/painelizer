@@ -1,12 +1,13 @@
 'use client';
 
+import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
 import { isPlanWall, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
-import type { Selection } from '@/lib/editor/state';
-import { countByFilter, filterWalls, type WallFilter } from '@/lib/editor/wall-filters';
+import { isReviewed, reviewedCount, type Selection } from '@/lib/editor/state';
+import { countByFilter, filterWalls, type LevelFilter, type WallFilter } from '@/lib/editor/wall-filters';
 import { cn } from '@/lib/utils';
 
 export interface WallRowsProps {
@@ -15,12 +16,15 @@ export interface WallRowsProps {
   provenance: ReadonlyMap<string, WallProvenance>;
   issuesByWall: ReadonlyMap<string | undefined, Issue[]>;
   onSelect: (selection: Selection) => void;
+  /** Pavimento mostrado (M5): o mesmo da planta. */
+  level?: LevelFilter | undefined;
 }
 
 const FILTERS: { id: WallFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'attention', label: 'Needs attention' },
   { id: 'lowConfidence', label: 'Low confidence' },
+  { id: 'notReviewed', label: 'Not reviewed' },
 ];
 
 const TONE_DOT = { success: 'bg-success', warning: 'bg-warning', destructive: 'bg-destructive' } as const;
@@ -44,21 +48,23 @@ function openingLabel(o: DraftOpening): string {
 
 /**
  * Lista compacta de paredes do workspace (S21.4): uma linha por parede com papel, comprimento, pontos de issue e
- * de confiança; filtros em chips; a parede selecionada expande as aberturas. Selecionar centraliza a planta
- * (quem decide é o `Workspace`, pelo handle do canvas).
+ * de confiança; filtros em chips (M5: "Not reviewed" quando a revisão faz sentido, pavimento igual ao da planta);
+ * a parede selecionada expande as aberturas. Selecionar centraliza a planta (quem decide é o `Workspace`).
  */
-export function WallRows({ draft, selection, provenance, issuesByWall, onSelect }: WallRowsProps) {
+export function WallRows({ draft, selection, provenance, issuesByWall, onSelect, level = 'all' }: WallRowsProps) {
   const [filter, setFilter] = useState<WallFilter>('all');
   const hasProvenance = provenance.size > 0;
-  const counts = countByFilter(draft.walls, issuesByWall, provenance);
-  const walls = filterWalls(draft.walls, filter, issuesByWall, provenance);
+  const reviewing = hasProvenance || reviewedCount(draft.walls) > 0;
+  const counts = countByFilter(draft.walls, issuesByWall, provenance, level);
+  const walls = filterWalls(draft.walls, filter, issuesByWall, provenance, level);
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
   const selectedOpening = selection.kind === 'opening' ? selection.openingId : undefined;
+  const filters = FILTERS.filter((f) => (f.id !== 'lowConfidence' || hasProvenance) && (f.id !== 'notReviewed' || reviewing));
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap gap-1 px-3 py-2" role="group" aria-label="Filter walls">
-        {FILTERS.filter((f) => f.id !== 'lowConfidence' || hasProvenance).map((f) => (
+        {filters.map((f) => (
           <button
             key={f.id}
             type="button"
@@ -98,6 +104,7 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect 
             const warnings = issues.length - problems;
             const selected = selectedWall === w.id;
             const length = wallLength(w);
+            const reviewed = isReviewed(w);
             return (
               <li key={w.id} className={cn('border-l-2 border-transparent transition-colors duration-200', selected && 'border-selection bg-selection/8')}>
                 <button
@@ -106,7 +113,10 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect 
                   aria-pressed={selected}
                   className={cn('grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 px-3 py-2 text-left transition-colors duration-200 hover:bg-paper-2', selected && 'hover:bg-selection/12')}
                 >
-                  <span className={cn('font-mono text-[13px] font-semibold', selected && 'text-navy-900')}>{w.id}</span>
+                  <span className={cn('flex items-center gap-1 font-mono text-[13px] font-semibold', selected && 'text-navy-900')}>
+                    {w.id}
+                    {reviewed ? <CheckIcon className="size-3.5 text-ok-700" aria-label="Reviewed" /> : null}
+                  </span>
                   <span className="min-w-0 truncate text-[12px] text-ink-3">
                     {role(w)}
                     {w.section !== undefined ? ` · ${w.section}` : ''}

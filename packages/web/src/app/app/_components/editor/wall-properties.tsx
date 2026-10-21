@@ -1,15 +1,17 @@
 'use client';
 
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import type { Dispatch } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { isIdFree, isPlanWall, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
+import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
 import { resolveDraftOpening } from '@/lib/editor/resolve';
-import type { EditorAction, Selection } from '@/lib/editor/state';
+import { isReviewed, type EditorAction, type Selection } from '@/lib/editor/state';
+import { cn } from '@/lib/utils';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
 import { IssueCallout } from './issue-callout';
 
@@ -37,6 +39,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
   };
   const length = wall.length ?? (wall.start !== undefined && wall.end !== undefined ? Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y) : undefined);
   const framingIssue = issues.some((i) => /section|exterior|bearing|floors|building|king|header|wind/i.test(i.kind ?? i.code ?? i.text));
+  const reviewed = isReviewed(wall);
 
   return (
     <div className="space-y-6">
@@ -45,9 +48,25 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
         title="Wall"
         collapsible={collapsible}
         actions={
-          <Button variant="ghost" size="xs" className="text-destructive" onClick={() => dispatch({ type: 'removeWall', wallId: id })}>
-            <Trash2Icon /> Remove wall
-          </Button>
+          <span className="flex items-center gap-2">
+            {/* Marca de revisão humana (M5): fica no arquivo (`$reviewed`), conta na top bar e filtra a lista. */}
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={reviewed}
+              aria-label={`Mark ${id} as reviewed`}
+              onClick={() => dispatch({ type: 'setReviewed', wallId: id, reviewed: !reviewed })}
+              className={cn('flex cursor-pointer items-center gap-1.5 rounded-pill border px-2 py-0.5 text-[12px] font-semibold transition-colors duration-200', reviewed ? 'border-ok/30 bg-ok/10 text-ok-700' : 'border-line text-ink-2 hover:border-line-strong')}
+            >
+              <span className={cn('flex size-3.5 items-center justify-center rounded-[3px] border', reviewed ? 'border-ok-700 bg-ok-700 text-paper' : 'border-line-strong bg-card')} aria-hidden>
+                {reviewed ? <CheckIcon className="size-3" /> : null}
+              </span>
+              Reviewed
+            </button>
+            <Button variant="ghost" size="xs" className="text-destructive" onClick={() => dispatch({ type: 'removeWall', wallId: id })}>
+              <Trash2Icon /> Remove wall
+            </Button>
+          </span>
         }
       >
         <div className="grid grid-cols-2 gap-3">
@@ -60,7 +79,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
           <Field id={`w-${id}-level`} label="Level">
             <NumberInput id={`w-${id}-level`} value={wall.level} integer min={1} placeholder="1" onCommit={(v) => set({ level: v })} />
           </Field>
-          <Field id={`w-${id}-height`} label="Height" hint="Subfloor to top of double top plate">
+          <Field id={`w-${id}-height`} label="Height" hint={LABELS.wallHeightHint}>
             <MeasureInput id={`w-${id}-height`} value={wall.height} positive onCommit={(v) => set({ height: v })} />
           </Field>
         </div>
@@ -98,7 +117,7 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
             <Field id={`w-${id}-len`} label="Length">
               <MeasureInput id={`w-${id}-len`} value={wall.length} positive required onCommit={(v) => v !== undefined && dispatch({ type: 'setWallLength', wallId: id, length: v })} />
             </Field>
-            <Field id={`w-${id}-lo`} label="Layout origin" hint="Building mark 0 in wall x; negative when the panel starts mid-wall">
+            <Field id={`w-${id}-lo`} label="Layout origin" hint="Where the building’s layout mark 0 falls along this wall; negative when the panel starts mid-wall">
               <MeasureInput id={`w-${id}-lo`} value={wall.layoutOrigin} signed placeholder="0" onCommit={(v) => set({ layoutOrigin: v })} />
             </Field>
           </div>
@@ -116,13 +135,13 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
           <Field id={`w-${id}-bearing`} label="Load">
             <BoolSelect id={`w-${id}-bearing`} value={wall.bearing} trueLabel="Bearing" falseLabel="Non-bearing" onChange={(v) => set({ bearing: v })} />
           </Field>
-          <Field id={`w-${id}-floors`} label="Floors above" hint="Bearing walls: for the IRC header table">
+          <Field id={`w-${id}-floors`} label={LABELS.floors} hint="Bearing walls: picks the row of the IRC header table">
             <NumberInput id={`w-${id}-floors`} value={wall.floorsSupported} integer min={0} placeholder="0" onCommit={(v) => set({ floorsSupported: v })} />
           </Field>
-          <Field id={`w-${id}-span`} label="Floor span">
-            <EnumSelect id={`w-${id}-span`} value={wall.floorSpan} noneLabel="Worst case" options={SPAN_OPTIONS} onChange={(v) => set({ floorSpan: v as DraftWall['floorSpan'] })} />
+          <Field id={`w-${id}-span`} label={LABELS.floorSpan}>
+            <EnumSelect id={`w-${id}-span`} value={wall.floorSpan} noneLabel={LABELS.floorSpanUnknown} options={SPAN_OPTIONS} onChange={(v) => set({ floorSpan: v as DraftWall['floorSpan'] })} />
           </Field>
-          <Field id={`w-${id}-bw`} label="Building width" hint="Overrides the project's (L-shaped house)">
+          <Field id={`w-${id}-bw`} label={LABELS.width} hint="Only this wall (L-shaped house); empty = the project’s">
             <MeasureInput id={`w-${id}-bw`} value={wall.buildingWidth} positive placeholder="project" onCommit={(v) => set({ buildingWidth: v })} />
           </Field>
         </div>

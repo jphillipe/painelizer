@@ -3,13 +3,18 @@
 import { FileImageIcon, FileTextIcon, UploadIcon, XIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ACCEPTED_UPLOAD_EXTENSIONS } from '@/types/extract';
+import { ACCEPTED_UPLOAD_EXTENSIONS, ACCEPTED_UPLOAD_TYPES } from '@/types/extract';
 
 export interface DropZoneProps {
   files: readonly File[];
   onFiles: (files: File[]) => void;
   disabled?: boolean;
+  /** Erro do formulário (sem arquivo ao enviar), mostrado embaixo da zona (M5), não em toast. */
+  error?: string | undefined;
 }
+
+/** Limite do envio (`serverActions.bodySizeLimit`, S20.2). */
+export const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
 
 export function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -19,18 +24,62 @@ export function formatBytes(n: number): string {
 const ACCEPT = ACCEPTED_UPLOAD_EXTENSIONS.join(',');
 const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
 
+/** Aceito por tipo MIME ou, quando o browser não o dá, pela extensão. */
+export function isAccepted(f: File): boolean {
+  if ((ACCEPTED_UPLOAD_TYPES as readonly string[]).includes(f.type)) return true;
+  const name = f.name.toLowerCase();
+  return ACCEPTED_UPLOAD_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
+/**
+ * Separa o que entra do que não entra (M5): tipo não aceito, repetido, ou o total passando do limite. Devolve a
+ * lista nova e o motivo de cada recusa, para a zona dizer em vez de ignorar em silêncio.
+ */
+export function mergeFiles(current: readonly File[], incoming: readonly File[]): { files: File[]; rejected: { name: string; reason: string }[] } {
+  const seen = new Set(current.map((f) => `${f.name}:${f.size}`));
+  const files = [...current];
+  const rejected: { name: string; reason: string }[] = [];
+  let total = current.reduce((n, f) => n + f.size, 0);
+  for (const f of incoming) {
+    if (seen.has(`${f.name}:${f.size}`)) {
+      rejected.push({ name: f.name, reason: 'already added' });
+      continue;
+    }
+    if (!isAccepted(f)) {
+      rejected.push({ name: f.name, reason: 'not a PDF or image' });
+      continue;
+    }
+    if (total + f.size > MAX_UPLOAD_BYTES) {
+      rejected.push({ name: f.name, reason: `would pass the ${formatBytes(MAX_UPLOAD_BYTES)} limit` });
+      continue;
+    }
+    seen.add(`${f.name}:${f.size}`);
+    files.push(f);
+    total += f.size;
+  }
+  return { files, rejected };
+}
+
 /** Zona de soltar arquivos: tracejada, cantos marcados, ícone navy; responde a hover e arraste. Acumula arquivos. */
-export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
+export function DropZone({ files, onFiles, disabled = false, error }: DropZoneProps) {
   const input = useRef<HTMLInputElement>(null);
+  // Contador de dragenter/dragleave (M5): o leave dispara ao passar sobre os filhos e fazia o estado piscar.
+  const depth = useRef(0);
   const [over, setOver] = useState(false);
+  const [rejected, setRejected] = useState<{ name: string; reason: string }[]>([]);
+  const total = files.reduce((n, f) => n + f.size, 0);
 
   const add = (list: FileList | null) => {
     if (!list) return;
-    const incoming = Array.from(list);
-    const seen = new Set(files.map((f) => `${f.name}:${f.size}`));
-    onFiles([...files, ...incoming.filter((f) => !seen.has(`${f.name}:${f.size}`))]);
+    const r = mergeFiles(files, Array.from(list));
+    setRejected(r.rejected);
+    if (r.files.length !== files.length) onFiles(r.files);
   };
   const remove = (file: File) => onFiles(files.filter((f) => f !== file));
+  const leave = (): void => {
+    depth.current = Math.max(0, depth.current - 1);
+    if (depth.current === 0) setOver(false);
+  };
 
   return (
     <div className="space-y-3">
@@ -38,6 +87,7 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
         role="button"
         tabIndex={disabled ? -1 : 0}
         aria-disabled={disabled}
+        aria-describedby={error !== undefined ? 'drop-zone-error' : undefined}
         onClick={() => !disabled && input.current?.click()}
         onKeyDown={(e) => {
           if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
@@ -45,13 +95,16 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
             input.current?.click();
           }
         }}
-        onDragOver={(e) => {
+        onDragEnter={(e) => {
           e.preventDefault();
+          depth.current += 1;
           if (!disabled) setOver(true);
         }}
-        onDragLeave={() => setOver(false)}
+        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={leave}
         onDrop={(e) => {
           e.preventDefault();
+          depth.current = 0;
           setOver(false);
           if (!disabled) add(e.dataTransfer.files);
         }}
@@ -60,6 +113,7 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
           'transition-[border-color,background-color,transform,box-shadow] duration-200 ease-site',
           'hover:border-gold hover:bg-gold-100/50 hover:shadow-1 focus-visible:border-gold',
           over && 'scale-[1.01] border-gold bg-gold-100/70 shadow-1 motion-reduce:scale-100',
+          error !== undefined && 'border-destructive',
           disabled && 'cursor-not-allowed opacity-60 hover:border-line-strong hover:bg-paper-2 hover:shadow-none',
         )}
       >
@@ -93,32 +147,47 @@ export function DropZone({ files, onFiles, disabled = false }: DropZoneProps) {
           }}
         />
       </div>
+      {error !== undefined ? (
+        <p id="drop-zone-error" className="text-[13px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
       <p className="text-[13px] text-ink-3">
-        PDF, PNG or JPG · up to 300 MB · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
+        PDF, PNG, JPG, WebP or GIF · up to {formatBytes(MAX_UPLOAD_BYTES)} per upload · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
       </p>
-      {files.length > 0 ? (
-        <ul className="divide-y divide-line-faint rounded-md border bg-card text-sm">
-          {files.map((f, i) => (
-            <li
-              key={`${f.name}:${f.size}`}
-              style={{ '--i': i } as React.CSSProperties}
-              className="stagger group/row flex items-center gap-3 px-3 py-2 transition-colors duration-200 hover:bg-paper-2"
-            >
-              {isPdf(f) ? <FileTextIcon className="size-4 shrink-0 text-navy-900" /> : <FileImageIcon className="size-4 shrink-0 text-gold-600" />}
-              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{f.name}</span>
-              <span className="text-ink-3">{formatBytes(f.size)}</span>
-              <button
-                type="button"
-                onClick={() => remove(f)}
-                disabled={disabled}
-                aria-label={`Remove ${f.name}`}
-                className="rounded-pill p-1 text-ink-3 opacity-60 transition-[opacity,background-color,color] duration-200 group-hover/row:opacity-100 hover:bg-paper-3 hover:text-destructive"
-              >
-                <XIcon className="size-4" />
-              </button>
+      {rejected.length > 0 ? (
+        <ul className="rounded-md border border-warning/40 bg-gold-100/40 px-3 py-2 text-[13px] text-ink-2" role="status">
+          {rejected.map((r) => (
+            <li key={r.name}>
+              <span className="font-mono">{r.name}</span> skipped: {r.reason}.
             </li>
           ))}
         </ul>
+      ) : null}
+      {files.length > 0 ? (
+        <div className="space-y-1">
+          <ul className="divide-y divide-line-faint rounded-md border bg-card text-sm">
+            {files.map((f, i) => (
+              <li key={`${f.name}:${f.size}`} style={{ '--i': Math.min(i, 12) } as React.CSSProperties} className="stagger group/row flex items-center gap-3 px-3 py-2 transition-colors duration-200 hover:bg-paper-2">
+                {isPdf(f) ? <FileTextIcon className="size-4 shrink-0 text-navy-900" /> : <FileImageIcon className="size-4 shrink-0 text-gold-600" />}
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{f.name}</span>
+                <span className="text-ink-3">{formatBytes(f.size)}</span>
+                <button
+                  type="button"
+                  onClick={() => remove(f)}
+                  disabled={disabled}
+                  aria-label={`Remove ${f.name}`}
+                  className="rounded-pill p-1 text-ink-2 transition-[background-color,color] duration-200 hover:bg-paper-3 hover:text-destructive"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="text-right text-[12px] text-ink-2">
+            {files.length} file{files.length === 1 ? '' : 's'} · {formatBytes(total)} of {formatBytes(MAX_UPLOAD_BYTES)}
+          </p>
+        </div>
       ) : null}
     </div>
   );

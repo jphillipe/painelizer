@@ -36,11 +36,28 @@ describe('wall-filters', () => {
     expect(filterWalls(walls, 'all', issuesByWall, provenance).map((w) => w.id)).toEqual(['N1', 'S1', 'I1', 'I2']);
     expect(filterWalls(walls, 'attention', issuesByWall, provenance).map((w) => w.id)).toEqual(['N1', 'S1', 'I1']);
     expect(filterWalls(walls, 'lowConfidence', issuesByWall, provenance).map((w) => w.id)).toEqual(['S1', 'I1']);
-    expect(countByFilter(walls, issuesByWall, provenance)).toEqual({ all: 4, attention: 3, lowConfidence: 2 });
+    expect(countByFilter(walls, issuesByWall, provenance)).toEqual({ all: 4, attention: 3, lowConfidence: 2, notReviewed: 4 });
   });
 
   it('sem leitura da IA, só as issues contam', () => {
     expect(filterWalls(walls, 'attention', issuesByWall, new Map()).map((w) => w.id)).toEqual(['N1']);
     expect(filterWalls(walls, 'lowConfidence', issuesByWall, new Map())).toEqual([]);
+  });
+});
+
+describe('M5: não revisadas e pavimento', () => {
+  const leveled = [
+    { id: 'A', level: 1, extra: { $reviewed: true } },
+    { id: 'B', level: 1 },
+    { id: 'C', level: 2 },
+  ];
+  it('notReviewed deixa só as sem a marca; o pavimento corta antes de qualquer filtro', () => {
+    const empty = new Map<string | undefined, Issue[]>();
+    const none = new Map<string, WallProvenance>();
+    expect(filterWalls(leveled, 'notReviewed', empty, none).map((w) => w.id)).toEqual(['B', 'C']);
+    expect(filterWalls(leveled, 'all', empty, none, 1).map((w) => w.id)).toEqual(['A', 'B']);
+    expect(filterWalls(leveled, 'notReviewed', empty, none, 2).map((w) => w.id)).toEqual(['C']);
+    expect(countByFilter(leveled, empty, none)).toEqual({ all: 3, attention: 0, lowConfidence: 0, notReviewed: 2 });
+    expect(countByFilter(leveled, empty, none, 2).all).toBe(1);
   });
 });

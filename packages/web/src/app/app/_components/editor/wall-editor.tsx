@@ -1,7 +1,7 @@
 'use client';
 
 import { OctagonXIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, type Dispatch, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ProjectDraft } from '@/lib/editor/draft';
@@ -93,7 +93,10 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
   }, [draft, state.loadProblems, check.result, outcome, geometry, ids]);
   const issuesByWall = useMemo(() => byWall(issues), [issues]);
   const groups = useMemo(() => groupIssues(issues, ids), [issues, ids]);
-  useEditorShortcuts(state, dispatch, draft !== undefined);
+  // Lista de atalhos (M5): `?` ou o botão da toolbar.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useEditorShortcuts(state, dispatch, draft !== undefined, { onHelp: openHelp });
 
   if (draft === undefined) {
     return (
@@ -144,6 +147,7 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
       onOutcome={onOutcome}
       steps={steps}
       onStartOver={onStartOver}
+      help={{ open: helpOpen, onOpenChange: setHelpOpen }}
     />
   );
 }

@@ -29,6 +29,8 @@ export interface ProjectDataFormProps {
   onSkip?: () => void;
   /** `setup`: o que o motor exige deste projeto (lib/editor/requirements). */
   needs?: ProjectDataNeeds;
+  /** Só estes campos (M5: nas configurações, o que não tem campo próprio no projeto). */
+  fields?: readonly (keyof ProjectData)[] | undefined;
 }
 
 const REQUIRED_KEY: Record<RequiredField, keyof ProjectData> = { wallHeight: 'wallHeight', snow: 'snow', width: 'width', floors: 'floors', floorSpan: 'floorSpan' };
@@ -37,7 +39,7 @@ const REQUIRED_KEY: Record<RequiredField, keyof ProjectData> = { wallHeight: 'wa
  * Revisão: o que os desenhos não trazem, aplicado à leitura já feita sem chamar a IA de novo. O resultado
  * recarrega o projeto no editor; com edições pendentes, pede confirmação.
  */
-export function ProjectDataForm({ outcome, onOutcome, variant = 'card', confirm = false, onSkip, needs }: ProjectDataFormProps) {
+export function ProjectDataForm({ outcome, onOutcome, variant = 'card', confirm = false, onSkip, needs, fields }: ProjectDataFormProps) {
   // `given` pode faltar numa leitura feita antes desta tela existir.
   const form = useForm<ProjectData>({ resolver: zodResolver(projectDataSchema), defaultValues: { ...EMPTY_PROJECT_DATA, ...(outcome.given ?? {}) } });
   const [pendingData, setPendingData] = useState<ProjectData | undefined>(undefined);
@@ -108,11 +110,11 @@ export function ProjectDataForm({ outcome, onOutcome, variant = 'card', confirm 
           </div>
         ) : setup ? null : (
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <h3>Project data the drawings don’t have</h3>
+            <h3 className="text-base">{fields === undefined ? 'Project data the drawings don’t have' : 'Defaults applied through the reading'}</h3>
             <span className="text-sm text-ink-3">{confirm ? 'Rebuilds the project from the reading.' : 'Applied instantly, no new AI call.'}</span>
           </div>
         )}
-        <ProjectDataFields control={form.control} layout={setup ? 'setup' : 'compact'} required={required} />
+        <ProjectDataFields control={form.control} layout={setup ? 'setup' : 'compact'} required={required} fields={fields} />
         <div className={setup ? 'flex flex-wrap items-center gap-4' : 'mt-4 flex items-center gap-3'}>
           <Button type="submit" variant={setup ? 'accent' : 'default'} size={setup ? 'default' : 'sm'} disabled={isPending}>
             {isPending ? (

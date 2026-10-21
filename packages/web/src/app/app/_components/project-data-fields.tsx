@@ -4,13 +4,14 @@ import type { Control, FieldValues, Path } from 'react-hook-form';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LABELS } from '@/lib/editor/labels';
 import type { RequiredField } from '@/lib/editor/requirements';
 import type { ProjectData } from '@/types/extract';
 import { cn } from '@/lib/utils';
 
 const AUTO = 'auto';
-const SPAN_LABELS: Record<string, string> = { [AUTO]: 'Not known', center: 'Center bearing', clear: 'Clear span' };
-const EXPOSURE_LABELS: Record<string, string> = { [AUTO]: 'Not known', B: 'B', C: 'C', D: 'D' };
+const SPAN_LABELS: Record<string, string> = { [AUTO]: LABELS.floorSpanUnknown, center: LABELS.floorSpanCenter, clear: LABELS.floorSpanClear };
+const EXPOSURE_LABELS: Record<string, string> = { [AUTO]: LABELS.exposureUnknown, B: 'B', C: 'C', D: 'D' };
 
 /**
  * `full`: upload (com descrições). `compact`: configurações do projeto (sem descrições). `setup`: card "Before you
@@ -38,15 +39,27 @@ export function ProjectDataFields<T extends FieldValues & ProjectData>({
   compact = false,
   layout,
   required = [],
+  fields,
 }: {
   control: Control<T>;
   compact?: boolean;
   layout?: ProjectDataLayout;
   /** `setup`: o que o motor exige deste projeto (lib/editor/requirements). */
   required?: readonly RequiredField[];
+  /** Só estes campos (M5: nas configurações, só o que não tem campo próprio no projeto). */
+  fields?: readonly FieldKey[] | undefined;
 }) {
   const mode: ProjectDataLayout = layout ?? (compact ? 'compact' : 'full');
   const describe = mode === 'full';
+  if (fields !== undefined) {
+    return (
+      <div className={cn('grid gap-4', fields.length > 1 && 'sm:grid-cols-2')}>
+        {fields.map((k) => (
+          <Field key={k} name={k} control={control} describe={describe} />
+        ))}
+      </div>
+    );
+  }
   if (mode === 'setup') {
     const req = new Set<FieldKey>(required.map((r) => REQUIRED_KEY[r]));
     const main = SETUP_ORDER.filter((k) => req.has(k));
@@ -97,26 +110,26 @@ function Field<T extends FieldValues & ProjectData>({ name, control, describe, r
   switch (name) {
     case 'wallHeight':
       return (
-        <TextField control={control} name={name} required={required} label="Wall height" hint={required ? undefined : '(if no sections)'} placeholder={`e.g. 9'-1 1/8"`} description={describe || required ? 'Subfloor to top of the double top plate.' : undefined} />
+        <TextField control={control} name={name} required={required} label={LABELS.wallHeight} hint={required ? undefined : "(if no sections)"} placeholder={`e.g. ${LABELS.wallHeightPlaceholder}`} description={describe || required ? `${LABELS.wallHeightHint}.` : undefined} />
       );
     case 'headerHeight':
-      return <TextField control={control} name={name} required={required} label="Header height" hint="(top of RO)" placeholder={`6'-10 1/2"`} description={describe ? 'From the subfloor. Empty: the drawings, else the factory standard.' : undefined} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.headerHeight} hint="(top of RO)" placeholder={LABELS.headerHeightPlaceholder} description={describe ? `${LABELS.headerHeightHint}. Empty: the drawings, else the factory standard.` : undefined} />;
     case 'sillHeight':
-      return <TextField control={control} name={name} required={required} label="Window sill height" hint="(if no elevations)" placeholder={`e.g. 2'-0"`} description={describe ? 'From the subfloor, for window types the drawings leave blank.' : undefined} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.sillHeight} hint="(if no elevations)" placeholder={`e.g. ${LABELS.sillHeightPlaceholder}`} description={describe ? 'From the subfloor, for window types the drawings leave blank.' : undefined} />;
     case 'floors':
-      return <TextField control={control} name={name} required={required} label="Floors above this level" placeholder="2" inputMode="numeric" description={required ? 'Bearing walls: picks the row of the IRC header table.' : undefined} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.floors} placeholder="2" inputMode="numeric" description={required ? 'Bearing walls: picks the row of the IRC header table.' : undefined} />;
     case 'snow':
-      return <TextField control={control} name={name} required={required} label="Snow load (psf)" placeholder="30" inputMode="decimal" description={required ? 'Ground snow load from the structural notes.' : undefined} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.snow} placeholder={LABELS.snowPlaceholder} inputMode="decimal" description={required ? 'Ground snow load from the structural notes.' : undefined} />;
     case 'width':
-      return <TextField control={control} name={name} required={required} label="Building width" placeholder={`29'`} description={required ? 'Depth of the building the floor joists span.' : undefined} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.width} placeholder={LABELS.widthPlaceholder} description={required ? 'Depth of the building the floor joists span.' : undefined} />;
     case 'wind':
-      return <TextField control={control} name={name} required={required} label="Wind (mph)" placeholder="130" inputMode="numeric" description={describe ? undefined : 'Empty: 1 king stud per side, with a warning.'} />;
+      return <TextField control={control} name={name} required={required} label={LABELS.wind} placeholder={LABELS.windPlaceholder} inputMode="numeric" description={describe ? "Empty: 1 king stud per side, with a warning." : undefined} />;
     case 'floorSpan':
       return (
-        <SelectField control={control} name={name} required={required} label="Floor span" labels={SPAN_LABELS} options={['center', 'clear']} description={required ? 'Do the floor joists rest on a center bearing wall or beam, or span the whole width? Not known = worst case, and the header falls outside the table.' : 'Not known = worst case; headers may fall outside the table.'} />
+        <SelectField control={control} name={name} required={required} label={LABELS.floorSpan} labels={SPAN_LABELS} options={['center', 'clear']} description={required ? 'Do the floor joists rest on a center bearing wall or beam, or span the whole width? Not known = worst case, and the header falls outside the table.' : 'Not known = worst case; headers may fall outside the table.'} />
       );
     case 'exposure':
-      return <SelectField control={control} name={name} required={required} label="Exposure" labels={EXPOSURE_LABELS} options={['B', 'C', 'D']} />;
+      return <SelectField control={control} name={name} required={required} label={LABELS.exposure} labels={EXPOSURE_LABELS} options={['B', 'C', 'D']} />;
   }
 }
 

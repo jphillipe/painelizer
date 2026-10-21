@@ -3,6 +3,7 @@
 import type { Dispatch } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DraftConfig, DraftPanelConfig, ProjectDraft } from '@/lib/editor/draft';
+import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { EditorAction } from '@/lib/editor/state';
 import type { ExtractOutcome } from '@/types/extract';
@@ -54,14 +55,12 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
         </div>
       </Section>
 
-      {outcome !== undefined && showProjectData ? <ProjectDataForm outcome={outcome} onOutcome={onOutcome} confirm={dirty} /> : null}
-
       <Section title="Framing">
         <div className="grid grid-cols-2 gap-3">
           <Field id="c-spacing" label="Stud spacing">
             <MeasureInput id="c-spacing" value={c.studSpacing} positive required placeholder={`16"`} onCommit={(v) => setConfig({ studSpacing: v })} />
           </Field>
-          <Field id="c-hh" label="Header height" hint="Top of RO above subfloor; openings may override">
+          <Field id="c-hh" label={LABELS.headerHeight} hint={`${LABELS.headerHeightHint}; openings may override`}>
             <MeasureInput id="c-hh" value={c.headerHeight} positive placeholder="top plate" onCommit={(v) => setConfig({ headerHeight: v })} />
           </Field>
           <Field id="c-precuts" label="Precut studs" hint="Wall height minus three plates, comma-separated" className="col-span-2">
@@ -105,17 +104,17 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
 
       <Section title="Building (structural notes)">
         <div className="grid grid-cols-2 gap-3">
-          <Field id="b-snow" label="Ground snow load (psf)">
-            <NumberInput id="b-snow" value={b.groundSnowLoad} min={0} placeholder="30" onCommit={(v) => setBuilding({ groundSnowLoad: v })} />
+          <Field id="b-snow" label={LABELS.snow}>
+            <NumberInput id="b-snow" value={b.groundSnowLoad} min={0} placeholder={LABELS.snowPlaceholder} onCommit={(v) => setBuilding({ groundSnowLoad: v })} />
           </Field>
-          <Field id="b-width" label="Building width">
-            <MeasureInput id="b-width" value={b.buildingWidth} positive placeholder={`28'`} onCommit={(v) => setBuilding({ buildingWidth: v })} />
+          <Field id="b-width" label={LABELS.width}>
+            <MeasureInput id="b-width" value={b.buildingWidth} positive placeholder={LABELS.widthPlaceholder} onCommit={(v) => setBuilding({ buildingWidth: v })} />
           </Field>
-          <Field id="b-wind" label="Wind speed (mph)">
-            <NumberInput id="b-wind" value={b.windSpeed} min={1} placeholder="130" onCommit={(v) => setBuilding({ windSpeed: v })} />
+          <Field id="b-wind" label={LABELS.wind}>
+            <NumberInput id="b-wind" value={b.windSpeed} min={1} placeholder={LABELS.windPlaceholder} onCommit={(v) => setBuilding({ windSpeed: v })} />
           </Field>
-          <Field id="b-exp" label="Exposure">
-            <EnumSelect id="b-exp" value={b.exposure} noneLabel="B (default)" options={EXPOSURE_OPTIONS} onChange={(v) => setBuilding({ exposure: v as DraftConfig['building'] extends infer B ? (B extends { exposure?: infer E } ? E : never) : never })} />
+          <Field id="b-exp" label={LABELS.exposure}>
+            <EnumSelect id="b-exp" value={b.exposure} noneLabel={LABELS.exposureUnknown} options={EXPOSURE_OPTIONS} onChange={(v) => setBuilding({ exposure: v as DraftConfig['building'] extends infer B ? (B extends { exposure?: infer E } ? E : never) : never })} />
           </Field>
           <Field id="b-species" label="Species">
             <EnumSelect id="b-species" value={b.species} noneLabel="SPF (tables)" options={SPECIES_OPTIONS} onChange={(v) => setBuilding({ species: v as NonNullable<DraftConfig['building']>['species'] })} />
@@ -123,6 +122,20 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
         </div>
         <p className="text-[12px] text-ink-3">Snow load and width together enable the IRC header table; wind speed enables the king stud table.</p>
       </Section>
+
+      {outcome !== undefined && showProjectData ? (
+        // M5: um só conjunto de campos. O que tem campo próprio acima (header height, building) não se repete; aqui
+        // fica só o que é aplicado pela reconversão da leitura (altura para as paredes sem altura, peitoril das
+        // janelas sem elevação), recolhido e dizendo que reconstrói o projeto.
+        <details className="rounded-md border bg-paper-2/60 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-ink-2 select-none">
+            Reconvert from the AI reading <span className="font-normal text-ink-3">— wall height and window sill defaults; rebuilds the project</span>
+          </summary>
+          <div className="mt-3">
+            <ProjectDataForm outcome={outcome} onOutcome={onOutcome} confirm={dirty} fields={['wallHeight', 'sillHeight']} />
+          </div>
+        </details>
+      ) : null}
 
       <Section title={`Opening schedule (${Object.keys(c.openingTypes ?? {}).length})`}>
         {c.openingTypes === undefined || Object.keys(c.openingTypes).length === 0 ? (

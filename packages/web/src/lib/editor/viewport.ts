@@ -78,6 +78,23 @@ export function centerOn(v: Viewport, r: Rect, size: Size, paddingPx = 48): View
   return { scale, tx: size.width / 2 - cx * scale, ty: size.height / 2 + cy * scale };
 }
 
+/** Comprimentos "redondos" para a barra de escala, em polegadas: 1", 6", 1', 2', 4', 8', 16', 32', 64'. */
+const SCALE_BAR_STEPS = [1, 6, 12, 24, 48, 96, 192, 384, 768] as const;
+
+/** Barra de escala (M5): o maior comprimento redondo que cabe em `maxPx` na escala atual. */
+export function scaleBar(scale: number, maxPx = 120): { inches: number; px: number } {
+  let best: number = SCALE_BAR_STEPS[0];
+  for (const s of SCALE_BAR_STEPS) if (s * scale <= maxPx) best = s;
+  return { inches: best, px: best * scale };
+}
+
+/** Passo da grade (M5): 12" quando cada polegada tem ≥ 1 px (linhas a ≥ 12 px); 48" acima de 0,25 px/pol; senão sem grade. */
+export function gridStep(scale: number): number | undefined {
+  if (scale >= 1) return 12;
+  if (scale >= 0.25) return 48;
+  return undefined;
+}
+
 /** Viewport entre `a` (t = 0) e `b` (t = 1), para Fit e centralização animados (M4). */
 export function lerpViewport(a: Viewport, b: Viewport, t: number): Viewport {
   const k = clamp(t, 0, 1);

@@ -17,6 +17,7 @@ import { uploadFieldsSchema, type UploadFields } from '@/schemas/extract';
 import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome } from '@/types/extract';
 import { extractWalls } from '../_actions/extract-walls';
 import { DropZone } from './drop-zone';
+import { PdfPages } from './pdf-pages';
 import { ProjectDataFields } from './project-data-fields';
 
 export interface UploadFormProps {
@@ -24,16 +25,27 @@ export interface UploadFormProps {
   onOutcome: (outcome: ExtractOutcome) => void;
   /** A leitura em andamento (tela de espera), ou `undefined` quando acaba. */
   onJobChange: (job: ExtractJob | undefined) => void;
+  /** "or try a sample" na linha do botão (M5): leva ao seletor de exemplos, quando ele existe. */
+  onSample?: (() => void) | undefined;
 }
 
 const AUTO = 'auto';
+
+/** Páginas marcadas nas miniaturas → texto do campo (`3,15`), união entre os PDFs (o campo vale para todos). */
+export function pagesText(selected: ReadonlyMap<string, ReadonlySet<number>>): string {
+  const all = new Set<number>();
+  for (const s of selected.values()) for (const p of s) all.add(p);
+  return [...all].sort((a, b) => a - b).join(',');
+}
 
 /**
  * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
  * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
  */
-export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProps) {
+export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
+  const [filesError, setFilesError] = useState<string | undefined>(undefined);
+  const [picked, setPicked] = useState<Map<string, Set<number>>>(new Map());
   const startedAt = useRef(0);
   const form = useForm<UploadFields>({
     resolver: zodResolver(uploadFieldsSchema),
@@ -51,7 +63,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProp
 
   const submit = (fields: UploadFields) => {
     if (files.length === 0) {
-      toast.error('Add at least one PDF or image.');
+      setFilesError('Add at least one PDF or image.');
       return;
     }
     const fd = new FormData();
@@ -61,6 +73,27 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProp
     onJobChange({ startedAt: startedAt.current, files: files.map((f) => ({ name: f.name, size: f.size })) });
     execute(fd);
   };
+  const onFiles = (next: File[]): void => {
+    setFiles(next);
+    if (next.length > 0) setFilesError(undefined);
+    // Arquivo removido: suas páginas marcadas saem do campo.
+    const names = new Set(next.map((f) => f.name));
+    const kept = new Map([...picked].filter(([name]) => names.has(name)));
+    if (kept.size !== picked.size) {
+      setPicked(kept);
+      form.setValue('pages', pagesText(kept), { shouldDirty: true });
+    }
+  };
+  const togglePage = (file: string, page: number): void => {
+    const next = new Map(picked);
+    const set = new Set(next.get(file) ?? []);
+    if (set.has(page)) set.delete(page);
+    else set.add(page);
+    if (set.size === 0) next.delete(file);
+    else next.set(file, set);
+    setPicked(next);
+    form.setValue('pages', pagesText(next), { shouldDirty: true });
+  };
 
   return (
     <Form {...form}>
@@ -68,14 +101,18 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProp
         {aiEnabled ? null : (
           <Alert variant="warning">
             <TriangleAlertIcon />
-            <AlertTitle>AI extraction is off on this server</AlertTitle>
-            <AlertDescription>ANTHROPIC_API_KEY is not set. Try a sample below, or import a project file under Advanced.</AlertDescription>
+            <AlertTitle>AI reading is off on this server</AlertTitle>
+            <AlertDescription>
+              No API key is configured, so drawings can’t be read here.
+              {onSample !== undefined ? ' Try a sample project below, or open a project file under Advanced.' : ' Open a project file saved from the editor, or ask whoever runs this server to add the key.'}
+            </AlertDescription>
           </Alert>
         )}
 
         <section className="space-y-3">
           <h3>Your drawings</h3>
-          <DropZone files={files} onFiles={setFiles} disabled={isPending} />
+          <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError} />
+          <PdfPages files={files} selected={picked} onToggle={togglePage} />
           <details className="text-sm">
             <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
@@ -140,7 +177,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProp
                 <FormControl>
                   <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
                 </FormControl>
-                <FormDescription>Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
+                <FormDescription>Click page thumbnails above, or type numbers. Empty: the floor plan and schedule sheets are picked by their title block. Applies to every PDF sent.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -179,6 +216,11 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange }: UploadFormProp
               </>
             )}
           </Button>
+          {onSample !== undefined ? (
+            <Button type="button" variant="link" className="px-0" onClick={onSample}>
+              or try a sample
+            </Button>
+          ) : null}
           <span className="text-sm text-ink-3">The read takes several minutes. You review every wall before anything is built.</span>
         </div>
       </form>

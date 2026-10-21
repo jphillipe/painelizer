@@ -148,7 +148,11 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   National Lumber**: cabeçalho (eyebrow + h1 + parágrafo), **barra de passos** numerada (círculo navy cheio no
   ativo, sublinhado dourado; passos feitos também cheios), e o passo 1 em duas colunas 5/12 + 7/12: à esquerda
   o card do formulário (zona de soltar arquivos tracejada com cantos marcados e ícone navy, "Project details",
-  collapsibles com `<details>`), à direita o **card de prévia** com cabeçalho navy, ilustração (a planta de
+  collapsibles com `<details>`; a zona lista o que recusou e por quê, mostra o total dos 300 MB e o erro de
+  "sem arquivo" embaixo dela; cada PDF solto ganha **miniaturas das páginas** (pdf.js no cliente), e clicar numa
+  marca a folha no campo "PDF pages"; "or try a sample" ao lado do botão só quando os exemplos existem — exemplos
+  e "Advanced › Recorded response" aparecem só em desenvolvimento ou com `PANELIZER_DEV_TOOLS=1`), à direita o
+  **card de prévia** com cabeçalho navy, ilustração (a planta de
   painéis da 28x40 gerada pelo motor), legenda em papel-2, título + parágrafo, três features numeradas e rodapé
   navy; esse card vira status quando há leitura. **Cada passo é uma tela**: o passo ativo ocupa a área toda,
   o anterior some; a barra de passos leva de volta aos concluídos (círculo com check), e as telas 2 e 3 têm
@@ -180,20 +184,34 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   chips de ids clicáveis — da abertura quando a issue é dela —, conserto rápido inline quando existe (campo de
   vento, campo de altura de header, botão "Add <id>" para abertura sem posição), botão de ação, textos originais
   em "Details"); problemas antes de avisos. Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
-- **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com Fit, pavimentos e a toolbar do editor
-  à direita; dica de uso no rodapé). Projeto solto (sem planta) mostra um painel tracejado com a toolbar. Leitura
+- **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
+  toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;
+  dentro da planta, barra de escala no canto inferior esquerdo, legenda no direito, grade de 12" quando o zoom
+  passa de 1 px/pol, cota junto ao cursor durante o arraste; o canvas é focável: setas movem a seleção, +/− F
+  zoom e Fit; dois dedos fazem pinch e pan). Projeto solto (sem planta) mostra a **elevação esquemática** da
+  parede selecionada (M5), com os RO clicáveis. Leitura
   da IA à qual falta o que o motor exige (`lib/editor/requirements.ts`: altura; neve, largura, pavimentos acima e
   vão do piso quando há parede portante com abertura sem header próprio) mostra, no lugar da planta, o card
   **"Before you review"** (eyebrow + h2 + lista do que falta e por quê + "Required for this project" com os
   campos marcados `· required` + "Optional" recolhido + "Apply and open the editor" accent + link "Skip — set it
   per wall instead"). O obrigatório é validado antes de aplicar; o card só existe enquanto o draft tem obrigatório
   faltando (nunca por mensagem do motor), e os grupos de issues dessas famílias o reabrem por "Fill in project data".
-- **Inspetor** (direita, fundo white, 16 px de padding, sem moldura): breadcrumb, **issues do item no topo** em
+- **Inspetor** (direita, fundo white, 16 px de padding, sem moldura): breadcrumb com anterior / próxima parede
+  (`[` `]`), botão **Reviewed** na seção Wall (chip verde quando marcado; conta na top bar como "N of M reviewed"
+  quando há leitura da IA ou alguma marca, e vira o filtro "Not reviewed" da lista — checklist do revisor, não
+  trava o Generate), **issues do item no topo** em
   callout (err/5% ou gold-100/40, título em inglês + texto original mono), seções em `<details>` com eyebrow e
   chevron (Wall, Geometry e Openings abertas; Framing fechada quando completa e sem issue; "From the AI reading"
   aberta só com confiança < 0,9, evidência recolhida). Seleção `project` abre o Dialog de configurações.
-- **Abaixo de `lg`** (`useMediaQuery`, não CSS, para não montar o inspetor duas vezes): planta em cima (45dvh) e
-  abas Walls / Issues / Reading / Inspector embaixo; selecionar pela lista abre a aba Inspector.
+- **Abaixo de `lg`** (`useMediaQuery`, não CSS, para não montar o inspetor duas vezes; lê a janela já no primeiro
+  render do cliente): planta em cima (45dvh) e abas Walls / Issues / Reading / Inspector embaixo; selecionar pela
+  lista abre a aba Inspector. Abaixo de `sm` a top bar são duas linhas fixas (passos + nome | status + Generate +
+  ⋯) e a toolbar mostra só ícones.
+- **Rótulos**: um nome por dado em todo o app, de `lib/editor/labels.ts` ("Ground snow load (psf)", "Wind speed
+  (mph)", "Building width", "Floors above this level", "Floor span" com "Not known (worst case)"…). Upload, card
+  "Before you review", configurações, inspetor e consertos rápidos leem dali. Nas configurações cada dado tem um
+  campo só; o que a reconversão da leitura aplica e não tem campo próprio (altura de parede em lote, peitoril)
+  fica recolhido em "Reconvert from the AI reading".
 - Passos 01 e 03 continuam no container de 1200 px com a barra de passos cheia; o cabeçalho hero (eyebrow + h1 +
   parágrafo) aparece só no passo 01 (M3) — nos outros, o eyebrow do passo ("03 · Panels") é o título.
 

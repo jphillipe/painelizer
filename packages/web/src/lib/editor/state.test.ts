@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { textFromDraft, wallById, type ProjectDraft } from './draft';
-import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, NEW_WALL_LENGTH, type EditorAction, type EditorState } from './state';
+import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, type EditorAction, type EditorState } from './state';
 
 const loaded = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' });
 const loose = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[2]!.text, source: 'sample' });
@@ -231,5 +231,37 @@ describe('edição de aberturas', () => {
     const s = run(loaded(), { type: 'addWall' }, { type: 'addOpening', wallId: 'W06' });
     expect(textFromDraft(draftOf(s))).not.toBe(EXAMPLES[1]!.text);
     expect(JSON.parse(textFromDraft(draftOf(s)))).toMatchObject({ walls: expect.arrayContaining([expect.objectContaining({ id: 'W06' })]) });
+  });
+});
+
+describe('M5: moveWall e setReviewed', () => {
+  it('moveWall desloca as duas pontas; offsets das aberturas ficam (a abertura vai junto); parede solta não move', () => {
+    const s = loaded();
+    const before = wallById(draftOf(s), 'W01')!;
+    const moved = editorReducer(s, { type: 'moveWall', wallId: 'W01', dx: 12, dy: -1 });
+    const w = wallById(draftOf(moved), 'W01')!;
+    expect(w.start).toEqual({ x: before.start!.x + 12, y: before.start!.y - 1 });
+    expect(w.end).toEqual({ x: before.end!.x + 12, y: before.end!.y - 1 });
+    expect(w.openings).toEqual(before.openings);
+    expect(moved.dirty).toBe(true);
+    expect(editorReducer(s, { type: 'moveWall', wallId: 'W01', dx: 0, dy: 0 })).toBe(s);
+    const l = loose();
+    expect(editorReducer(l, { type: 'moveWall', wallId: 'N1', dx: 1, dy: 0 })).toBe(l);
+    // Um nudge com txn repetido é um undo só.
+    let t = s;
+    for (let i = 0; i < 5; i += 1) t = editorReducer(t, { type: 'moveWall', wallId: 'W01', dx: 1, dy: 0, txn: 'nudge' });
+    expect(t.past).toHaveLength(1);
+    expect(wallById(draftOf(t), 'W01')!.start!.x).toBe(before.start!.x + 5);
+  });
+
+  it('setReviewed grava `$reviewed` no extra (sobrevive à serialização), desmarcar apaga; repetir é no-op', () => {
+    const s = editorReducer(loaded(), { type: 'setReviewed', wallId: 'W02', reviewed: true });
+    expect(isReviewed(wallById(draftOf(s), 'W02')!)).toBe(true);
+    expect(reviewedCount(draftOf(s).walls)).toBe(1);
+    expect(JSON.parse(textFromDraft(draftOf(s))).walls[1].$reviewed).toBe(true);
+    expect(editorReducer(s, { type: 'setReviewed', wallId: 'W02', reviewed: true })).toBe(s);
+    const off = editorReducer(s, { type: 'setReviewed', wallId: 'W02', reviewed: false });
+    expect(isReviewed(wallById(draftOf(off), 'W02')!)).toBe(false);
+    expect(wallById(draftOf(off), 'W02')!.extra).toBeUndefined();
   });
 });

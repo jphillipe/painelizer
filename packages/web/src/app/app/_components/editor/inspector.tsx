@@ -1,9 +1,11 @@
 'use client';
 
-import { ChevronRightIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { Dispatch } from 'react';
 import { Button } from '@/components/ui/button';
+import { Kbd, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { openingById, wallById, type ProjectDraft } from '@/lib/editor/draft';
+import { neighborWall } from './use-editor-shortcuts';
 import type { Issue } from '@/lib/editor/problems';
 import type { WallProvenance } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState, Selection } from '@/lib/editor/state';
@@ -33,6 +35,37 @@ export interface InspectorProps {
 export function Inspector({ state, draft, dispatch, provenance, issues, outcome, onOutcome, showProjectData, flat = false }: InspectorProps) {
   const sel = state.selection;
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
+  const currentWall = sel.kind === 'wall' || sel.kind === 'opening' ? sel.wallId : undefined;
+  const go = (delta: 1 | -1): void => {
+    const next = neighborWall(draft.walls, currentWall, delta);
+    if (next !== undefined) select({ kind: 'wall', wallId: next });
+  };
+  // Anterior / próxima parede (M5): revisar 28 paredes em sequência sem voltar à lista.
+  const stepper =
+    draft.walls.length > 1 ? (
+      <span className="ml-auto flex items-center gap-0.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" aria-label="Previous wall" onClick={() => go(-1)}>
+              <ChevronLeftIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Previous wall<Kbd>[</Kbd>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" aria-label="Next wall" onClick={() => go(1)}>
+              <ChevronRightIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Next wall<Kbd>]</Kbd>
+          </TooltipContent>
+        </Tooltip>
+      </span>
+    ) : null;
   const crumb = (
     <nav className="flex flex-wrap items-center gap-1 text-[13px] text-ink-3" aria-label="Selection">
       <Button variant="link" size="xs" className="h-auto max-w-full px-0 text-[13px]" onClick={() => select({ kind: 'project' })}>
@@ -52,6 +85,7 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
           <span className="font-mono text-ink">{sel.openingId}</span>
         </>
       ) : null}
+      {stepper}
     </nav>
   );
 

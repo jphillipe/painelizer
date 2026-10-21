@@ -730,9 +730,24 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     de roda passa por 17 larguras distintas em ~38 quadros (de 1 937 px a 658 px); altura 9'-0" confirmada com
     Enter põe `commit-flash` no campo, que some em 1 s; com `prefers-reduced-motion` emulado, `step-enter` dura
     1e-5 s e o Fit vai direto (2 larguras distintas). Captura em `out/m4/`.
-  - [ ] **M5 — Facilidade de uso no editor** (zoom +/−, escala, grade, pinch, nudge por teclado, tooltips com
-    atalhos, prev/next, "Reviewed" por parede, dialog de configurações sem campos duplicados, elevação esquemática
-    do projeto solto, mobile, passo 01 com miniaturas de PDF).
+  - [x] **M5 — Facilidade de uso no editor.** Feita em 2026-10-21 (sem regra de framing). Libs testadas:
+    `lib/editor/labels.ts` (glossário), `elevation.ts` (elevação esquemática), `viewport.ts` (`scaleBar`,
+    `gridStep`), `wall-filters.ts` (`notReviewed`, pavimento), `state.ts` (`moveWall`, `setReviewed`,
+    `isReviewed`), `use-editor-shortcuts` (`neighborWall`, N/O/]/[/?), `drop-zone` (`mergeFiles`), `lib/platform.ts`.
+    UI: `PlanCanvas` reescrito (zoom −/%/+/Fit, barra de escala, grade, legenda, erro da casa visível, cota no
+    cursor, pinch, teclado com canvas focável, pavimento compartilhado), `ui/tooltip.tsx`, toolbar com tooltips e
+    só ícones no celular, `shortcuts-dialog.tsx`, inspetor com anterior/próxima e botão "Reviewed", lista com
+    filtro "Not reviewed" e check, top bar em duas linhas com "N of M reviewed", `wall-elevation.tsx` no projeto
+    solto, settings sem campos duplicados (`ProjectDataFields fields`), `useMediaQuery` sem flash, passo 01 com
+    erro inline, recusas explicadas, total, "or try a sample", dev tools só em dev (`page.tsx`), `pdf-pages.tsx`
+    (miniaturas por pdf.js). `pdfjs-dist` entrou no web. Testes do web: 184 (eram 173). Conferido em 1440×900 e
+    375 px por CDP (`cdp-m5.mjs`, PDF real do Ringgold via `DOM.setFileInputFiles`): enviar sem arquivo mostra
+    "Add at least one PDF or image." embaixo da zona; o PDF de 2 páginas vira 2 miniaturas e clicar na 2ª põe
+    "2" no campo; 28x40: controles de zoom, `pattern#plan-grid`, barra de escala "4'-0"", legenda com 5 itens,
+    + leva a 125 %; W01 selecionada + 2× → com o canvas em foco move start x de 0" a 2"; ] vai a W02; ? abre a
+    lista de atalhos; "Reviewed" marca W02 e a top bar diz "1 of 5 reviewed", a lista ganha "Not reviewed 4";
+    settings com um só "Ground snow load (psf)"; Ringgold S2 mostra "Elevation of S2" com 2 RO; em 375 px a top
+    bar tem 83 px (duas linhas) e os rótulos da toolbar somem. Capturas em `out/m5/`.
   - [ ] **M6 — Planta do arquiteto por baixo** (`$underlay` calibrado por dois pontos).
   - [ ] **M7 — Extração honesta** (prévia das páginas e custo, progresso real, cancelar, job sobrevive ao reload).
   - [ ] **M8 — Desempenho da checagem** (`check` sem gerar SVG/CSV; memoização da geometria por parede).

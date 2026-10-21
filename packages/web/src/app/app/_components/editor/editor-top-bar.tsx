@@ -20,6 +20,8 @@ export interface EditorTopBarProps {
   name: string;
   walls: number;
   openings: number;
+  /** Paredes marcadas como revisadas (M5); mostrado quando há leitura da IA ou alguma marca. */
+  reviewed?: { done: number; total: number } | undefined;
   check: CheckState;
   problems: number;
   warnings: number;
@@ -34,34 +36,29 @@ export interface EditorTopBarProps {
 
 /**
  * Top bar do workspace (S21.4): passos, nome do projeto (h1 da tela), contagens, um chip de status e a ação
- * principal sempre visível. Downloads, configurações e "Start over" ficam no menu `⋯`.
+ * principal sempre visível. Downloads, configurações e "Start over" ficam no menu `⋯`. Abaixo de `sm` (M5) são
+ * duas linhas fixas: passos + nome | status + Generate + menu — nada quebra em três.
  */
-export function EditorTopBar({ name, walls, openings, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu }: EditorTopBarProps) {
-  const hint =
-    problems > 0
-      ? needsData
-        ? 'Fill in the project data first.'
-        : `Fix ${problems} problem${problems === 1 ? '' : 's'} first.`
-      : check.status === 'error'
-        ? (check.error ?? 'Could not check the project.')
-        : ready
-          ? ''
-          : 'Checking…';
+export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu }: EditorTopBarProps) {
+  const hint = problems > 0 ? (needsData ? 'Fill in the project data first.' : `Fix ${problems} problem${problems === 1 ? '' : 's'} first.`) : check.status === 'error' ? (check.error ?? 'Could not check the project.') : '';
   return (
-    <div className="no-print flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-card px-[var(--gutter)] py-2">
-      {steps}
-      <div className="flex min-w-0 flex-1 items-baseline gap-3">
-        <h1 className="truncate text-lg font-semibold tracking-tight">{name}</h1>
-        <span className="hidden shrink-0 text-[13px] text-ink-3 lg:inline">
-          {walls} wall{walls === 1 ? '' : 's'} · {openings} opening{openings === 1 ? '' : 's'}
-        </span>
+    <div className="no-print grid shrink-0 grid-cols-1 gap-x-4 gap-y-1.5 border-b border-line bg-card px-[var(--gutter)] py-2 sm:flex sm:flex-wrap sm:items-center">
+      <div className="flex min-w-0 items-center gap-3">
+        {steps}
+        <div className="flex min-w-0 flex-1 items-baseline gap-3">
+          <h1 className="truncate text-lg font-semibold tracking-tight">{name}</h1>
+          <span className="hidden shrink-0 text-[13px] text-ink-3 lg:inline">
+            {walls} wall{walls === 1 ? '' : 's'} · {openings} opening{openings === 1 ? '' : 's'}
+            {reviewed !== undefined ? ` · ${reviewed.done} of ${reviewed.total} reviewed` : ''}
+          </span>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2" aria-live="polite">
-        <StatusChip check={check} problems={problems} warnings={warnings} />
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {hint !== '' ? <span className="hidden text-[13px] text-ink-3 sm:inline">{hint}</span> : null}
-        <Button variant="accent" size="sm" disabled={pending || !ready} onClick={onGenerate}>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-none" aria-live="polite">
+          <StatusChip check={check} problems={problems} warnings={warnings} />
+        </div>
+        {hint !== '' ? <span className="hidden truncate text-[13px] text-ink-3 md:inline">{hint}</span> : null}
+        <Button variant="accent" size="sm" disabled={pending || !ready} onClick={onGenerate} title={hint === '' ? undefined : hint} className="ml-auto shrink-0 sm:ml-0">
           {pending ? (
             <>
               <Loader2Icon className="animate-spin" /> Generating…

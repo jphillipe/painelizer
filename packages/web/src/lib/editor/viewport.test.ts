@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOn, fitViewport, lerpViewport, panBy, planToScreen, rectToScreen, rectVisible, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
+import { centerOn, fitViewport, gridStep, lerpViewport, panBy, scaleBar, planToScreen, rectToScreen, rectVisible, screenToPlan, snap, zoomAt, ZOOM_LIMITS, type Viewport } from './viewport';
 
 describe('viewport', () => {
   const v: Viewport = { scale: 2, tx: 100, ty: 500 };
@@ -78,5 +78,19 @@ describe('lerpViewport (M4)', () => {
     expect(lerpViewport(a, b, 0.5)).toEqual({ scale: 2, tx: 50, ty: -20 });
     expect(lerpViewport(a, b, -1)).toEqual(a);
     expect(lerpViewport(a, b, 2)).toEqual(b);
+  });
+});
+
+describe('barra de escala e grade (M5)', () => {
+  it('scaleBar: maior comprimento redondo que cabe', () => {
+    expect(scaleBar(2)).toEqual({ inches: 48, px: 96 });
+    expect(scaleBar(0.5)).toEqual({ inches: 192, px: 96 });
+    expect(scaleBar(20)).toEqual({ inches: 6, px: 120 });
+    expect(scaleBar(400).inches).toBe(1);
+  });
+  it('gridStep: 12" com ≥ 1 px/pol, 48" acima de 0,25, senão nada', () => {
+    expect(gridStep(2)).toBe(12);
+    expect(gridStep(0.5)).toBe(48);
+    expect(gridStep(0.1)).toBeUndefined();
   });
 });

@@ -70,6 +70,10 @@ export type EditorAction =
   /** Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento e papel; em planta, continua da ponta `end` virando 90°. */
   | { type: 'addWall'; afterWallId?: string }
   | { type: 'removeWall'; wallId: string }
+  /** Parede inteira deslocada (M5: nudge pelo teclado); aberturas vão junto (offsets não mudam). Só em planta. */
+  | { type: 'moveWall'; wallId: string; dx: number; dy: number; txn?: string }
+  /** Marca de revisão humana (M5): `$reviewed` no `extra` da parede — o CLI ignora chaves com `$`. */
+  | { type: 'setReviewed'; wallId: string; reviewed: boolean }
   /** `preset` (S21.4): id e tag que a leitura já tinha para uma abertura que ficou fora do projeto (sem posição). */
   | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
   | { type: 'removeOpening'; wallId: string; openingId: string }
@@ -79,6 +83,16 @@ export type EditorAction =
   | { type: 'moveOpening'; wallId: string; openingId: string; s0: number; roughWidth: number; txn?: string };
 
 export const HISTORY_LIMIT = 100;
+/** Chave da marca de revisão no `extra` da parede (sobrevive à serialização; o CLI ignora). */
+export const REVIEWED_KEY = '$reviewed';
+
+export function isReviewed(w: Pick<DraftWall, 'extra'>): boolean {
+  return w.extra?.[REVIEWED_KEY] === true;
+}
+
+export function reviewedCount(walls: readonly Pick<DraftWall, 'extra'>[]): number {
+  return walls.filter(isReviewed).length;
+}
 /** Comprimento mínimo de parede ao mover uma ponta. */
 export const MIN_WALL_LENGTH = 1;
 /** Parede nova: comprimento e abertura default (janela 36 × 48). */
@@ -213,6 +227,21 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case 'removeWall': {
       if (!d.walls.some((w) => w.id === action.wallId)) return state;
       return commit(state, { ...d, walls: d.walls.filter((w) => w.id !== action.wallId) });
+    }
+    case 'moveWall': {
+      const w = d.walls.find((x) => x.id === action.wallId);
+      if (w === undefined || w.start === undefined || w.end === undefined || (action.dx === 0 && action.dy === 0)) return state;
+      const start = round({ x: w.start.x + action.dx, y: w.start.y + action.dy });
+      const end = round({ x: w.end.x + action.dx, y: w.end.y + action.dy });
+      return commit(state, mapWall(d, action.wallId, () => ({ ...w, start, end })), action.txn);
+    }
+    case 'setReviewed': {
+      const w = d.walls.find((x) => x.id === action.wallId);
+      if (w === undefined || isReviewed(w) === action.reviewed) return state;
+      const extra = { ...(w.extra ?? {}) };
+      if (action.reviewed) extra[REVIEWED_KEY] = true;
+      else delete extra[REVIEWED_KEY];
+      return commit(state, mapWall(d, action.wallId, (x) => (Object.keys(extra).length === 0 ? omit(x, 'extra') : { ...x, extra })));
     }
     case 'addOpening': {
       const w = d.walls.find((x) => x.id === action.wallId);

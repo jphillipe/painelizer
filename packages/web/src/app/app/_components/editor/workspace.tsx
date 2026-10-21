@@ -3,14 +3,15 @@
 import { useRef, useState, type Dispatch, type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
-import type { ProjectDraft } from '@/lib/editor/draft';
+import { wallById, type ProjectDraft } from '@/lib/editor/draft';
 import { projectFileName, projectFileText } from '@/lib/editor/project-file';
 import type { PlanGeometry } from '@/lib/editor/geometry';
 import type { IssueGroup } from '@/lib/editor/issue-groups';
 import type { Issue } from '@/lib/editor/problems';
 import type { WallProvenance } from '@/lib/editor/provenance';
 import type { ProjectDataNeeds } from '@/lib/editor/requirements';
-import type { EditorAction, EditorState, Selection } from '@/lib/editor/state';
+import { reviewedCount, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
+import type { LevelFilter } from '@/lib/editor/wall-filters';
 import { useMediaQuery, WIDE_QUERY } from '@/lib/use-media-query';
 import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
@@ -22,6 +23,8 @@ import { Navigator, type NavigatorTab } from './navigator';
 import { PlanCanvas, type PlanCanvasHandle } from './plan-canvas';
 import { ProjectSettingsDialog } from './project-settings-dialog';
 import { ReadingPanel } from './reading-panel';
+import { ShortcutsDialog } from './shortcuts-dialog';
+import { WallElevation } from './wall-elevation';
 import type { CheckState } from './use-project-check';
 import { WallRows } from './wall-rows';
 
@@ -50,6 +53,8 @@ export interface WorkspaceProps {
   /** `StepBar` compacta, para a top bar. */
   steps: ReactNode;
   onStartOver: () => void;
+  /** Lista de atalhos (M5), aberta por ? (WallEditor) ou pelo botão da toolbar. */
+  help: { open: boolean; onOpenChange: (open: boolean) => void };
 }
 
 /**
@@ -58,10 +63,12 @@ export interface WorkspaceProps {
  * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
  * outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver }: WorkspaceProps) {
+export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help }: WorkspaceProps) {
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
+  // Pavimento (M5): um só filtro para a planta e a lista.
+  const [level, setLevel] = useState<LevelFilter>('all');
   const canvas = useRef<PlanCanvasHandle>(null);
 
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
@@ -82,7 +89,9 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     { label: 'Start over', separator: true, destructive: true, onSelect: onStartOver },
   ];
 
-  const toolbar = <EditorToolbar state={state} dispatch={dispatch} embedded />;
+  const toolbar = <EditorToolbar state={state} dispatch={dispatch} embedded onHelp={() => help.onOpenChange(true)} />;
+  const selectedWall = state.selection.kind === 'wall' || state.selection.kind === 'opening' ? wallById(draft, state.selection.wallId) : undefined;
+  const reviewed = outcome !== undefined || reviewedCount(draft.walls) > 0 ? { done: reviewedCount(draft.walls), total: draft.walls.length } : undefined;
   const center = setupVisible ? (
     <Card className="step-enter workspace-pane flex-1 gap-0 p-6 md:p-8">
       <ProjectDataForm outcome={outcome} onOutcome={onOutcome} variant="setup" needs={needs} confirm={state.dirty} onSkip={() => setDismissed(true)} />
@@ -100,19 +109,27 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
       onSelect={select}
       onEndpointDrag={(wallId, end, point, txn) => dispatch({ type: 'moveEndpoint', wallId, end, point, txn })}
       onOpeningDrag={(wallId, openingId, s0, roughWidth, txn) => dispatch({ type: 'moveOpening', wallId, openingId, s0, roughWidth, txn })}
+      onWallNudge={(wallId, dx, dy, txn) => dispatch({ type: 'moveWall', wallId, dx, dy, txn })}
       onDragEnd={() => dispatch({ type: 'endTransaction' })}
+      level={level}
+      onLevel={setLevel}
     />
   ) : (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-end gap-1">{toolbar}</div>
-      <div className="flex flex-1 items-center justify-center rounded-md border border-dashed bg-paper-2 p-6 text-center text-sm text-ink-3">
-        {draft.walls.length === 0 ? 'No walls yet. Add one with the toolbar.' : 'Walls given by length only: nothing to draw. Pick a wall on the left to edit it.'}
-      </div>
+      {selectedWall !== undefined ? (
+        // Projeto solto (M5): a elevação esquemática da parede selecionada no lugar da caixa vazia.
+        <WallElevation draft={draft} wall={selectedWall} selection={state.selection} onSelect={select} className="min-h-0 flex-1" />
+      ) : (
+        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed bg-paper-2 p-6 text-center text-sm text-ink-3">
+          {draft.walls.length === 0 ? 'No walls yet. Add one with the toolbar.' : 'Walls given by length only, so there is no plan. Pick a wall in the list to see its elevation and edit it.'}
+        </div>
+      )}
     </div>
   );
 
   const navTabs: NavigatorTab[] = [
-    { id: 'walls', label: 'Walls', count: draft.walls.length, content: <WallRows draft={draft} selection={state.selection} provenance={provenance} issuesByWall={issuesByWall} onSelect={selectFromList} /> },
+    { id: 'walls', label: 'Walls', count: draft.walls.length, content: <WallRows draft={draft} selection={state.selection} provenance={provenance} issuesByWall={issuesByWall} onSelect={selectFromList} level={level} /> },
     {
       id: 'issues',
       label: 'Issues',
@@ -149,7 +166,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">
-      <EditorTopBar name={name} walls={draft.walls.length} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} />
+      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} />
       {wide ? (
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="flex min-h-0 flex-col border-r border-line bg-card" aria-label="Navigator">
@@ -170,6 +187,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
           <Navigator tab={tab} onTab={setTab} tabs={[...navTabs, { id: 'inspector', label: 'Inspector', content: <div className="workspace-pane flex-1">{inspector}</div> }]} className="bg-card" />
         </div>
       )}
+      <ShortcutsDialog open={help.open} onOpenChange={help.onOpenChange} />
       <ProjectSettingsDialog open={settingsOpen} onOpenChange={(open) => !open && select({ kind: 'none' })} draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} />
     </div>
   );

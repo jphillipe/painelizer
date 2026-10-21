@@ -26,3 +26,16 @@ describe('atalhos do editor: onde Delete vale (M2)', () => {
     expect(inEditableContext(null)).toBe(false);
   });
 });
+
+describe('neighborWall (M5)', () => {
+  it('anda em círculo na ordem do arquivo; sem seleção, começa pela primeira ou última', async () => {
+    const { neighborWall } = await import('./use-editor-shortcuts');
+    const walls = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
+    expect(neighborWall(walls, 'A', 1)).toBe('B');
+    expect(neighborWall(walls, 'C', 1)).toBe('A');
+    expect(neighborWall(walls, 'A', -1)).toBe('C');
+    expect(neighborWall(walls, undefined, 1)).toBe('A');
+    expect(neighborWall(walls, undefined, -1)).toBe('C');
+    expect(neighborWall([], undefined, 1)).toBeUndefined();
+  });
+});

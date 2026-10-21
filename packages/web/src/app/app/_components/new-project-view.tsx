@@ -34,6 +34,8 @@ export interface NewProjectViewProps {
   examples: readonly Example[];
   aiEnabled: boolean;
   illustration: string | undefined;
+  /** Exemplos e 'Advanced' (M5): só em desenvolvimento ou com PANELIZER_DEV_TOOLS=1. */
+  devTools?: boolean;
 }
 
 const SOURCE_LABEL: Record<DraftSource, string> = { extraction: 'from an AI reading', sample: 'a sample project', file: 'from a project file' };
@@ -44,7 +46,7 @@ const SOURCE_LABEL: Record<DraftSource, string> = { extraction: 'from an AI read
  * histórico) e a leitura da IA (`outcome`) fica como proveniência. Estado no cliente até a S22 — com auto-save
  * no navegador e banner de retomada (M2), para uma leitura de 10 minutos não morrer num F5.
  */
-export function NewProjectView({ examples, aiEnabled, illustration }: NewProjectViewProps) {
+export function NewProjectView({ examples, aiEnabled, illustration, devTools = false }: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(1);
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
   const [job, setJob] = useState<ExtractJob | undefined>(undefined);
@@ -128,13 +130,19 @@ export function NewProjectView({ examples, aiEnabled, illustration }: NewProject
     <section key="upload" className={uploadVisible ? 'step-enter no-print mt-8 grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start' : 'hidden'} aria-hidden={!uploadVisible}>
       <div className="space-y-4">
         <Card className="gap-0 p-6">
-          <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} />
+          <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} onSample={devTools ? () => document.getElementById('sample')?.focus() : undefined} />
         </Card>
-        <Card className="lift gap-4 p-6">
-          <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={openSample} />
-          <Separator />
-          <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
-        </Card>
+        {devTools ? (
+          <Card className="lift gap-4 p-6">
+            <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={openSample} />
+            <Separator />
+            <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
+          </Card>
+        ) : (
+          <Card className="gap-3 p-6">
+            <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
+          </Card>
+        )}
       </div>
       <PreviewCard illustration={illustration} outcome={outcome} />
     </section>

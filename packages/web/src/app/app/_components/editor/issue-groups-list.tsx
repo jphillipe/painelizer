@@ -4,6 +4,7 @@ import { CircleCheckIcon, Loader2Icon, OctagonXIcon, PlusIcon, TriangleAlertIcon
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { helpFor, quickFixFor, type QuickFix } from '@/lib/editor/issue-help';
+import { LABELS } from '@/lib/editor/labels';
 import type { IssueAction, IssueGroup } from '@/lib/editor/issue-groups';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
@@ -147,9 +148,9 @@ function QuickFixRow({ fix, group, current, onQuickFix }: { fix: QuickFix; group
     return (
       <div className="flex items-center gap-2">
         <Label htmlFor={`qf-wind-${group.key}`} className="text-[12px] text-ink-2">
-          Wind (mph)
+          {LABELS.wind}
         </Label>
-        <NumberInput id={`qf-wind-${group.key}`} value={current?.windSpeed} integer min={1} placeholder="130" onCommit={(v) => v !== undefined && onQuickFix({ kind: 'wind', value: v })} />
+        <NumberInput id={`qf-wind-${group.key}`} value={current?.windSpeed} integer min={1} placeholder={LABELS.windPlaceholder} onCommit={(v) => v !== undefined && onQuickFix({ kind: 'wind', value: v })} />
       </div>
     );
   }
@@ -157,9 +158,9 @@ function QuickFixRow({ fix, group, current, onQuickFix }: { fix: QuickFix; group
     return (
       <div className="flex items-center gap-2">
         <Label htmlFor={`qf-hh-${group.key}`} className="text-[12px] text-ink-2">
-          Header height
+          {LABELS.headerHeight}
         </Label>
-        <MeasureInput id={`qf-hh-${group.key}`} value={current?.headerHeight} positive placeholder={`6'-10 1/2"`} onCommit={(v) => v !== undefined && onQuickFix({ kind: 'headerHeight', value: v })} />
+        <MeasureInput id={`qf-hh-${group.key}`} value={current?.headerHeight} positive placeholder={LABELS.headerHeightPlaceholder} onCommit={(v) => v !== undefined && onQuickFix({ kind: 'headerHeight', value: v })} />
       </div>
     );
   }
