@@ -276,7 +276,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
         </Button>
         {fill ? <div className="ml-auto flex items-center gap-1">{toolbar}</div> : <span className="ml-auto text-[12px] text-ink-3">{hint}</span>}
       </div>
-      <div ref={containerRef} className={cn('relative w-full overflow-hidden rounded-md border bg-paper-2', fill ? 'min-h-0 flex-1' : 'aspect-[4/3] min-h-[360px]')}>
+      <div ref={containerRef} data-plan-canvas className={cn('relative w-full overflow-hidden rounded-md border bg-paper-2', fill ? 'min-h-0 flex-1' : 'aspect-[4/3] min-h-[360px]')}>
         <svg
           ref={svgRef}
           role="img"

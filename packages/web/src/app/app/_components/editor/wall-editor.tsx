@@ -1,7 +1,8 @@
 'use client';
 
 import { OctagonXIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, type Dispatch, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type Dispatch, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { ProjectDraft } from '@/lib/editor/draft';
 import { geometryIssues, planGeometry, type PlanGeometry } from '@/lib/editor/geometry';
@@ -35,8 +36,36 @@ export interface WallEditorProps {
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
  * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
  */
-export function WallEditor({ state, dispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver }: WallEditorProps) {
   const { draft } = state;
+  // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
+  const latest = useRef(state);
+  latest.current = state;
+  const dispatch = useCallback<Dispatch<EditorAction>>(
+    (action) => {
+      if (action.type !== 'removeWall' && action.type !== 'removeOpening') {
+        rawDispatch(action);
+        return;
+      }
+      const d = latest.current.draft;
+      const wall = d?.walls.find((w) => w.id === action.wallId);
+      const exists = action.type === 'removeWall' ? wall !== undefined : wall?.openings.some((o) => o.id === action.openingId) === true;
+      rawDispatch(action);
+      if (!exists) return;
+      const label = action.type === 'removeWall' ? `wall ${action.wallId}` : `opening ${action.openingId}`;
+      const after = latest.current.revision + 1;
+      toast(`Removed ${label}`, {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (latest.current.revision === after) rawDispatch({ type: 'undo' });
+            else toast.error('Other edits came after; use Undo in the toolbar.');
+          },
+        },
+      });
+    },
+    [rawDispatch],
+  );
   const provenance = useMemo(() => provenanceIndex(outcome?.walls), [outcome]);
   // Última geometria em que a casa fechava: no fallback (casa aberta no meio de um arraste), as paredes não
   // citadas no erro mantêm as plates dela em vez de pular para o eixo nu (anti-flicker).

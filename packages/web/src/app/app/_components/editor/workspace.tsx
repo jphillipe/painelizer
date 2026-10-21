@@ -3,7 +3,8 @@
 import { useRef, useState, type Dispatch, type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
-import { textFromDraft, type ProjectDraft } from '@/lib/editor/draft';
+import type { ProjectDraft } from '@/lib/editor/draft';
+import { projectFileName, projectFileText } from '@/lib/editor/project-file';
 import type { PlanGeometry } from '@/lib/editor/geometry';
 import type { IssueGroup } from '@/lib/editor/issue-groups';
 import type { Issue } from '@/lib/editor/problems';
@@ -75,8 +76,8 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
   const setupVisible = needsData && outcome !== undefined && !dismissed;
 
   const menu: TopBarMenuItem[] = [
-    { label: 'Download project file', onSelect: () => downloadText(`${slug}-project.json`, textFromDraft(draft)) },
-    ...(outcome !== undefined ? [{ label: 'Download AI reading', disabled: outcome.output === undefined, onSelect: () => downloadText(`${slug}-reading.json`, JSON.stringify(outcome.output, null, 2)) }] : []),
+    // Um arquivo só (M2): o projeto do CLI com a leitura da IA dentro (`$panelizer`); reabre no app com a proveniência.
+    { label: 'Download project file', onSelect: () => downloadText(projectFileName(slug), projectFileText(draft, outcome)) },
     { label: 'Project settings', separator: true, onSelect: openSettings },
     { label: 'Start over', separator: true, destructive: true, onSelect: onStartOver },
   ];

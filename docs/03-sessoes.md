@@ -683,8 +683,24 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     linha da lista com fundo/borda navy, separador da toolbar visível, chip "Ready · 12 panels" claro com ícone),
     Ringgold na aba Issues (chip "2 warnings" gold-100 ≠ seleção), passo 03 (tabs sublinhadas em gold, badges
     claros, botões pill, folha selecionada em navy). Capturas em `out/m1/` (fora do git).
-  - [ ] **M2 — Não perder trabalho** (auto-save em `localStorage` + resume, `beforeunload`, confirmação em Start over,
-    passo 2/3 em `done`, `UploadForm` não desmontado, Backspace só com foco no canvas, arquivo `.panelizer.json`).
+  - [x] **M2 — Não perder trabalho.** Feita em 2026-10-20 na sessão seguinte à M1 (sem regra de framing). Auto-save
+    da sessão em `localStorage` (`lib/editor/persist.ts`, hook `use-saved-session.ts`: debounce 500 ms, flush no
+    `beforeunload`, quota → sem a leitura) e banner "Resume *nome*?" ao abrir `/app`; job de extração em voo
+    gravado para avisar no reload e `beforeunload` durante a leitura; arquivo único `<slug>.panelizer.json`
+    (`lib/editor/project-file.ts`: JSON do CLI + `$panelizer.reading`, que o CLI ignora) no menu ⋯, no "Advanced"
+    e dentro do zip (`project.panelizer.json`, listado na aba Files); `doneSteps` (passo 2 feito com draft, 3 com
+    resultado), passo 1 sempre montado e escondido por classe, resultado desatualizado com "Generate again";
+    `ConfirmDialog` em "Start over" (com edições, resultado ou leitura); toast "Removed wall W03 · Undo"; Delete só
+    com foco na planta, Backspace fora (`deleteAllowed`, `inEditableContext` testados). `load` aceita `dirty`.
+    Testes do web: 166 (eram 152): persist (sessão, quota, lixo, job, idade), project-file (ida e volta pelo
+    parser do CLI e pelo editor), atalhos, `doneSteps`. Conferido em 1440×900 (Chrome headless por CDP, roteiro
+    `cdp-m2.mjs`): remover W05 pela toolbar → toast "Removed wall W05 · Undo" → Undo devolve as 5; Backspace e
+    Delete com um botão da lista em foco não apagam; Delete com foco na planta apaga; sessão gravada com
+    `dirty: true` e 4 paredes; reload → banner "Resume “Casa 28x40 (visão)”? Saved in this browser just now · a
+    sample project · with your edits" → Resume reabre com 4 paredes; "Drawings" na barra e "Review walls" de volta
+    ao editor; Generate → 15 arquivos com `project.panelizer.json` na aba Files; Back to review, remover W01,
+    "Panels" pela barra → "Edited since these panels were generated" + "Generate again"; Start over → dialog,
+    "Keep working" fica, confirmar limpa a sessão e volta ao passo 1. Capturas em `out/m2/`.
   - [ ] **M3 — Resultado que mostra a entrega** (aba Materials com BOM e lista de corte, planta clicável →
     folha, anterior/próximo, lightbox, avisos agrupados, hero só no passo 01). Toca `core/output/planSvg.ts`.
   - [ ] **M4 — Motion no editor** (seleção/hover/halo animados, viewport interpolado em Fit, fade do inspetor,

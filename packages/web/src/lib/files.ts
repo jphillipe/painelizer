@@ -87,6 +87,7 @@ const LABELS: Readonly<Record<string, string>> = {
   'bom.csv': 'Bill of materials, consolidated',
   'panels.csv': 'Panel index: wall, level, position, size, pieces, weight, warnings',
   'plan.svg': 'Panel plan, top view',
+  'project.panelizer.json': 'Project as sent to the engine, with the AI reading; reopens in the editor and runs in the CLI',
 };
 
 /** O que há em cada arquivo, para a aba Files. Folha: "Fabrication sheet <id do painel>". */

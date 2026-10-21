@@ -148,6 +148,12 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   o anterior some; a barra de passos leva de volta aos concluídos (círculo com check), e as telas 2 e 3 têm
   "Back" e "Start over". Até a S22 o estado fica no cliente (sem URL por passo); com projetos salvos, cada
   passo ganha rota própria.
+- **Nunca perder trabalho (M2):** o projeto aberto é gravado no navegador a cada edição (`localStorage`, até a S22) e
+  `/app` sem projeto oferece "Resume *nome*?" num Alert `default` logo abaixo da barra de passos (Resume accent,
+  Discard ghost). O passo 1 fica montado e escondido nos outros passos (arquivos e campos sobrevivem). "Start over"
+  confirma em `Dialog` quando há edições, resultado ou leitura. Remover parede/abertura avisa em toast com "Undo".
+  Delete só apaga com o foco na planta; Backspace nunca apaga. Passo 3 alcançável pela barra depois de voltar ao
+  editor, com Alert `warning` "Edited since these panels were generated" + "Generate again" quando o draft mudou.
 - Rodapé mínimo: versão, "National Lumber · WR Group".
 
 ### Workspace do editor (passo 02, S21.4)
@@ -237,6 +243,10 @@ Server Component     →  service                                               
   como `{ ok: false, problems }` para a UI listar.
 - **O usuário nunca vê JSON**: a entrada é desenho (PDF, imagem) e a revisão é tabela; o formato do CLI fica em
   "Advanced" recolhido. Tudo que veio da IA mostra confiança e evidência.
+- **Arquivo de projeto** (M2): `<slug>.panelizer.json` = JSON do CLI + leitura da IA em `$panelizer` (chave que o
+  CLI ignora). É o que o menu ⋯ baixa, o que "Advanced" reabre (com a proveniência) e o que vai no zip do passo 03
+  como `project.panelizer.json`. Não existe mais "Download AI reading" separado no menu (a aba Reading mantém o
+  download da resposta crua para debug).
 - **Formulários**: schema zod em `src/schemas/*.ts` (compartilhado), `useForm` + `zodResolver` + `Form` do
   shadcn; `returnValidationErrors` para erro de campo. Upload: `FormData` com `z.instanceof(File)`;
   `serverActions.bodySizeLimit` 300 MB (conjunto inteiro de folhas, S20.2).

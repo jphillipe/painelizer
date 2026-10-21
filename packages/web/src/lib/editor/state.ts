@@ -51,7 +51,8 @@ export interface EditorState {
 }
 
 export type EditorAction =
-  | { type: 'load'; text: string; source: DraftSource }
+  /** `dirty` (M2): sessão retomada do navegador que já tinha edições — continua marcada como editada. */
+  | { type: 'load'; text: string; source: DraftSource; dirty?: boolean }
   | { type: 'reset' }
   | { type: 'select'; selection: Selection }
   | { type: 'undo' }
@@ -104,7 +105,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       if (!load.ok) {
         return { ...initialEditorState, loadError: load.problems.map((p) => p.text).join('; '), loadProblems: load.problems, source: action.source, revision: state.revision + 1 };
       }
-      return { ...initialEditorState, draft: load.draft, loadProblems: load.problems, source: action.source, revision: state.revision + 1 };
+      return { ...initialEditorState, draft: load.draft, loadProblems: load.problems, source: action.source, revision: state.revision + 1, dirty: action.dirty === true };
     }
     case 'reset':
       return { ...initialEditorState, revision: state.revision + 1 };

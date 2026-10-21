@@ -1,9 +1,10 @@
 'use client';
 
-import { CircleCheckIcon, DownloadIcon, PrinterIcon, TriangleAlertIcon } from 'lucide-react';
+import { CircleCheckIcon, DownloadIcon, PrinterIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Problems, Warnings } from './problems';
 import { SvgView } from './svg-view';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,10 +21,19 @@ import type { GenerateResult } from '@/types/panels';
 export interface ResultViewProps {
   result: GenerateResult | undefined;
   pending: boolean;
+  /** Arquivo de projeto do app (projeto + leitura): entra no zip e na lista, para o pacote ser reproduzível (M2). */
+  projectFile?: string | undefined;
+  /** O draft mudou depois que este resultado saiu (M2). */
+  stale?: boolean;
+  canRegenerate?: boolean;
+  onRegenerate?: (() => void) | undefined;
 }
 
+/** Nome do arquivo de projeto dentro do zip (ao lado de `cutlist.csv`, `plan.svg`…). */
+export const PROJECT_FILE_IN_ZIP = 'project.panelizer.json';
+
 /** Resultado do motor: vazio, carregando, problemas, ou resumo + abas Plan / Sheets / Files, zip e impressão. */
-export function ResultView({ result, pending }: ResultViewProps) {
+export function ResultView({ result, pending, projectFile, stale = false, canRegenerate = false, onRegenerate }: ResultViewProps) {
   if (pending) {
     return (
       <div className="space-y-3" aria-busy="true" aria-live="polite">
@@ -40,14 +50,15 @@ export function ResultView({ result, pending }: ResultViewProps) {
     );
   }
   if (!result.ok) return <Problems problems={result.problems} />;
-  return <Generated result={result} />;
+  return <Generated result={result} projectFile={projectFile} stale={stale} canRegenerate={canRegenerate} onRegenerate={onRegenerate} />;
 }
 
 type Tab = 'plan' | 'sheets' | 'files';
 
-function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }) {
+function Generated({ result, projectFile, stale, canRegenerate, onRegenerate }: { result: Extract<GenerateResult, { ok: true }>; projectFile: string | undefined; stale: boolean; canRegenerate: boolean; onRegenerate: (() => void) | undefined }) {
   const plan = planOf(result.files);
   const sheets = useMemo(() => sheetsOf(result.files, result.panels), [result]);
+  const files = useMemo(() => (projectFile === undefined ? result.files : [...result.files, { path: PROJECT_FILE_IN_ZIP, content: projectFile }]), [result, projectFile]);
   const panelIdByPath = useMemo(() => new Map(sheets.map((s) => [s.path, s.panelId])), [sheets]);
   const [tab, setTab] = useState<Tab>(plan === undefined ? 'sheets' : 'plan');
   const [selected, setSelected] = useState<string | undefined>(sheets[0]?.panelId);
@@ -69,15 +80,27 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
     setShowAll(true);
     setPrinting(true);
   };
-  const downloadAll = () => downloadBytes(zip, zipFiles(result.files), 'application/zip');
+  const downloadAll = () => downloadBytes(zip, zipFiles(files), 'application/zip');
 
   return (
     <div className="space-y-4" aria-live="polite">
+      {stale ? (
+        <Alert variant="warning" className="no-print">
+          <TriangleAlertIcon />
+          <AlertTitle>Edited since these panels were generated</AlertTitle>
+          <AlertDescription>
+            <p>The sheets below come from an earlier revision of the project.</p>
+            <Button variant="outline" size="sm" className="mt-1" disabled={!canRegenerate} onClick={onRegenerate}>
+              <RefreshCwIcon /> Generate again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <div className="no-print flex flex-wrap items-center gap-2">
         <h2 className="mr-2">{result.projectName}</h2>
         <Badge variant="secondary">{result.panels.length} panels</Badge>
         <Badge variant="secondary">{pieces} pieces to cut</Badge>
-        <Badge variant="secondary">{result.files.length} files</Badge>
+        <Badge variant="secondary">{files.length} files</Badge>
         {result.warnings.length > 0 ? (
           <Badge variant="warning">
             <TriangleAlertIcon /> {result.warnings.length} warning{result.warnings.length === 1 ? '' : 's'}
@@ -180,7 +203,7 @@ function Generated({ result }: { result: Extract<GenerateResult, { ok: true }> }
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {result.files.map((f) => (
+                {files.map((f) => (
                   <TableRow key={f.path}>
                     <TableCell className="font-mono text-[13px]">{f.path}</TableCell>
                     <TableCell className="text-ink-2">{fileLabel(f.path, panelIdByPath.get(f.path))}</TableCell>

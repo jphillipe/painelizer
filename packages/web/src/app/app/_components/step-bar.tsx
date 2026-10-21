@@ -11,6 +11,14 @@ const STEPS: { id: StepId; label: string; short: string }[] = [
   { id: 3, label: 'Panels', short: 'Panels' },
 ];
 
+/**
+ * Passos concluídos (clicáveis para voltar): com projeto aberto, 1 e 2 — o editor fica alcançável depois de ir aos
+ * desenhos (M2: antes o 2 só contava com resultado e o humano ficava preso no passo 1); com resultado, o 3.
+ */
+export function doneSteps(hasDraft: boolean, hasResult: boolean): StepId[] {
+  return [...(hasDraft ? ([1, 2] as const) : []), ...(hasResult ? ([3] as const) : [])];
+}
+
 export interface StepBarProps {
   active: StepId;
   /** Passos já concluídos: clicáveis para voltar. */
