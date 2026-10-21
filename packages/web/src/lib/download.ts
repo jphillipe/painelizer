@@ -17,3 +17,11 @@ export function downloadText(name: string, text: string, mime = 'application/jso
 export function downloadBytes(name: string, bytes: Uint8Array, mime = 'application/octet-stream'): void {
   downloadBlob(name, new Blob([new Uint8Array(bytes)], { type: mime }));
 }
+
+/** Base64 (o que uma server action devolve) → bytes. */
+export function bytesFromBase64(base64: string): Uint8Array {
+  const bin = atob(base64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+  return out;
+}

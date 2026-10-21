@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, ExternalLinkIcon, PrinterIcon, ZoomInIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, ExternalLinkIcon, FileDownIcon, Loader2Icon, PrinterIcon, ZoomInIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -25,6 +25,9 @@ export interface ResultSheetsProps {
   onShowAll: (v: boolean) => void;
   /** Imprimir só a folha aberta (a lista e os controles têm `no-print`). */
   onPrint: () => void;
+  /** PDF só desta folha (M9). */
+  onPdf?: ((sheet: Sheet) => void) | undefined;
+  pdfPending?: boolean;
 }
 
 /** A animação em cascata da lista só na primeira montagem e só nos primeiros itens (M3): 41 folhas não esperam 2,5 s. */
@@ -37,7 +40,7 @@ const ZOOMS = [100, 150, 200] as const;
  * nova aba, baixar, imprimir só esta e lupa (dialog de tela cheia com zoom). "Show all" despeja todas, para a
  * impressão do conjunto.
  */
-export function ResultSheets({ sheets, panels, warningsByPanel, selected, onSelect, showAll, onShowAll, onPrint }: ResultSheetsProps) {
+export function ResultSheets({ sheets, panels, warningsByPanel, selected, onSelect, showAll, onShowAll, onPrint, onPdf, pdfPending = false }: ResultSheetsProps) {
   const index = Math.max(0, sheets.findIndex((s) => s.panelId === selected));
   const current = sheets[index];
   const panel = panels.find((p) => p.id === current?.panelId);
@@ -149,6 +152,11 @@ export function ResultSheets({ sheets, panels, warningsByPanel, selected, onSele
                   <Button variant="ghost" size="xs" onClick={onPrint} title="Print this sheet">
                     <PrinterIcon /> Print
                   </Button>
+                  {onPdf !== undefined ? (
+                    <Button variant="ghost" size="xs" onClick={() => onPdf(current)} disabled={pdfPending} title="PDF of this sheet, letter landscape">
+                      {pdfPending ? <Loader2Icon className="animate-spin" /> : <FileDownIcon />} PDF
+                    </Button>
+                  ) : null}
                 </div>
               </div>
               <SvgView key={current.panelId} svg={current.svg} label={`Sheet ${current.panelId}`} className="animate-fade-in" />

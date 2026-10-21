@@ -97,3 +97,14 @@ export function fileLabel(path: string, panelId?: string): string {
   if (fileKind(path) === 'sheet') return `Fabrication sheet ${panelId ?? baseName(path).replace(/\.svg$/, '')}`;
   return path;
 }
+
+/** Nº de avisos por painel (M3; o resultado os mostra na lista de folhas): os avisos do motor começam com o id do painel. */
+export function warningsByPanel(warnings: readonly string[], panelIds: readonly string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const w of warnings) {
+    const id = panelIds.find((p) => w.startsWith(`${p} `));
+    if (id !== undefined) out.set(id, (out.get(id) ?? 0) + 1);
+  }
+
+  return out;
+}

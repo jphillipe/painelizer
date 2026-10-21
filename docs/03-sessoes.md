@@ -785,6 +785,14 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     possível com server actions; fica o descarte de resposta velha e o "texto igual não vai" da M6. Testes: cli 113,
     web 206 (eram 201). Achado para a fábrica (não mexido, é framing): T dos dois lados no mesmo ponto de uma
     parede (cruzamento em +) é recusado pelo motor ("layoutPlates: cuts sobrepõe"); ver 04-decisoes.
-  - [ ] **M9 — PDF e impressão** (`@resvg/resvg-js`, "x de y").
+  - [x] **M9 — PDF e impressão.** Feita em 2026-10-21 (sem regra de framing). `services/pdf.service.ts`:
+    cada SVG vira PNG por `@resvg/resvg-js` (largura 220 dpi do miolo, fontes do sistema) e entra numa página
+    carta paisagem do `pdf-lib`, centrado, com rodapé "projeto · folha" à esquerda e "x de y" à direita; título
+    do documento "<projeto> — fabrication sheets". Action `downloadPdf` (schema em `schemas/pdf.ts`; a tela
+    manda os SVGs que já tem, o motor não roda de novo) devolve base64 e o cliente baixa. Botões: **Download
+    PDF** ao lado de "Print all sheets" (planta primeiro + todas as folhas → `<slug>-sheets.pdf`, "Rendering N
+    pages…" enquanto renderiza) e **PDF** por folha na aba Sheets (`<id>.pdf`); `window.print()` continua.
+    Conferido no browser com a 28x40: 13 páginas 792×612 pt, 1,3 MB; folha avulsa 90 KB. Testes: web 209
+    (eram 206); `@resvg/resvg-js` em `serverExternalPackages`.
   - [ ] **M10 — Testes de interação** (jsdom + testing-library).
 - [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**

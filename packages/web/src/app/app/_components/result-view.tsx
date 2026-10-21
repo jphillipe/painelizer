@@ -1,18 +1,21 @@
 'use client';
 
-import { CircleCheckIcon, DownloadIcon, PrinterIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
+import { CircleCheckIcon, DownloadIcon, FileDownIcon, Loader2Icon, PrinterIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
+import { useAction } from 'next-safe-action/hooks';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { downloadBytes, downloadText } from '@/lib/download';
+import { bytesFromBase64, downloadBytes, downloadText } from '@/lib/download';
 import type { IdIndex } from '@/lib/editor/problems';
-import { baseName, fileLabel, formatSize, mimeOf, planOf, sheetsOf, zipName } from '@/lib/files';
+import { baseName, fileLabel, formatSize, mimeOf, planOf, projectSlug, sheetsOf, warningsByPanel, zipName, type Sheet } from '@/lib/files';
 import { zipFiles } from '@/lib/zip';
 import type { GenerateResult } from '@/types/panels';
+import { downloadPdf } from '../_actions/download-pdf';
 import { PlanView } from './plan-view';
 import { Problems } from './problems';
 import { ResultMaterials } from './result-materials';
@@ -60,15 +63,6 @@ type Tab = 'plan' | 'sheets' | 'materials' | 'files';
 
 const TAB_CLASS = 'h-9 flex-none rounded-none px-3 after:bottom-0';
 
-/** Nº de avisos por painel: os avisos do motor começam com o id do painel. */
-export function warningsByPanel(warnings: readonly string[], panelIds: readonly string[]): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const w of warnings) {
-    const id = panelIds.find((p) => w.startsWith(`${p} `));
-    if (id !== undefined) out.set(id, (out.get(id) ?? 0) + 1);
-  }
-  return out;
-}
 
 function Generated({ result, projectFile, stale, canRegenerate, onRegenerate, ids }: { result: Extract<GenerateResult, { ok: true }>; projectFile: string | undefined; stale: boolean; canRegenerate: boolean; onRegenerate: (() => void) | undefined; ids: IdIndex | undefined }) {
   const plan = planOf(result.files);
@@ -107,6 +101,21 @@ function Generated({ result, projectFile, stale, canRegenerate, onRegenerate, id
     setTab('sheets');
   };
   const downloadAll = () => downloadBytes(zip, zipFiles(files), 'application/zip');
+  // PDF (M9): as folhas como a tela as tem (não o projeto: o resultado pode ser de uma revisão anterior).
+  const { executeAsync: renderPdf, isPending: pdfPending } = useAction(downloadPdf);
+  const [pdfLabel, setPdfLabel] = useState<string | undefined>(undefined);
+  const makePdf = async (pages: { label: string; svg: string }[], name: string): Promise<void> => {
+    setPdfLabel(name);
+    const r = await renderPdf({ projectName: result.projectName, pages });
+    setPdfLabel(undefined);
+    if (r.data === undefined) {
+      toast.error(r.serverError ?? 'Could not render the PDF.');
+      return;
+    }
+    downloadBytes(name, bytesFromBase64(r.data.base64), 'application/pdf');
+  };
+  const pdfAll = () => void makePdf([...(plan === undefined ? [] : [{ label: 'Panel plan', svg: plan }]), ...sheets.map((s) => ({ label: s.panelId, svg: s.svg }))], `${projectSlug(result.projectName)}-sheets.pdf`);
+  const pdfOne = (s: Sheet) => void makePdf([{ label: s.panelId, svg: s.svg }], `${s.panelId}.pdf`);
 
   return (
     <div className="space-y-4" aria-live="polite">
@@ -141,6 +150,17 @@ function Generated({ result, projectFile, stale, canRegenerate, onRegenerate, id
           <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={printAll} disabled={sheets.length === 0}>
               <PrinterIcon /> Print all sheets
+            </Button>
+            <Button variant="outline" size="sm" onClick={pdfAll} disabled={sheets.length === 0 || pdfPending} title="One letter-landscape page per sheet, panel plan first">
+              {pdfPending && pdfLabel?.endsWith('-sheets.pdf') ? (
+                <>
+                  <Loader2Icon className="animate-spin" /> Rendering {sheets.length + (plan === undefined ? 0 : 1)} pages…
+                </>
+              ) : (
+                <>
+                  <FileDownIcon /> Download PDF
+                </>
+              )}
             </Button>
             <Button variant="accent" size="sm" onClick={downloadAll}>
               <DownloadIcon /> Download all
@@ -183,7 +203,7 @@ function Generated({ result, projectFile, stale, canRegenerate, onRegenerate, id
           )}
         </TabsContent>
         <TabsContent value="sheets" className="pt-3">
-          <ResultSheets sheets={sheets} panels={result.panels} warningsByPanel={perPanel} selected={selected} onSelect={setSelected} showAll={showAll} onShowAll={setShowAll} onPrint={printOne} />
+          <ResultSheets sheets={sheets} panels={result.panels} warningsByPanel={perPanel} selected={selected} onSelect={setSelected} showAll={showAll} onShowAll={setShowAll} onPrint={printOne} onPdf={pdfOne} pdfPending={pdfPending && pdfLabel !== undefined && !pdfLabel.endsWith('-sheets.pdf')} />
         </TabsContent>
         <TabsContent value="materials" className="pt-3">
           <ResultMaterials bom={result.bom} cutLists={result.cutLists} panels={result.panels} onOpenSheet={openSheet} />

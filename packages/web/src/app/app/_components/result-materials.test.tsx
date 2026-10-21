@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { groupBySection, stockLabel } from './result-materials';
-import { warningsByPanel } from './result-view';
+import { warningsByPanel } from '@/lib/files';
 import { idsFromPanels } from './result-warnings';
 import type { BomRow } from '@/types/panels';
 

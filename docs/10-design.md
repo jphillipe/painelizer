@@ -251,7 +251,10 @@ Open, Download, Print da folha; lupa em Dialog cheio com 100/150/200 %; "Show al
 **Materials** (BOM por seção com subtotais e total, lista de corte por painel) e **Files**; avisos do motor
 passam pelos mesmos grupos e ajuda do editor, com chip por painel. As folhas mantêm o visual atual (não passam
 pelo tema; a fábrica lê a folha, não o site). Impressão: `@media print` esconde `.no-print`, cada `.sheet` com
-`break-after: page`, `@page { size: letter landscape; margin: 0.4in }`.
+`break-after: page`, `@page { size: letter landscape; margin: 0.4in }`. **PDF** (M9): "Download PDF" ao lado de
+"Print all sheets" manda os SVGs da tela para `pdf.service` (`@resvg/resvg-js` → PNG a 220 dpi, `pdf-lib` → carta
+paisagem, uma folha por página, planta primeiro, rodapé "projeto · folha" e "x de y") e baixa `<slug>-sheets.pdf`;
+cada folha tem o seu botão PDF (`<id>.pdf`). Enquanto renderiza o botão mostra "Rendering N pages…" com spinner.
 
 ## 7. Arquitetura de requisições (padrão único)
 
@@ -271,7 +274,7 @@ Server Component     →  service                                               
   `frameWalls`, `resolveOpening`, geometria do eixo) para o editor validar e desenhar a planta no cliente sem
   ida ao servidor; é a única camada do cliente que o faz, e os componentes importam só a lib. `cli` e `extract`
   nunca entram no cliente; o motor continua rodando no servidor (`generatePanels`, `checkProject`). `panels.service` (gerar), `extract.service` (PDF → JSON, resposta
-  gravada, checagem da chave), `projects.service` (S22).
+  gravada, checagem da chave), `pdf.service` (folhas SVG → PDF, M9), `projects.service` (S22).
 - **ky** (`src/lib/http.ts`): instância única (`prefixUrl`, `timeout`, `retry`, hooks que convertem erro
   HTTP em `ServiceError`), usada só dentro de services e só onde há HTTP de verdade. Motor e extração rodam
   em processo. Nunca ky em componente, nunca `fetch` solto.
