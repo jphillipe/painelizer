@@ -174,6 +174,17 @@
   animation: var(--animate-fade-up);
   animation-delay: calc(var(--i, 0) * 60ms);
 }
+/* Header do app (components/site-header.tsx): navy com profundidade — gradiente, brilho dourado atrás da marca e grade fina. */
+@utility header-surface {
+  background-color: var(--navy-900);
+  background-image:
+    radial-gradient(560px 160px at 0% 50%, rgba(201, 161, 91, 0.2), transparent 70%),
+    linear-gradient(rgba(246, 244, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(246, 244, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, var(--navy-950), var(--navy-900) 45%, var(--navy-800));
+  background-size: auto, 24px 24px, 24px 24px, auto;
+}
+
 /* Cartão que levanta no hover. */
 @utility lift {
   transition: transform 200ms var(--ease-site), box-shadow 200ms var(--ease-site), border-color 200ms var(--ease-site);
@@ -225,6 +236,56 @@
 @utility frame-scan {
   animation: frame-scan 3.2s ease-in-out infinite alternate;
 }
+/*
+ * Palco do login (S22, 2026-10-23): a parede se monta em cascata, uma linha tracejada desce na marca de 12',
+ * as duas metades se afastam e ganham o id do painel; tudo some e recomeca (10 s).
+ */
+@utility login-surface {
+  background-color: var(--navy-950);
+  background-image:
+    radial-gradient(900px 600px at 50% 60%, rgba(201, 161, 91, 0.14), transparent 70%),
+    linear-gradient(rgba(246, 244, 238, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(246, 244, 238, 0.05) 1px, transparent 1px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
+@utility login-piece {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: login-build 10s var(--ease-site) infinite both;
+  animation-delay: calc(var(--i, 0) * 100ms);
+}
+@utility login-half {
+  animation: login-half 10s var(--ease-site) infinite both;
+}
+@utility login-split {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: login-split 10s var(--ease-site) infinite both;
+}
+@utility login-tag {
+  opacity: 0;
+  animation: login-tag 10s ease-in-out infinite both;
+  animation-delay: calc(var(--t, 0) * 400ms);
+}
+@keyframes login-build {
+  0% { opacity: 0; transform: scaleY(0); }
+  5%, 84% { opacity: 1; transform: scaleY(1); }
+  92%, 100% { opacity: 0; transform: scaleY(1); }
+}
+@keyframes login-half {
+  0%, 60% { transform: translateX(0); }
+  70%, 100% { transform: translateX(var(--dx, 0)); }
+}
+@keyframes login-split {
+  0%, 48% { stroke-dashoffset: 1; opacity: 1; }
+  58%, 84% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes login-tag {
+  0%, 56% { opacity: 0; transform: translateY(6px); }
+  62%, 84% { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; }
+}
 @utility blueprint {
   background-color: var(--paper);
   background-image:
@@ -275,6 +336,19 @@
   }
   .frame-scan {
     display: none;
+  }
+  /* Palco do login: parede inteira, parada, com os ids visiveis. */
+  .login-piece,
+  .login-half,
+  .login-split,
+  .login-tag {
+    animation: none !important;
+  }
+  .login-split {
+    stroke-dashoffset: 0;
+  }
+  .login-tag {
+    opacity: 1;
   }
 }
 

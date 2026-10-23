@@ -830,6 +830,23 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     `/login?next=%2Fapp%2Fprojects%2Fx%3Ftab%3D1`; enviar o formulário mostra "Could not reach the sign-in
     service"). **Login real conferido em 2026-10-23** com o projeto criado: entrar leva a `/app` com e-mail e "Sign out" no header, F5 mantém a sessão (refresh pelo proxy), `/login?next=/app?from=test` logado volta a `/app?from=test`, "Sign out" leva ao login e `/app` volta a redirecionar; sem erro no console nem no servidor. Projeto
     `panelizer` criado em 2026-10-22 pelo conector MCP (ref em `supabase/README.md`), migração aplicada, chaves no `.env.local`, cadastro desligado e uma conta criada no painel.
+  - [x] **Header do app (pedido do humano, 2026-10-23)** — sem regra de framing. O header de uma linha (nome + link)
+    virou `components/site-header.tsx`: logo oficial da National Lumber (`public/brand/national-lumber.png`) num tile
+    de papel, superfície navy com gradiente, brilho dourado e grade (`header-surface`), fio dourado na base, fixo no
+    topo encolhendo de 72 para 64px ao rolar; navegação em grupo de pills com ativo pela rota (`usePathname`) e ponto
+    dourado; avatar de iniciais com ponto de sessão e menu (e-mail, Sign out) no lugar do botão solto; em `/login`
+    só a marca e uma linha de contexto — o "New project" não aparece mais para quem não entrou. Regras puras em
+    `lib/site-nav.ts` (`isActivePath`, `isBareRoute`, `initialsOf`). Testes: 3 puros + 3 no jsdom (rota ativa,
+    login sem nav, menu que sai e vai ao login; Radix precisa de `hasPointerCapture` falso). `10-design` §4
+    reescrito. Conferido no browser em /login e logado em /app.
+  - [x] **Tela de login (pedido do humano, 2026-10-23)** — sem regra de framing. Treze versões num canvas de design
+    (seis direções, quatro variações da V1, três da V1B); o humano escolheu a V1B: palco navy em tela cheia com a
+    parede de 18' que se monta em cascata, recebe a linha tracejada da quebra na marca de 12' e se separa em dois
+    painéis com id, em loop de 10 s, e o card de vidro com o formulário por cima. Modo `stage` no shell
+    (`useShellMode`), geometria pura em `lib/login-sketch.ts` (3 testes), `WallSplitSketch` só SVG + CSS
+    (`login-*` em globals.css, parada e inteira com `prefers-reduced-motion`), `LoginForm` com `tone="dark"` e
+    sem card próprio. `10-design` §4 e §5. Conferido no browser a 1440×900 (parede, quebra, ids, card à direita,
+    sem rolagem) e a 375×812 (parede acima do card, sem rolagem horizontal).
   - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
     `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
     `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";

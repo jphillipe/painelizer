@@ -142,8 +142,35 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
 ## 4. Layout
 
 ### App shell
-- Header 64px, fundo navy-900, texto papel: logotipo "Panelizer" (Barlow 600) + "· National Lumber" (ink
-  claro), nav à direita ("New project", depois "Projects"). Link ativo com sublinhado gold.
+- **Header** (`components/site-header.tsx`, refeito em 2026-10-23): 72px (64px depois de rolar, com `shadow-2`),
+  fixo no topo, superfície `header-surface` (navy-950 → navy-900 → navy-800 da esquerda para a direita, brilho
+  dourado a 20 % atrás da marca, grade de 24px a 3,5 % de papel) e fio dourado de 2px na base (gold → gold-300 →
+  transparente). Três áreas: **marca** — a logo da National Lumber (`public/brand/national-lumber.png`, 30×20 num
+  tile de papel 40×40 com `shadow-1`, que levanta no hover; a logo é navy e sumiria direto sobre o fundo) +
+  "Panelizer" (Barlow 600, 18px) sobre "NATIONAL LUMBER · WR GROUP" (10,5px, caixa alta, tracking 1,6px, gold-300);
+  **navegação** — grupo de pills (`rounded-pill`, borda papel/10, fundo papel/5) com "New project" (depois
+  "Projects"): ícone + rótulo (só ícone abaixo de `sm`), ativo pela rota (`aria-current="page"`, fundo papel/12,
+  ícone gold-300 e ponto dourado em `animate-pop`), hover papel/8; itens entram em `stagger`; **usuário** — avatar
+  de iniciais (gold-btn sobre navy-900, `initialsOf`, ponto `ok` de sessão ativa), e-mail (≥ `md`) e chevron que
+  gira ao abrir; o menu (`DropdownMenu`) traz "Signed in as" + e-mail e "Sign out". Em `/login` só a marca e a
+  linha "Wall panel fabrication · internal tool": sem navegação e sem usuário (não faz sentido oferecer "New
+  project" a quem ainda não entrou). **Tom por rota** (`data-tone`): navy sobre as telas em papel; em `/login` o
+  palco é navy, então o header vira **papel** (fundo paper, `shadow-1`, "Panelizer" em navy-900, assinatura em
+  gold-700, linha de contexto em ink-3, logo num tile white com borda line) para não virar uma coisa só com a
+  página — o fio dourado na base é o mesmo nos dois tons. Foco em gold-300 pelo `.on-navy` só no tom navy. A logo em PNG de 60×40 fica
+  nítida até 2×; pedir o SVG à National Lumber quando houver.
+- **Tela de login** (`app/login/_components/login-view.tsx`, escolhida entre 13 versões num canvas em 2026-10-23,
+  a "V1B"): modo `stage` do shell (largura toda, sem rodapé, rolagem normal), palco `login-surface` (navy-950,
+  brilho dourado ao centro, grade de 32px) com a **parede que vira painéis**: elevação de 18' com janela
+  (`lib/login-sketch.ts`, geometria em polegadas como o `WallSketch` da extração) que se monta peça a peça em
+  cascata (`login-piece`, 100 ms por peça), depois uma linha tracejada dourada desce na marca de 12' (`login-split`),
+  as duas metades se afastam 14px (`login-half`) e ganham os ids em mono (`login-tag`); ciclo de 10 s. Plates, kings e
+  jacks em papel, studs em gold-300, header em gold. Por cima, à direita, o **card de vidro**: navy-900 a 85 % com
+  `backdrop-blur`, borda papel/15, `shadow-2`; `LoginForm` em `tone="dark"` (rótulos papel/90, campos papel/8 com
+  borda papel/25 e foco gold-300, erro de campo em gold-300, nota em papel/60; o Alert de credencial errada continua
+  claro). Eyebrow e título em Barlow Condensed sobre o palco; rodapé em mono com o que o desenho mostra. Abaixo de
+  `lg` a parede fica acima do card, menor, e tudo rola. `prefers-reduced-motion`: parede inteira, parada, ids
+  visíveis. É a única animação em loop do app além da espera da extração, e a mesma linguagem.
 - Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho seguem o **takeoff da
   National Lumber**: cabeçalho (eyebrow + h1 + parágrafo), **barra de passos** numerada (círculo navy cheio no
   ativo, sublinhado dourado; passos feitos também cheios), e o passo 1 em duas colunas 5/12 + 7/12: à esquerda
@@ -233,7 +260,7 @@ números grandes em Barlow Condensed com unidade em eyebrow. Rotas `/`, `/how-it
 | `/` | landing; por ora `redirect('/app')` | S20.0 |
 | `/app` | novo projeto: desenhos → revisão → painéis | S20.1–S20.3 |
 | `/app/projects`, `/app/projects/[id]` | projetos salvos | S22.1–S22.2 |
-| `/login` | e-mail e senha; `?next=` volta aonde ia | S22.0 |
+| `/login` | palco com a parede que vira painéis + card de vidro; `?next=` volta aonde ia | S22.0 / 2026-10-23 |
 
 Rotas de API: **nenhuma**. Sem route handlers.
 
@@ -285,7 +312,7 @@ Server Component     →  service                                               
   `lib/auth/routes.ts` (`/app*` exige usuário → `/login?next=…`; `/login` com usuário volta ao app). As
   actions de `/app` usam `authActionClient`, que exige usuário quando o Supabase está configurado (`ctx.user`).
   Sem as chaves o app roda aberto em desenvolvimento; em produção `/app` é bloqueado e `/login` explica.
-  O header mostra o e-mail e "Sign out" quando há sessão.
+  O header mostra o avatar do usuário com menu e "Sign out" quando há sessão (§4).
 - **Erros**: `handleServerError` do `actionClient` traduz `ProjectError`, `BuildError`, `ExtractError`,
   `ServiceError`, `SignedOutError` e erros da API em mensagem; problemas de projeto não são erro de servidor, voltam em `data`
   como `{ ok: false, problems }` para a UI listar.
@@ -305,7 +332,7 @@ Server Component     →  service                                               
 app/<rota>/page.tsx      rota fina: Server Component lê pelos services e monta a view
 app/<rota>/_components/  a view e os componentes que só essa rota usa (pasta privada: `_` não vira rota)
 app/<rota>/_actions/     server actions (next-safe-action) só dessa rota, uma por arquivo
-components/              compartilhado entre rotas (app-shell) e `ui/` do shadcn
+components/              compartilhado entre rotas (app-shell, site-header) e `ui/` do shadcn
 services/                regra de negócio, só servidor
 schemas/                 zod compartilhado cliente/servidor
 types/                   tipos que trafegam servidor → cliente

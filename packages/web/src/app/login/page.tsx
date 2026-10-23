@@ -3,27 +3,19 @@ import { redirect } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { safeNext } from '@/lib/auth/routes';
 import { currentUser, isAuthConfigured } from '@/services/auth.service';
-import { LoginForm } from './_components/login-form';
+import { LoginView } from './_components/login-view';
 
 /**
- * `/login` (S22.0, docs/10-design.md §5): e-mail e senha. Já logado, volta ao app (o proxy também faz isso; aqui é
- * a segunda barreira). Sem Supabase configurado, explica em vez de mostrar um formulário que não funciona.
+ * `/login` (S22.0, docs/10-design.md §4 e §5): palco com a parede que vira painéis e o card de login (V1B). Já
+ * logado, volta ao app (o proxy também faz isso; aqui é a segunda barreira). Sem Supabase configurado, explica em
+ * vez de mostrar um formulário que não funciona.
  */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   const to = safeNext(next);
   if (!isAuthConfigured()) return <NotConfigured />;
   if ((await currentUser()) !== undefined) redirect(to);
-  return (
-    <section className="step-enter mx-auto w-full max-w-sm space-y-6 py-8">
-      <header className="space-y-3">
-        <p className="eyebrow">Sign in</p>
-        <h1>Welcome back.</h1>
-        <p className="text-ink-2">Use the account the National Lumber team created for you.</p>
-      </header>
-      <LoginForm next={to} />
-    </section>
-  );
+  return <LoginView next={to} />;
 }
 
 function NotConfigured() {
