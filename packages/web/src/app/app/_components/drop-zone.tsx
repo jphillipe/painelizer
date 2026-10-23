@@ -11,6 +11,8 @@ export interface DropZoneProps {
   disabled?: boolean;
   /** Erro do formulário (sem arquivo ao enviar), mostrado embaixo da zona (M5), não em toast. */
   error?: string | undefined;
+  /** `hero` (2026-10-23): dentro da zona-herói do passo 01 — sem moldura própria (a moldura tracejada é do pai), convite maior e vertical. */
+  variant?: 'card' | 'hero';
 }
 
 /** Limite do envio (`serverActions.bodySizeLimit`, S20.2). */
@@ -61,7 +63,8 @@ export function mergeFiles(current: readonly File[], incoming: readonly File[]):
 }
 
 /** Zona de soltar arquivos: tracejada, cantos marcados, ícone navy; responde a hover e arraste. Acumula arquivos. */
-export function DropZone({ files, onFiles, disabled = false, error }: DropZoneProps) {
+export function DropZone({ files, onFiles, disabled = false, error, variant = 'card' }: DropZoneProps) {
+  const hero = variant === 'hero';
   const input = useRef<HTMLInputElement>(null);
   // Contador de dragenter/dragleave (M5): o leave dispara ao passar sobre os filhos e fazia o estado piscar.
   const depth = useRef(0);
@@ -109,21 +112,25 @@ export function DropZone({ files, onFiles, disabled = false, error }: DropZonePr
           if (!disabled) add(e.dataTransfer.files);
         }}
         className={cn(
-          'group relative flex cursor-pointer items-center gap-5 rounded-md border border-dashed border-line-strong bg-paper-2 px-6 py-7',
-          'transition-[border-color,background-color,transform,box-shadow] duration-200 ease-site',
-          'hover:border-gold hover:bg-gold-100/50 hover:shadow-1 focus-visible:border-gold',
-          over && 'scale-[1.01] border-gold bg-gold-100/70 shadow-1 motion-reduce:scale-100',
-          error !== undefined && 'border-destructive',
+          'group relative flex cursor-pointer items-center gap-5 rounded-md transition-[border-color,background-color,transform,box-shadow] duration-200 ease-site',
+          hero ? 'flex-col items-start gap-3 px-1 py-1' : 'border border-dashed border-line-strong bg-paper-2 px-6 py-7 hover:border-gold hover:bg-gold-100/50 hover:shadow-1 focus-visible:border-gold',
+          over && (hero ? 'bg-gold-100/40' : 'scale-[1.01] border-gold bg-gold-100/70 shadow-1 motion-reduce:scale-100'),
+          error !== undefined && !hero && 'border-destructive',
           disabled && 'cursor-not-allowed opacity-60 hover:border-line-strong hover:bg-paper-2 hover:shadow-none',
         )}
       >
-        <Corner className="top-2 left-2 border-t border-l" over={over} />
-        <Corner className="top-2 right-2 border-t border-r" over={over} />
-        <Corner className="bottom-2 left-2 border-b border-l" over={over} />
-        <Corner className="bottom-2 right-2 border-b border-r" over={over} />
+        {hero ? null : (
+          <>
+            <Corner className="top-2 left-2 border-t border-l" over={over} />
+            <Corner className="top-2 right-2 border-t border-r" over={over} />
+            <Corner className="bottom-2 left-2 border-b border-l" over={over} />
+            <Corner className="bottom-2 right-2 border-b border-r" over={over} />
+          </>
+        )}
         <span
           className={cn(
-            'flex size-12 shrink-0 items-center justify-center rounded-md bg-navy-900 text-paper transition-transform duration-200 ease-site',
+            'flex shrink-0 items-center justify-center rounded-md bg-navy-900 text-paper transition-transform duration-200 ease-site',
+            hero ? 'size-12' : 'size-12',
             'group-hover:-translate-y-0.5 group-hover:scale-105',
             over && 'scale-110 bg-gold-600 motion-reduce:scale-100',
           )}
@@ -131,8 +138,8 @@ export function DropZone({ files, onFiles, disabled = false, error }: DropZonePr
           <UploadIcon className={cn('size-5 transition-transform duration-200', over && '-translate-y-0.5')} />
         </span>
         <span>
-          <span className="block text-lg font-medium tracking-tight">{over ? 'Release to add' : 'Drop your drawings here'}</span>
-          <span className="block text-ink-2">or click to choose files</span>
+          <span className={cn('block font-medium tracking-tight', hero ? 'text-xl font-semibold' : 'text-lg')}>{over ? 'Release to add' : 'Drop your drawings here'}</span>
+          <span className={cn('block text-ink-2', hero && 'text-base')}>or click to choose files</span>
         </span>
         <input
           ref={input}
@@ -155,6 +162,15 @@ export function DropZone({ files, onFiles, disabled = false, error }: DropZonePr
       <p className="text-[13px] text-ink-3">
         PDF, PNG, JPG, WebP or GIF · up to {formatBytes(MAX_UPLOAD_BYTES)} per upload · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
       </p>
+      {hero && files.length === 0 ? (
+        <ul className="flex flex-wrap gap-2 text-[12px] font-semibold text-ink-2" aria-label="What to send">
+          {['A-1xx plans', 'A-8xx schedules', 'S-xxx structural', 'elevations', 'sections'].map((k) => (
+            <li key={k} className="rounded-pill border bg-paper px-2.5 py-1">
+              {k}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {rejected.length > 0 ? (
         <ul className="rounded-md border border-warning/40 bg-gold-100/40 px-3 py-2 text-[13px] text-ink-2" role="status">
           {rejected.map((r) => (
@@ -166,7 +182,7 @@ export function DropZone({ files, onFiles, disabled = false, error }: DropZonePr
       ) : null}
       {files.length > 0 ? (
         <div className="space-y-1">
-          <ul className="divide-y divide-line-faint rounded-md border bg-card text-sm">
+          <ul className={cn('divide-y divide-line-faint rounded-md border bg-card text-sm', hero && 'max-h-44 overflow-auto')}>
             {files.map((f, i) => (
               <li key={`${f.name}:${f.size}`} style={{ '--i': Math.min(i, 12) } as React.CSSProperties} className="stagger group/row flex items-center gap-3 px-3 py-2 transition-colors duration-200 hover:bg-paper-2">
                 {isPdf(f) ? <FileTextIcon className="size-4 shrink-0 text-navy-900" /> : <FileImageIcon className="size-4 shrink-0 text-gold-600" />}

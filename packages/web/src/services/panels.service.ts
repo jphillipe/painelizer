@@ -5,6 +5,7 @@
  */
 
 import 'server-only';
+import ringgoldReading from '@/samples/ringgold-st-multifamily-reading.json' with { type: 'json' };
 import { buildProject, BuildError, panelizeProject, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError, type Project } from 'cli/project';
@@ -83,9 +84,40 @@ export function check(projectText: string): CheckResult {
   }
 }
 
-/** Os exemplos do CLI, com o texto, para o formulário oferecer. */
+/**
+ * Exemplos para testar sem desenhos (2026-10-23): primeiro a leitura real da IA do 26 Ringgold St (resposta
+ * gravada em 2026-10-15, `src/samples`), que passa pela mesma conversão da extração e abre com proveniência; depois
+ * os projetos do CLI. Os fatos de cada card vêm do próprio arquivo, não de texto fixo.
+ */
 export function listExamples(): Example[] {
-  return EXAMPLES.map((e) => ({ id: e.id, label: e.label, text: e.text }));
+  const reading: Example = {
+    id: 'ringgold-reading',
+    label: 'Ringgold St MultiFamily · AI reading',
+    kind: 'reading',
+    facts: readingFacts(ringgoldReading),
+    text: JSON.stringify(ringgoldReading),
+  };
+  // O `ringgold-checkpoint` do CLI (4 painéis do checkpoint 2) fica fora: a leitura real já é o Ringgold (2026-10-23).
+  return [reading, ...EXAMPLES.filter((e) => e.id !== 'ringgold-checkpoint').map((e) => ({ id: e.id, label: e.label, kind: 'project' as const, facts: projectFacts(e.text), text: e.text }))];
+}
+
+function readingFacts(r: { walls?: { openings?: unknown[] }[]; level?: number; sheets?: { plan?: string | null; schedule?: string | null } }): string {
+  const walls = r.walls ?? [];
+  const openings = walls.reduce((n, w) => n + (w.openings?.length ?? 0), 0);
+  const sheets = [r.sheets?.plan, r.sheets?.schedule].filter((x): x is string => typeof x === 'string' && x !== '');
+  return [`${walls.length} walls`, `${openings} openings`, ...(r.level === undefined ? [] : [`level ${r.level}`]), ...(sheets.length > 0 ? [`from ${sheets.join(' + ')}`] : [])].join(' · ');
+}
+
+function projectFacts(text: string): string {
+  let walls = 0;
+  try {
+    const p = JSON.parse(text) as { walls?: unknown[] };
+    walls = Array.isArray(p.walls) ? p.walls.length : 0;
+  } catch {
+    /* fatos vazios */
+  }
+  const r = check(text);
+  return [`${walls} walls`, ...(r.ok ? [`${r.panels.length} panels`] : []), ...(r.ok && r.warnings.length > 0 ? [`${r.warnings.length} warnings`] : [])].join(' · ');
 }
 
 export function exampleText(id: string): string | undefined {

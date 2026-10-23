@@ -19,9 +19,8 @@ import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome, type ExtractP
 import { extractWalls } from '../_actions/extract-walls';
 import { previewExtraction } from '../_actions/preview-extraction';
 import { DropZone } from './drop-zone';
-import { PdfPages } from './pdf-pages';
+import { PlanReadSketch } from './plan-read-sketch';
 import { ProjectDataFields } from './project-data-fields';
-import { SendPreview } from './send-preview';
 
 export interface UploadFormProps {
   aiEnabled: boolean;
@@ -39,28 +38,6 @@ const AUTO = 'auto';
 const AUTO_PREVIEW_BYTES = 40 * 1024 * 1024;
 const PREVIEW_DELAY_MS = 800;
 
-/** Páginas marcadas nas miniaturas → texto do campo (`3,15`), união entre os PDFs (o campo vale para os sem marca). */
-export function pagesText(selected: ReadonlyMap<string, ReadonlySet<number>>): string {
-  const all = new Set<number>();
-  for (const s of selected.values()) for (const p of s) all.add(p);
-  return [...all].sort((a, b) => a - b).join(',');
-}
-
-/** Páginas por arquivo (M7), como o FormData leva. */
-export function pagesByFileJson(selected: ReadonlyMap<string, ReadonlySet<number>>): string {
-  const out: Record<string, number[]> = {};
-  for (const [name, s] of selected) if (s.size > 0) out[name] = [...s].sort((a, b) => a - b);
-  return Object.keys(out).length === 0 ? '' : JSON.stringify(out);
-}
-
-/** Páginas que a prévia diz que vão, por arquivo (para as miniaturas marcarem). */
-export function sentPages(preview: ExtractPreview | undefined): Map<string, Set<number>> {
-  const out = new Map<string, Set<number>>();
-  if (preview === undefined || !preview.ok) return out;
-  for (const f of preview.files) if (f.kind === 'pdf') out.set(f.name, new Set(f.pages.map((p) => p.page)));
-  return out;
-}
-
 function newJobId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `job-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -68,13 +45,11 @@ function newJobId(): string {
 /**
  * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
  * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
- * M7: prévia do que vai ser enviado (páginas, folhas fora, tamanho, custo estimado) antes de pagar; páginas por
- * arquivo; a leitura leva um `jobId` para a tela de espera acompanhar e recolher depois de um F5.
+ * M7: prévia do que vai ser enviado (só para o custo no botão, desde 2026-10-23) antes de pagar; a leitura leva um `jobId` para a tela de espera acompanhar e recolher depois de um F5.
  */
 export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFilesChange }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [filesError, setFilesError] = useState<string | undefined>(undefined);
-  const [picked, setPicked] = useState<Map<string, Set<number>>>(new Map());
   const [preview, setPreview] = useState<ExtractPreview | undefined>(undefined);
   const [previewing, setPreviewing] = useState(false);
   const [previewWanted, setPreviewWanted] = useState(false);
@@ -107,7 +82,6 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
       fd.set('pages', pagesField);
       fd.set('level', levelField);
     }
-    fd.set('pagesByFile', pagesByFileJson(picked));
     return fd;
   };
 
@@ -128,7 +102,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     }, PREVIEW_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, picked, pagesField, levelField, previewAuto, previewWanted]);
+  }, [files, pagesField, levelField, previewAuto, previewWanted]);
 
   const submit = (fields: UploadFields) => {
     if (files.length === 0) {
@@ -146,25 +120,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     setFiles(next);
     onFilesChange?.(next);
     if (next.length > 0) setFilesError(undefined);
-    // Arquivo removido: suas páginas marcadas saem do campo.
-    const names = new Set(next.map((f) => f.name));
-    const kept = new Map([...picked].filter(([name]) => names.has(name)));
-    if (kept.size !== picked.size) {
-      setPicked(kept);
-      form.setValue('pages', pagesText(kept), { shouldDirty: true });
-    }
   };
-  const togglePage = (file: string, page: number): void => {
-    const next = new Map(picked);
-    const set = new Set(next.get(file) ?? []);
-    if (set.has(page)) set.delete(page);
-    else set.add(page);
-    if (set.size === 0) next.delete(file);
-    else next.set(file, set);
-    setPicked(next);
-    form.setValue('pages', pagesText(next), { shouldDirty: true });
-  };
-
   const estimate = preview?.ok ? estimateCost(preview.pagesTotal, preview.images) : undefined;
 
   return (
@@ -181,24 +137,35 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
           </Alert>
         )}
 
-        <section className="space-y-3">
-          <h3>Your drawings</h3>
-          <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError} />
-          <PdfPages files={files} selected={picked} sent={sentPages(preview)} onToggle={togglePage} />
-          <details className="text-sm">
-            <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
-              <li>Floor plan of the level to panelize, with dimensions readable.</li>
-              <li>Wall type sheet (partition types) and door and window schedules.</li>
-              <li>Elevations or sections when head heights and sill heights matter.</li>
-              <li>Structural notes (snow load, wind, species) if you have them: the engine sizes headers by code tables.</li>
-            </ul>
-          </details>
+        <section className="zone-pulse grid overflow-hidden rounded-lg border-2 border-dashed border-gold/70 bg-card shadow-1 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-stretch" aria-label="Your drawings">
+          <div className="login-surface relative flex min-h-[300px] flex-col justify-center gap-3 p-5 text-paper lg:min-h-[320px]">
+            <PlanReadSketch className="w-full" />
+            <div className="relative h-5 font-mono text-[12px] text-paper/75" aria-hidden>
+              <span className="read-caption" style={{ '--c': 0 } as React.CSSProperties}>01 · the sheets are picked by their title block</span>
+              <span className="read-caption" style={{ '--c': 1 } as React.CSSProperties}>02 · the AI traces each wall; you confirm every one</span>
+              <span className="read-caption" style={{ '--c': 2 } as React.CSSProperties}>03 · the engine frames, splits and numbers the panels</span>
+            </div>
+          </div>
+          <div className="flex flex-col justify-center gap-3 p-5 sm:p-6">
+            <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError} variant="hero" />
+            <details className="text-sm">
+              <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
+                <li>Floor plan of the level to panelize, with dimensions readable.</li>
+                <li>Wall type sheet (partition types) and door and window schedules.</li>
+                <li>Elevations or sections when head heights and sill heights matter.</li>
+                <li>Structural notes (snow load, wind, species) if you have them: the engine sizes headers by code tables.</li>
+              </ul>
+            </details>
+          </div>
         </section>
 
-        <section className="space-y-4">
-          <h3>Project details</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <section className="space-y-4 rounded-md border bg-card p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="eyebrow">Project details</p>
+            <p className="text-[13px] text-ink-3">everything optional now — the review step asks for what the engine needs</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="level"
@@ -227,9 +194,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
               name="projectName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Project name <span className="font-normal text-ink-3">(optional)</span>
-                  </FormLabel>
+                  <FormLabel>Project name</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="e.g. Maple St duplex" />
                   </FormControl>
@@ -237,67 +202,75 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
                 </FormItem>
               )}
             />
-          </div>
-          <FormField
-            control={form.control}
-            name="pages"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  PDF pages <span className="font-normal text-ink-3">(optional)</span>
-                </FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="e.g. 3,15" className="font-mono sm:w-60" />
-                </FormControl>
-                <FormDescription>Click page thumbnails above (per file), or type numbers here for every PDF without a click. Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <details className="text-sm">
-            <summary className="cursor-pointer text-ink-2">Wall height and structural data (optional now; you can add them at review)</summary>
-            <p className="mt-2 mb-3 text-ink-3">Only used where the drawings say nothing. The engine sizes headers by the IRC tables.</p>
-            <ProjectDataFields control={form.control} />
-          </details>
-          <details className="text-sm">
-            <summary className="cursor-pointer text-ink-2">Add notes for the AI (optional)</summary>
             <FormField
               control={form.control}
-              name="notes"
+              name="pages"
               render={({ field }) => (
-                <FormItem className="mt-2">
+                <FormItem>
+                  <FormLabel>PDF pages</FormLabel>
                   <FormControl>
-                    <Textarea {...field} rows={3} placeholder="e.g. Ignore the garage. North is up." />
+                    <Input {...field} placeholder="e.g. 3,15 — empty: by title block" className="font-mono" />
                   </FormControl>
+                  <FormDescription>Page numbers, for every PDF. Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </details>
+          </div>
+          <div className="space-y-3 border-t border-line-faint pt-4">
+            <details className="text-sm">
+              <summary className="cursor-pointer font-semibold text-ink">
+                Wall height &amp; structural data <span className="font-normal text-ink-3">· optional now; you can add them at review</span>
+              </summary>
+              <div className="mt-3">
+                <ProjectDataFields control={form.control} compact />
+              </div>
+            </details>
+            <details className="text-sm">
+              <summary className="cursor-pointer font-semibold text-ink">
+                Notes for the AI <span className="font-normal text-ink-3">· optional</span>
+              </summary>
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="mt-2">
+                    <FormControl>
+                      <Textarea {...field} rows={3} placeholder="e.g. Ignore the garage. North is up." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </details>
+          </div>
         </section>
 
-        {files.length > 0 ? (
-          <SendPreview preview={preview} previewing={previewing} estimate={estimate} needsRequest={!previewAuto && !previewWanted} totalBytes={totalBytes} onRequest={() => setPreviewWanted(true)} />
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" variant="accent" disabled={!aiEnabled || isPending}>
+        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+          <Button type="submit" variant="accent" size="lg" className="h-14 px-9 text-[17px] shadow-2" disabled={!aiEnabled || isPending}>
             {isPending ? (
               <>
                 <Loader2Icon className="animate-spin" /> Reading the set…
               </>
             ) : (
               <>
-                <SparklesIcon /> Extract walls with AI{estimate !== undefined ? <span className="font-medium opacity-80"> · about {formatUsd(estimate.usd)}</span> : null}
+                <SparklesIcon className="size-5" /> Extract walls with AI{estimate !== undefined ? <span className="font-medium opacity-80"> · about {formatUsd(estimate.usd)}</span> : null}
               </>
             )}
           </Button>
-          {onSample !== undefined ? (
-            <Button type="button" variant="link" className="px-0" onClick={onSample}>
-              or try a sample
-            </Button>
-          ) : null}
-          <span className="text-sm text-ink-3">The read takes several minutes and can be cancelled. You review every wall before anything is built.</span>
+          <p className="text-sm text-ink-3">
+            {preview?.ok ? `${preview.pagesTotal} page${preview.pagesTotal === 1 ? '' : 's'} go to the AI · ` : ''}
+            The read takes several minutes and can be cancelled. You review every wall before anything is built.
+            {onSample !== undefined ? (
+              <>
+                {' '}
+                <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={onSample}>
+                  Or try a sample
+                </Button>
+                .
+              </>
+            ) : null}
+          </p>
         </div>
       </form>
     </Form>

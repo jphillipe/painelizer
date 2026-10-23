@@ -84,9 +84,14 @@ describe('panels.service.check', () => {
 });
 
 describe('listExamples', () => {
-  it('os três exemplos do CLI, com rótulo', () => {
-    expect(listExamples().map((e) => e.id)).toEqual(['casa-exemplo', 'house-28x40', 'ringgold-checkpoint']);
-    expect(listExamples().every((e) => e.label.length > 0)).toBe(true);
+  it('a leitura real do Ringgold primeiro, depois os exemplos do CLI (sem o checkpoint do Ringgold), com rótulo e fatos do próprio arquivo', () => {
+    const list = listExamples();
+    expect(list.map((e) => e.id)).toEqual(['ringgold-reading', 'casa-exemplo', 'house-28x40']);
+    expect(list.map((e) => e.kind)).toEqual(['reading', 'project', 'project']);
+    expect(list.every((e) => e.label.length > 0)).toBe(true);
+    expect(list[0]!.facts).toBe('28 walls · 30 openings · level 1 · from A-100 + A-800');
+    expect(list[2]!.facts).toBe('5 walls · 12 panels');
+    expect(JSON.parse(list[0]!.text)).toMatchObject({ projectName: 'Ringgold St MultiFamily' });
     expect(exampleText('nope')).toBeUndefined();
   });
 });

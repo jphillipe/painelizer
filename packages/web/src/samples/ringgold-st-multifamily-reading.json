@@ -1,0 +1,1267 @@
+{
+  "projectName": "Ringgold St MultiFamily",
+  "level": 1,
+  "sheets": {
+    "plan": "A-100",
+    "schedule": "A-800",
+    "elevations": null
+  },
+  "origin": "(0,0) fica na interseção dos eixos de W1 e S1, no canto externo SW do prédio, 2 3/4\" para dentro de cada face externa de stud; x cresce para leste e y para norte. Relações usadas: face externa oeste x = -2 3/4\", face externa norte y = 28' - 9 1/4\", x = FX - 2 3/4\" (FX medido da face externa oeste) e y = 28' - 9 1/4\" - DN (DN medido da face externa norte).",
+  "wallHeight": null,
+  "headerHeight": null,
+  "building": {
+    "groundSnowLoad": null,
+    "buildingWidth": null,
+    "windSpeed": null,
+    "exposure": null,
+    "species": null
+  },
+  "wallTypes": [
+    {
+      "tag": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "description": "Exterior wall: 2x6 wood studs @ 16\" o.c., 1/2\" plywood sheathing, 5/8\" Type X GWB, R-21 batt, actual width 6 5/8\", 1 HR, horizontal lap siding.",
+      "evidence": "A-800, tabela EXTERIOR WALL: X1 | 2X6 | 5/8\" TYPE \"X\" GWB | 6 5/8\" | 5 1/2\" BATT | UL# 356 | 1 HR | 16'-4\". Nota geral 2 da A-100: \"ALL NEW EXTERIOR WALLS ARE TYPE X1\"."
+    },
+    {
+      "tag": "1",
+      "section": "2x4",
+      "exterior": false,
+      "description": "Interior partition: 2x4 wood studs @ 16\" o.c., 5/8\" GWB nos dois lados, actual 4 3/4\", 3 1/2\" batt, 1 HR UL# U305, STC 56, MR GWB no lado do banheiro e da cozinha.",
+      "evidence": "A-800, PARTITION TYPE 1: 2X4 | 5/8\" GWB | 4 3/4\" | 3 1/2\" BATT | UL# U305 | 1 HR | STC 56. Nota geral 3 da A-100: \"ALL INTERIOR WALL SHALL BE TYPE 1\"."
+    },
+    {
+      "tag": "1A",
+      "section": "2x4",
+      "exterior": false,
+      "description": "2x4, 5/8\" Type X GWB, actual 4 3/4\", 1 HR U305, STC 56, paperless at bathrooms 1 side.",
+      "evidence": "A-800, linha 1A da tabela de partition types. Não aparece tag 1A na planta do 1º pavimento."
+    },
+    {
+      "tag": "1B",
+      "section": "2x4",
+      "exterior": false,
+      "description": "2x4, 5/8\" GWB, actual 6 1/8\", 2 HR UL# U301, delete GWB at inside face of stud, Type X STC 50+, PT wood framing @ CMU walls, deflection L/360.",
+      "evidence": "A-800, linha 1B: 2X4 | 5/8\" GWB | 6 1/8\" | 3 1/2\" BATT | UL# U301 | 2 HR. Na A-100 há três tags 1B junto ao núcleo da escada: (1149,194), (1252,248) e (1027,332)."
+    },
+    {
+      "tag": "1C",
+      "section": "2x6",
+      "exterior": false,
+      "description": "2x6, 5/8\" GWB, actual 7 3/4\", 2 HR UL# U301, MR GWB @ bath and kitchen side.",
+      "evidence": "A-800, linha 1C. Não é usado na planta do 1º pavimento."
+    },
+    {
+      "tag": "1D",
+      "section": "2x6",
+      "exterior": false,
+      "description": "2x6, 5/8\" GWB, actual 4 1/8\", UL# U305, delete GWB at inside face of stud.",
+      "evidence": "A-800, linha 1D: 2X6 com ACTUAL WIDTH 4 1/8\". É incoerente, porque 4 1/8\" é menor que um stud 2x6; veja notes. Não é usado na planta do 1º pavimento."
+    }
+  ],
+  "openingTypes": [
+    {
+      "tag": "A",
+      "kind": "window",
+      "width": "2' - 5\"",
+      "height": "6' - 0\"",
+      "frame": null,
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "Vent with Transom, U VALUE 0.45",
+      "confidence": 1,
+      "evidence": "A-800, Window Schedule: A | Vent with Transom | 2' - 5\" | 6' - 0\" | U VALUE 0.45. Na legenda, 3' - 11 3/4\" + 2' - 0 1/4\" = 6' - 0\"."
+    },
+    {
+      "tag": "A2",
+      "kind": "window",
+      "width": "4' - 10\"",
+      "height": "6' - 0\"",
+      "frame": null,
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "Par de janelas A acopladas (2 × A), com RO contínuo",
+      "confidence": 0.8,
+      "evidence": "Tipo criado para os pares de tags 'A A' lado a lado na A-100. As tags ficam a cerca de 43 pt de distância, ou seja 2.4' a 1/4\"=1'-0\", igual à largura de 2' - 5\". As cotas da planta caem no eixo do par. Largura = 2 × 2' - 5\" = 4' - 10\". O mullion do fabricante não foi informado."
+    },
+    {
+      "tag": "1",
+      "kind": "door",
+      "width": "3' - 0\"",
+      "height": "6' - 8\"",
+      "frame": "hm",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 36\" X 80\" WD/GLASS, frame METAL, 45 MINUTES FIRE RATED",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha 1."
+    },
+    {
+      "tag": "U1",
+      "kind": "door",
+      "width": "3' - 0\"",
+      "height": "6' - 8\"",
+      "frame": "hm",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 36\" X 80\" WD, frame METAL, 90 MINUTES FIRE RATED",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha U1."
+    },
+    {
+      "tag": "U2",
+      "kind": "door",
+      "width": "3' - 0\"",
+      "height": "6' - 8\"",
+      "frame": "wood",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 36\" X 80\" WD, frame WD",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha U2."
+    },
+    {
+      "tag": "U3",
+      "kind": "door",
+      "width": "2' - 6\"",
+      "height": "6' - 8\"",
+      "frame": "wood",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 30\" X 80\" WD, frame WD",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha U3."
+    },
+    {
+      "tag": "U4",
+      "kind": "door",
+      "width": "2' - 4\"",
+      "height": "6' - 8\"",
+      "frame": "wood",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 28\" X 80\" WD, frame WD (não usada no 1º pavimento)",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha U4."
+    },
+    {
+      "tag": "U5",
+      "kind": "door",
+      "width": "2' - 8\"",
+      "height": "6' - 8\"",
+      "frame": "wood",
+      "sillHeight": null,
+      "roughWidth": null,
+      "roughHeight": null,
+      "description": "SINGLE 32\" X 80\" WD, frame WD (não usada no 1º pavimento)",
+      "confidence": 1,
+      "evidence": "A-800, Door Schedule, linha U5."
+    }
+  ],
+  "headerSchedule": [],
+  "walls": [
+    {
+      "id": "S1",
+      "start": {
+        "x": "0' - 0\"",
+        "y": "0' - 0\""
+      },
+      "end": {
+        "x": "42' - 3 1/2\"",
+        "y": "0' - 0\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "S1-A2-1",
+          "tag": "A2",
+          "type": "window",
+          "center": "8' - 4 1/4\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=263/306). Cota da face externa oeste ao eixo do par: 8' - 7\". center = 8' - 7\" - 2 3/4\" = 8' - 4 1/4\"."
+        },
+        {
+          "id": "S1-1-1",
+          "tag": "1",
+          "type": "door",
+          "center": "14' - 1 3/4\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.9,
+          "evidence": "Tag 1 em (388,645), entrada da Unit 3. Da face externa oeste: 8' - 7\" + 5' - 9 1/2\" = 14' - 4 1/2\". center = 14' - 4 1/2\" - 2 3/4\" = 14' - 1 3/4\"."
+        },
+        {
+          "id": "S1-A2-2",
+          "tag": "A2",
+          "type": "window",
+          "center": "18' - 10 1/4\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=452/495). Da face externa oeste: 14' - 4 1/2\" + 4' - 8 1/2\" = 19' - 1\". center = 19' - 1\" - 2 3/4\" = 18' - 10 1/4\"."
+        },
+        {
+          "id": "S1-A2-3",
+          "tag": "A2",
+          "type": "window",
+          "center": "35' - 3 1/2\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=747/791). Da face externa oeste: 19' - 1\" + 16' - 5 1/4\" = 35' - 6 1/4\". center = 35' - 6 1/4\" - 2 3/4\" = 35' - 3 1/2\". O restante de 7' - 2 3/4\" fecha o total de 42' - 9\"."
+        }
+      ],
+      "confidence": 0.9,
+      "evidence": "Parede sul do trecho oeste. A cadeia da face externa oeste até a face externa leste do recuo é 8' - 7\" + 5' - 9 1/2\" + 4' - 8 1/2\" + 16' - 5 1/4\" + 7' - 2 3/4\" = 42' - 9\" (cota total 42' - 9\"). Eixo de E2 = 42' - 9\" - 2 3/4\" (W1) - 2 3/4\" (E2) = 42' - 3 1/2\". Tipo X1 pela nota geral 2."
+    },
+    {
+      "id": "E2",
+      "start": {
+        "x": "42' - 3 1/2\"",
+        "y": "0' - 0\""
+      },
+      "end": {
+        "x": "42' - 3 1/2\"",
+        "y": "5' - 0\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.85,
+      "evidence": "Parede externa do recuo, voltada para leste. Cota vertical 5' - 0\" em x=920 (29' - 0\" - 24' - 0\" = 5' - 0\"). De eixo a eixo, S1 (2 3/4\" acima da face sul) até S2 (2 3/4\" acima da face sul do trecho leste) dá 5' - 0\". x = 42' - 9\" - 2 3/4\" - 2 3/4\" = 42' - 3 1/2\"."
+    },
+    {
+      "id": "S2",
+      "start": {
+        "x": "42' - 3 1/2\"",
+        "y": "5' - 0\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "5' - 0\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "S2-A2-1",
+          "tag": "A2",
+          "type": "window",
+          "center": "3' - 5 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=935/979). Cota 3' - 2 5/8\" da face externa de E2. O start de S2 fica no eixo de E2, 2 3/4\" a oeste dessa face. center = 3' - 2 5/8\" + 2 3/4\" = 3' - 5 3/8\"."
+        },
+        {
+          "id": "S2-1-1",
+          "tag": "1",
+          "type": "door",
+          "center": "7' - 10 1/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.9,
+          "evidence": "Tag 1 em (1036,554), entrada da Unit 2. Da face de E2: 3' - 2 5/8\" + 4' - 4 3/4\" = 7' - 7 3/8\". center = 7' - 7 3/8\" + 2 3/4\" = 7' - 10 1/8\"."
+        },
+        {
+          "id": "S2-1-2",
+          "tag": "1",
+          "type": "door",
+          "center": "15' - 8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.9,
+          "evidence": "Tag 1 em (1176,554), entrada do hall da escada. Da face de E2: 7' - 7 3/8\" + 7' - 9 7/8\" = 15' - 5 1/4\". center = 15' - 5 1/4\" + 2 3/4\" = 15' - 8\"."
+        },
+        {
+          "id": "S2-A2-2",
+          "tag": "A2",
+          "type": "window",
+          "center": "26' - 6\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=1350/1393). Da face de E2: 15' - 5 1/4\" + 10' - 10\" = 26' - 3 1/4\". center = 26' - 3 1/4\" + 2 3/4\" = 26' - 6\"."
+        },
+        {
+          "id": "S2-A2-3",
+          "tag": "A2",
+          "type": "window",
+          "center": "37' - 10 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.8,
+          "evidence": "Par A A (tags x=1554/1598). Da face de E2: 26' - 3 1/4\" + 11' - 4 3/8\" = 37' - 7 5/8\". center = 37' - 7 5/8\" + 2 3/4\" = 37' - 10 3/8\". Tomando os 9' - 0\" a partir da face leste dá 37' - 10 1/4\" (diferença de 1/8\", veja notes)."
+        }
+      ],
+      "confidence": 0.9,
+      "evidence": "Parede sul do trecho leste. Cota total 46' - 7 1/2\" da face de E2 à face externa leste, com 42' - 9\" + 46' - 7 1/2\" = 89' - 4 1/2\". y = 5' - 0\" (veja E2). Comprimento no eixo = 88' - 11\" - 42' - 3 1/2\" = 46' - 7 1/2\". Tipo X1 pela nota geral 2."
+    },
+    {
+      "id": "E1",
+      "start": {
+        "x": "88' - 11\"",
+        "y": "5' - 0\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "E1-1-1",
+          "tag": "1",
+          "type": "door",
+          "center": "4' - 11 1/2\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.7,
+          "evidence": "Ponto da cadeia leste (5' - 3 3/8\" + 13' - 6 3/8\" a partir do norte; 5' - 2 1/4\" a partir da face sul do trecho leste), sem tag de janela. Associado à tag 1 em (1650,453) e centrado no vestíbulo I20/I21/I22. center = 5' - 2 1/4\" - 2 3/4\" = 4' - 11 1/2\"."
+        },
+        {
+          "id": "E1-A2-1",
+          "tag": "A2",
+          "type": "window",
+          "center": "18' - 5 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A (tags y=201/241). Fica a 5' - 3 3/8\" da face externa norte, ou seja a 5' - 0 5/8\" do eixo de N1. center = 23' - 6 1/2\" (comprimento de E1) - 5' - 0 5/8\" = 18' - 5 7/8\". Conferência: 5' - 2 1/4\" + 13' - 6 3/8\" - 2 3/4\" = 18' - 5 7/8\"."
+        }
+      ],
+      "confidence": 0.9,
+      "evidence": "Cota total 89' - 4 1/2\" entre faces externas: x = 89' - 4 1/2\" - 2 3/4\" - 2 3/4\" = 88' - 11\". A cadeia leste 5' - 3 3/8\" + 13' - 6 3/8\" + 5' - 2 1/4\" = 24' - 0\" confere com a cota de 24' - 0\". Tipo X1 pela nota geral 2."
+    },
+    {
+      "id": "N1",
+      "start": {
+        "x": "0' - 0\"",
+        "y": "28' - 6 1/2\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "N1-A2-1",
+          "tag": "A2",
+          "type": "window",
+          "center": "8' - 3 1/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=261/304). Da face externa oeste: 8' - 5 7/8\". center = 8' - 5 7/8\" - 2 3/4\" = 8' - 3 1/8\"."
+        },
+        {
+          "id": "N1-A2-2",
+          "tag": "A2",
+          "type": "window",
+          "center": "19' - 4 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=461/504). Da face oeste: 8' - 5 7/8\" + 11' - 1 1/4\" = 19' - 7 1/8\". center = 19' - 7 1/8\" - 2 3/4\" = 19' - 4 3/8\"."
+        },
+        {
+          "id": "N1-A2-3",
+          "tag": "A2",
+          "type": "window",
+          "center": "30' - 9 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=667/710). Da face oeste: 19' - 7 1/8\" + 11' - 5 1/2\" = 31' - 0 5/8\". center = 31' - 0 5/8\" - 2 3/4\" = 30' - 9 7/8\"."
+        },
+        {
+          "id": "N1-A2-4",
+          "tag": "A2",
+          "type": "window",
+          "center": "49' - 3 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=1000/1043). Da face oeste: 31' - 0 5/8\" + 18' - 6\" = 49' - 6 5/8\". center = 49' - 6 5/8\" - 2 3/4\" = 49' - 3 7/8\"."
+        },
+        {
+          "id": "N1-A2-5",
+          "tag": "A2",
+          "type": "window",
+          "center": "64' - 3 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A A (tags x=1270/1313). Da face oeste: 49' - 6 5/8\" + 15' - 0\" = 64' - 6 5/8\". center = 64' - 6 5/8\" - 2 3/4\" = 64' - 3 7/8\"."
+        },
+        {
+          "id": "N1-A2-6",
+          "tag": "A2",
+          "type": "window",
+          "center": "80' - 10 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.8,
+          "evidence": "Par A A (tags x=1568/1611). Da face oeste: 64' - 6 5/8\" + 16' - 7\" = 81' - 1 5/8\". center = 81' - 1 5/8\" - 2 3/4\" = 80' - 10 7/8\". Tomando os 8' - 3\" a partir da face leste dá 80' - 10 3/4\" (veja notes)."
+        }
+      ],
+      "confidence": 0.9,
+      "evidence": "Cota total 29' - 0\" entre as faces externas norte e sul (cadeia oeste): y = 29' - 0\" - 2 3/4\" - 2 3/4\" = 28' - 6 1/2\". A cadeia norte soma 89' - 4 5/8\" contra o total de 89' - 4 1/2\"; foi usado o total. Tipo X1 pela nota geral 2."
+    },
+    {
+      "id": "W1",
+      "start": {
+        "x": "0' - 0\"",
+        "y": "0' - 0\""
+      },
+      "end": {
+        "x": "0' - 0\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "X1",
+      "section": "2x6",
+      "exterior": true,
+      "bearing": true,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "W1-A2-1",
+          "tag": "A2",
+          "type": "window",
+          "center": "5' - 6 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.85,
+          "evidence": "Par A (tags y=521/564). Da face externa sul: 5' - 9 1/8\". center = 5' - 9 1/8\" - 2 3/4\" = 5' - 6 3/8\"."
+        },
+        {
+          "id": "W1-A2-2",
+          "tag": "A2",
+          "type": "window",
+          "center": "23' - 5 7/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.8,
+          "evidence": "Par A (tags y=197/241), a 5' - 3 3/8\" da face externa norte. center = 28' - 9 1/4\" - 5' - 3 3/8\" = 23' - 5 7/8\". Pela cadeia a partir do sul (5' - 9 1/8\" + 17' - 11 5/8\" - 2 3/4\") daria 23' - 6\"; diferença de 1/8\", veja notes."
+        }
+      ],
+      "confidence": 0.9,
+      "evidence": "Cadeia oeste 5' - 3 3/8\" + 17' - 11 5/8\" + 5' - 9 1/8\" = 29' - 0 1/8\" contra o total de 29' - 0\"; foi usado o total. x = 0 no eixo, que fica 2 3/4\" para dentro da face externa oeste. Tipo X1 pela nota geral 2."
+    },
+    {
+      "id": "I1",
+      "start": {
+        "x": "12' - 10 3/4\"",
+        "y": "12' - 10\""
+      },
+      "end": {
+        "x": "12' - 10 3/4\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.75,
+      "evidence": "Divisória entre os quartos da Unit 3. Quarto oeste com 12' - 5\": FX = 6 1/8\" (5 1/2\" stud + 5/8\" GWB do X1) + 12' - 5\" + 2 3/8\" (5/8\" GWB + 1 3/4\") = 13' - 1 1/2\"; x = 13' - 1 1/2\" - 2 3/4\" = 12' - 10 3/4\". Vai de N1 até I4. Conferência: corredor de 6' - 1 1/8\" entre I3 e I1 (dá 6' - 1 1/4\"). Tipo 1 pela nota geral 3."
+    },
+    {
+      "id": "I2",
+      "start": {
+        "x": "25' - 9 5/8\"",
+        "y": "0' - 0\""
+      },
+      "end": {
+        "x": "25' - 9 5/8\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.75,
+      "evidence": "Parede divisória entre Unit 3 e Unit 2, de S1 a N1. FX = 13' - 1 1/2\" + 2 3/8\" + 12' - 6 1/8\" (quarto leste da Unit 3) + 2 3/8\" = 26' - 0 3/8\"; x = 26' - 0 3/8\" - 2 3/4\" = 25' - 9 5/8\". Conferência pela sala/cozinha de 25' - 4\": 6 1/8\" + 25' - 4\" + 2 3/8\" = 26' - 0 1/2\" (1/8\" de diferença). Sem tag na planta: tipo 1 pela nota geral 3."
+    },
+    {
+      "id": "I3",
+      "start": {
+        "x": "6' - 4 3/4\"",
+        "y": "9' - 8 3/4\""
+      },
+      "end": {
+        "x": "6' - 4 3/4\"",
+        "y": "17' - 9 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I3-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "5' - 1 5/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.45,
+          "evidence": "Tag U2 em (244,385). Cota vertical de 1' - 10\" em (327,412), lida como medida da face norte de I4 (DN 15' - 11 1/4\" - 2 3/8\" = 15' - 8 7/8\") até o eixo da porta: DN 13' - 10 7/8\", y = 28' - 9 1/4\" - 13' - 10 7/8\" = 14' - 10 3/8\". center = 14' - 10 3/8\" - 9' - 8 3/4\" = 5' - 1 5/8\". A referência da cota é interpretada."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede leste do banheiro da Unit 3, com largura de 5' - 11\": FX = 6 1/8\" + 5' - 11\" + 2 3/8\" = 6' - 7 1/2\"; x = 6' - 7 1/2\" - 2 3/4\" = 6' - 4 3/4\". Vai de I5 até I6."
+    },
+    {
+      "id": "I4",
+      "start": {
+        "x": "12' - 10 3/4\"",
+        "y": "12' - 10\""
+      },
+      "end": {
+        "x": "25' - 9 5/8\"",
+        "y": "12' - 10\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I4-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "2' - 4 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.65,
+          "evidence": "Tag U2 em (396,412). Cota de 2' - 2\" em (373,427) da face leste de I1 ao eixo da porta. center = 2 3/8\" + 2' - 2\" = 2' - 4 3/8\"."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede sul do quarto leste da Unit 3, com profundidade de 15' - 2 3/4\": DN = 6 1/8\" + 15' - 2 3/4\" + 2 3/8\" = 15' - 11 1/4\"; y = 28' - 9 1/4\" - 15' - 11 1/4\" = 12' - 10\". Vai de I1 até I2."
+    },
+    {
+      "id": "I5",
+      "start": {
+        "x": "0' - 0\"",
+        "y": "9' - 8 3/4\""
+      },
+      "end": {
+        "x": "6' - 4 3/4\"",
+        "y": "9' - 8 3/4\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.7,
+      "evidence": "Parede sul do banheiro da Unit 3. Quarto oeste de 10' - 3 1/4\" e banheiro de 7' - 8\": DN = 6 1/8\" + 10' - 3 1/4\" + 4 3/4\" + 7' - 8\" + 2 3/8\" = 19' - 0 1/2\"; y = 28' - 9 1/4\" - 19' - 0 1/2\" = 9' - 8 3/4\". Vai de W1 até I3."
+    },
+    {
+      "id": "I6",
+      "start": {
+        "x": "0' - 0\"",
+        "y": "17' - 9 1/2\""
+      },
+      "end": {
+        "x": "12' - 10 3/4\"",
+        "y": "17' - 9 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I6-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "10' - 10 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.7,
+          "evidence": "Tag U2 em (324,321). Cota de 1' - 10\" em (334,236) da face oeste de I1 ao eixo da porta: x = 12' - 10 3/4\" - 2 3/8\" - 1' - 10\" = 10' - 10 3/8\". Como o start está em x = 0, center = 10' - 10 3/8\"."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede sul do quarto oeste da Unit 3, com profundidade de 10' - 3 1/4\": DN = 6 1/8\" + 10' - 3 1/4\" + 2 3/8\" = 10' - 11 3/4\"; y = 28' - 9 1/4\" - 10' - 11 3/4\" = 17' - 9 1/2\". Vai de W1 até I1."
+    },
+    {
+      "id": "I7",
+      "start": {
+        "x": "38' - 8 3/8\"",
+        "y": "13' - 9 3/8\""
+      },
+      "end": {
+        "x": "38' - 8 3/8\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I7-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "2' - 4\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.5,
+          "evidence": "Tag U2 em (842,353), porta do quarto leste da Unit 2. Cota vertical de 2' - 1 5/8\" em (804,398), lida a partir da face norte de I11. center = 2 3/8\" + 2' - 1 5/8\" = 2' - 4\". A cota pode localizar a porta do banheiro em vez desta; veja notes."
+        }
+      ],
+      "confidence": 0.75,
+      "evidence": "Divisória entre os quartos da Unit 2. FX = 26' - 0 3/8\" (I2) + 2 3/8\" + 12' - 6\" + 2 3/8\" = 38' - 11 1/8\"; x = 38' - 11 1/8\" - 2 3/4\" = 38' - 8 3/8\". Vai de I11 até N1."
+    },
+    {
+      "id": "I8",
+      "start": {
+        "x": "25' - 9 5/8\"",
+        "y": "19' - 1 3/8\""
+      },
+      "end": {
+        "x": "38' - 8 3/8\"",
+        "y": "19' - 1 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I8-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "10' - 10 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.7,
+          "evidence": "Tag U2 em (791,299). Cota de 1' - 10\" em (801,218) da face oeste de I7: x = 38' - 8 3/8\" - 2 3/8\" - 1' - 10\" = 36' - 8\". center = 36' - 8\" - 25' - 9 5/8\" = 10' - 10 3/8\"."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede sul do quarto oeste da Unit 2, com profundidade de 8' - 11 3/8\": DN = 6 1/8\" + 8' - 11 3/8\" + 2 3/8\" = 9' - 7 7/8\"; y = 28' - 9 1/4\" - 9' - 7 7/8\" = 19' - 1 3/8\". Vai de I2 até I7."
+    },
+    {
+      "id": "I9",
+      "start": {
+        "x": "32' - 1 3/8\"",
+        "y": "9' - 0 5/8\""
+      },
+      "end": {
+        "x": "32' - 1 3/8\"",
+        "y": "19' - 1 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I9-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": null,
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.4,
+          "evidence": "Tag U2 em (709,362), porta do banheiro da Unit 2. Não há cota inequívoca para o eixo; a de 2' - 1 5/8\" foi atribuída à porta em I7."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede leste do banheiro da Unit 2, com largura de 5' - 11\": FX = 26' - 0 3/8\" + 2 3/8\" + 5' - 11\" + 2 3/8\" = 32' - 4 1/8\"; x = 32' - 4 1/8\" - 2 3/4\" = 32' - 1 3/8\". Vai de I10 até I8."
+    },
+    {
+      "id": "I10",
+      "start": {
+        "x": "25' - 9 5/8\"",
+        "y": "9' - 0 5/8\""
+      },
+      "end": {
+        "x": "32' - 1 3/8\"",
+        "y": "9' - 0 5/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.65,
+      "evidence": "Parede sul do banheiro da Unit 2, com profundidade de 7' - 8\": DN = 9' - 7 7/8\" + 2 3/8\" + 7' - 8\" + 2 3/8\" = 19' - 8 5/8\"; y = 28' - 9 1/4\" - 19' - 8 5/8\" = 9' - 0 5/8\". Vai de I2 até I9."
+    },
+    {
+      "id": "I11",
+      "start": {
+        "x": "38' - 8 3/8\"",
+        "y": "13' - 9 3/8\""
+      },
+      "end": {
+        "x": "52' - 1 1/4\"",
+        "y": "13' - 9 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.7,
+      "evidence": "Parede sul do quarto leste da Unit 2, com profundidade de 14' - 5 3/8\": DN = 6 1/8\" + 14' - 5 3/8\" + 2 3/8\" = 14' - 11 7/8\"; y = 28' - 9 1/4\" - 14' - 11 7/8\" = 13' - 9 3/8\". Vai de I7 até I12. A cozinha de 13' - 2\" abaixo fecha com 3/8\" de diferença no total de 29' (veja notes)."
+    },
+    {
+      "id": "I12",
+      "start": {
+        "x": "52' - 1 1/4\"",
+        "y": "5' - 0\""
+      },
+      "end": {
+        "x": "52' - 1 1/4\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1B",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I12-U3-1",
+          "tag": "U3",
+          "type": "door",
+          "center": "21' - 9 1/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.6,
+          "evidence": "Tag U3 em (1069,161), porta do banheiro central, que é acessado pelo quarto leste da Unit 2. Cota vertical de 1' - 6\" em (1048,155) da face GWB interna de N1 (y = 28' - 9 1/4\" - 6 1/8\" = 28' - 3 1/8\") ao eixo: y = 26' - 9 1/8\". center = 26' - 9 1/8\" - 5' - 0\" = 21' - 9 1/8\"."
+        }
+      ],
+      "confidence": 0.55,
+      "evidence": "Parede oeste do núcleo da escada e do banheiro central, de S2 a N1. Tag 1B em (1027,332). FX = 38' - 11 1/8\" + 2 3/8\" + 13' - 0 1/8\" (quarto leste da Unit 2) + 2 3/8\" = 52' - 4\"; x = 52' - 4\" - 2 3/4\" = 52' - 1 1/4\". O offset de 2 3/8\" é o do tipo 1; a composição do 1B (6 1/8\") não é clara e o eixo pode variar cerca de 11/16\". Conferência pela cozinha de 25' - 11\": eixo a 52' - 4 1/8\"."
+    },
+    {
+      "id": "I13",
+      "start": {
+        "x": "59' - 7\"",
+        "y": "5' - 0\""
+      },
+      "end": {
+        "x": "59' - 7\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1B",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I13-U1-1",
+          "tag": "U1",
+          "type": "door",
+          "center": null,
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.35,
+          "evidence": "Tag U1 em (1210,516), porta do hall da escada para a Unit 1 (90 min). Não há cota do eixo; graficamente fica perto de DN 21.8', mas não se inventa a medida."
+        }
+      ],
+      "confidence": 0.55,
+      "evidence": "Parede leste do núcleo, de S2 a N1. Tag 1B em (1252,248). Banheiro central com 7' - 1\": FX = 52' - 4\" + 2 3/8\" + 7' - 1\" + 2 3/8\" = 59' - 9 3/4\"; x = 59' - 9 3/4\" - 2 3/4\" = 59' - 7\". O hall da escada está cotado com 7' - 0\" contra 7' - 1\" calculado; veja notes sobre o 1B."
+    },
+    {
+      "id": "I14",
+      "start": {
+        "x": "52' - 1 1/4\"",
+        "y": "22' - 4 1/4\""
+      },
+      "end": {
+        "x": "59' - 7\"",
+        "y": "22' - 4 1/4\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1B",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.35,
+      "evidence": "Parede entre o banheiro central e a escada; tag 1B em (1149,194). A profundidade do banheiro não está cotada. Foi deduzida da cota de 16' - 10 1/2\" em (1099,417), lida como da face GWB interna de S2 (DN 24' - 0\" - 6 1/8\" = 23' - 5 7/8\") até a face sul desta parede: DN da face = 6' - 7 3/8\", DN do eixo = 6' - 5\", y = 28' - 9 1/4\" - 6' - 5\" = 22' - 4 1/4\". É uma interpretação."
+    },
+    {
+      "id": "I15",
+      "start": {
+        "x": "72' - 3 3/4\"",
+        "y": "16' - 1 3/8\""
+      },
+      "end": {
+        "x": "72' - 3 3/4\"",
+        "y": "28' - 6 1/2\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.7,
+      "evidence": "Divisória entre os quartos da Unit 1. Quarto oeste com 12' - 4\": FX = 59' - 9 3/4\" + 2 3/8\" + 12' - 4\" + 2 3/8\" = 72' - 6 1/2\"; x = 72' - 6 1/2\" - 2 3/4\" = 72' - 3 3/4\". Vai de I16 até N1."
+    },
+    {
+      "id": "I16",
+      "start": {
+        "x": "72' - 3 3/4\"",
+        "y": "16' - 1 3/8\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "16' - 1 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I16-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "2' - 4 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.65,
+          "evidence": "Tag U2 em (1470,353). Cota de 2' - 2\" em (1447,371) da face leste de I15 ao eixo da porta. center = 2 3/8\" + 2' - 2\" = 2' - 4 3/8\"."
+        }
+      ],
+      "confidence": 0.7,
+      "evidence": "Parede sul do quarto leste da Unit 1, com profundidade de 11' - 11 3/8\" (x=1565): DN = 6 1/8\" + 11' - 11 3/8\" + 2 3/8\" = 12' - 7 7/8\"; y = 28' - 9 1/4\" - 12' - 7 7/8\" = 16' - 1 3/8\". Vai de I15 até E1. Os 10' - 8\" abaixo fecham com 3/8\" de diferença no total de 24'."
+    },
+    {
+      "id": "I17",
+      "start": {
+        "x": "59' - 7\"",
+        "y": "19' - 1 3/8\""
+      },
+      "end": {
+        "x": "72' - 3 3/4\"",
+        "y": "19' - 1 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I17-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": "10' - 6 3/8\"",
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.55,
+          "evidence": "Tag U2 em (1398,299). Cota de 1' - 10\" em (1408,214) da face oeste de I15: x = 72' - 3 3/4\" - 2 3/8\" - 1' - 10\" = 70' - 1 3/8\". center = 70' - 1 3/8\" - 59' - 7\" = 10' - 6 3/8\"."
+        }
+      ],
+      "confidence": 0.4,
+      "evidence": "Parede sul do quarto oeste da Unit 1. A profundidade do quarto NÃO está cotada. O y foi inferido pelo alinhamento gráfico com a Unit 2 (tag U2 em y=299, cota de banheiro de 7' - 8\" na mesma altura): y = 19' - 1 3/8\", igual a I8. Vai de I13 até I15."
+    },
+    {
+      "id": "I18",
+      "start": {
+        "x": "65' - 10 3/4\"",
+        "y": "9' - 0 5/8\""
+      },
+      "end": {
+        "x": "65' - 10 3/4\"",
+        "y": "19' - 1 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [
+        {
+          "id": "I18-U2-1",
+          "tag": "U2",
+          "type": "door",
+          "center": null,
+          "offset": null,
+          "roughWidth": null,
+          "roughHeight": null,
+          "headerHeight": null,
+          "confidence": 0.35,
+          "evidence": "Tag U2 em (1327,362), porta do banheiro da Unit 1. A cota vertical de 2' - 0 1/2\" em (1387,398) parece localizá-la, mas a referência não foi identificada; center deixado null."
+        }
+      ],
+      "confidence": 0.45,
+      "evidence": "Parede leste do banheiro da Unit 1, com largura de 5' - 11\" em (1256,261): FX = 59' - 9 3/4\" + 2 3/8\" + 5' - 11\" + 2 3/8\" = 66' - 1 1/2\"; x = 66' - 1 1/2\" - 2 3/4\" = 65' - 10 3/4\". As extremidades dependem de I17 e I19, que foram inferidos."
+    },
+    {
+      "id": "I19",
+      "start": {
+        "x": "59' - 7\"",
+        "y": "9' - 0 5/8\""
+      },
+      "end": {
+        "x": "65' - 10 3/4\"",
+        "y": "9' - 0 5/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.4,
+      "evidence": "Parede sul do banheiro da Unit 1. Banheiro de 7' - 8\" em (1238,381) a partir de I17 (inferido): y = 19' - 1 3/8\" - 2 3/8\" - 7' - 8\" - 2 3/8\" = 9' - 0 5/8\". Vai de I13 até I18."
+    },
+    {
+      "id": "I20",
+      "start": {
+        "x": "83' - 7 3/4\"",
+        "y": "7' - 0 3/4\""
+      },
+      "end": {
+        "x": "83' - 7 3/4\"",
+        "y": "12' - 9 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.3,
+      "evidence": "Parede oeste do vestíbulo da porta leste. A cota de 4' - 9 1/2\" em (1669,526) foi lida como interna, da face GWB de E1 (FX 89' - 4 1/2\" - 6 1/8\" = 88' - 10 3/8\") à face leste desta parede: eixo FX = 88' - 10 3/8\" - 4' - 9 1/2\" - 2 3/8\" = 83' - 10 1/2\", x = 83' - 7 3/4\". A cozinha de 23' - 6 3/4\" daria x = 83' - 6 1/2\" (1 1/4\" de conflito). A abertura interna do vestíbulo não foi identificada."
+    },
+    {
+      "id": "I21",
+      "start": {
+        "x": "83' - 7 3/4\"",
+        "y": "12' - 9 3/8\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "12' - 9 3/8\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.4,
+      "evidence": "Parede norte do vestíbulo. Cadeia em x=1603: 2' - 11 1/4\" + 6' - 1 3/8\" + 1' - 7 3/8\" = 10' - 8\". Face norte em DN = 12' - 10 1/4\" (face sul de I16) + 2' - 11 1/4\" = 15' - 9 1/2\"; eixo DN = 15' - 11 7/8\"; y = 28' - 9 1/4\" - 15' - 11 7/8\" = 12' - 9 3/8\"."
+    },
+    {
+      "id": "I22",
+      "start": {
+        "x": "83' - 7 3/4\"",
+        "y": "7' - 0 3/4\""
+      },
+      "end": {
+        "x": "88' - 11\"",
+        "y": "7' - 0 3/4\""
+      },
+      "length": null,
+      "endsStart": null,
+      "endsEnd": null,
+      "wallType": "1",
+      "section": "2x4",
+      "exterior": false,
+      "bearing": false,
+      "floorsSupported": null,
+      "floorSpan": null,
+      "height": null,
+      "level": 1,
+      "openings": [],
+      "confidence": 0.4,
+      "evidence": "Parede sul do vestíbulo. Face sul em DN = 15' - 9 1/2\" + 6' - 1 3/8\" = 21' - 10 7/8\"; eixo DN = 21' - 8 1/2\"; y = 28' - 9 1/4\" - 21' - 8 1/2\" = 7' - 0 3/4\". A porta 1 de E1 (y = 9' - 11 1/2\") cai no meio do vestíbulo (cerca de 9' - 11\"), o que confirma a leitura."
+    }
+  ],
+  "notes": [
+    "Origem: interseção dos eixos de W1 e S1 no canto SW. Todas as paredes externas são X1 (2x6) pela nota geral 2. Conversão face→eixo de 2 3/4\". Nas internas, a face GWB fica a 6 1/8\" da face externa do X1 (5 1/2\" stud + 5/8\" GWB), e do GWB ao eixo de uma divisória tipo 1 são 2 3/8\" (5/8\" + 1 3/4\").",
+    "Discrepâncias de 1/8\" nas cadeias externas. Norte: soma 89' - 4 5/8\" contra o total de 89' - 4 1/2\". Oeste: 29' - 0 1/8\" contra 29' - 0\". S2: 46' - 7 5/8\" contra 46' - 7 1/2\". As posições das aberturas foram medidas a partir do lado do start; o último par de N1 e o último de S2 diferem 1/8\" se medidos pelo outro lado.",
+    "Janelas: as 30 janelas A estão instaladas em 15 pares acoplados ('A A'), modelados como abertura única do tipo A2 (4' - 10\" x 6' - 0\"). O mullion e o RO ficam com o catálogo. Não há peitoril nem head height no schedule; sem elevações, sillHeight e headerHeight ficam null.",
+    "Sem cortes ou elevações neste conjunto: wallHeight e height ficam null. O 'LIMITING HEIGHT 16'-4\"' da A-800 é limite do sistema de partição, não altura de parede.",
+    "Sem notas estruturais. floorsSupported, floorSpan e os dados do building (neve, vento, espécie, largura) ficam null. A folha cita 'HEADER, SEE STRUCTURAL' e não há header schedule (headerSchedule vazio). O número de pavimentos acima do 1º piso não aparece nas folhas recebidas.",
+    "Paredes internas marcadas como não portantes (bearing=false) por falta de indicação. As paredes do núcleo da escada (1B, 2 HR) e a divisória entre unidades (I2) podem ser portantes; confirmar com o estrutural.",
+    "Tipo 1B (6 1/8\", 'delete GWB at inside face of stud', 'PT wood framing @ CMU walls'): a posição do stud dentro da espessura não está clara. I12, I13 e I14 foram convertidos com o offset do tipo 1 (2 3/8\"), com possível erro de cerca de 11/16\". O hall da escada está cotado com 7' - 0\", contra 7' - 1\" calculado entre as faces tipo 1. Também pode haver CMU no núcleo; verificar.",
+    "Tipo 1D: a A-800 lista 2X6 com ACTUAL WIDTH 4 1/8\", o que é incoerente. O tipo não é usado nesta planta.",
+    "Cadeias internas norte-sul fecham com 3/8\" a mais. Unit 2: 14' - 5 3/8\" + 4 3/4\" + 13' - 2\" = 28' - 0 1/8\" contra 27' - 11 3/4\" livres. Unit 1: 11' - 11 3/8\" + 4 3/4\" + 10' - 8\" = 23' - 0 1/8\" contra 22' - 11 3/4\". As paredes foram posicionadas pelas cotas a partir do norte.",
+    "Unit 1: a profundidade do quarto oeste não está cotada. I17, I18 e I19 foram posicionados por alinhamento gráfico com a Unit 2 (mesmo layout espelhado), com confiança baixa. Revisar.",
+    "A parede entre o banheiro central e a escada (I14) foi deduzida da cota de 16' - 10 1/2\" da escada; revisar. Paredes ou guarda-corpos internos da escada, o patamar e os elementos ligados às cotas 7' - 0\", 2' - 10\" e R 2' - 6\" não foram modelados.",
+    "Vestíbulo leste (I20, I21, I22): a leitura das cotas 4' - 9 1/2\", 3' - 0 1/2\" e 6' - 1 3/8\" é interpretativa. Há um 'DN' junto a E1 (possível escada para o porão) e um arco de porta a oeste do vestíbulo sem tag; a abertura interna do vestíbulo não foi incluída.",
+    "Porta E1-1-1: a cadeia leste tem um ponto a 5' - 2 1/4\" da face sul do trecho leste sem tag de janela. Foi associado à tag 1 em (1650,453), que fica dentro do vestíbulo; confirmar.",
+    "Portas internas sem cota de eixo identificável ficaram com center null: U2 do banheiro da Unit 2 (I9), U2 do banheiro da Unit 1 (I18) e U1 (I13). A cota de 2' - 1 5/8\" (Unit 2) foi atribuída à porta do quarto leste em I7, mas pode ser da porta do banheiro. A cota de 2' - 0 1/2\" (Unit 1) ficou sem atribuição segura. A de 1' - 10\" vertical da Unit 3 foi atribuída à porta do banheiro em I3, com referência interpretada.",
+    "O '1' em (1270,191) da A-100 é delta de revisão (triângulo), não porta. As cotas 48\", 56\" e 30\" nos banheiros são de louças e foram ignoradas.",
+    "Nota geral 1: os layouts finais de cozinhas e banheiros serão definidos pelo proprietário. As paredes dos banheiros (I3, I5, I9, I10, I18, I19) podem mudar.",
+    "A planta do porão (Basement Plan, mesma folha A-100) não foi extraída; esta saída cobre só o 1st Floor Plan (level 1)."
+  ]
+}

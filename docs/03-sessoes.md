@@ -859,6 +859,15 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     `stage`, `login-skeleton.tsx`). Onde não usar, em `10-design` §4. Testes: web 262 (+2: 404 e esqueleto por
     SSR; header pelo slot). Conferido: `/nao-existe` responde 404 com a página; o esqueleto do login vai no HTML
     inicial e some quando a página chega; o palco e o header claro seguem iguais. `app/error.tsx` (cliente: mensagem, digest, "Try again" com o reset do Next; 2 testes no jsdom) — conferido só por teste: não há rota que lance de propósito.
+  - [x] **Página inicial (passo 01) refeita (pedido do humano, 2026-10-23)** — sem regra de framing. Canvas com três
+    direções (A zona-herói, B palco com a planta lida, C mesa de luz); escolhida A com a animação da B. Trilho de
+    passos (`StepBar rail`), título em display, zona-herói com `PlanReadSketch` (`lib/plan-sketch.ts`, 4 testes),
+    `DropZone variant="hero"`, miniaturas das páginas removidas (`pdf-pages.tsx` apagado; páginas só por número ou carimbo), detalhes compactos empilhados, "What will be sent"
+    removido, botão grande, `SampleCards` sempre visíveis com a leitura real do Ringgold em primeiro
+    (`src/samples`, pela action `finishResponse`; fatos do arquivo), `PreviewCard` e `illustrationPlan` fora da
+    página. Ajustes do humano no primeiro corte: PDF de 20 páginas esticava o palco; campos do estrutural
+    apertados em duas colunas; prévia redundante; botão pequeno e zona grande demais; samples invisíveis.
+    `10-design` §4 reescrito.
   - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
     `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
     `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";

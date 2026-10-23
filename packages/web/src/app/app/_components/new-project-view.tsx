@@ -1,46 +1,67 @@
-'use client';
+"use client";
 
-import { ArrowLeftIcon, HistoryIcon, OctagonXIcon, RotateCcwIcon } from 'lucide-react';
-import { useAction } from 'next-safe-action/hooks';
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { useWorkspaceLayout } from '@/components/shell-layout';
-import { engineText } from './editor/use-project-check';
-import { describeAge, type SavedSession } from '@/lib/editor/persist';
-import { projectFileText, type ParsedProjectFile, type Reading } from '@/lib/editor/project-file';
-import { idIndex } from '@/lib/editor/problems';
-import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
-import { prefersReducedMotion } from '@/lib/motion';
-import type { ExtractJob, ExtractOutcome } from '@/types/extract';
-import type { Example, GenerateResult } from '@/types/panels';
-import { cancelExtraction } from '../_actions/cancel-extraction';
-import { extractionResult } from '../_actions/extraction-result';
-import { generatePanels } from '../_actions/generate-panels';
-import { AdvancedImport } from './advanced-import';
-import { ConfirmDialog } from './confirm-dialog';
-import { useProjectCheck } from './editor/use-project-check';
-import { WallEditor } from './editor/wall-editor';
-import { ExtractProgress } from './extract-progress';
-import { PreviewCard } from './preview-card';
-import { ResultView } from './result-view';
-import { SamplePicker } from './sample-picker';
-import { doneSteps, StepBar, type StepId } from './step-bar';
-import { UploadForm } from './upload-form';
-import { useSavedSession } from './use-saved-session';
+import {
+  ArrowLeftIcon,
+  HistoryIcon,
+  OctagonXIcon,
+  RotateCcwIcon,
+} from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useWorkspaceLayout } from "@/components/shell-layout";
+import { engineText } from "./editor/use-project-check";
+import { describeAge, type SavedSession } from "@/lib/editor/persist";
+import {
+  projectFileText,
+  type ParsedProjectFile,
+  type Reading,
+} from "@/lib/editor/project-file";
+import { idIndex } from "@/lib/editor/problems";
+import {
+  editorReducer,
+  initialEditorState,
+  type DraftSource,
+} from "@/lib/editor/state";
+import { prefersReducedMotion } from "@/lib/motion";
+import type { ExtractJob, ExtractOutcome } from "@/types/extract";
+import type { Example, GenerateResult } from "@/types/panels";
+import { cancelExtraction } from "../_actions/cancel-extraction";
+import { extractionResult } from "../_actions/extraction-result";
+import { generatePanels } from "../_actions/generate-panels";
+import { AdvancedImport } from "./advanced-import";
+import { ConfirmDialog } from "./confirm-dialog";
+import { useProjectCheck } from "./editor/use-project-check";
+import { WallEditor } from "./editor/wall-editor";
+import { ExtractProgress } from "./extract-progress";
+import { ResultView } from "./result-view";
+import { SampleCards } from './sample-cards';
+import { doneSteps, StepBar, type StepId } from "./step-bar";
+import { UploadForm } from "./upload-form";
+import { useSavedSession } from "./use-saved-session";
 
 export interface NewProjectViewProps {
   examples: readonly Example[];
   aiEnabled: boolean;
-  illustration: string | undefined;
-  /** Exemplos e 'Advanced' (M5): só em desenvolvimento ou com PANELIZER_DEV_TOOLS=1. */
+  /** 'Advanced' (M5): só em desenvolvimento ou com PANELIZER_DEV_TOOLS=1. Os exemplos aparecem sempre (2026-10-23). */
   devTools?: boolean;
 }
 
-const SOURCE_LABEL: Record<DraftSource, string> = { extraction: 'from an AI reading', sample: 'a sample project', file: 'from a project file' };
+const SOURCE_LABEL: Record<DraftSource, string> = {
+  extraction: "from an AI reading",
+  sample: "a sample project",
+  file: "from a project file",
+};
 
 /**
  * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos leva de
@@ -48,7 +69,11 @@ const SOURCE_LABEL: Record<DraftSource, string> = { extraction: 'from an AI read
  * histórico) e a leitura da IA (`outcome`) fica como proveniência. Estado no cliente até a S22 — com auto-save
  * no navegador e banner de retomada (M2), para uma leitura de 10 minutos não morrer num F5.
  */
-export function NewProjectView({ examples, aiEnabled, illustration, devTools = false }: NewProjectViewProps) {
+export function NewProjectView({
+  examples,
+  aiEnabled,
+  devTools = false,
+}: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(1);
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
   const [job, setJob] = useState<ExtractJob | undefined>(undefined);
@@ -72,18 +97,31 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
         setStep(3);
       }
     },
-    onError: ({ error }) => toast.error(error.serverError ?? error.validationErrors?.projectText?._errors?.[0] ?? 'Could not generate panels.'),
+    onError: ({ error }) =>
+      toast.error(
+        error.serverError ??
+          error.validationErrors?.projectText?._errors?.[0] ??
+          "Could not generate panels.",
+      ),
   });
 
-  const openProject = useCallback((text: string, source: DraftSource, reading: Reading | undefined, dirty = false) => {
-    setOutcome(reading);
-    dispatch({ type: 'load', text, source, dirty });
-    setResult(undefined);
-    setStep(2);
-  }, []);
+  const openProject = useCallback(
+    (
+      text: string,
+      source: DraftSource,
+      reading: Reading | undefined,
+      dirty = false,
+    ) => {
+      setOutcome(reading);
+      dispatch({ type: "load", text, source, dirty });
+      setResult(undefined);
+      setStep(2);
+    },
+    [],
+  );
   const onOutcome = (o: ExtractOutcome) => {
-    if (o.ok) openProject(o.projectText, 'extraction', o);
-    else if (o.reason === 'cancelled') {
+    if (o.ok) openProject(o.projectText, "extraction", o);
+    else if (o.reason === "cancelled") {
       // M7: cancelar não é erro; o passo 01 volta com arquivos e campos intactos.
       setOutcome(undefined);
       toast(o.message);
@@ -100,22 +138,38 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
     if (current === undefined) return;
     const r = await fetchResult({ jobId: current.jobId });
     setJob(undefined);
-    if (r.data === null || r.data === undefined) toast.warning('The read finished, but its result was already collected or has expired.');
+    if (r.data === null || r.data === undefined)
+      toast.warning(
+        "The read finished, but its result was already collected or has expired.",
+      );
     else onOutcome(r.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job, fetchResult]);
-  const onResumedEnded = useCallback((status: 'failed' | 'cancelled' | 'unknown', message: string | undefined) => {
-    setJob(undefined);
-    if (status === 'unknown') toast.warning('The server no longer knows this read (it may have restarted). Upload the set again.');
-    else if (status === 'cancelled') toast(message ?? 'Read cancelled.');
-    else toast.error(message ?? 'The read failed.');
-  }, []);
+  const onResumedEnded = useCallback(
+    (
+      status: "failed" | "cancelled" | "unknown",
+      message: string | undefined,
+    ) => {
+      setJob(undefined);
+      if (status === "unknown")
+        toast.warning(
+          "The server no longer knows this read (it may have restarted). Upload the set again.",
+        );
+      else if (status === "cancelled") toast(message ?? "Read cancelled.");
+      else toast.error(message ?? "The read failed.");
+    },
+    [],
+  );
   const openFile = (file: ParsedProjectFile) => {
-    if (file.projectText.trim() === '') return;
-    openProject(file.projectText, file.reading === undefined ? 'file' : 'extraction', file.reading);
+    if (file.projectText.trim() === "") return;
+    openProject(
+      file.projectText,
+      file.reading === undefined ? "file" : "extraction",
+      file.reading,
+    );
   };
   const openSample = (text: string) => {
-    if (text.trim() !== '') openProject(text, 'sample', undefined);
+    if (text.trim() !== "") openProject(text, "sample", undefined);
   };
   const runProject = () => {
     if (editor.draft === undefined) return;
@@ -126,26 +180,52 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
     setConfirmingStartOver(false);
     setOutcome(undefined);
     setResult(undefined);
-    dispatch({ type: 'reset' });
+    dispatch({ type: "reset" });
     setStep(1);
   };
   // Há o que perder: edições, um resultado, ou uma leitura paga.
-  const hasWork = editor.draft !== undefined && (editor.dirty || result !== undefined || okOutcome !== undefined);
-  const requestStartOver = () => (hasWork ? setConfirmingStartOver(true) : startOver());
+  const hasWork =
+    editor.draft !== undefined &&
+    (editor.dirty || result !== undefined || okOutcome !== undefined);
+  const requestStartOver = () =>
+    hasWork ? setConfirmingStartOver(true) : startOver();
 
-  const onResume = useCallback((s: SavedSession) => openProject(s.text, s.source, s.reading, s.dirty), [openProject]);
+  const onResume = useCallback(
+    (s: SavedSession) => openProject(s.text, s.source, s.reading, s.dirty),
+    [openProject],
+  );
   const onResumeJob = useCallback((j: ExtractJob) => setJob(j), []);
-  const session = useSavedSession(editor, okOutcome, job, onResume, onResumeJob);
+  const session = useSavedSession(
+    editor,
+    okOutcome,
+    job,
+    onResume,
+    onResumeJob,
+  );
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }, [step, extracting]);
 
   const done = doneSteps(editor.draft !== undefined, result !== undefined);
-  const resultStale = result !== undefined && resultRevision !== editor.revision;
-  const canRegenerate = check.status === 'done' && !check.stale && check.result?.ok === true && !generate.isPending;
-  const projectFile = editor.draft === undefined ? undefined : projectFileText(editor.draft, okOutcome);
-  const ids = useMemo(() => (editor.draft === undefined ? undefined : idIndex(editor.draft)), [editor.draft]);
+  const resultStale =
+    result !== undefined && resultRevision !== editor.revision;
+  const canRegenerate =
+    check.status === "done" &&
+    !check.stale &&
+    check.result?.ok === true &&
+    !generate.isPending;
+  const projectFile =
+    editor.draft === undefined
+      ? undefined
+      : projectFileText(editor.draft, okOutcome);
+  const ids = useMemo(
+    () => (editor.draft === undefined ? undefined : idIndex(editor.draft)),
+    [editor.draft],
+  );
 
   const workspace = step === 2 && editor.draft !== undefined;
   useWorkspaceLayout(workspace);
@@ -154,24 +234,46 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
   // voltar, e à espera da leitura. Com `hidden` por classe, não por atributo (o `grid` venceria o atributo).
   const uploadVisible = step === 1 && !extracting;
   const upload = (
-    <section key="upload" className={uploadVisible ? 'step-enter no-print mt-8 grid gap-6 lg:grid-cols-[5fr_7fr] lg:items-start' : 'hidden'} aria-hidden={!uploadVisible}>
-      <div className="space-y-4">
-        <Card className="gap-0 p-6">
-          <UploadForm aiEnabled={aiEnabled} onOutcome={onOutcome} onJobChange={setJob} onFilesChange={setUploaded} onSample={devTools ? () => document.getElementById('sample')?.focus() : undefined} />
+    <section
+      key="upload"
+      className={
+        uploadVisible
+          ? "step-enter no-print mx-auto w-full max-w-[1040px] space-y-5"
+          : "hidden"
+      }
+      aria-hidden={!uploadVisible}
+    >
+      <UploadForm
+        aiEnabled={aiEnabled}
+        onOutcome={onOutcome}
+        onJobChange={setJob}
+        onFilesChange={setUploaded}
+        onSample={
+          devTools
+            ? () => document.getElementById("sample")?.focus()
+            : undefined
+        }
+      />
+      <SampleCards examples={examples} disabled={generate.isPending || extracting} onPick={openSample} onOutcome={onOutcome} />
+      {devTools ? (
+        <Card className="gap-3 p-5">
+          <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
         </Card>
-        {devTools ? (
-          <Card className="lift gap-4 p-6">
-            <SamplePicker examples={examples} disabled={generate.isPending || extracting} onPick={openSample} />
-            <Separator />
-            <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
-          </Card>
-        ) : (
-          <Card className="gap-3 p-6">
-            <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
-          </Card>
-        )}
-      </div>
-      <PreviewCard illustration={illustration} outcome={outcome} />
+      ) : null}
+      <ul className="flex flex-wrap justify-center gap-x-8 gap-y-2 pt-2 text-[13px] text-ink-2">
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
+          The read takes several minutes and can be cancelled
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
+          Every wall shows its confidence and the dimension it came from
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
+          Deterministic engine · IRC 2021 R602.7
+        </li>
+      </ul>
     </section>
   );
 
@@ -193,26 +295,72 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
       ) : (
         <div className="space-y-8">
           {step === 1 ? (
-            // O hero só no passo 01 (M3): nos outros, o eyebrow do passo já diz onde se está.
-            <header className="no-print space-y-3">
-              <p className="eyebrow">New project</p>
-              <h1>From drawings to panels.</h1>
-              <p className="max-w-2xl text-ink-2">
-                Upload the plan set. The AI reads the walls, you check and fix them in the editor, and the engine builds every
-                fabrication sheet. Nothing is built before your review.
-              </p>
-            </header>
+            // O hero só no passo 01 (M3; refeito em 2026-10-23: rail de passos no topo, título em display, centrado).
+            <>
+              <StepBar active={step} done={done} onGo={setStep} rail />
+              <header className="no-print mx-auto max-w-2xl space-y-3 text-center pb-4">
+                <p className="eyebrow">New project</p>
+                <h1 className="font-display text-5xl leading-[.98] tracking-[-1px] text-navy-900 sm:text-6xl">
+                  Drop the drawings.
+                  <br />
+                  Get the panels.
+                </h1>
+                <p className="mx-auto max-w-xl text-lg text-ink-2">
+                  The AI reads the set, you check every wall, and the engine
+                  frames each panel. Nothing is built before your review.
+                </p>
+              </header>
+            </>
           ) : (
-            <h1 className="sr-only">{step === 2 ? 'Review walls' : 'Panels'}</h1>
+            <>
+              <h1 className="sr-only">
+                {step === 2 ? "Review walls" : "Panels"}
+              </h1>
+              <StepBar active={step} done={done} onGo={setStep} />
+            </>
           )}
 
-          <StepBar active={step} done={done} onGo={setStep} />
-
-          {step === 1 && !extracting && editor.draft === undefined && session.saved !== undefined ? (
-            <ResumeBanner saved={session.saved} onResume={session.resume} onDiscard={session.discard} />
+          {step === 1 &&
+          okOutcome !== undefined &&
+          editor.draft !== undefined &&
+          !extracting ? (
+            <Alert className="no-print mx-auto max-w-[1040px]">
+              <HistoryIcon />
+              <AlertTitle>Walls read from your set</AlertTitle>
+              <AlertDescription>
+                <p>
+                  {okOutcome.walls.length} walls ·{" "}
+                  {okOutcome.openingTypes.length} opening types · level{" "}
+                  {okOutcome.level}. Nothing is built until you generate.
+                </p>
+                <div className="mt-1">
+                  <Button variant="accent" size="sm" onClick={() => setStep(2)}>
+                    Review walls
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
           ) : null}
 
-          {step === 1 && job ? <ExtractProgress job={job} onCancel={() => cancelRead({ jobId: job.jobId })} onResumedDone={onResumedDone} onResumedEnded={onResumedEnded} /> : null}
+          {step === 1 &&
+          !extracting &&
+          editor.draft === undefined &&
+          session.saved !== undefined ? (
+            <ResumeBanner
+              saved={session.saved}
+              onResume={session.resume}
+              onDiscard={session.discard}
+            />
+          ) : null}
+
+          {step === 1 && job ? (
+            <ExtractProgress
+              job={job}
+              onCancel={() => cancelRead({ jobId: job.jobId })}
+              onResumedDone={onResumedDone}
+              onResumedEnded={onResumedEnded}
+            />
+          ) : null}
 
           {step === 2 ? (
             // Com draft aberto o passo 02 é o workspace (retorno acima); aqui só o que não abriu.
@@ -223,15 +371,28 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
                   <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
                     <ArrowLeftIcon /> Back to drawings
                   </Button>
-                  <Button variant="outline" size="sm" onClick={requestStartOver}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={requestStartOver}
+                  >
                     <RotateCcwIcon /> Start over
                   </Button>
                 </div>
               </div>
               <Alert variant="destructive">
                 <OctagonXIcon />
-                <AlertTitle>{editor.loadError !== undefined ? 'This project can’t be opened' : 'Nothing to review'}</AlertTitle>
-                <AlertDescription>{editor.loadError ?? (outcome && !outcome.ok ? outcome.message : 'Upload drawings or pick a sample first.')}</AlertDescription>
+                <AlertTitle>
+                  {editor.loadError !== undefined
+                    ? "This project can’t be opened"
+                    : "Nothing to review"}
+                </AlertTitle>
+                <AlertDescription>
+                  {editor.loadError ??
+                    (outcome && !outcome.ok
+                      ? outcome.message
+                      : "Upload drawings or pick a sample first.")}
+                </AlertDescription>
               </Alert>
             </section>
           ) : null}
@@ -242,16 +403,32 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
                 <p className="eyebrow">03 · Panels</p>
                 <div className="flex gap-2">
                   {editor.draft !== undefined ? (
-                    <Button variant="ghost" size="sm" onClick={() => setStep(2)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep(2)}
+                    >
                       <ArrowLeftIcon /> Back to review
                     </Button>
                   ) : null}
-                  <Button variant="outline" size="sm" onClick={requestStartOver}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={requestStartOver}
+                  >
                     <RotateCcwIcon /> Start over
                   </Button>
                 </div>
               </div>
-              <ResultView result={result} pending={generate.isPending} projectFile={projectFile} stale={resultStale} canRegenerate={canRegenerate} onRegenerate={runProject} ids={ids} />
+              <ResultView
+                result={result}
+                pending={generate.isPending}
+                projectFile={projectFile}
+                stale={resultStale}
+                canRegenerate={canRegenerate}
+                onRegenerate={runProject}
+                ids={ids}
+              />
             </section>
           ) : null}
         </div>
@@ -265,8 +442,8 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
         title="Start over?"
         description={
           okOutcome !== undefined
-            ? 'This closes the project and its AI reading. A read takes several minutes and costs money; save the project file from the menu first if you may want it back.'
-            : 'This closes the project and discards your edits and the generated panels.'
+            ? "This closes the project and its AI reading. A read takes several minutes and costs money; save the project file from the menu first if you may want it back."
+            : "This closes the project and discards your edits and the generated panels."
         }
         confirmLabel="Start over"
         destructive
@@ -277,16 +454,28 @@ export function NewProjectView({ examples, aiEnabled, illustration, devTools = f
 }
 
 /** Sessão gravada neste navegador (M2): oferece retomar antes de qualquer coisa. */
-function ResumeBanner({ saved, onResume, onDiscard }: { saved: SavedSession; onResume: () => void; onDiscard: () => void }) {
+function ResumeBanner({
+  saved,
+  onResume,
+  onDiscard,
+}: {
+  saved: SavedSession;
+  onResume: () => void;
+  onDiscard: () => void;
+}) {
   return (
     <Alert className="step-enter no-print">
       <HistoryIcon />
       <AlertTitle>Resume “{saved.name}”?</AlertTitle>
       <AlertDescription>
         <p>
-          Saved in this browser {describeAge(saved.savedAt, Date.now())} · {SOURCE_LABEL[saved.source]}
-          {saved.dirty ? ' · with your edits' : ''}
-          {saved.reading !== undefined ? ` · ${saved.reading.walls.length} walls read` : ''}.
+          Saved in this browser {describeAge(saved.savedAt, Date.now())} ·{" "}
+          {SOURCE_LABEL[saved.source]}
+          {saved.dirty ? " · with your edits" : ""}
+          {saved.reading !== undefined
+            ? ` · ${saved.reading.walls.length} walls read`
+            : ""}
+          .
         </p>
         <div className="mt-1 flex gap-2">
           <Button variant="accent" size="sm" onClick={onResume}>

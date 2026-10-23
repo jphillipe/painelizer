@@ -286,6 +286,77 @@
   62%, 84% { opacity: 1; transform: translateY(0); }
   92%, 100% { opacity: 0; }
 }
+/*
+ * Passo 01 (2026-10-23): a planta sendo lida dentro da zona de soltar. A varredura desce em 11 s de ciclo; as
+ * paredes horizontais acendem por atraso (--d), as verticais por clip-path, depois quebras e ids; a borda da zona pulsa.
+ */
+@utility read-scan {
+  opacity: 0;
+  animation: read-scan 11s linear infinite;
+}
+@utility read-wall {
+  animation: read-wall 11s steps(1) infinite both;
+  animation-delay: var(--d, 0s);
+}
+@utility read-wall-v {
+  clip-path: inset(0 0 100% 0);
+  animation: read-wall-v 11s linear infinite both;
+}
+@utility read-tag {
+  opacity: 0;
+  animation: read-tag 11s ease-in-out infinite both;
+  animation-delay: calc(var(--i, 0) * 120ms);
+}
+@utility read-break {
+  opacity: 0;
+  stroke-dasharray: 4 4;
+  animation: read-break 11s ease-in-out infinite both;
+}
+@utility read-caption {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: read-caption 11s ease-in-out infinite;
+  animation-delay: calc(var(--c, 0) * 3.67s);
+}
+@utility zone-pulse {
+  animation: zone-pulse 4s ease-in-out infinite;
+}
+@keyframes read-scan {
+  0%, 8% { opacity: 0; transform: translateY(0); }
+  9% { opacity: 1; }
+  38% { opacity: 1; transform: translateY(var(--h, 400px)); }
+  40%, 100% { opacity: 0; transform: translateY(var(--h, 400px)); }
+}
+@keyframes read-wall {
+  0% { fill: rgba(246, 244, 238, 0.28); }
+  9%, 80% { fill: var(--gold-300); }
+  86%, 100% { fill: rgba(246, 244, 238, 0.28); }
+}
+@keyframes read-wall-v {
+  0%, 8% { clip-path: inset(0 0 100% 0); }
+  38%, 80% { clip-path: inset(0); }
+  88%, 100% { clip-path: inset(0 0 100% 0); }
+}
+@keyframes read-tag {
+  0%, 42% { opacity: 0; transform: translateY(5px); }
+  47%, 80% { opacity: 1; transform: translateY(0); }
+  86%, 100% { opacity: 0; }
+}
+@keyframes read-break {
+  0%, 40% { opacity: 0; }
+  44%, 80% { opacity: 1; }
+  86%, 100% { opacity: 0; }
+}
+@keyframes read-caption {
+  0% { opacity: 0; transform: translateY(4px); }
+  5%, 28% { opacity: 1; transform: translateY(0); }
+  33%, 100% { opacity: 0; }
+}
+@keyframes zone-pulse {
+  0%, 100% { border-color: rgba(186, 139, 55, 0.5); }
+  50% { border-color: rgba(186, 139, 55, 1); }
+}
 @utility blueprint {
   background-color: var(--paper);
   background-image:
@@ -348,6 +419,21 @@
     stroke-dashoffset: 0;
   }
   .login-tag {
+    opacity: 1;
+  }
+  /* Planta do passo 01: lida inteira, parada. */
+  .read-scan {
+    display: none;
+  }
+  .read-wall {
+    fill: var(--gold-300);
+  }
+  .read-wall-v {
+    clip-path: inset(0);
+  }
+  .read-tag,
+  .read-break,
+  .read-caption {
     opacity: 1;
   }
 }

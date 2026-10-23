@@ -63,7 +63,7 @@ export function SiteHeader({ userSlot }: SiteHeaderProps) {
           </span>
           <span className="flex flex-col leading-none">
             <span className={cn('text-lg font-semibold tracking-tight', light ? 'text-navy-900' : 'text-paper')}>Panelizer</span>
-            <span className={cn('mt-1 text-[10.5px] font-semibold uppercase tracking-[1.6px]', light ? 'text-gold-700' : 'text-gold-300')}>National Lumber · WR Group</span>
+            <span className={cn('mt-1 hidden text-[10.5px] font-semibold uppercase tracking-[1.6px] sm:block', light ? 'text-gold-700' : 'text-gold-300')}>National Lumber · WR Group</span>
           </span>
         </Link>
 

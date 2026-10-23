@@ -171,23 +171,32 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   claro). Eyebrow e título em Barlow Condensed sobre o palco; rodapé em mono com o que o desenho mostra. Abaixo de
   `lg` a parede fica acima do card, menor, e tudo rola. `prefers-reduced-motion`: parede inteira, parada, ids
   visíveis. É a única animação em loop do app além da espera da extração, e a mesma linguagem.
-- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. Telas de trabalho seguem o **takeoff da
-  National Lumber**: cabeçalho (eyebrow + h1 + parágrafo), **barra de passos** numerada (círculo navy cheio no
-  ativo, sublinhado dourado; passos feitos também cheios), e o passo 1 em duas colunas 5/12 + 7/12: à esquerda
-  o card do formulário (zona de soltar arquivos tracejada com cantos marcados e ícone navy, "Project details",
-  collapsibles com `<details>`; a zona lista o que recusou e por quê, mostra o total dos 300 MB e o erro de
-  "sem arquivo" embaixo dela; cada PDF solto ganha **miniaturas das páginas** (pdf.js no cliente), e clicar numa
-  marca a folha no campo "PDF pages" (por arquivo); o card **"What will be sent"** (M7) lista, antes de pagar, as
-  páginas que vão de cada PDF com folha e título, as que ficaram fora do orçamento, imagens, tamanho e o custo
-  estimado com faixa, e o botão leva "· about US$ X"; a tela de espera mostra a fase e os tokens que já
-  chegaram, tem "Cancel the read" e volta sozinha depois de um F5; "or try a sample" ao lado do botão só quando os exemplos existem — exemplos
-  e "Advanced › Recorded response" aparecem só em desenvolvimento ou com `PANELIZER_DEV_TOOLS=1`), à direita o
-  **card de prévia** com cabeçalho navy, ilustração (a planta de
-  painéis da 28x40 gerada pelo motor), legenda em papel-2, título + parágrafo, três features numeradas e rodapé
-  navy; esse card vira status quando há leitura. **Cada passo é uma tela**: o passo ativo ocupa a área toda,
-  o anterior some; a barra de passos leva de volta aos concluídos (círculo com check), e as telas 2 e 3 têm
-  "Back" e "Start over". Até a S22 o estado fica no cliente (sem URL por passo); com projetos salvos, cada
-  passo ganha rota própria.
+- Conteúdo: `max-w-[1200px]`, gutter do site, padding vertical 32px. **Passo 01 (refeito em 2026-10-23, a partir
+  de um canvas com três direções; escolhida "A com a animação da B")**: tudo numa coluna de 1040px. No topo o
+  **trilho de passos** centrado (`StepBar rail`: círculos numerados ligados por linhas, a do passo feito em
+  dourado), depois o título em display, centrado, em duas linhas ("Drop the drawings. / Get the panels.") e uma
+  frase. A **zona de soltar é o herói**: um card largo com borda tracejada dourada que pulsa (`zone-pulse`); à
+  esquerda (360px, `lg+`) um palco navy (`login-surface`) com a **planta sendo lida** (`PlanReadSketch`,
+  geometria em `lib/plan-sketch.ts`: a casa 28×40, uma linha dourada varre de cima para baixo, cada parede acende
+  ao ser passada, depois as quebras e os ids dos painéis; ciclo de 11 s, `read-*` em globals.css, parada e inteira
+  com `prefers-reduced-motion`) e uma legenda em mono que troca a cada fase; à direita o convite (`DropZone
+  variant="hero"`: sem moldura própria, ícone 48px, título 20px, chips do que enviar, lista de arquivos com rolagem
+  a partir de ~5) e o "Drawing checklist". As **miniaturas das páginas** (M5) saíram de vez a pedido do humano:
+  um PDF de 20 páginas virava uma parede de cartões; as páginas vão só pelo campo "PDF pages", por número, ou pelo
+  carimbo. Depois a faixa **"Project details"**:
+  Level, Project name e PDF pages em três colunas, e os opcionais empilhados em `<details>` (dados do estrutural
+  em `ProjectDataFields compact`, notas para a IA). O card **"What will be sent"** saiu (redundante): a prévia
+  continua rodando por baixo para o custo no botão. O **botão** "Extract walls
+  with AI · about US$ X" é grande (56px, 17px, `shadow-2`), centrado, com a frase do tempo e "Or try a sample"
+  embaixo. **Samples como cards** (`SampleCards`, sempre visíveis, `#samples`): o primeiro é a leitura real da IA
+  do 26 Ringgold St (resposta gravada, `src/samples`), que passa pela mesma conversão da extração e abre com
+  proveniência; os outros são os projetos do CLI, menos o `ringgold-checkpoint` (a leitura real já é o Ringgold); os fatos de cada card vêm do próprio arquivo. "Advanced" (arquivo
+  de projeto e resposta gravada) continua só em desenvolvimento ou com `PANELIZER_DEV_TOOLS=1`. A planta de painéis
+  ilustrativa e o card de prévia saíram. Quando há leitura e o humano volta aos desenhos, um Alert diz quantas
+  paredes foram lidas, com "Review walls". A tela de espera (fase, tokens, "Cancel the read", retomada após F5)
+  não mudou. **Cada passo é uma tela**: o passo ativo ocupa a área toda, o anterior some; a barra de passos leva de
+  volta aos concluídos (círculo com check), e as telas 2 e 3 têm "Back" e "Start over". Até a S22 o estado fica
+  no cliente (sem URL por passo); com projetos salvos, cada passo ganha rota própria.
 - **Nunca perder trabalho (M2):** o projeto aberto é gravado no navegador a cada edição (`localStorage`, até a S22) e
   `/app` sem projeto oferece "Resume *nome*?" num Alert `default` logo abaixo da barra de passos (Resume accent,
   Discard ghost). O passo 1 fica montado e escondido nos outros passos (arquivos e campos sobrevivem). "Start over"

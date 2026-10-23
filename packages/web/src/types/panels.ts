@@ -59,5 +59,9 @@ export type CheckResult =
 export interface Example {
   id: string;
   label: string;
+  /** `project`: JSON do CLI, abre direto no editor. `reading`: resposta gravada da IA, passa pela mesma conversão da extração (com proveniência). */
+  kind: 'project' | 'reading';
+  /** Uma linha de fatos tirados do próprio arquivo ("27 walls · level 1"). */
+  facts: string;
   text: string;
 }

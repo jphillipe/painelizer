@@ -26,10 +26,13 @@ export interface StepBarProps {
   onGo: (step: StepId) => void;
   /** Versão de uma linha para a top bar do workspace (S21.4): pills pequenos, rótulos curtos. */
   compact?: boolean;
+  /** Trilho centrado do passo 01 (2026-10-23): círculos ligados por uma linha, a feita em dourado. */
+  rail?: boolean;
 }
 
 /** Barra de passos como no takeoff da National Lumber: círculo numerado, ativo cheio em navy com sublinhado dourado. */
-export function StepBar({ active, done, onGo, compact = false }: StepBarProps) {
+export function StepBar({ active, done, onGo, compact = false, rail = false }: StepBarProps) {
+  if (rail) return <StepRail active={active} done={done} onGo={onGo} />;
   return (
     <ol className={cn('no-print', compact ? 'flex items-center gap-1' : 'grid grid-cols-3 border-y border-line-faint')} aria-label="Steps">
       {STEPS.map((s) => {
@@ -71,6 +74,36 @@ export function StepBar({ active, done, onGo, compact = false }: StepBarProps) {
                 compact && 'inset-x-1.5',
               )}
             />
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Trilho do passo 01: três círculos numerados ligados por linhas; a linha de um passo feito é dourada. */
+function StepRail({ active, done, onGo }: Pick<StepBarProps, 'active' | 'done' | 'onGo'>) {
+  return (
+    <ol className="no-print flex items-center justify-center" aria-label="Steps">
+      {STEPS.map((s, i) => {
+        const isActive = s.id === active;
+        const isDone = done.includes(s.id);
+        const clickable = isDone && !isActive;
+        const reached = isActive || isDone;
+        return (
+          <li key={s.id} aria-current={isActive ? 'step' : undefined} className="flex items-center">
+            {i > 0 ? <span aria-hidden className={cn('mx-3 h-0.5 w-10 rounded-pill sm:mx-4 sm:w-20', reached ? 'bg-gradient-to-r from-gold to-line' : 'bg-line')} /> : null}
+            <button
+              type="button"
+              disabled={!clickable}
+              onClick={() => onGo(s.id)}
+              className={cn('flex items-center gap-2.5 text-[13px] font-semibold transition-colors duration-200', reached ? 'text-ink' : 'text-ink-3', clickable ? 'cursor-pointer hover:text-navy-600' : 'cursor-default')}
+            >
+              <span className={cn('flex size-7 items-center justify-center rounded-pill border text-[12px] transition-[background-color,border-color,transform] duration-300 ease-site', reached ? 'border-navy-900 bg-navy-900 text-paper' : 'border-line-strong bg-card text-ink-2', isActive && 'scale-110')}>
+                {isDone && !isActive ? <CheckIcon className="size-3.5" /> : s.id}
+              </span>
+              <span className={cn(!isActive && 'hidden sm:inline')}>{s.label}</span>
+            </button>
           </li>
         );
       })}
