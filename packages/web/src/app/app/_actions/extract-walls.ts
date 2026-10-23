@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { actionClient } from '@/lib/safe-action';
+import { authActionClient } from '@/lib/safe-action';
 import { parsePages, parsePagesByFile, pickProjectData, uploadFieldsSchema } from '@/schemas/extract';
 import { fromFiles, type UploadedFile } from '@/services/extract.service';
 
@@ -41,7 +41,7 @@ export async function readUploadForm(form: FormData) {
  * tela acompanhar o progresso e recolher o resultado depois de um F5.
  * Sem chave no servidor, devolve `{ ok: false, reason: 'no_key' }` sem ler os arquivos.
  */
-export const extractWalls = actionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form }) => {
+export const extractWalls = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form }) => {
   const { fields, files, pages, pagesByFile, level, jobId } = await readUploadForm(form);
   const given = pickProjectData(fields);
   return fromFiles(files, {

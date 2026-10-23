@@ -1,11 +1,11 @@
 'use server';
 
-import { actionClient } from '@/lib/safe-action';
+import { authActionClient } from '@/lib/safe-action';
 import { applyProjectDataSchema } from '@/schemas/extract';
 import { reconvert } from '@/services/extract.service';
 
 /** Revisão: reaplica altura e dados estruturais à leitura já feita, sem chamar a IA. */
-export const applyProjectData = actionClient.inputSchema(applyProjectDataSchema).action(async ({ parsedInput }) => {
+export const applyProjectData = authActionClient.inputSchema(applyProjectDataSchema).action(async ({ parsedInput }) => {
   if (parsedInput.output === undefined || parsedInput.output === null) {
     return {
       ok: false as const,

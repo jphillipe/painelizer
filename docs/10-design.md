@@ -232,8 +232,8 @@ números grandes em Barlow Condensed com unidade em eyebrow. Rotas `/`, `/how-it
 |---|---|---|
 | `/` | landing; por ora `redirect('/app')` | S20.0 |
 | `/app` | novo projeto: desenhos → revisão → painéis | S20.1–S20.3 |
-| `/app/projects`, `/app/projects/[id]` | projetos salvos | S22 |
-| `/login` | auth | S22 |
+| `/app/projects`, `/app/projects/[id]` | projetos salvos | S22.1–S22.2 |
+| `/login` | e-mail e senha; `?next=` volta aonde ia | S22.0 |
 
 Rotas de API: **nenhuma**. Sem route handlers.
 
@@ -260,7 +260,7 @@ cada folha tem o seu botão PDF (`<id>.pdf`). Enquanto renderiza o botão mostra
 
 ```
 componente (client)  →  server action (next-safe-action, zod)  →  service (server-only)  →  core / cli / extract (em processo)
-Server Component     →  service                                                           →  ky (HTTP externo: Supabase, APIs)
+Server Component     →  service                                                           →  supabase-js (S22) / ky (outras APIs)
 ```
 
 - **Mutações** só por server actions em `src/actions/*.ts` (`'use server'`,
@@ -277,9 +277,17 @@ Server Component     →  service                                               
   gravada, checagem da chave), `pdf.service` (folhas SVG → PDF, M9), `projects.service` (S22).
 - **ky** (`src/lib/http.ts`): instância única (`prefixUrl`, `timeout`, `retry`, hooks que convertem erro
   HTTP em `ServiceError`), usada só dentro de services e só onde há HTTP de verdade. Motor e extração rodam
-  em processo. Nunca ky em componente, nunca `fetch` solto.
+  em processo. Nunca ky em componente, nunca `fetch` solto. **Supabase não passa pelo ky** (S22.0): o
+  `supabase-js` com `@supabase/ssr` cuida da sessão em cookie e do refresh do token, que o ky teria de
+  reimplementar; `src/lib/supabase/server.ts` cria um cliente por requisição e só services o importam.
+- **Login** (S22.0): e-mail e senha no Supabase Auth, sem cadastro no app (contas criadas no painel; ver
+  `supabase/README.md`). `src/proxy.ts` roda antes de toda página e action: renova o token e aplica
+  `lib/auth/routes.ts` (`/app*` exige usuário → `/login?next=…`; `/login` com usuário volta ao app). As
+  actions de `/app` usam `authActionClient`, que exige usuário quando o Supabase está configurado (`ctx.user`).
+  Sem as chaves o app roda aberto em desenvolvimento; em produção `/app` é bloqueado e `/login` explica.
+  O header mostra o e-mail e "Sign out" quando há sessão.
 - **Erros**: `handleServerError` do `actionClient` traduz `ProjectError`, `BuildError`, `ExtractError`,
-  `ServiceError` e erros da API em mensagem; problemas de projeto não são erro de servidor, voltam em `data`
+  `ServiceError`, `SignedOutError` e erros da API em mensagem; problemas de projeto não são erro de servidor, voltam em `data`
   como `{ ok: false, problems }` para a UI listar.
 - **O usuário nunca vê JSON**: a entrada é desenho (PDF, imagem) e a revisão é tabela; o formato do CLI fica em
   "Advanced" recolhido. Tudo que veio da IA mostra confiança e evidência.
@@ -303,6 +311,10 @@ schemas/                 zod compartilhado cliente/servidor
 types/                   tipos que trafegam servidor → cliente
 lib/                     utilidades puras (files, zip, http, safe-action, utils)
 lib/editor/              modelo do editor (S21): draft do projeto, issues, estado, geometria — único lugar do cliente que importa core
+lib/supabase/            chaves do ambiente (puro) e cliente de servidor com a sessão em cookie (S22.0)
+lib/auth/                decisão de rota do guard de login, pura (S22.0)
+proxy.ts                 guard de login: refresh do token + redirecionamentos, antes de toda página e action (S22.0)
+types/database.ts        tipos da base do Supabase, escritos à mão a partir de supabase/migrations/*.sql
 ```
 
 Regra: um componente ou action só sai de `app/<rota>/_*` para `components/` ou para uma pasta compartilhada

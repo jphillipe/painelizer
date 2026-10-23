@@ -808,4 +808,34 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     o projeto ao motor (`$reviewed` ficava no texto; `engineText` agora tira toda chave `$…`, `withoutEditorKeys`).
     Conferido no browser: Esc volta ao valor e não cria undo; Reviewed sem POST. Testes: web 234 (eram 209).
     Playwright fica para depois da S22.
-- [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage**
+- [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage** — abordagem aprovada em 2026-10-22, em
+  quatro subsessões (nenhuma toca regra de framing). Setup do projeto no Supabase em `supabase/README.md`.
+  - [x] **S22.0 — Esquema, auth e login.** Feita em 2026-10-22. `@supabase/supabase-js` + `@supabase/ssr` no
+    web (sessão em cookie; ky não serve: teria de reimplementar o refresh do token). `supabase/migrations/
+    20261022000000_projects.sql`: tabela `projects` (`id`, `owner_id`/`owner_email`, `name`, `data jsonb` = o
+    `.panelizer.json` inteiro, `revision` para concorrência otimista, datas com trigger) e RLS de time (todo
+    usuário autenticado lê, cria como autor, edita e apaga). `types/database.ts` à mão. `lib/supabase/env.ts`
+    (`NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, aceita o nome antigo `ANON_KEY`),
+    `lib/supabase/server.ts` (um cliente por requisição; `setAll` engole o erro em Server Component),
+    `lib/auth/routes.ts` (`routeFor`, `safeNext`, puros), `src/proxy.ts` (renova o token, aplica `routeFor`,
+    copia os cookies para o redirect; matcher sem estáticos), `services/auth.service.ts` (`currentUser`,
+    `requireUser`, `signIn` com mapa de códigos — credencial errada, e-mail não confirmado, limite de
+    tentativas, rede fora por status 0 —, `signOut`; `deps` injetáveis), `authActionClient` em `safe-action.ts`
+    (todas as actions de `/app` passaram a usá-lo; `signIn`/`signOut` usam o cru), `/login` (Server Component:
+    sem chaves explica, logado redireciona, senão `LoginForm` com RHF + zod, erro no card, foco na senha,
+    sucesso `router.push(next)` + `refresh`), `SignOutButton` no header com o e-mail. **Sem as chaves**: aberto
+    em desenvolvimento; em produção `/app` → `/login` (que explica). Sem cadastro no app. Testes: web 249
+    (eram 234): env, rotas, auth.service com cliente falso, LoginForm no jsdom. Conferido no browser sem chaves
+    (`/login` explica, `/app` aberto sem "Sign out") e com uma URL inalcançável (`/app/projects/x?tab=1` →
+    `/login?next=%2Fapp%2Fprojects%2Fx%3Ftab%3D1`; enviar o formulário mostra "Could not reach the sign-in
+    service"). **Login real conferido em 2026-10-23** com o projeto criado: entrar leva a `/app` com e-mail e "Sign out" no header, F5 mantém a sessão (refresh pelo proxy), `/login?next=/app?from=test` logado volta a `/app?from=test`, "Sign out" leva ao login e `/app` volta a redirecionar; sem erro no console nem no servidor. Projeto
+    `panelizer` criado em 2026-10-22 pelo conector MCP (ref em `supabase/README.md`), migração aplicada, chaves no `.env.local`, cadastro desligado e uma conta criada no painel.
+  - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
+    `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
+    `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";
+    `revision` divergente → aviso "edited elsewhere" em vez de sobrescrever; `localStorage` fica como buffer de
+    queda e para o job de extração. Passo 03 em `/app/projects/[id]/panels`.
+  - [ ] **S22.2 — Lista de projetos.** `/app/projects` (nome, paredes, atualizado, autor), abrir, renomear,
+    duplicar, apagar com confirmação; "Projects" no header.
+  - [ ] **S22.3 — Desenhos no Storage.** Bucket `drawings` por projeto (PDFs do passo 01, subidos pela action
+    de 300 MB); o underlay e releituras leem de lá. Painéis gerados não são guardados (reproduzíveis).
