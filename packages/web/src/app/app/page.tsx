@@ -1,4 +1,11 @@
 import { hasKey } from '@/services/extract.service';
+
+/**
+ * Teto de duração das actions desta rota na Vercel (a leitura da IA leva ~10 min; o padrão é 300 s). 300 é o
+ * máximo do plano Hobby com Fluid compute; no Pro pode subir a 800. Acima do plano o deploy falha — ver
+ * docs/04-decisoes.md (2026-10-23). Fora da Vercel não tem efeito.
+ */
+export const maxDuration = 300;
 import { illustrationPlan, listExamples } from '@/services/panels.service';
 import { NewProjectView } from './_components/new-project-view';
 

@@ -847,6 +847,18 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     (`login-*` em globals.css, parada e inteira com `prefers-reduced-motion`), `LoginForm` com `tone="dark"` e
     sem card próprio. `10-design` §4 e §5. Conferido no browser a 1440×900 (parede, quebra, ids, card à direita,
     sem rolagem) e a 375×812 (parede acima do card, sem rolagem horizontal).
+  - [x] **Leitura da IA na Vercel (2026-10-23)** — bug de deploy, sem regra de framing: o `pdf.worker.mjs` não ia
+    no bundle (import dinâmico do pdf.js invisível ao rastreio); import estático em `extract/src/pdf.ts` com
+    `globalThis.pdfjsWorker`, conferido no `.nft.json` do build. `describeServerError` mostra a causa na UI;
+    `maxDuration = 300` na rota `/app`. Limites que ficam (4,5 MB de corpo, 300/800 s, jobs em memória) em
+    04-decisoes. Testes: extract 115, web +2.
+  - [x] **404, Suspense e esqueletos (pedido do humano, 2026-10-23)** — sem regra de framing. `app/not-found.tsx`
+    (parede com o vão sem header, links ao app e ao login); usuário do header atrás de `Suspense`
+    (`components/header-user.tsx`: o layout não espera mais o Supabase; `SiteHeader` recebe `userSlot`);
+    `app/app/loading.tsx` e `app/login/loading.tsx` com `Skeleton` na grade das telas reais (o do login em modo
+    `stage`, `login-skeleton.tsx`). Onde não usar, em `10-design` §4. Testes: web 262 (+2: 404 e esqueleto por
+    SSR; header pelo slot). Conferido: `/nao-existe` responde 404 com a página; o esqueleto do login vai no HTML
+    inicial e some quando a página chega; o palco e o header claro seguem iguais. `app/error.tsx` (cliente: mensagem, digest, "Try again" com o reset do Next; 2 testes no jsdom) — conferido só por teste: não há rota que lance de propósito.
   - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
     `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
     `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAction } from 'next-safe-action/hooks';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { signOutAction } from '@/app/login/_actions/sign-out';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -22,7 +22,8 @@ interface NavItem extends NavTarget {
 const NAV: readonly NavItem[] = [{ href: '/app', label: 'New project', icon: PlusIcon, exact: true }];
 
 export interface SiteHeaderProps {
-  user: SessionUser | undefined;
+  /** Area do usuario, montada pelo servidor (avatar + menu, um skeleton enquanto carrega, ou nada). */
+  userSlot: ReactNode;
 }
 
 /**
@@ -33,7 +34,7 @@ export interface SiteHeaderProps {
  * menu: e-mail e "Sign out"). Em `/login` só a marca e uma linha de contexto. Entradas em fade e cascata;
  * tudo respeita `prefers-reduced-motion` pela regra global.
  */
-export function SiteHeader({ user }: SiteHeaderProps) {
+export function SiteHeader({ userSlot }: SiteHeaderProps) {
   const pathname = usePathname();
   const bare = isBareRoute(pathname);
   const scrolled = useScrolled();
@@ -93,7 +94,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 );
               })}
             </nav>
-            <div className="ml-auto flex items-center gap-3 animate-fade-in">{user === undefined ? null : <UserMenu user={user} />}</div>
+            <div className="ml-auto flex items-center gap-3 animate-fade-in">{userSlot}</div>
           </>
         )}
       </div>
@@ -102,7 +103,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 }
 
 /** Avatar com iniciais (ponto verde = sessão ativa) e menu: e-mail, "Sign out". Sair limpa a sessão e vai ao login. */
-function UserMenu({ user }: { user: SessionUser }) {
+export function UserMenu({ user }: { user: SessionUser }) {
   const router = useRouter();
   const { execute, isPending } = useAction(signOutAction, {
     onSuccess: () => {

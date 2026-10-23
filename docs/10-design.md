@@ -261,6 +261,19 @@ números grandes em Barlow Condensed com unidade em eyebrow. Rotas `/`, `/how-it
 | `/app` | novo projeto: desenhos → revisão → painéis | S20.1–S20.3 |
 | `/app/projects`, `/app/projects/[id]` | projetos salvos | S22.1–S22.2 |
 | `/login` | palco com a parede que vira painéis + card de vidro; `?next=` volta aonde ia | S22.0 / 2026-10-23 |
+| qualquer outra | `app/not-found.tsx`: "Nothing was framed here." — parede com o vão sem header, "Back to the app" (accent) e "Sign in" (ghost); também o que `notFound()` mostra | 2026-10-23 |
+| erro de rota | `app/error.tsx` (cliente): "This page broke while loading.", Alert destrutivo com a mensagem do erro e a referência (`digest`), "Try again" (accent, chama o `reset` do Next) e "Back to the app" (ghost); o erro vai ao console. Sem `global-error.tsx` de propósito: o layout raiz só monta o shell | 2026-10-23 |
+
+**Carregando** (2026-10-23): o que o servidor espera fica atrás de `Suspense`, e o resto da página chega antes.
+`app/app/loading.tsx` e `app/login/loading.tsx` são a página inteira em `Skeleton` (papel-3, nunca dourado;
+sobre navy, papel a 8–15 %), com a **mesma grade** da tela real para nada pular quando o conteúdo chega — o
+Next os usa como fallback do `Suspense` da rota, na navegação e no streaming do primeiro HTML (o esqueleto do
+login vai no HTML e é trocado quando o Supabase responde). O **usuário do header** entra por um `Suspense` próprio
+(`components/header-user.tsx`: `HeaderUser` async + `HeaderUserSkeleton`, a mesma caixa do avatar): o layout
+deixou de esperar `currentUser()` em toda navegação. Esqueletos levam `aria-busy="true"` e um texto `sr-only`.
+Onde **não** se usa: o passo 01 é síncrono (exemplos e ilustração do motor em ~30 ms) e o editor e o resultado
+têm os próprios estados de espera (chip "Checking…", "Rendering N pages…", tela da extração) — Suspense ali só
+duplicaria.
 
 Rotas de API: **nenhuma**. Sem route handlers.
 
@@ -332,6 +345,9 @@ Server Component     →  service                                               
 app/<rota>/page.tsx      rota fina: Server Component lê pelos services e monta a view
 app/<rota>/_components/  a view e os componentes que só essa rota usa (pasta privada: `_` não vira rota)
 app/<rota>/_actions/     server actions (next-safe-action) só dessa rota, uma por arquivo
+app/<rota>/loading.tsx   esqueleto da rota (fallback do Suspense do Next), na grade da tela real
+app/not-found.tsx        404 do app (e o que `notFound()` mostra)
+app/error.tsx            erro de renderização de uma rota, com "Try again" (reset)
 components/              compartilhado entre rotas (app-shell, site-header) e `ui/` do shadcn
 services/                regra de negócio, só servidor
 schemas/                 zod compartilhado cliente/servidor

@@ -19,7 +19,7 @@ vi.mock('next-safe-action/hooks', () => ({
   }),
 }));
 
-const { SiteHeader } = await import('./site-header');
+const { SiteHeader, UserMenu } = await import('./site-header');
 const user = { id: 'u1', email: 'joao.phillipe1998@gmail.com' };
 
 beforeEach(() => {
@@ -36,7 +36,7 @@ afterEach(cleanup);
 describe('SiteHeader (S22 header)', () => {
   it('no app: marca, "New project" ativo pela rota e avatar com as iniciais', () => {
     pathname = '/app';
-    render(<SiteHeader user={user} />);
+    render(<SiteHeader userSlot={<UserMenu user={user} />} />);
     expect(screen.getByRole('link', { name: 'Panelizer — National Lumber' })).toBeTruthy();
     const nav = screen.getByRole('link', { name: 'New project' });
     expect(nav.getAttribute('aria-current')).toBe('page');
@@ -46,12 +46,12 @@ describe('SiteHeader (S22 header)', () => {
 
   it('sem usuário não há avatar; na tela de login não há navegação mesmo com usuário', () => {
     pathname = '/app';
-    const { unmount } = render(<SiteHeader user={undefined} />);
+    const { unmount } = render(<SiteHeader userSlot={null} />);
     expect(screen.queryByRole('button', { name: /Account:/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'New project' })).toBeTruthy();
     unmount();
     pathname = '/login';
-    render(<SiteHeader user={user} />);
+    render(<SiteHeader userSlot={<UserMenu user={user} />} />);
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByRole('button', { name: /Account:/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'Panelizer — National Lumber' })).toBeTruthy();
@@ -63,7 +63,7 @@ describe('SiteHeader (S22 header)', () => {
   it('o menu do avatar mostra o e-mail e "Sign out" sai e vai ao login', async () => {
     pathname = '/app';
     const u = userEvent.setup();
-    render(<SiteHeader user={user} />);
+    render(<SiteHeader userSlot={<UserMenu user={user} />} />);
     await u.click(screen.getByRole('button', { name: `Account: ${user.email}` }));
     const item = await screen.findByRole('menuitem', { name: /Sign out/ });
     expect(screen.getByText('Signed in as')).toBeTruthy();

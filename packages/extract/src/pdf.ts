@@ -8,8 +8,18 @@
  * API, que recebe as páginas recortadas como `document`.
  */
 
+/// <reference path="./pdfjs-worker.d.ts" />
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+
+/**
+ * Worker na própria thread, carregado por import estático. Em Node o pdf.js monta um "fake worker" com
+ * `import("./pdf.worker.mjs")` dinâmico, que o rastreio de arquivos do Next/Vercel não enxerga: no deploy o
+ * arquivo não ia junto e toda leitura morria em "Setting up fake worker failed" (2026-10-23). Com o módulo em
+ * `globalThis.pdfjsWorker`, o pdf.js usa este handler e não importa nada em tempo de execução.
+ */
+(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker ??= pdfjsWorker;
 
 /** Um trecho de texto na página, já arredondado ao ponto. */
 export interface TextRun {
