@@ -3,8 +3,9 @@
  *
  * Uso: `extract <planta.pdf> --out <dir> [--pages 3,15] [--dry-run | --response <resposta.json>] …`
  * Grava em <dir>: `projeto.json` (entrada do `panelizer build`), `extracao.json` (resposta do modelo),
- * `revisao.md` (relatório com confiança, evidência e o que revisar) e `paginas/<n>.txt` (texto posicionado
- * enviado). Sem `--dry-run`/`--response` chama a API, que precisa de `ANTHROPIC_API_KEY`.
+ * `revisao.md` (relatório com confiança, evidência e o que revisar), `paginas/<n>.txt` (texto posicionado
+ * enviado) e, no `--dry-run`, `recortes/` (as imagens em alta resolução das plantas que iriam à API). Sem
+ * `--dry-run`/`--response` chama a API, que precisa de `ANTHROPIC_API_KEY`.
  *
  * Único módulo do pacote que toca `node:fs` (junto com `bin/` e `cli.ts`), por uma `Io` injetável.
  * Códigos de saída: 0 ok (mesmo com problemas no JSON: a saída é para revisão), 1 erro, 2 uso incorreto.
@@ -16,6 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 import { buildRequest, droppedWarning, ExtractError, extractWalls, finish, selectPages, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
 import { formatPageText, readPageText } from './pdf';
 import { RESPONSE_SCHEMA } from './prompt';
+import type { TileOptions } from './tiles';
 
 export const USAGE = `extract — planta em PDF → JSON de paredes do panelizer, para revisão
 
@@ -27,10 +29,11 @@ Gera em <dir>:
   extracao.json      resposta do modelo: paredes, aberturas, tipos, confiança e evidência
   revisao.md         relatório: o que foi lido, de onde, e o que revisar
   paginas/<n>.txt    texto posicionado de cada página enviada
+  recortes/          (só --dry-run) recortes em alta resolução das plantas, como vão à API
 
 Opções:
   --out <dir>            diretório de saída (obrigatório; criado se não existir)
-  --pages 3,15           páginas (1-based) a enviar; sem isto, a planta A-1xx e o schedule A-8xx pelo carimbo
+  --pages 3,15           páginas (1-based) a enviar; sem isto, as folhas úteis pelo carimbo (planta, schedules, estrutural…)
   --level <n>            pavimento a extrair (dica ao modelo)
   --name <texto>         nome do projeto (dica ao modelo)
   --hint <texto>         observação livre para o modelo ("ignore a garagem")
@@ -44,8 +47,11 @@ Opções:
   --floors <n>           pavimentos acima das paredes portantes; --floor-span <center|clear> apoio do piso
   --model <id>           modelo (default claude-opus-5-5)
   --effort <nível>       low | medium | high (default) | xhigh | max
-  --max-tokens <n>       limite de saída (default 96000; o raciocínio conta)
-  --dry-run              não chama a API: grava paginas/ e pedido.json e para
+  --max-tokens <n>       limite de saída (default 128000, o máximo; o raciocínio conta)
+  --no-tiles             sem recortes em alta resolução das plantas (default: até 6 por planta, 16 por leitura)
+  --max-tiles <n>        teto de recortes por página de planta
+  --tiles-dpi <n>        resolução alvo dos recortes (default 200; o teto por página costuma mandar)
+  --dry-run              não chama a API: grava paginas/, recortes/ e pedido.json e para
   --response <arquivo>   não chama a API: pós-processa uma resposta gravada (JSON do modelo)
   -h, --help             esta ajuda
 
@@ -55,6 +61,7 @@ Precisa de ANTHROPIC_API_KEY no ambiente para chamar a API (não com --dry-run n
 export interface Io {
   readFile(path: string): Uint8Array;
   writeFile(path: string, content: string): void;
+  writeBinary(path: string, content: Uint8Array): void;
   mkdir(path: string): void;
   stdout(line: string): void;
   stderr(line: string): void;
@@ -63,6 +70,7 @@ export interface Io {
 export const nodeIo: Io = {
   readFile: (p) => new Uint8Array(readFileSync(p)),
   writeFile: (p, c) => writeFileSync(p, c, 'utf8'),
+  writeBinary: (p, c) => writeFileSync(p, c),
   mkdir: (p) => {
     mkdirSync(p, { recursive: true });
   },
@@ -96,6 +104,8 @@ export interface ExtractArgs {
   model?: string;
   effort?: Effort;
   maxTokens?: number;
+  /** `false` desliga os recortes; objeto ajusta teto por página e dpi. */
+  tiles: boolean | Partial<TileOptions>;
   dryRun: boolean;
   response?: string;
 }
@@ -126,7 +136,12 @@ function int(v: string, flag: string): number {
 export function parseArgs(argv: readonly string[]): ParsedArgs {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) return { command: 'help' };
   let input: string | undefined;
-  const args: Omit<ExtractArgs, 'command' | 'input' | 'out'> & { out?: string } = { dryRun: false };
+  const args: Omit<ExtractArgs, 'command' | 'input' | 'out'> & { out?: string } = { dryRun: false, tiles: true };
+  const tileOptions = (): Partial<TileOptions> => {
+    if (args.tiles === false) throw new UsageError('--no-tiles não combina com --max-tiles / --tiles-dpi');
+    if (args.tiles === true) args.tiles = {};
+    return args.tiles;
+  };
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] as string;
@@ -210,6 +225,16 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       case '--max-tokens':
         args.maxTokens = int(value(), '--max-tokens');
         break;
+      case '--no-tiles':
+        if (typeof args.tiles === 'object') throw new UsageError('--no-tiles não combina com --max-tiles / --tiles-dpi');
+        args.tiles = false;
+        break;
+      case '--max-tiles':
+        tileOptions().maxPerPage = int(value(), '--max-tiles');
+        break;
+      case '--tiles-dpi':
+        tileOptions().dpi = int(value(), '--tiles-dpi');
+        break;
       case '--dry-run':
         args.dryRun = true;
         break;
@@ -266,6 +291,11 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
     io.mkdir(dirname(target));
     io.writeFile(target, content);
   };
+  const writeBinary = (name: string, content: Uint8Array) => {
+    const target = join(outDir, ...name.split('/'));
+    io.mkdir(dirname(target));
+    io.writeBinary(target, content);
+  };
 
   let pdf: Uint8Array;
   try {
@@ -309,12 +339,33 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
       floorsSupported: args.floors,
       floorSpan: args.floorSpan,
     });
-    const req: ExtractRequest = { pdf, pages, hints, convert };
+    const req: ExtractRequest = { pdf, pages, hints, convert, tiles: args.tiles };
     const opts: ExtractOptions = strip({ model: args.model, effort: args.effort, maxTokens: args.maxTokens });
 
     let result: ExtractResult;
     if (args.dryRun) {
-      const { params } = await buildRequest(req, opts);
+      const { params, pdfs, tiles, tileWarnings } = await buildRequest(req, opts);
+      const written: Record<string, unknown>[] = [];
+      for (const input of pdfs) {
+        for (const t of input.tiles ?? []) {
+          const ext = t.tile.mediaType === 'image/png' ? 'png' : 'jpg';
+          const file = `recortes/p${t.page}-l${t.tile.row}c${t.tile.col}.${ext}`;
+          writeBinary(file, t.tile.data);
+          written.push({
+            file,
+            page: t.page,
+            sheet: t.sheet ?? null,
+            row: t.tile.row,
+            col: t.tile.col,
+            region_pt: { x0: t.tile.x0, y0: t.tile.y0, x1: t.tile.x1, y1: t.tile.y1 },
+            width: t.tile.width,
+            height: t.tile.height,
+            dpi: t.grid.dpi,
+            bytes: t.tile.data.byteLength,
+            mediaType: t.tile.mediaType,
+          });
+        }
+      }
       const summary = {
         model: params.model,
         max_tokens: params.max_tokens,
@@ -322,11 +373,16 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         system: params.system[0]?.text,
         pages,
         pdf_bytes: pdf.byteLength,
+        tiles: written,
+        tiles_encoded_bytes: tiles.encodedBytes,
         content_blocks: (params.messages[0]?.content as unknown[]).map((b) => (b as { type: string }).type),
         schema: RESPONSE_SCHEMA,
       };
       write('pedido.json', JSON.stringify(summary, null, 2) + '\n');
-      io.stdout(`dry-run: ${pages.length} página(s) → ${outDir} (paginas/, pedido.json); nada enviado`);
+      for (const w of tileWarnings) io.stderr(`aviso: ${w}`);
+      io.stdout(
+        `dry-run: ${pages.length} página(s), ${tiles.count} recorte(s) → ${outDir} (paginas/${tiles.count > 0 ? ', recortes/' : ''}, pedido.json); nada enviado`,
+      );
       return 0;
     } else if (args.response !== undefined) {
       const text = Buffer.from(io.readFile(resolve(cwd, args.response))).toString('utf8');
@@ -340,9 +396,10 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
     write('revisao.md', result.report);
 
     const openings = result.output.walls.reduce((n, w) => n + w.openings.length, 0);
+    const tilesSent = result.tilesSent.reduce((n, t) => n + t.tiles, 0);
     io.stdout(
       `${result.output.walls.length} parede(s), ${openings} abertura(s) → ${outDir} ` +
-        `(${result.model}; ${result.usage.inputTokens} tokens de entrada, ${result.usage.outputTokens} de saída)`,
+        `(${result.model}; ${result.usage.inputTokens} tokens de entrada, ${result.usage.outputTokens} de saída${tilesSent > 0 ? `; ${tilesSent} recorte(s)` : ''})`,
     );
     for (const w of result.warnings) io.stderr(`aviso: ${w}`);
     for (const p of result.problems) io.stderr(`problema: ${p}`);

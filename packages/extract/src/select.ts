@@ -29,20 +29,34 @@ export type SheetCategory =
   | 'otherPlan'
   | 'skip';
 
+/**
+ * Ordem de importância. `enlarged` logo depois de `schedule` (2026-10-30): no Horace as portas dos apartamentos
+ * só têm cota e regra de posicionamento nas plantas ampliadas (A-401–A-404); o schedule vem antes porque dá
+ * os tipos de porta que a ampliada referencia.
+ */
 const RANK: Record<Exclude<SheetCategory, 'skip'>, number> = {
   plan: 0,
   schedule: 1,
-  structural: 2,
-  elevation: 3,
-  section: 4,
-  enlarged: 5,
+  enlarged: 2,
+  structural: 3,
+  elevation: 4,
+  section: 5,
   otherPlan: 6,
 };
 
+/** Categorias que recebem recortes em alta resolução (`tiles.ts`): planta do pavimento e plantas ampliadas. */
+export function tiledCategory(c: SheetCategory): 'plan' | 'enlarged' | undefined {
+  return c === 'plan' || c === 'enlarged' ? c : undefined;
+}
+
 /** Páginas por requisição quando o humano não escolhe (a API aceita 600; o custo cresce com cada folha). */
 export const AUTO_PAGE_BUDGET = 40;
-/** PDF recortado somado: a requisição tem teto de 32 MB e o base64 incha um terço. */
-export const AUTO_BYTE_BUDGET = 22 * 1024 * 1024;
+/**
+ * PDF recortado somado: a requisição tem teto de 32 MB e o base64 incha um terço (19 MiB brutos ≈ 25 MiB
+ * codificados), e o que sobra (~6 MiB) é dos recortes em alta resolução das plantas (2026-10-30; antes 22 MiB,
+ * que no Horace não deixava lugar para recorte nenhum).
+ */
+export const AUTO_BYTE_BUDGET = 19 * 1024 * 1024;
 
 const SCHEDULE = /\bSCHEDULES?\b|PARTITION TYPES?|WALL TYPES?|\bASSEMBLIES\b/;
 const SKIP =

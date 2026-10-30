@@ -12,6 +12,7 @@ const ringgoldOutput = JSON.parse(readFileSync(new URL('./fixtures/ringgold-outp
 /** Io em memória: arquivos de entrada dados, saídas capturadas. */
 function memIo(inputs: Record<string, Uint8Array | string>) {
   const files = new Map<string, string>();
+  const binaries = new Map<string, Uint8Array>();
   const dirs: string[] = [];
   const out: string[] = [];
   const err: string[] = [];
@@ -25,6 +26,9 @@ function memIo(inputs: Record<string, Uint8Array | string>) {
     writeFile: (p, c) => {
       files.set(p.replace(/\\/g, '/').replace(/^.*\/saida\//, ''), c);
     },
+    writeBinary: (p, c) => {
+      binaries.set(p.replace(/\\/g, '/').replace(/^.*\/saida\//, ''), c);
+    },
     mkdir: (p) => {
       dirs.push(p);
     },
@@ -35,7 +39,7 @@ function memIo(inputs: Record<string, Uint8Array | string>) {
       err.push(l);
     },
   };
-  return { io, files, dirs, out, err };
+  return { io, files, binaries, dirs, out, err };
 }
 
 const fakeDeps: Deps = {
@@ -56,8 +60,12 @@ describe('parseArgs', () => {
       ]),
     ).toEqual({
       command: 'extract', input: 'planta.pdf', out: 'saida', pages: [3, 15], level: 1, name: 'Casa', hint: 'ignore a garagem',
-      date: '2026-10-14', revision: 'A', model: 'claude-sonnet-5-5', effort: 'max', maxTokens: 8000, dryRun: false,
+      date: '2026-10-14', revision: 'A', model: 'claude-sonnet-5-5', effort: 'max', maxTokens: 8000, dryRun: false, tiles: true,
     });
+    expect(parseArgs(['p.pdf', '--out', 'd', '--no-tiles'])).toMatchObject({ tiles: false });
+    expect(parseArgs(['p.pdf', '--out', 'd', '--max-tiles', '12', '--tiles-dpi', '220'])).toMatchObject({ tiles: { maxPerPage: 12, dpi: 220 } });
+    expect(() => parseArgs(['p.pdf', '--out', 'd', '--no-tiles', '--max-tiles', '4'])).toThrow(/não combina/);
+    expect(() => parseArgs(['p.pdf', '--out', 'd', '--max-tiles', '4', '--no-tiles'])).toThrow(/não combina/);
     expect(parseArgs(['p.pdf', '--out=d', '--dry-run'])).toMatchObject({ out: 'd', dryRun: true });
     expect(parseArgs(['p.pdf', '--out', 'd', '--wall-height', `9'-1 1/8"`])).toMatchObject({ wallHeight: `9'-1 1/8"` });
     expect(parseArgs(['p.pdf', '--out', 'd', '--snow', '30', '--width', `29'`, '--wind', '130', '--exposure', 'B'])).toMatchObject({
@@ -103,14 +111,32 @@ describe('run', () => {
     const deps: Deps = { extract: async () => { throw new Error('não deveria chamar'); } };
     expect(await run(['planta.pdf', '--out', 'saida', '--dry-run'], m.io, '/w', deps)).toBe(0);
     expect(m.out[0]).toBe('páginas pelo carimbo: 1=A-100 2=A-800');
-    expect(m.out[1]).toMatch(/^dry-run: 2 página\(s\)/);
+    expect(m.out[1]).toMatch(/^dry-run: 2 página\(s\), 1 recorte\(s\)/);
     expect([...m.files.keys()].sort()).toEqual(['paginas/1.txt', 'paginas/2.txt', 'pedido.json']);
+    // O recorte da A-100 (planta) vai para recortes/; a A-800 (schedule) não recorta.
+    expect([...m.binaries.keys()]).toEqual(['recortes/p1-l1c1.png']);
+    expect(Array.from(m.binaries.get('recortes/p1-l1c1.png')!.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
     expect(m.files.get('paginas/1.txt')).toContain(`16' - 0"`);
     const pedido = JSON.parse(m.files.get('pedido.json') as string) as Record<string, unknown>;
     expect(pedido['model']).toBe('claude-opus-5-5');
     expect(pedido['pages']).toEqual([1, 2]);
-    expect(pedido['content_blocks']).toEqual(['document', 'text', 'text', 'text']);
+    expect(pedido['content_blocks']).toEqual(['document', 'text', 'text', 'text', 'image', 'text']);
+    expect(pedido['tiles']).toEqual([
+      expect.objectContaining({ file: 'recortes/p1-l1c1.png', page: 1, sheet: 'A-100', row: 1, col: 1, region_pt: { x0: 0, y0: 0, x1: 612, y1: 792 }, mediaType: 'image/png' }),
+    ]);
+    expect(pedido['tiles_encoded_bytes']).toBeGreaterThan(0);
     expect(pedido['schema']).toHaveProperty('properties');
+  });
+
+  it('--dry-run --no-tiles: sem recortes/ e com os 4 blocos de antes', async () => {
+    const m = memIo({ 'planta.pdf': await makePdf() });
+    const deps: Deps = { extract: async () => { throw new Error('não deveria chamar'); } };
+    expect(await run(['planta.pdf', '--out', 'saida', '--dry-run', '--no-tiles'], m.io, '/w', deps)).toBe(0);
+    expect(m.out[1]).toMatch(/^dry-run: 2 página\(s\), 0 recorte\(s\) → .*\(paginas\/, pedido\.json\)/);
+    expect(m.binaries.size).toBe(0);
+    const pedido = JSON.parse(m.files.get('pedido.json') as string) as Record<string, unknown>;
+    expect(pedido['content_blocks']).toEqual(['document', 'text', 'text', 'text']);
+    expect(pedido['tiles']).toEqual([]);
   });
 
   it('--response: pós-processa a resposta gravada e escreve projeto.json válido, extracao.json e revisao.md', async () => {

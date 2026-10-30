@@ -1,14 +1,15 @@
 /**
- * O prompt da extração (S18, S20.2). Determinístico: mesma entrada, mesmas mensagens. O system prompt é
- * fixo (cacheável); a parte variável — PDFs recortados, imagens e o texto posicionado — vai na mensagem do
- * usuário. As convenções abaixo são as do CLI (`packages/cli/src/project.ts`) e de `docs/02-framing.md`;
- * mudou lá, muda aqui.
+ * O prompt da extração (S18, S20.2, recortes 2026-10-30). Determinístico: mesma entrada, mesmas mensagens. O
+ * system prompt é fixo (cacheável); a parte variável — PDFs recortados, texto posicionado, recortes em alta
+ * resolução das plantas, imagens — vai na mensagem do usuário. As convenções abaixo são as do CLI
+ * (`packages/cli/src/project.ts`) e de `docs/02-framing.md`; mudou lá, muda aqui.
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { formatPageText, type PageText } from './pdf';
+import { formatPageText, type PageText, type RenderedTile } from './pdf';
 import { ExtractionOutput } from './schema';
+import { tileCaption, type TileGrid } from './tiles';
 
 export interface ExtractHints {
   /** Pavimento a extrair quando o PDF tem mais de uma planta (default: o que o modelo identificar como 1º). */
@@ -23,6 +24,9 @@ export const SYSTEM_PROMPT = `Você lê plantas de arquitetura residencial ameri
 
 ## Entrada
 Um ou mais arquivos do projeto: páginas de PDF vetorial e/ou imagens (fotos ou exportações). Podem vir plantas de vários pavimentos, schedules de portas e janelas, tipos de parede e de piso, notas e plantas estruturais (folhas S-), elevações externas e cortes. Use cada folha para o que ela tem: a planta do pavimento pedido dá paredes e aberturas; os schedules dão tipos e tamanhos; as elevações dão peitoril, altura de verga e quantos pavimentos há; os cortes dão piso a piso, espessura do piso e altura de parede; o estrutural dá cargas, headers e quais paredes são portantes. Junte as informações e cite a folha em \`evidence\`. Para cada página de PDF vem também o texto posicionado (x, y em pontos, y crescendo para baixo; \`rot=90\` ou \`rot=-90\` marca texto de cotas verticais). Use a imagem para entender a geometria e o texto posicionado para ler cada cota sem erro. Em imagem sem texto posicionado, leia as cotas pela imagem e baixe a confiança quando o texto estiver pequeno ou cortado.
+
+## Recortes
+Depois do texto posicionado de um PDF podem vir **recortes**: imagens em alta resolução de regiões das folhas de planta, cada uma precedida de um rótulo \`## recorte …\` com a folha, a posição na grade (linha/coluna) e a região em pontos da página — as mesmas coordenadas do texto posicionado, y crescendo para baixo. A página inteira do PDF dá a visão geral; os recortes mostram o que nela fica pequeno demais: símbolos de porta (folha e arco de giro), vãos sem porta, tags pequenas, cotas internas. Para cada abertura interna, procure-a no recorte da região onde a tag ou a cota aparece e cruze com o texto posicionado.
 
 ## Convenções de saída
 - Medidas sempre como texto copiado do desenho (\`16' - 0"\`, \`8' - 5 7/8"\`, \`56"\`). Faça contas só quando a convenção abaixo exigir, e mostre a conta em \`evidence\`.
@@ -42,10 +46,20 @@ Um ou mais arquivos do projeto: páginas de PDF vetorial e/ou imagens (fotos ou 
 - Confiança: 1.0 quando a cota está explícita e a conta é direta; 0.7–0.9 quando precisou interpretar (qual cota é de qual parede, conversão de face para eixo); abaixo de 0.7 quando chutou ou faltou cota. Seja honesto: o revisor confia no número.
 - Ids curtos e estáveis: externas pela orientação (\`N1\`, \`S1\`, \`S2\`, \`E1\`, \`W1\`), internas \`I1\`, \`I2\`…; aberturas \`<parede>-<tag ou tipo><n>\`.
 
+## Aberturas internas e sem cota
+- Todo símbolo de porta (folha com arco de giro, porta de correr ou de bolso, vão com linhas de batente) é uma abertura da parede em que está, com tag ou sem. Sem tag: \`type: "door"\`, com \`roughWidth\` quando a planta cota o vão, ou a tag do tipo do schedule quando a largura desenhada só cabe num tipo; senão RO null e uma nota.
+- Tags de porta no texto posicionado (\`U2\`, \`1\`, \`114\`, \`103A\`, os tipos numéricos de um "DOOR SCHEDULE - UNITS") marcam uma porta na parede mais próxima da tag. Registre em \`notes\` todas as tags de porta encontradas e o destino de cada uma: abertura \`<id>\` na parede \`<id>\`, ou o motivo de não ser porta (delta de revisão, bolha de vista, carimbo, tabela).
+- Posição de cada abertura, nesta ordem, declarando a fonte em \`positionSource\`: \`dimension\` — cota explícita até o eixo (ou até a borda: use \`offset\`), inclusive pelas notas gerais ("dimensions to doors are taken to the center line"); \`rule\` — regra escrita na folha ("single doors to be located 4\\" from adjacent face of stud", "double doors centered on closet"): aplique a regra com as cotas da parede e mostre a conta em \`evidence\`; \`scaled\` — não há cota nem regra: meça no recorte, pela escala da planta e a partir de uma cota próxima conhecida, e dê a medida em polegadas inteiras com confiança ≤ 0.5. Uma porta nunca fica de fora nem sem posição por falta de cota: \`scaled\` é o último recurso, marcado para o revisor conferir.
+- Plantas ampliadas (ENLARGED UNIT PLANS, A-4xx) são a fonte do interior das unidades: paredes, portas e regras de posicionamento de lá valem sobre a planta geral quando divergem; cite a folha em \`evidence\`.
+- Janelas sem tag na planta: a tag vem da elevação externa pela posição ao longo da fachada; o peitoril idem.
+- Autochecagem em \`rooms\`: um item por cômodo fechado do pavimento (bedroom, bathroom, closet, kitchen, living, hall, vestibule, mech…) com os ids das portas que dão acesso a ele. Cômodo sem nenhuma porta encontrada fica com \`doors: []\` e uma \`note\` dizendo por quê (vão aberto sem porta, símbolo não visível, fora do pavimento). Use a lista para voltar à planta antes de responder: todo quarto, banheiro e closet tem porta.
+- Planta com paredes fora dos eixos (rotação de poucos graus): mantenha a premissa de eixos, leia as cotas como estão e registre em \`notes\`.
+
 ## O que NÃO fazer
 - Não escolher header, jacks ou kings: isso é do motor e das tabelas do IRC.
-- Não arredondar cotas nem converter para decimal.
-- Não omitir paredes porque faltou cota: inclua com confiança baixa e explique em \`notes\`.`;
+- Não arredondar cotas nem converter para decimal — a exceção é a posição \`scaled\`, que já nasce medida e marcada.
+- Não omitir paredes porque faltou cota: inclua com confiança baixa e explique em \`notes\`.
+- Não omitir aberturas porque faltou cota: posição \`scaled\`, confiança baixa e uma nota.`;
 
 /** JSON Schema do `ExtractionOutput`, gerado do zod: vai no system prompt em vez de structured outputs. */
 export const RESPONSE_SCHEMA = z.toJSONSchema(ExtractionOutput) as Record<string, unknown>;
@@ -64,11 +78,23 @@ export const FULL_SYSTEM_PROMPT =
 
 export type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
 
+/** Um recorte de uma página de planta, pronto para a mensagem: a imagem e o que a legenda precisa dizer. */
+export interface PageTile {
+  /** Número original da página no PDF (o mesmo do `# página N` do texto posicionado). */
+  page: number;
+  sheet?: string;
+  title?: string;
+  grid: TileGrid;
+  tile: RenderedTile;
+}
+
 /** Um PDF já recortado às páginas enviadas, com o texto posicionado dessas páginas na mesma ordem. */
 export interface PdfInput {
   name: string;
   pdf: Uint8Array;
   pages: readonly PageText[];
+  /** Recortes em alta resolução das páginas de planta deste PDF (ordem de página, linha, coluna). */
+  tiles?: readonly PageTile[];
 }
 
 export interface ImageInput {
@@ -94,8 +120,9 @@ function hintsText(h: ExtractHints | undefined): string {
 const toBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('base64');
 
 /**
- * Conteúdo da mensagem do usuário: cada PDF como `document` seguido do texto posicionado de cada página,
- * cada imagem como `image` precedida do nome, as dicas e a instrução final. Determinístico.
+ * Conteúdo da mensagem do usuário: cada PDF como `document` seguido do texto posicionado de cada página e dos
+ * recortes das suas plantas (legenda + imagem), cada imagem do usuário como `image` precedida do nome, as
+ * dicas e a instrução final. Determinístico.
  */
 export function buildUserContent(input: PromptInput): Anthropic.ContentBlockParam[] {
   if (input.pdfs.length === 0 && (input.images?.length ?? 0) === 0) {
@@ -110,6 +137,13 @@ export function buildUserContent(input: PromptInput): Anthropic.ContentBlockPara
     });
     for (const p of doc.pages) {
       blocks.push({ type: 'text', text: `## ${doc.name}\n${formatPageText(p)}` });
+    }
+    for (const t of doc.tiles ?? []) {
+      blocks.push({
+        type: 'text',
+        text: tileCaption({ name: doc.name, page: t.page, ...(t.sheet === undefined ? {} : { sheet: t.sheet }), ...(t.title === undefined ? {} : { title: t.title }), grid: t.grid, tile: t.tile }),
+      });
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: t.tile.mediaType, data: toBase64(t.tile.data) } });
     }
   }
   for (const img of input.images ?? []) {

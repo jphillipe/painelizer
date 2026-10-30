@@ -54,6 +54,9 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   ALTURA_PADRAO: 'Default header height used',
   ALTURA_RO_PORTA: 'Door RO height assumed',
   FOLHAS_FORA: 'Sheets left out of the reading',
+  ABERTURA_ESTIMADA: 'Opening position measured by scale (no dimension)',
+  COMODO_SEM_PORTA: 'Room without a door in the reading',
+  RECORTES_FORA: 'High-res crops left out of the reading',
   // motor (packages/core)
   HEADER_JACKS_BELOW_TABLE: 'Fewer jack studs than the IRC table',
   HEADER_KINGS_BELOW_TABLE: 'Fewer king studs than the IRC table',

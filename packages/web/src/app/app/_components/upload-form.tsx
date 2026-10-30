@@ -121,7 +121,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     onFilesChange?.(next);
     if (next.length > 0) setFilesError(undefined);
   };
-  const estimate = preview?.ok ? estimateCost(preview.pagesTotal, preview.images) : undefined;
+  const estimate = preview?.ok ? estimateCost(preview.pagesTotal, preview.images, preview.tiles.count) : undefined;
 
   return (
     <Form {...form}>
@@ -259,7 +259,9 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
             )}
           </Button>
           <p className="text-sm text-ink-3">
-            {preview?.ok ? `${preview.pagesTotal} page${preview.pagesTotal === 1 ? '' : 's'} go to the AI · ` : ''}
+            {preview?.ok
+              ? `${preview.pagesTotal} page${preview.pagesTotal === 1 ? '' : 's'}${preview.tiles.count > 0 ? ` + ${preview.tiles.count} high-res crop${preview.tiles.count === 1 ? '' : 's'} of the plan` : ''} go to the AI · `
+              : ''}
             The read takes several minutes and can be cancelled. You review every wall before anything is built.
             {onSample !== undefined ? (
               <>

@@ -132,10 +132,19 @@ export async function preview(files: readonly UploadedFile[], opts: Pick<FromFil
     const out: Extract<ExtractPreview, { ok: true }>['files'] = sources.map((s) => ({
       name: s.name,
       kind: s.kind,
-      pages: info.sheets.filter((p) => p.name === s.name).map(({ page, sheet, title }) => ({ page, ...(sheet === undefined ? {} : { sheet }), ...(title === undefined ? {} : { title }) })),
+      pages: info.sheets
+        .filter((p) => p.name === s.name)
+        .map(({ page, sheet, title, category }) => ({ page, ...(sheet === undefined ? {} : { sheet }), ...(title === undefined ? {} : { title }), ...(category === undefined ? {} : { category }) })),
       dropped: info.pagesDropped.filter((d) => d.name === s.name).map((d) => ({ page: d.page, ...(d.sheet === undefined ? {} : { sheet: d.sheet }), category: d.category })),
     }));
-    return { ok: true, files: out, pagesTotal: info.pagesSent.reduce((n, p) => n + p.pages.length, 0), images: info.images, encodedBytes: info.encodedBytes };
+    return {
+      ok: true,
+      files: out,
+      pagesTotal: info.pagesSent.reduce((n, p) => n + p.pages.length, 0),
+      images: info.images,
+      encodedBytes: info.encodedBytes,
+      tiles: { count: info.tiles.count, encodedBytes: info.tiles.encodedBytes },
+    };
   } catch (e) {
     if (e instanceof RangeError || e instanceof SyntaxError) return { ok: false, message: e.message };
     throw e;

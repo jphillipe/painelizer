@@ -1,0 +1,19 @@
+# O que `gcloud run deploy --source .` NÃO sobe para o Cloud Build. Regras do gitignore: um nome solto casa em
+# qualquer profundidade, por isso as pastas da raiz levam `/` na frente (sem ele, `supabase` escondia
+# packages/web/src/lib/supabase e o build falhava com "Module not found").
+.gcloudignore
+.git
+.claude
+node_modules
+**/node_modules
+**/.next
+/out
+/dist
+/docs
+/supabase
+*.log
+.env
+.env.*
+!.env.example
+**/*.tsbuildinfo
+packages/web/next-env.d.ts

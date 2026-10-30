@@ -95,14 +95,17 @@ export type ExtractPreview =
       files: {
         name: string;
         kind: 'pdf' | 'image';
-        /** Páginas que vão (PDF), com folha e título do carimbo quando lidos. */
-        pages: { page: number; sheet?: string; title?: string }[];
+        /** Páginas que vão (PDF), com folha, título do carimbo e categoria (planta, schedule…) quando lidos. */
+        pages: { page: number; sheet?: string; title?: string; category?: string }[];
         /** Páginas úteis que ficaram fora do orçamento, com a categoria. */
         dropped: { page: number; sheet?: string; category: string }[];
       }[];
       pagesTotal: number;
       images: number;
+      /** Já inclui os recortes (estimados). */
       encodedBytes: number;
+      /** Recortes em alta resolução das plantas que vão junto (2026-10-30). */
+      tiles: { count: number; encodedBytes: number };
     }
   | { ok: false; message: string };
 

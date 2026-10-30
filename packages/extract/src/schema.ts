@@ -6,6 +6,9 @@
  *
  * Medidas são texto como no desenho (`16' - 0"`, `8' - 5 7/8"`, `56"`): `parseFeetInches` do core lê
  * esse formato, e manter a string preserva a evidência para a revisão humana.
+ *
+ * `positionSource` e `rooms` (2026-10-30) têm default para as leituras gravadas antes deles continuarem
+ * válidas; no JSON Schema que vai ao modelo eles aparecem como campos normais.
  */
 
 import { z } from 'zod';
@@ -19,12 +22,19 @@ export const Point = z.object({
   y: Measure.describe('y no eixo da parede; norte positivo.'),
 });
 
+export const PositionSource = z.enum(['dimension', 'rule', 'scaled']);
+
 export const OpeningOut = z.object({
   id: z.string().describe('Id único no projeto, ex.: `N1-A`, `S2-D1`.'),
   tag: z.string().nullable().describe('Tag do schedule (janela `A`, porta `1`, `U2`), quando a planta usa tag.'),
   type: z.enum(['window', 'door']).nullable().describe('Obrigatório quando não há tag no schedule.'),
   center: Measure.nullable().describe('Eixo da abertura medido do `start` da parede, como a planta cota (notas de cota).'),
   offset: Measure.nullable().describe('Só quando a planta cota a borda do RO em vez do eixo.'),
+  positionSource: PositionSource.nullable()
+    .default(null)
+    .describe(
+      'De onde veio a posição: `dimension` (cota explícita), `rule` (regra escrita na folha, conta em `evidence`), `scaled` (medida no recorte pela escala; confiança ≤ 0.5). Null só quando não há posição.',
+    ),
   roughWidth: Measure.nullable().describe('RO explícito na planta, se houver; senão null (o catálogo decide).'),
   roughHeight: Measure.nullable(),
   headerHeight: Measure.nullable().describe('Topo do RO acima do subfloor, se a elevação ou o schedule der; senão null.'),
@@ -97,6 +107,14 @@ export const BuildingOut = z.object({
   species: z.enum(['SPF', 'Hem-Fir', 'DF', 'SP']).nullable(),
 });
 
+/** Autochecagem do modelo: cada cômodo fechado do pavimento e as portas que dão acesso a ele. */
+export const RoomOut = z.object({
+  name: z.string().describe('Como a planta chama (`Bedroom`, `Bathroom`, `Closet`, `Unit 2 Kitchen`).'),
+  level: z.number().int().min(1).nullable(),
+  doors: z.array(z.string()).describe('Ids das aberturas (portas ou vãos) que dão acesso ao cômodo; vazio = nenhuma encontrada.'),
+  note: z.string().nullable().describe('Obrigatório quando `doors` está vazio: por que não há porta.'),
+});
+
 export const ExtractionOutput = z.object({
   projectName: z.string(),
   level: z.number().int().min(1).describe('Pavimento da planta lida.'),
@@ -113,9 +131,12 @@ export const ExtractionOutput = z.object({
   openingTypes: z.array(OpeningTypeOut),
   headerSchedule: z.array(HeaderScheduleOut),
   walls: z.array(WallOut),
-  notes: z.array(z.string()).describe('Tudo que não coube nos campos: dúvidas, cotas ausentes, conflitos.'),
+  rooms: z.array(RoomOut).default([]).describe('Um item por cômodo fechado do pavimento lido, com as portas que dão acesso a ele.'),
+  notes: z.array(z.string()).describe('Tudo que não coube nos campos: dúvidas, cotas ausentes, conflitos, destino de cada tag de porta.'),
 });
 
 export type ExtractionOutput = z.infer<typeof ExtractionOutput>;
 export type WallOut = z.infer<typeof WallOut>;
 export type OpeningOut = z.infer<typeof OpeningOut>;
+export type RoomOut = z.infer<typeof RoomOut>;
+export type PositionSource = z.infer<typeof PositionSource>;

@@ -1,0 +1,8 @@
+# Exceção, só neste projeto, à política "Domain Restricted Sharing" da organização, para a URL do Cloud Run
+# poder ser aberta por qualquer pessoa (docs/12-hospedagem-cloud-run.md, seção 3b). Precisa do papel
+# Organization Policy Administrator na organização:
+#   gcloud org-policies set-policy scripts/cloud-run-allow-public.yaml
+name: projects/national-lumber-1883b/policies/iam.allowedPolicyMemberDomains
+spec:
+  rules:
+    - allowAll: true

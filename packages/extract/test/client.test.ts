@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it, vi } from 'vitest';
-import { buildRequest, DEFAULT_MODEL, ExtractError, extractWalls, finish, stripFences } from '../src/client';
+import { buildRequest, DEFAULT_MODEL, ExtractError, extractWalls, finish, previewExtraction, stripFences } from '../src/client';
+import * as pdfModule from '../src/pdf';
 import { subsetPdf } from '../src/pdf';
 import { FULL_SYSTEM_PROMPT } from '../src/prompt';
 import { makePdf } from './helpers/makePdf';
@@ -41,7 +42,7 @@ describe('buildRequest', () => {
     const { params, pagesSent } = await buildRequest({ pdf, pages: [1, 2] });
     expect(pagesSent).toEqual([{ name: 'planta.pdf', pages: [1, 2] }]);
     expect(params.model).toBe(DEFAULT_MODEL);
-    expect(params.max_tokens).toBe(96000);
+    expect(params.max_tokens).toBe(128000);
     expect(params.system[0]?.cache_control).toEqual({ type: 'ephemeral' });
     expect(params.output_config).toEqual({ effort: 'high' });
     const system = params.system[0]?.text ?? '';
@@ -49,7 +50,32 @@ describe('buildRequest', () => {
     for (const key of ['"projectName"', '"walls"', '"openingTypes"', '"wallTypes"', '"notes"', '"origin"']) expect(system).toContain(key);
     expect(system).toBe(FULL_SYSTEM_PROMPT);
     const content = params.messages[0]?.content;
-    expect(Array.isArray(content) && content.length).toBe(4); // document + 2 páginas + instrução
+    // document + 2 páginas + (legenda + recorte da A-100, que é planta) + instrução; a A-800 (schedule) não recorta
+    expect(Array.isArray(content) && content.map((b) => (b as { type: string }).type)).toEqual(['document', 'text', 'text', 'text', 'image', 'text']);
+  });
+
+  it('tiles: false volta aos 4 blocos de antes', async () => {
+    const { params, tiles } = await buildRequest({ pdf: await makePdf(), pages: [1, 2], tiles: false });
+    expect((params.messages[0]?.content as unknown[]).length).toBe(4);
+    expect(tiles).toEqual({ count: 0, encodedBytes: 0, pages: [], skipped: [] });
+  });
+
+  it('recorta só as páginas de planta, com o resumo em tiles', async () => {
+    const { tiles, pdfs } = await buildRequest({ pdf: await makePdf(), pages: [1, 2] });
+    expect(tiles.count).toBe(1);
+    expect(tiles.pages).toEqual([{ name: 'planta.pdf', page: 1, tiles: 1, dpi: expect.any(Number) }]);
+    expect(tiles.encodedBytes).toBeGreaterThan(1000);
+    expect(pdfs[0]?.tiles?.map((t) => [t.page, t.sheet, t.tile.mediaType])).toEqual([[1, 'A-100', 'image/png']]);
+    const onlySchedule = await buildRequest({ pdf: await makePdf(), pages: [2] });
+    expect(onlySchedule.tiles.count).toBe(0);
+  });
+
+  it('com 20 imagens do usuário não sobra orçamento para recortes', async () => {
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47]);
+    const images = Array.from({ length: 20 }, (_, i) => ({ kind: 'image' as const, name: `f${i}.png`, data: png, mediaType: 'image/png' as const }));
+    const { tiles } = await buildRequest({ sources: [{ kind: 'pdf', name: 'p.pdf', data: await makePdf(), pages: [1] }, ...images] });
+    expect(tiles.count).toBe(0);
+    expect(tiles.skipped).toEqual([{ name: 'p.pdf', page: 1 }]);
   });
 
   it('aceita modelo, esforço e max_tokens', async () => {
@@ -80,14 +106,44 @@ describe('buildRequest', () => {
       { name: 'detalhe.pdf', pages: [2] },
     ]);
     const types = (params.messages[0]?.content as { type: string }[]).map((b) => b.type);
-    // PDFs primeiro (document + 1 texto por página), depois a imagem (rótulo + image), depois a instrução.
-    expect(types).toEqual(['document', 'text', 'text', 'document', 'text', 'text', 'image', 'text']);
+    // PDFs primeiro (document + 1 texto por página + recortes das plantas), depois a imagem (rótulo + image), depois a instrução.
+    // arq.pdf: A-100 (planta → 1 recorte) e A-800; detalhe.pdf: só a A-800 pedida (schedule, sem recorte).
+    expect(types).toEqual(['document', 'text', 'text', 'text', 'image', 'document', 'text', 'text', 'image', 'text']);
   });
 
   it('PDF sem carimbo reconhecível manda todas as páginas até o limite', async () => {
     const only = await subsetPdf(await makePdf(), [2]); // só A-800: sem planta A-1xx
     const { pagesSent } = await buildRequest({ sources: [{ kind: 'pdf', name: 's.pdf', data: only }] });
     expect(pagesSent).toEqual([{ name: 's.pdf', pages: [1] }]);
+  });
+});
+
+describe('previewExtraction — recortes só planejados', () => {
+  it('conta recortes e estima bytes sem renderizar; traz categoria e carimbo das páginas pedidas', async () => {
+    const render = vi.spyOn(pdfModule, 'renderPageTiles');
+    const preview = await previewExtraction({ pdf: await makePdf(), pages: [1, 2] });
+    expect(render).not.toHaveBeenCalled();
+    render.mockRestore();
+    expect(preview.tiles.count).toBe(1);
+    expect(preview.tiles.encodedBytes).toBeGreaterThan(0);
+    expect(preview.tiles.pages[0]).toMatchObject({ name: 'planta.pdf', page: 1, tiles: 1 });
+    expect(preview.encodedBytes).toBeGreaterThan(preview.tiles.encodedBytes);
+    expect(preview.sheets).toEqual([
+      { name: 'planta.pdf', page: 1, sheet: 'A-100', category: 'plan' },
+      { name: 'planta.pdf', page: 2, sheet: 'A-800', category: 'schedule' },
+    ]);
+  });
+
+  it('PDF pedido sem carimbo reconhecível recorta como planta', async () => {
+    const blank = await (async () => {
+      const { PDFDocument } = await import('pdf-lib');
+      const doc = await PDFDocument.create();
+      doc.addPage([612, 792]);
+      return doc.save();
+    })();
+    const preview = await previewExtraction({ sources: [{ kind: 'pdf', name: 'foto.pdf', data: blank, pages: [1] }] });
+    expect(preview.tiles.count).toBe(1);
+    expect(preview.sheets[0]).toEqual({ name: 'foto.pdf', page: 1, category: 'plan' });
   });
 });
 
@@ -110,6 +166,7 @@ describe('extractWalls com cliente falso', () => {
     expect(result.model).toBe('claude-opus-5-5');
     expect(result.usage).toEqual({ inputTokens: 1200, outputTokens: 800 });
     expect(result.pagesSent).toEqual([{ name: 'planta.pdf', pages: [1, 2] }]);
+    expect(result.tilesSent).toEqual([{ name: 'planta.pdf', page: 1, tiles: 1, dpi: expect.any(Number) }]);
   });
 
   it('recusa vira ExtractError com a explicação', async () => {
@@ -127,7 +184,7 @@ describe('extractWalls com cliente falso', () => {
     const { client } = fakeClient(fakeMessage({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"proj', citations: null }] }));
     const err = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as ExtractError).message).toContain('96000 tokens');
+    expect((err as ExtractError).message).toContain('128000 tokens');
     expect((err as ExtractError).rawText).toBe('{"proj');
   });
 

@@ -27,3 +27,12 @@ describe('custo da leitura (M7)', () => {
     expect(outputFraction(10, 0)).toBe(0);
   });
 });
+
+describe('recortes em alta resolução (2026-10-30)', () => {
+  it('cada recorte soma até 4 900 tokens de entrada à estimativa', () => {
+    expect(estimateCost(2, 0, 6).inputTokens).toBe(6_000 + 2 * 7_300 + 6 * 4_900);
+    expect(estimateCost(2, 0, 6).usd).toBeGreaterThan(estimateCost(2).usd);
+    // Seis recortes custam uns 10 centavos: a estimativa de 2 páginas continua perto de US$ 1,60.
+    expect(estimateCost(2, 0, 6).usd - estimateCost(2).usd).toBeLessThan(0.12);
+  });
+});

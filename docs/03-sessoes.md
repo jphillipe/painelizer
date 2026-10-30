@@ -868,6 +868,49 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     página. Ajustes do humano no primeiro corte: PDF de 20 páginas esticava o palco; campos do estrutural
     apertados em duas colunas; prévia redundante; botão pequeno e zona grande demais; samples invisíveis.
     `10-design` §4 reescrito.
+  - [x] **Hospedagem no Cloud Run (2026-10-29)** — sem regra de framing. `Dockerfile` na raiz (pnpm workspace →
+    `next build` standalone → imagem final), `.dockerignore`/`.gcloudignore`, `output: 'standalone'` no
+    `next.config.ts`, guia `docs/12-hospedagem-cloud-run.md` (SDK, segredo da Anthropic, deploy com
+    `--source .`, limites e custo). Conferido: build standalone rodado localmente no Node (Docker Desktop estava
+    parado; a imagem em si só no Cloud Build). Script `scripts/deploy-cloud-run.ps1` faz tudo de uma vez
+    (APIs, segredo, permissões, deploy; `-DryRun`, `-UpdateKey`); conferido em dry run na conta da empresa. O 1º deploy
+    real falhou por falta do papel `roles/cloudbuild.builds.builder` na conta de serviço padrão (projetos pós-2024);
+    o script passou a concedê-lo. O 2º falhou com "Module not found" em `@/lib/supabase/*`: no `.gcloudignore`
+    a linha `supabase` (regra gitignore) casava em qualquer profundidade; pastas da raiz agora levam `/`. O 3º publicou
+    (`panelizer-00001`), mas a URL responde 403: a organização Workspace tem Domain Restricted Sharing, que bloqueia
+    `allUsers`; a exceção no projeto (guia, 3b) exigiu papel de administrador de políticas na organização; o humano a aplicou pelo console e a URL abriu.
+    A página `/app` mostrou "AI reading is off" apesar do segredo montado; `GET /api/health` (`lib/health.ts`, puro,
+    com teste) passou a dizer o que o processo enxerga, e na revisão 00003 respondeu `ai: true` — mas a página seguia com o aviso
+    e sem o menu do usuário. Causa (2026-10-30): build sem variáveis pré-renderizava `/app` estática (○), HTML congelado;
+    `page.tsx` agora é `force-dynamic` com teste de regressão; build sem `.env.local` mostra ƒ. Ver `04-decisoes.md`. Publicado e
+    confirmado pelo humano em 2026-10-30: login, header com usuário e leitura da IA ligada na URL pública.
+  - [x] **Leitura mais fiel: recortes em alta resolução, aberturas internas, medição (2026-10-30)** — sem regra de
+    framing. Diagnóstico: a leitura do Ringgold trazia 2 aberturas internas onde a A-100 tem 15 portas com tag; a API
+    reduz a folha inteira a ~72 dpi (porta de 2'6" ≈ 45 px) e o prompt não cobrava portas. **Recortes** (`extract/src/tiles.ts`,
+    `renderPageTiles` em `pdf.ts`, `canvas.ts` com `@napi-rs/canvas`): páginas `plan`/`enlarged` vão também em imagens
+    de regiões da folha (Ringgold 2×3 a 162 dpi, ~1 900×1 850 px, 2,1 MB os 6), com legenda em pontos — mesmas coordenadas
+    do texto posicionado; orçamento 6/planta e 16/leitura, reserva de 2 por ampliada, plantas em ordem gulosa; estouro →
+    JPEG → descarte do fim (`RECORTES_FORA`); `AUTO_BYTE_BUDGET` 22 → 19 MiB; `enlarged` no rank 2; prévia só conta
+    (`ExtractPreviewInfo.tiles`, custo +4 900 tokens/recorte no web); CLI `--no-tiles`, `--max-tiles`, `--tiles-dpi`,
+    `--dry-run` grava `recortes/`. **Prompt**: seção "Aberturas internas e sem cota" (toda porta desenhada é abertura; destino
+    de cada tag em `notes`; `positionSource` dimension > rule > scaled; ampliadas mandam no interior; `rooms[]` como
+    autochecagem). **Esquema/conversão**: `positionSource` e `rooms` com default; `scaled` entra no projeto com
+    `ABERTURA_ESTIMADA` (some com "Reviewed"); `COMODO_SEM_PORTA`; relatório com "Cômodos" e coluna fonte; ajuda e títulos
+    no web. **Medição** (`src/eval.ts`, `pnpm --filter extract eval`, verdade em `test/eval/ringgold-truth.json`) e
+    `scripts/read-set.ts` para conjuntos de vários arquivos. Resultado no Ringgold (8 folhas, 2 leituras pagas, 83 k tokens de
+    entrada cada, +17 k pelos recortes): antes (leitura S21) 12 aberturas internas com 8 posicionadas e 4 sem posição, tags
+    100 %, 0 cômodos; depois, nas DUAS leituras, 12/12 posicionadas (9 por cota, 3 pela escala), 0 sem posição, 16 cômodos
+    com suas portas, tags 100 %, destino das 15 tags anotado; único cômodo sem porta é o hall aberto para a sala (explicado
+    na nota). Portas cotadas repetem a cota do desenho entre leituras (10'-10 3/8" em I2/I7); as que o baseline deixava sem
+    cota (I3, I4, I8, I10) vieram com cota. Dry-run do Horace (Architectural + Structural, 133 PDFs → 32 folhas): A-101 com
+    6 recortes a 125 dpi, A-401–A-403 com 2 cada a 75 dpi (as ampliadas do Horace são 1/4", como a planta; com 7 páginas
+    disputando 16 recortes a resolução cai — escolher as páginas rende recortes maiores). A leitura real do Horace com a
+    seleção automática FALHOU: 633 k tokens de entrada (~18 k por folha, 2,4× o que o estimador assume pelo Ringgold) e o
+    raciocínio consumiu o teto de 96 k de saída com 17 k de resposta escrita (~US$ 4,5 perdidos); `DEFAULT_MAX_TOKENS`
+    subiu para 128 k (máximo do streaming) e o `read-set` grava `resposta-bruta.txt` na falha. No Horace, escolher as
+    páginas (planta, ampliadas da ala nova, tipos de parede, schedules, notas estruturais) é obrigatório — P43. Testes: 157 no extract, 276 no
+    web, suíte do repositório verde. Fora: detecção geométrica de cômodos no core (sessão própria), plantas não ortogonais.
+    Ver `04-decisoes.md` (2026-10-30) e P42.
   - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
     `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
     `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";

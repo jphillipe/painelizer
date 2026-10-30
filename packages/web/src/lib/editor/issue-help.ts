@@ -7,6 +7,7 @@
 import type { ProjectDraft } from './draft';
 import { parseMeasureText } from './measure';
 import type { Issue } from './problems';
+import { isReviewed } from './state';
 
 export interface IssueHelp {
   /** O que aconteceu, em uma frase. */
@@ -69,6 +70,18 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
     fix: 'Check the door schedule; set the RO height on the opening if it differs.',
   },
   FOLHAS_FORA: { what: 'Some useful sheets did not fit the page budget of the reading.', fix: 'Send fewer files, or the specific sheets, and read again.' },
+  ABERTURA_ESTIMADA: {
+    what: 'The plan has no dimension for this opening, so the AI measured its position on the drawing by scale. It is in the project at the approximate spot.',
+    fix: 'Check it against the plan, drag it into place if needed, then mark the wall as reviewed.',
+  },
+  COMODO_SEM_PORTA: {
+    what: 'The AI listed this room but found no door into it: either it is an open passage or the reading missed the door.',
+    fix: 'Check the plan; if there is a door, select the wall and add the opening (O), with the tag from the door schedule.',
+  },
+  RECORTES_FORA: {
+    what: 'Some high-resolution crops of the plan were left out so the request would fit the API size limit; small symbols in those regions may have been missed.',
+    fix: 'Send fewer sheets or pick the pages, and read again.',
+  },
   // editor
   'wall.height': { what: 'The engine cannot cut studs without the wall height.', fix: 'Fill in the project data, or set the height on each wall.' },
   'config.studLength': { what: 'The precut stud lengths are missing (wall height minus three plates).', fix: 'Fill in the project data; the wall height derives them.' },
@@ -146,6 +159,14 @@ export function readingWarningResolved(issue: Issue, draft: ProjectDraft): boole
     }
     case 'ALTURA_RO_PORTA':
       return issue.openingId !== undefined && opening(issue.openingId)?.roughHeight !== undefined;
+    case 'ABERTURA_ESTIMADA': {
+      // Posição medida pela escala: resolvido quando o humano revisou a parede (ou tirou a abertura).
+      if (issue.wallId === undefined) return false;
+      const wall = draft.walls.find((w) => w.id === issue.wallId);
+      if (wall === undefined) return false;
+      if (issue.openingId !== undefined && opening(issue.openingId) === undefined) return true;
+      return isReviewed(wall);
+    }
     default:
       return false;
   }

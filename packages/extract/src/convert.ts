@@ -190,6 +190,38 @@ export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {
   );
 }
 
+/** Abertura cuja posição o modelo mediu no recorte pela escala (sem cota nem regra): entra no projeto, mas avisa. */
+function isScaled(o: OpeningOut): boolean {
+  return o.positionSource === 'scaled' && !isUnplaced(o);
+}
+
+/**
+ * Aberturas com posição estimada pela escala (decisão do humano, 2026-10-30): ficam no projeto no lugar
+ * aproximado, com um aviso por abertura para o revisor conferir a cota — melhor do que sumir da parede.
+ */
+export function estimatedOpenings(out: ExtractionOutput): string[] {
+  return out.walls.flatMap((w) =>
+    w.openings
+      .filter((o) => isScaled(o) && !isUnsized(o))
+      .map(
+        (o) =>
+          `extração ABERTURA_ESTIMADA: parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): posição medida no desenho pela ` +
+          `escala, sem cota (confiança ${o.confidence.toFixed(2)}) — confira a posição na planta e ajuste`,
+      ),
+  );
+}
+
+/** Cômodos que o modelo listou sem nenhuma porta: ou é um vão aberto, ou a leitura perdeu a porta. */
+export function roomsWithoutDoors(out: ExtractionOutput): string[] {
+  return out.rooms
+    .filter((r) => r.doors.length === 0)
+    .map(
+      (r) =>
+        `extração COMODO_SEM_PORTA: ${r.name}${r.level === null ? '' : ` (pavimento ${r.level})`}: nenhuma porta encontrada` +
+        `${r.note === null || r.note.trim() === '' ? '' : ` — ${r.note.trim()}`}; confira na planta e adicione a abertura na parede certa`,
+    );
+}
+
 /** Pré-cortes derivados: altura de cada parede menos as três plates, sem repetição, crescente. */
 export function derivedStudLengths(out: ExtractionOutput, opts: ConvertOptions = {}): number[] {
   const heights = new Set<number>();
@@ -264,7 +296,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
 export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Converted {
   const project = toProject(out, opts);
   const problems: string[] = [];
-  const warnings: string[] = [...unplacedOpenings(out, opts), ...defaultHeightWarnings(out, opts)];
+  const warnings: string[] = [...unplacedOpenings(out, opts), ...estimatedOpenings(out), ...roomsWithoutDoors(out), ...defaultHeightWarnings(out, opts)];
   const noHeight = wallsWithoutHeight(out, opts);
   if (noHeight.length > 0) {
     // O parser do CLI reclamaria de `studLength`; a causa é a altura, e é isso que o revisor precisa saber.
@@ -327,6 +359,7 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
     for (const o of w.openings) {
       if (o.confidence < threshold) review.push(`abertura ${o.id} (${w.id}): confiança ${o.confidence.toFixed(2)}`);
       if (o.center === null && o.offset === null) review.push(`abertura ${o.id} (${w.id}): sem posição`);
+      else if (o.positionSource === 'scaled') review.push(`abertura ${o.id} (${w.id}): posição estimada pela escala`);
       if (o.tag === null && (o.type === null || o.roughWidth === null || o.roughHeight === null)) {
         review.push(`abertura ${o.id} (${w.id}): sem tag e sem RO completo`);
       }
@@ -338,12 +371,12 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
   if (openings.length > 0) {
     lines.push('## Aberturas');
     lines.push('');
-    lines.push('| id | parede | tag/tipo | eixo | RO | topo RO | conf | evidência |');
-    lines.push('|---|---|---|---|---|---|---|---|');
+    lines.push('| id | parede | tag/tipo | eixo | fonte | RO | topo RO | conf | evidência |');
+    lines.push('|---|---|---|---|---|---|---|---|---|');
     for (const { w, o } of openings) {
       const ro = o.roughWidth !== null || o.roughHeight !== null ? `${o.roughWidth ?? '?'} × ${o.roughHeight ?? '?'}` : 'catálogo';
       lines.push(
-        `| ${o.id} | ${w.id} | ${o.tag ?? o.type ?? '—'} | ${o.center ?? (o.offset !== null ? `borda ${o.offset}` : '—')} | ${ro} | ${o.headerHeight ?? '—'} | ${o.confidence.toFixed(2)} | ${o.evidence} |`,
+        `| ${o.id} | ${w.id} | ${o.tag ?? o.type ?? '—'} | ${o.center ?? (o.offset !== null ? `borda ${o.offset}` : '—')} | ${o.positionSource ?? '—'} | ${ro} | ${o.headerHeight ?? '—'} | ${o.confidence.toFixed(2)} | ${o.evidence} |`,
       );
     }
     lines.push('');
@@ -369,6 +402,18 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
     lines.push('');
     for (const t of out.wallTypes) {
       lines.push(`- **${t.tag}** ${t.section} ${t.exterior ? 'externa' : 'interna'} — ${t.description} (${t.evidence})`);
+    }
+    lines.push('');
+  }
+
+  if (out.rooms.length > 0) {
+    lines.push('## Cômodos');
+    lines.push('');
+    lines.push('| cômodo | pav. | portas | nota |');
+    lines.push('|---|---|---|---|');
+    for (const r of out.rooms) {
+      lines.push(`| ${r.name} | ${r.level ?? '—'} | ${r.doors.length === 0 ? '**nenhuma**' : r.doors.join(', ')} | ${r.note ?? ''} |`);
+      if (r.doors.length === 0) review.push(`cômodo ${r.name}: sem porta`);
     }
     lines.push('');
   }

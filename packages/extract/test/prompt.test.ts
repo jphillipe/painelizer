@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildUserContent, SYSTEM_PROMPT } from '../src/prompt';
-import { readPageText, subsetPdf } from '../src/pdf';
-import { makePdf } from './helpers/makePdf';
+import { readPageText, renderPageTiles, subsetPdf } from '../src/pdf';
+import { DEFAULT_TILE_OPTIONS, planTiles } from '../src/tiles';
+import { makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
 
 const PNG_1x1 = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01,
@@ -96,5 +97,59 @@ describe('buildUserContent', () => {
     const pdf = await makePdf();
     const input = { pdfs: [{ name: 'p.pdf', pdf, pages: [await readPageText(pdf, 1)] }] };
     expect(JSON.stringify(buildUserContent(input))).toBe(JSON.stringify(buildUserContent(input)));
+  });
+});
+
+describe('SYSTEM_PROMPT — recortes e aberturas internas (2026-10-30)', () => {
+  it('explica os recortes e amarra ao texto posicionado', () => {
+    expect(SYSTEM_PROMPT).toContain('## Recortes');
+    expect(SYSTEM_PROMPT).toContain('`## recorte …`');
+    expect(SYSTEM_PROMPT).toContain('mesmas coordenadas do texto posicionado');
+  });
+
+  it('cobra toda porta, com a fonte da posição e a estimativa pela escala como último recurso', () => {
+    expect(SYSTEM_PROMPT).toContain('## Aberturas internas e sem cota');
+    expect(SYSTEM_PROMPT).toContain('`positionSource`');
+    for (const k of ['`dimension`', '`rule`', '`scaled`']) expect(SYSTEM_PROMPT).toContain(k);
+    expect(SYSTEM_PROMPT).toContain('Uma porta nunca fica de fora nem sem posição por falta de cota');
+    expect(SYSTEM_PROMPT).toContain('Não omitir aberturas porque faltou cota');
+  });
+
+  it('pede o destino de cada tag de porta, as plantas ampliadas e a autochecagem por cômodo', () => {
+    expect(SYSTEM_PROMPT).toContain('todas as tags de porta encontradas e o destino de cada uma');
+    expect(SYSTEM_PROMPT).toContain('ENLARGED UNIT PLANS');
+    expect(SYSTEM_PROMPT).toContain('`rooms`');
+    expect(SYSTEM_PROMPT).toContain('todo quarto, banheiro e closet tem porta');
+  });
+});
+
+describe('buildUserContent — recortes', () => {
+  it('cada recorte entra depois do texto do PDF: legenda e imagem, antes das imagens do usuário', async () => {
+    const pdf = await makePdf();
+    const grid = planTiles({ width: PAGE_W, height: PAGE_H }, 200, DEFAULT_TILE_OPTIONS);
+    const [tile] = await renderPageTiles(pdf, 1, grid);
+    if (!tile) throw new Error('esperado recorte');
+    const content = buildUserContent({
+      pdfs: [{ name: 'p.pdf', pdf: await subsetPdf(pdf, [1]), pages: [await readPageText(pdf, 1)], tiles: [{ page: 1, sheet: 'A-100', title: '1st Floor Plan', grid, tile }] }],
+      images: [{ name: 'foto.png', data: PNG_1x1, mediaType: 'image/png' }],
+    });
+    expect(content.map((b) => b.type)).toEqual(['document', 'text', 'text', 'image', 'text', 'image', 'text']);
+    const caption = content[2];
+    expect(caption?.type === 'text' && caption.text).toBe(
+      `## recorte p.pdf · A-100 1st Floor Plan · linha 1/1, coluna 1/1 · região x 0–${PAGE_W} pt, y 0–${PAGE_H} pt da página 1 ` +
+        `(mesmas coordenadas do texto posicionado; y cresce para baixo) · ${tile.width}×${tile.height} px, ${grid.dpi} dpi`,
+    );
+    const img = content[3];
+    if (img?.type !== 'image' || img.source.type !== 'base64') throw new Error('esperado image base64');
+    expect(img.source.media_type).toBe('image/png');
+    expect(img.source.data).toBe(Buffer.from(tile.data).toString('base64'));
+    const user = content[4];
+    expect(user?.type === 'text' && user.text).toBe('## imagem: foto.png');
+  }, 30_000);
+
+  it('sem tiles nada muda', async () => {
+    const pdf = await makePdf();
+    const content = buildUserContent({ pdfs: [{ name: 'p.pdf', pdf, pages: [await readPageText(pdf, 1)], tiles: [] }] });
+    expect(content.map((b) => b.type)).toEqual(['document', 'text', 'text']);
   });
 });

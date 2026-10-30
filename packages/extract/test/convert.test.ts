@@ -193,7 +193,7 @@ describe('reviewReport', () => {
     const report = reviewReport(ringgold, convert(ringgold));
     expect(report).toContain('# Extração — 26 Ringgold St');
     expect(report).toContain('| S2 | 12\' - 0" | 2x6 | X1 | sim | sim | 0.90 |');
-    expect(report).toContain('| S2-D1 | S2 | 1 | 2\' - 4 1/2" | ? × 6\' - 10 1/2" | 6\' - 10 1/2" | 0.90 |');
+    expect(report).toContain('| S2-D1 | S2 | 1 | 2\' - 4 1/2" | — | ? × 6\' - 10 1/2" | 6\' - 10 1/2" | 0.90 |');
     expect(report).toContain('| A2 | window |');
     expect(report).toContain('- **X1** 2x6 externa');
     expect(report).toContain('## Notas do modelo');

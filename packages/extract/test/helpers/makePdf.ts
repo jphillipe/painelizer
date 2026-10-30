@@ -3,7 +3,7 @@
  * conhecidas (pdf-lib mede do canto inferior esquerdo; o leitor devolve y do topo).
  */
 
-import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
 
 export const PAGE_W = 612;
 export const PAGE_H = 792;
@@ -19,6 +19,8 @@ export async function makePdf(): Promise<Uint8Array> {
   plan.drawText(`8' - 5 7/8"`, { x: 300, y: 700, size: 10, font });
   plan.drawText(`29' - 0"`, { x: 50, y: 300, size: 10, font, rotate: degrees(90) });
   plan.drawText('1st Floor Plan', { x: 100, y: 100, size: 14, font });
+  // Uma "parede" vetorial: os recortes renderizados têm o que mostrar mesmo sem fonte (renderPageTiles).
+  plan.drawRectangle({ x: 120, y: 400, width: 300, height: 12, borderWidth: 2, borderColor: rgb(0, 0, 0), color: rgb(0.2, 0.2, 0.2) });
 
   const schedule = doc.addPage([PAGE_W, PAGE_H]);
   schedule.drawText('A-800', { x: 500, y: 40, size: 24, font });

@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { formatPageText, listSheets, pageCount, readPageText, subsetPdf } from '../src/pdf';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { formatPageText, listSheets, pageCount, readPageText, renderPageTiles, subsetPdf } from '../src/pdf';
+import { DEFAULT_TILE_OPTIONS, planTiles } from '../src/tiles';
 import { classifySheet } from '../src/select';
 import { makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
 
@@ -107,4 +109,70 @@ describe.skipIf(!existsSync(RINGGOLD))('26 Ringgold St (docs/examples, fora do g
     expect(text).toContain('ALL EXTERIOR DIMENSIONS ARE TAKEN FROM OUTSIDE');
     expect(text).toContain('OF THE DOOR.');
   }, 60_000);
+});
+
+describe('renderPageTiles — recortes em alta resolução', () => {
+  const pngSize = (bytes: Uint8Array) => {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return { width: dv.getUint32(16), height: dv.getUint32(20) };
+  };
+
+  it('PNG do tamanho da grade, com desenho dentro (não em branco), determinístico', async () => {
+    const pdf = await makePdf();
+    const grid = planTiles({ width: PAGE_W, height: PAGE_H }, 200, DEFAULT_TILE_OPTIONS);
+    const tiles = await renderPageTiles(pdf, 1, grid);
+    expect(tiles).toHaveLength(1);
+    const [t] = tiles;
+    if (!t) throw new Error('esperado recorte');
+    expect(t.mediaType).toBe('image/png');
+    expect(Array.from(t.data.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(pngSize(t.data)).toEqual({ width: t.width, height: t.height });
+    expect(t).toMatchObject({ x0: 0, y0: 0, x1: PAGE_W, y1: PAGE_H });
+
+    // O retângulo do makePdf (x 120–420, y 380–392 do topo) sai escuro; o canto superior esquerdo fica branco.
+    const img = await loadImage(Buffer.from(t.data));
+    const canvas = createCanvas(t.width, t.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const at = (x: number, y: number) => ctx.getImageData(Math.round(x * grid.scale), Math.round(y * grid.scale), 1, 1).data;
+    const dark = at(270, 386);
+    const white = at(10, 10);
+    expect(dark[0]).toBeLessThan(120);
+    expect(white[0]).toBe(255);
+
+    const again = await renderPageTiles(pdf, 1, grid);
+    expect(Buffer.from(again[0]!.data).equals(Buffer.from(t.data))).toBe(true);
+  }, 30_000);
+
+  it('grade com vários recortes: cada um na sua região, JPEG quando pedido', async () => {
+    const pdf = await makePdf();
+    const grid = planTiles({ width: PAGE_W, height: PAGE_H }, 200, { ...DEFAULT_TILE_OPTIONS, maxPerPage: 4 }, 4);
+    const forced: typeof grid = grid.tiles.length > 1 ? grid : { ...grid, rows: 2, cols: 1, tiles: [
+      { row: 1, col: 1, x0: 0, y0: 0, x1: PAGE_W, y1: 420, width: Math.round(PAGE_W * grid.scale), height: Math.round(420 * grid.scale) },
+      { row: 2, col: 1, x0: 0, y0: 372, x1: PAGE_W, y1: PAGE_H, width: Math.round(PAGE_W * grid.scale), height: Math.round((PAGE_H - 372) * grid.scale) },
+    ] };
+    const tiles = await renderPageTiles(pdf, 1, forced, 'jpeg');
+    expect(tiles).toHaveLength(forced.tiles.length);
+    for (const t of tiles) {
+      expect(t.mediaType).toBe('image/jpeg');
+      expect(Array.from(t.data.slice(0, 2))).toEqual([0xff, 0xd8]);
+    }
+    // O retângulo (y 380–392 do topo) está nos dois recortes da grade forçada: ambos têm pixels escuros.
+    const first = tiles[0]!;
+    const img = await loadImage(Buffer.from(first.data));
+    const canvas = createCanvas(first.width, first.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const px = ctx.getImageData(Math.round(270 * forced.scale), Math.round((386 - first.y0) * forced.scale), 1, 1).data;
+    expect(px[0]).toBeLessThan(140);
+  }, 30_000);
+
+  it('página fora do PDF é RangeError e o buffer do chamador fica intacto', async () => {
+    const pdf = await makePdf();
+    const grid = planTiles({ width: PAGE_W, height: PAGE_H }, 200, DEFAULT_TILE_OPTIONS);
+    await expect(renderPageTiles(pdf, 9, grid)).rejects.toThrow(RangeError);
+    const before = pdf.byteLength;
+    await renderPageTiles(pdf, 2, grid);
+    expect(pdf.byteLength).toBe(before);
+  }, 30_000);
 });

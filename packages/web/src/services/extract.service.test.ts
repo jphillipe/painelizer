@@ -107,13 +107,13 @@ describe('M7: prévia, páginas por arquivo, job e cancelamento', () => {
     let seen: ExtractRequest | undefined;
     const fakePreview = vi.fn(async (req: ExtractRequest) => {
       seen = req;
-      return { pagesSent: [{ name: 'plan.pdf', pages: [3, 15] }], pagesDropped: [{ name: 'plan.pdf', page: 7, sheet: 'A-201', category: 'elevation' as const }], sheets: [{ name: 'plan.pdf', page: 3, sheet: 'A-100', title: 'First Floor Plan' }, { name: 'plan.pdf', page: 15, sheet: 'A-800' }], encodedBytes: 1234, images: 1 };
+      return { pagesSent: [{ name: 'plan.pdf', pages: [3, 15] }], pagesDropped: [{ name: 'plan.pdf', page: 7, sheet: 'A-201', category: 'elevation' as const }], sheets: [{ name: 'plan.pdf', page: 3, sheet: 'A-100', title: 'First Floor Plan', category: 'plan' as const }, { name: 'plan.pdf', page: 15, sheet: 'A-800' }], encodedBytes: 1234, images: 1, tiles: { count: 6, encodedBytes: 900, pages: [{ name: 'plan.pdf', page: 3, tiles: 6, dpi: 164 }], skipped: [] } };
     });
     const r = await preview([pdf, png], { pages: [1], pagesByFile: { 'plan.pdf': [3, 15] } }, { extract: vi.fn(), preview: fakePreview, hasKey: () => false });
     expect(seen?.sources?.[0]).toMatchObject({ kind: 'pdf', pages: [3, 15] });
-    expect(r).toMatchObject({ ok: true, pagesTotal: 2, images: 1, encodedBytes: 1234 });
+    expect(r).toMatchObject({ ok: true, pagesTotal: 2, images: 1, encodedBytes: 1234, tiles: { count: 6, encodedBytes: 900 } });
     if (!r.ok) throw new Error('prévia falhou');
-    expect(r.files[0]).toEqual({ name: 'plan.pdf', kind: 'pdf', pages: [{ page: 3, sheet: 'A-100', title: 'First Floor Plan' }, { page: 15, sheet: 'A-800' }], dropped: [{ page: 7, sheet: 'A-201', category: 'elevation' }] });
+    expect(r.files[0]).toEqual({ name: 'plan.pdf', kind: 'pdf', pages: [{ page: 3, sheet: 'A-100', title: 'First Floor Plan', category: 'plan' }, { page: 15, sheet: 'A-800' }], dropped: [{ page: 7, sheet: 'A-201', category: 'elevation' }] });
     expect(r.files[1]).toMatchObject({ name: 'photo.PNG', kind: 'image', pages: [] });
     expect(await preview([], {}, { extract: vi.fn(), preview: fakePreview, hasKey: () => true })).toMatchObject({ ok: false });
     const failing = vi.fn(async () => {

@@ -9,9 +9,14 @@
  */
 
 /// <reference path="./pdfjs-worker.d.ts" />
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { PDFDocument } from 'pdf-lib';
+// Antes do pdf.js: polyfills de DOMMatrix/Path2D/ImageData e a fábrica de canvas nativo (ver canvas.ts).
+import { createCanvas, NapiCanvasFactory } from './canvas';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+import type { TileFormat, TileGrid, TileRect } from './tiles';
 
 /**
  * Worker na própria thread, carregado por import estático. Em Node o pdf.js monta um "fake worker" com
@@ -66,9 +71,28 @@ interface Loaded {
   close: () => Promise<void>;
 }
 
+/**
+ * Pasta das 14 fontes padrão do PDF que vêm com o pdfjs-dist, para renderizar texto em fonte não embutida
+ * (Helvetica dos testes). Sem ela o pdf.js só avisa e o texto nessa fonte não aparece no recorte; os PDFs de
+ * Revit embutem as fontes, então em produção quase nunca é usada.
+ */
+const STANDARD_FONTS_URL = (() => {
+  try {
+    const pkg = createRequire(import.meta.url).resolve('pdfjs-dist/package.json');
+    return join(dirname(pkg), 'standard_fonts') + '/';
+  } catch {
+    return undefined;
+  }
+})();
+
 async function open(data: Uint8Array): Promise<Loaded> {
   // pdf.js toma posse do buffer: entregamos uma cópia para o chamador poder reutilizar `data`.
-  const task = pdfjs.getDocument({ data: data.slice(), useSystemFonts: true });
+  const task = pdfjs.getDocument({
+    data: data.slice(),
+    useSystemFonts: true,
+    CanvasFactory: NapiCanvasFactory,
+    ...(STANDARD_FONTS_URL === undefined ? {} : { standardFontDataUrl: STANDARD_FONTS_URL }),
+  });
   const doc = await task.promise;
   return { doc, close: () => task.destroy() };
 }
@@ -212,4 +236,44 @@ export async function subsetPdf(data: Uint8Array, pages: readonly number[]): Pro
   );
   for (const page of copied) out.addPage(page);
   return out.save();
+}
+
+/** Um recorte renderizado: a região (`TileRect`) mais os bytes da imagem. */
+export interface RenderedTile extends TileRect {
+  data: Uint8Array;
+  mediaType: 'image/png' | 'image/jpeg';
+}
+
+/**
+ * Renderiza os recortes de uma página (1-based) na grade dada (`planTiles`). Cada recorte é um canvas do seu
+ * próprio tamanho: o viewport leva `offsetX/offsetY = −x0·scale/−y0·scale`, em pixels, então a região da
+ * página cai exatamente na imagem (mesmo sistema de coordenadas do texto posicionado). Sequencial, um canvas
+ * por vez (~15 MB RGBA cada); nunca renderiza a folha inteira. Determinístico: sem data nem metadado variável.
+ */
+export async function renderPageTiles(data: Uint8Array, page: number, grid: TileGrid, format: TileFormat = 'png'): Promise<RenderedTile[]> {
+  const { doc, close } = await open(data);
+  try {
+    if (!Number.isInteger(page) || page < 1 || page > doc.numPages) {
+      throw new RangeError(`página ${page} fora do PDF (${doc.numPages} páginas)`);
+    }
+    const p = await doc.getPage(page);
+    const out: RenderedTile[] = [];
+    for (const t of grid.tiles) {
+      const viewport = p.getViewport({ scale: grid.scale, offsetX: -t.x0 * grid.scale, offsetY: -t.y0 * grid.scale });
+      const canvas = createCanvas(t.width, t.height);
+      const context = canvas.getContext('2d');
+      await p.render({
+        canvasContext: context as unknown as CanvasRenderingContext2D,
+        canvas: canvas as unknown as HTMLCanvasElement,
+        viewport,
+        background: 'rgb(255,255,255)',
+      }).promise;
+      const bytes = format === 'png' ? await canvas.encode('png') : await canvas.encode('jpeg', 85);
+      out.push({ ...t, data: new Uint8Array(bytes), mediaType: format === 'png' ? 'image/png' : 'image/jpeg' });
+    }
+    p.cleanup();
+    return out;
+  } finally {
+    await close();
+  }
 }

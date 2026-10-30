@@ -39,3 +39,34 @@ describe('issue-help', () => {
     expect(readingWarningResolved(parseWarning('1-S1-P1 WIND_SPEED_MISSING: parede S1: x', ids), load(base))).toBe(false);
   });
 });
+
+describe('leitura 2026-10-30: posição estimada e cômodo sem porta', () => {
+  const ids2: IdIndex = { walls: ['I9'], openings: new Map([['I9', ['I9-U2-1']]]) };
+  const base = { config: { studSpacing: 16, openingTypes: { U2: { kind: 'door', width: 36, height: 80 } } }, walls: [{ id: 'I9', length: 120, height: 97, section: '2x4', exterior: false, bearing: false, openings: [{ id: 'I9-U2-1', tag: 'U2', center: 60 }] }] };
+  const load = (raw: unknown) => {
+    const r = draftFromJson(raw);
+    if (!r.ok) throw new Error('should load');
+    return r.draft;
+  };
+  const estimated = parseWarning('extração ABERTURA_ESTIMADA: parede I9, abertura I9-U2-1 (U2): posição medida no desenho pela escala, sem cota (confiança 0.45) — confira a posição na planta e ajuste', ids2);
+
+  it('tem ajuda e aponta parede e abertura; sem conserto rápido (a abertura já existe)', () => {
+    expect(estimated).toMatchObject({ source: 'extraction', code: 'ABERTURA_ESTIMADA', wallId: 'I9', openingId: 'I9-U2-1' });
+    expect(helpFor(estimated)?.what).toMatch(/measured .* by scale/);
+    expect(quickFixFor(estimated)).toBeUndefined();
+  });
+
+  it('some quando a parede foi marcada como revisada, ou quando a abertura foi removida', () => {
+    expect(readingWarningResolved(estimated, load(base))).toBe(false);
+    expect(readingWarningResolved(estimated, load({ ...base, walls: [{ ...base.walls[0], $reviewed: true }] }))).toBe(true);
+    expect(readingWarningResolved(estimated, load({ ...base, walls: [{ ...base.walls[0], openings: [] }] }))).toBe(true);
+  });
+
+  it('cômodo sem porta é um aviso geral da leitura, com ajuda', () => {
+    const room = parseWarning('extração COMODO_SEM_PORTA: Bathroom (pavimento 1): nenhuma porta encontrada — símbolo não visível; confira na planta e adicione a abertura na parede certa', ids2);
+    expect(room).toMatchObject({ source: 'extraction', code: 'COMODO_SEM_PORTA' });
+    expect(room.wallId).toBeUndefined();
+    expect(helpFor(room)?.fix).toMatch(/add the opening/);
+    expect(readingWarningResolved(room, load(base))).toBe(false);
+  });
+});

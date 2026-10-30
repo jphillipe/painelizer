@@ -1,0 +1,9 @@
+{
+  "$comment": "Verdade do 1º pavimento do 26 Ringgold St (A-100), para medir uma leitura (scripts/eval-reading.ts). Tags de porta contadas no texto posicionado da A-100 (9×U2, U3, U1; dos 7 textos '1' isolados, 4 são portas — os outros são o delta de revisão, a bolha de vista e o carimbo). O vão do vestíbulo não tem tag. Posições: a planta cota ao eixo da porta (notas 9 e 10); a conferência de posição fica com o revisor no editor, sobre a planta de fundo.",
+  "name": "26 Ringgold St — 1st Floor Plan (A-100)",
+  "level": 1,
+  "doorTags": { "U2": 9, "U3": 1, "U1": 1, "1": 4 },
+  "untaggedOpeningsMin": 1,
+  "interiorDoorsMin": 11,
+  "roomsMin": 15
+}
