@@ -17,6 +17,7 @@ import {
   type ExtractSource,
   type ImageMediaType,
 } from 'extract';
+import type { DrawingRef } from '@/lib/drawings';
 import { toConvertOptions } from '@/schemas/extract';
 import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ExtractPreview, type ProjectData, type WallReview } from '@/types/extract';
 import { createJob, finishJob, reportProgress } from './extract-jobs';
@@ -182,14 +183,20 @@ function point(p: { x: string; y: string }): string {
   return `(${p.x}, ${p.y})`;
 }
 
-/** Reaplica dados do projeto a uma leitura já feita (revisão), sem chamar a IA; mantém modelo e páginas. */
-export function reconvert(raw: unknown, given: ProjectData, meta: { model: string; pagesSent: { name: string; pages: number[] }[] }): ExtractOutcome {
+/** Reaplica dados do projeto a uma leitura já feita (revisão), sem chamar a IA; mantém modelo, páginas e desenhos. */
+export function reconvert(raw: unknown, given: ProjectData, meta: { model: string; pagesSent: { name: string; pages: number[] }[]; drawings?: DrawingRef[] | undefined }): ExtractOutcome {
   try {
     const r = finish(raw, toConvertOptions(given), meta.model, { inputTokens: 0, outputTokens: 0 });
-    return toOutcome({ ...r, pagesSent: meta.pagesSent }, given);
+    return withDrawings(toOutcome({ ...r, pagesSent: meta.pagesSent }, given), meta.drawings);
   } catch (e) {
     return failure(e);
   }
+}
+
+/** A leitura com os desenhos do Storage de onde saiu (S22.3); só numa leitura que deu certo. */
+export function withDrawings(outcome: ExtractOutcome, drawings: readonly DrawingRef[] | undefined): ExtractOutcome {
+  if (!outcome.ok || drawings === undefined || drawings.length === 0) return outcome;
+  return { ...outcome, drawings: [...drawings] };
 }
 
 export function toOutcome(r: ExtractResult, given: ProjectData): ExtractOutcome {

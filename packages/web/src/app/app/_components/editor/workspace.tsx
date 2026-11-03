@@ -13,6 +13,8 @@ import type { ProjectDataNeeds } from '@/lib/editor/requirements';
 import { reviewedCount, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
 import type { LevelFilter } from '@/lib/editor/wall-filters';
 import { useMediaQuery, WIDE_QUERY } from '@/lib/use-media-query';
+import type { DrawingRef } from '@/lib/drawings';
+import type { SupabaseEnv } from '@/lib/supabase/env';
 import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
 import { EditorToolbar } from './editor-toolbar';
@@ -61,6 +63,9 @@ export interface WorkspaceProps {
   help: { open: boolean; onOpenChange: (open: boolean) => void };
   /** Arquivos soltos no passo 01, para a planta por baixo (M6). */
   sourceFiles?: readonly File[] | undefined;
+  /** Desenhos no Storage (S22.3) e as chaves para baixá-los. */
+  storedDrawings?: readonly DrawingRef[] | undefined;
+  storage?: SupabaseEnv | undefined;
   /** Auto-save no servidor (S22.1). */
   save?: SaveStatus | undefined;
   onRetrySave?: (() => void) | undefined;
@@ -72,7 +77,7 @@ export interface WorkspaceProps {
  * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
  * outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], save, onRetrySave }: WorkspaceProps) {
+export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], storedDrawings = [], storage, save, onRetrySave }: WorkspaceProps) {
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
@@ -222,7 +227,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
         </div>
       )}
       <ShortcutsDialog open={help.open} onOpenChange={help.onOpenChange} />
-      <UnderlayDialog open={underlayOpen} onOpenChange={setUnderlayOpen} sourceFiles={sourceFiles} bounds={geometry?.bounds} onPick={setUnderlay} />
+      <UnderlayDialog open={underlayOpen} onOpenChange={setUnderlayOpen} sourceFiles={sourceFiles} storedDrawings={storedDrawings} storage={storage} bounds={geometry?.bounds} onPick={setUnderlay} />
       <ProjectSettingsDialog open={settingsOpen} onOpenChange={(open) => !open && select({ kind: 'none' })} draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} />
     </div>
   );

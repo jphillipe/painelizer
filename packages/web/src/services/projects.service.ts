@@ -11,17 +11,21 @@
  */
 
 import 'server-only';
+import { drawingsOfProjectData, withProjectDrawings } from '@/lib/drawings';
 import { copyName, NAME_MAX, nameFromData, projectName, wallCountOf, withProjectName } from '@/lib/projects';
 import { supabaseServer } from '@/lib/supabase/server';
 import { supabaseProjectsTable, type ProjectsTable } from '@/lib/supabase/projects-table';
 import type { Json } from '@/types/json';
 import type { SessionUser } from './auth.service';
+import { copyDrawings, defaultDeps as defaultDrawingsDeps, removeDrawings, type DrawingsDeps } from './drawings.service';
 
 /** Reexportados da lib pura (S22.2): a tela e o service usam o mesmo limite e a mesma normalização. */
 export { NAME_MAX, projectName };
 
 export interface ProjectsDeps {
   table: () => Promise<ProjectsTable | undefined>;
+  /** Os desenhos no Storage (S22.3): apagar projeto apaga a pasta, duplicar copia os objetos. */
+  drawings?: DrawingsDeps;
 }
 
 export const defaultDeps: ProjectsDeps = {
@@ -29,6 +33,7 @@ export const defaultDeps: ProjectsDeps = {
     const client = await supabaseServer();
     return client === undefined ? undefined : supabaseProjectsTable(client);
   },
+  drawings: defaultDrawingsDeps,
 };
 
 /** O projeto como a tela o recebe: o texto do `.panelizer.json` e a revisão a mandar na próxima gravação. */
@@ -192,7 +197,10 @@ export async function duplicateProject(id: string, user: SessionUser | undefined
     const row = await table.get(id);
     if (row === undefined) return { ok: false, reason: 'not_found', message: 'This project does not exist, or was deleted.' };
     const name = copyName(row.name);
-    const copy = await table.insert({ name, data: withProjectName(row.data, name), owner_id: user.id, owner_email: user.email });
+    // S22.3: a cópia aponta para a sua própria pasta de desenhos (apagar o original não a deixa sem planta).
+    const drawings = drawingsOfProjectData(row.data);
+    const data = drawings.length === 0 ? row.data : withProjectDrawings(row.data, await copyDrawings(drawings, deps.drawings));
+    const copy = await table.insert({ name, data: withProjectName(data, name), owner_id: user.id, owner_email: user.email });
     return { ok: true, id: copy.id, name };
   } catch (e) {
     return { ok: false, reason: 'failed', message: `Could not duplicate the project: ${failure(e)}` };
@@ -204,8 +212,11 @@ export async function deleteProject(id: string, deps: ProjectsDeps = defaultDeps
   const table = await deps.table();
   if (table === undefined) return { ok: false, reason: 'unconfigured', message: UNCONFIGURED };
   try {
+    const row = await table.get(id);
     const deleted = await table.delete(id);
     if (!deleted) return { ok: false, reason: 'not_found', message: 'This project was already deleted.' };
+    // S22.3: a pasta de desenhos vai junto (best effort: a linha já se foi; sobra vira lixo no bucket, não erro).
+    if (row !== undefined) await removeDrawings(drawingsOfProjectData(row.data), deps.drawings);
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: 'failed', message: `Could not delete the project: ${failure(e)}` };

@@ -934,8 +934,23 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     jsdom (7), header (+1), rota. Conferido no browser logado: sample → linha "Casa 28x40" com 5 paredes; Rename pelo dialog →
     toast, lista relida e o editor abre com o nome novo e "Saved · just now"; Duplicate → "Copy of …" no topo; Delete → confirmação,
     linha some; sem erro no console; 375 px sem rolagem horizontal. Ver `04-decisoes.md` (2026-11-03, S22.2).
-  - [ ] **S22.3 — Desenhos no Storage.** Bucket `drawings` por projeto (PDFs do passo 01, subidos pela action
-    de 300 MB); o underlay e releituras leem de lá. Painéis gerados não são guardados (reproduzíveis).
+  - [x] **S22.3 — Desenhos no Storage (2026-11-03).** Bucket privado `drawings` (migração
+    `20261103000000_drawings.sql`, aplicada pelo conector: 50 MB por objeto, só PDF e imagens, RLS de time). O
+    navegador sobe os arquivos do passo 01 **direto ao bucket** (`use-drawings-upload.ts`: um por vez, pasta
+    `<uploadId>/` por sessão do formulário, arquivo que sai da lista é apagado, nome seguro com sufixo em colisão,
+    "Uploading n of m" e Retry) assim que entram; a prévia e a leitura esperam os caminhos e mandam `drawings`
+    (JSON) no FormData em vez dos bytes — o pedido ao app fica pequeno e o teto de 32 MB do Cloud Run deixa de
+    valer para os desenhos. Sem Supabase (desenvolvimento sem chaves), os arquivos seguem no corpo como antes.
+    `readUploadForm` baixa do bucket (`drawings.service.downloadDrawings`, `DrawingsStore` injetável, adaptador em
+    `lib/supabase/drawings-store.ts`); a leitura que deu certo leva `drawings` (`ExtractOutcome`), que o
+    `.panelizer.json` guarda em `$panelizer.reading.drawings` e a reconversão mantém. O underlay de um projeto
+    reaberto lista os desenhos do Storage (ícone de nuvem) e baixa o escolhido com o cliente do navegador. Apagar
+    projeto apaga a pasta; duplicar copia os objetos para uma pasta nova e aponta a cópia para ela. As chaves
+    públicas chegam ao cliente por props (`storage`), lidas a cada request — o build do Cloud Run não tem
+    variáveis. Testes: web 334 (eram 318): lib `drawings` (6), `drawings.service` (4), `projects.service` (+1),
+    hook no jsdom (4), zona de soltar (+1). **Não conferido no browser**: a sessão do pane expirou (login do
+    humano) e a leitura real custa API; o caminho servidor → bucket está coberto pelos testes com bucket falso.
+    Fica: lixo no bucket de envios abandonados (sem projeto) — ver 05-pendencias.
 - [x] **Seleção automática de folhas: carimbos sem hífen e com rótulo (2026-11-03)** — sem regra de framing. O conjunto
   Matilda (49 Matilda St, Providence: 80 páginas, 11 unidades, 3 pavimentos + cellar, pricing set) não tinha nenhuma folha
   reconhecida: o arquiteto numera `A201` (sem hífen) e o estrutural `SA1.1` (com ponto), e o título fica sob um rótulo

@@ -13,6 +13,8 @@ export interface DropZoneProps {
   error?: string | undefined;
   /** `hero` (2026-10-23): dentro da zona-herói do passo 01 — sem moldura própria (a moldura tracejada é do pai), convite maior e vertical. */
   variant?: 'card' | 'hero';
+  /** Teto por arquivo (S22.3: 50 MB por objeto no Storage); ausente = só o total do envio. */
+  maxFileBytes?: number;
 }
 
 /** Limite do envio (`serverActions.bodySizeLimit`, S20.2). */
@@ -37,7 +39,7 @@ export function isAccepted(f: File): boolean {
  * Separa o que entra do que não entra (M5): tipo não aceito, repetido, ou o total passando do limite. Devolve a
  * lista nova e o motivo de cada recusa, para a zona dizer em vez de ignorar em silêncio.
  */
-export function mergeFiles(current: readonly File[], incoming: readonly File[]): { files: File[]; rejected: { name: string; reason: string }[] } {
+export function mergeFiles(current: readonly File[], incoming: readonly File[], maxFileBytes?: number): { files: File[]; rejected: { name: string; reason: string }[] } {
   const seen = new Set(current.map((f) => `${f.name}:${f.size}`));
   const files = [...current];
   const rejected: { name: string; reason: string }[] = [];
@@ -55,6 +57,11 @@ export function mergeFiles(current: readonly File[], incoming: readonly File[]):
       rejected.push({ name: f.name, reason: `would pass the ${formatBytes(MAX_UPLOAD_BYTES)} limit` });
       continue;
     }
+    // S22.3: no Storage cada objeto tem um teto (50 MB no plano gratuito do Supabase).
+    if (maxFileBytes !== undefined && f.size > maxFileBytes) {
+      rejected.push({ name: f.name, reason: `over the ${formatBytes(maxFileBytes)} per-file limit` });
+      continue;
+    }
     seen.add(`${f.name}:${f.size}`);
     files.push(f);
     total += f.size;
@@ -63,7 +70,7 @@ export function mergeFiles(current: readonly File[], incoming: readonly File[]):
 }
 
 /** Zona de soltar arquivos: tracejada, cantos marcados, ícone navy; responde a hover e arraste. Acumula arquivos. */
-export function DropZone({ files, onFiles, disabled = false, error, variant = 'card' }: DropZoneProps) {
+export function DropZone({ files, onFiles, disabled = false, error, variant = 'card', maxFileBytes }: DropZoneProps) {
   const hero = variant === 'hero';
   const input = useRef<HTMLInputElement>(null);
   // Contador de dragenter/dragleave (M5): o leave dispara ao passar sobre os filhos e fazia o estado piscar.
@@ -74,7 +81,7 @@ export function DropZone({ files, onFiles, disabled = false, error, variant = 'c
 
   const add = (list: FileList | null) => {
     if (!list) return;
-    const r = mergeFiles(files, Array.from(list));
+    const r = mergeFiles(files, Array.from(list), maxFileBytes);
     setRejected(r.rejected);
     if (r.files.length !== files.length) onFiles(r.files);
   };
@@ -160,7 +167,7 @@ export function DropZone({ files, onFiles, disabled = false, error, variant = 'c
         </p>
       ) : null}
       <p className="text-[13px] text-ink-3">
-        PDF, PNG, JPG, WebP or GIF · up to {formatBytes(MAX_UPLOAD_BYTES)} per upload · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
+        PDF, PNG, JPG, WebP or GIF · {maxFileBytes === undefined ? `up to ${formatBytes(MAX_UPLOAD_BYTES)} per upload` : `up to ${formatBytes(maxFileBytes)} per file, ${formatBytes(MAX_UPLOAD_BYTES)} per upload`} · send the whole set (many files or one big PDF): plans, schedules, elevations, sections and structural. The useful sheets are picked by their title block.
       </p>
       {hero && files.length === 0 ? (
         <ul className="flex flex-wrap gap-2 text-[12px] font-semibold text-ink-2" aria-label="What to send">

@@ -1,5 +1,6 @@
 import 'server-only';
 import { notFound, redirect } from 'next/navigation';
+import { supabaseEnv } from '@/lib/supabase/env';
 import { hasKey } from '@/services/extract.service';
 import { listExamples } from '@/services/panels.service';
 import { loadProject } from '@/services/projects.service';
@@ -21,6 +22,7 @@ export async function projectPageProps(id: string): Promise<Omit<NewProjectViewP
     examples: listExamples(),
     aiEnabled: hasKey(),
     devTools,
+    storage: supabaseEnv(),
     project: { id: loaded.project.id, name: loaded.project.name, revision: loaded.project.revision, text: loaded.project.text, savedAt: loaded.project.updatedAt },
   };
 }

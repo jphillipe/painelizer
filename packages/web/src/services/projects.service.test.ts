@@ -3,6 +3,31 @@ import type { ProjectsTable } from '@/lib/supabase/projects-table';
 import type { ProjectRow } from '@/types/database';
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ supabaseServer: async () => undefined }));
+import type { DrawingsStore } from '@/lib/supabase/drawings-store';
+
+/** Bucket em memória: caminho → bytes. */
+function fakeStore(seed: Record<string, number[]> = {}) {
+  const objects = new Map(Object.entries(seed).map(([k, v]) => [k, new Uint8Array(v)]));
+  const store: DrawingsStore = {
+    async download(path) {
+      const b = objects.get(path);
+      if (b === undefined) throw new Error(`not found: ${path}`);
+      return b;
+    },
+    async list(prefix) {
+      return [...objects.keys()].filter((k) => k.startsWith(`${prefix}/`));
+    },
+    async remove(paths) {
+      for (const p of paths) objects.delete(p);
+    },
+    async copy(from, to) {
+      const b = objects.get(from);
+      if (b === undefined) throw new Error(`not found: ${from}`);
+      objects.set(to, b);
+    },
+  };
+  return { store, objects, deps: { store: async () => store } };
+}
 const { createProject, deleteProject, duplicateProject, listProjects, loadProject, parseProjectData, projectName, renameProject, saveProject } = await import('./projects.service');
 
 /** Tabela em memória com a mesma regra da gravação condicional do banco. */
@@ -209,6 +234,31 @@ describe('projects.service — lista, renomear, duplicar, apagar (S22.2)', () =>
     expect(rows.get('p1')!.data).toEqual(JSON.parse(WITH_WALLS)); // o original fica igual
     expect(await duplicateProject('p1', undefined, deps)).toMatchObject({ ok: false, reason: 'signed_out' });
     expect(await duplicateProject('nope', user, deps)).toMatchObject({ ok: false, reason: 'not_found' });
+  });
+
+  it('apagar leva a pasta de desenhos junto; duplicar copia os objetos para uma pasta nova (S22.3)', async () => {
+    const { deps: tableDeps } = fakeTable();
+    const { objects, deps: drawingsDeps } = fakeStore({ 'u1/A.pdf': [1, 2], 'u1/B.png': [3], 'other/C.pdf': [4] });
+    const deps = { ...tableDeps, drawings: drawingsDeps };
+    const withDrawings = JSON.stringify({
+      name: 'Casa',
+      walls: [],
+      $panelizer: { version: 1, reading: { projectName: 'Casa', drawings: [{ name: 'A.pdf', path: 'u1/A.pdf', size: 2, type: 'application/pdf' }, { name: 'B.png', path: 'u1/B.png', size: 1, type: 'image/png' }] } },
+    });
+    await createProject({ name: 'Casa', text: withDrawings }, user, deps);
+    const copy = await duplicateProject('p1', user, deps);
+    expect(copy).toMatchObject({ ok: true, id: 'p2' });
+    const loaded = await loadProject('p2', deps);
+    if (!loaded.ok) throw new Error(loaded.message);
+    const copied = (JSON.parse(loaded.project.text) as { $panelizer: { reading: { drawings: { path: string }[] } } }).$panelizer.reading.drawings.map((d) => d.path);
+    expect(copied).toHaveLength(2);
+    expect(copied[0]).not.toBe('u1/A.pdf');
+    expect(copied[0]!.endsWith('/A.pdf')).toBe(true);
+    expect(objects.size).toBe(5); // 3 originais + 2 cópias
+    expect(await deleteProject('p1', deps)).toEqual({ ok: true });
+    expect([...objects.keys()].filter((k) => k.startsWith('u1/'))).toEqual([]);
+    expect(objects.has('other/C.pdf')).toBe(true);
+    expect(objects.size).toBe(3); // a cópia continua com os dela
   });
 
   it('apagar some da lista; apagar de novo é not_found; gravar depois é not_found', async () => {

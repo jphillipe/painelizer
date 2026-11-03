@@ -262,3 +262,13 @@ Resumo da revisão de escopo feita antes da S1, para não se perder:
 - **P42 — Posição de porta estimada pela escala (2026-10-30).** Quando a planta não cota a porta nem dá regra escrita, a IA mede a posição no recorte ampliado pela escala do desenho e a marca `scaled` (confiança ≤ 0,5); a porta entra no projeto com o aviso `ABERTURA_ESTIMADA`. Hipótese em vigor: o erro dessa medida fica em até ~2" e é aceitável como ponto de partida que o revisor confere sobre a planta de fundo. A fábrica confirma se prefere assim ou se porta sem cota deve ficar fora até alguém cotar.
 
 - **P43 — Conjuntos grandes (Horace) numa leitura só (2026-10-30).** A seleção automática do Horace (Architectural + Structural, 133 PDFs → 32 folhas úteis) soma ~633 k tokens de entrada: as folhas de notas e schedules do escritório são muito mais densas que as do Ringgold (~18 k tokens por página contra ~7 k), e a leitura estourou o teto de saída (o raciocínio conta). Hipótese em vigor: conjunto desse porte se lê escolhendo as páginas (planta do pavimento, plantas ampliadas da ala em questão, tipos de parede, schedules de portas e janelas, notas estruturais e a planta de framing do pavimento — uns 10 a 12 PDFs), ou em duas leituras por ala; o estimador de custo do web precisa de um termo por densidade de texto da página (hoje assume 7 300 tokens por página). A fábrica/humano decide se vale uma leitura por ala ou uma seleção manual padrão para conjuntos de escritório grande.
+
+## Storage (S22.3, 2026-11-03)
+
+- **Teto de 50 MB por arquivo** no bucket `drawings`: é o máximo de um objeto no plano gratuito do Supabase. Um PDF
+  maior (conjuntos escaneados chegam a isso) exige plano Pro, que permite upload retomável até 50 GB. Hipótese em
+  vigor: 50 MB basta para os conjuntos de arquiteto (Matilda inteiro tem 19,7 MB; o Horace vem em 133 arquivos).
+- **Envios abandonados** ficam no bucket: quem solta arquivos e não lê (ou cancela, ou a leitura falha) deixa a
+  pasta `<uploadId>/` sem projeto apontando para ela. Não há limpeza automática. Hipótese: volume baixo numa
+  ferramenta interna; se crescer, uma rotina lista as pastas sem referência em `projects.data` e apaga as com mais
+  de 7 dias.

@@ -56,10 +56,35 @@ export function pickProjectData(f: UploadFields): ProjectData {
   return { wallHeight: f.wallHeight, headerHeight: f.headerHeight, sillHeight: f.sillHeight, floors: f.floors, floorSpan: f.floorSpan, snow: f.snow, width: f.width, wind: f.wind, exposure: f.exposure };
 }
 
+/** Um desenho no Storage (S22.3): nome do humano, caminho `<uploadId>/<nome>` no bucket, tamanho e tipo. */
+export const drawingRefSchema = z.object({
+  name: z.string().min(1).max(255),
+  path: z.string().regex(/^[A-Za-z0-9-]{8,64}\/[A-Za-z0-9._-]{1,120}$/, 'drawing path'),
+  size: z.number().int().nonnegative(),
+  type: z.string().max(100),
+});
+export const drawingsSchema = z.array(drawingRefSchema).max(500);
+
+/** Lista de desenhos como JSON no FormData (S22.3); vazio ou lixo vira lista vazia. */
+export function parseDrawings(s: string): z.infer<typeof drawingsSchema> {
+  if (s.trim() === '') return [];
+  try {
+    const r = drawingsSchema.safeParse(JSON.parse(s));
+    return r.success ? r.data : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Reaplicar dados do projeto à leitura já feita (sem nova chamada à IA). */
 export const applyProjectDataSchema = z.object({
   output: z.unknown(),
-  meta: z.object({ model: z.string(), pagesSent: z.array(z.object({ name: z.string(), pages: z.array(z.number()) })) }),
+  meta: z.object({
+    model: z.string(),
+    pagesSent: z.array(z.object({ name: z.string(), pages: z.array(z.number()) })),
+    /** S22.3: a reconversão mantém os desenhos da leitura. */
+    drawings: drawingsSchema.optional(),
+  }),
   data: projectDataSchema,
 });
 

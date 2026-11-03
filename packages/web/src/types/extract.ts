@@ -1,5 +1,7 @@
 /** Resultado da extração como a tela o vê (sem depender do pacote extract: trafega servidor → cliente). */
 
+import type { DrawingRef } from '@/lib/drawings';
+
 export interface OpeningReview {
   id: string;
   /** Tag do schedule ou tipo (`window`/`door`), o que houver. */
@@ -61,6 +63,8 @@ export type ExtractOutcome =
       model: string;
       usage: { inputTokens: number; outputTokens: number };
       pagesSent: { name: string; pages: number[] }[];
+      /** Os desenhos no Storage de onde a leitura saiu (S22.3); ausente sem Supabase ou numa leitura gravada. */
+      drawings?: DrawingRef[];
     }
   | {
       ok: false;

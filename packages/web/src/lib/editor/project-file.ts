@@ -83,5 +83,7 @@ function readingFrom(meta: unknown, projectText: string): Reading | undefined {
     model: r.model,
     usage: r.usage ?? { inputTokens: 0, outputTokens: 0 },
     pagesSent: Array.isArray(r.pagesSent) ? r.pagesSent : [],
+    // S22.3: os desenhos no Storage viajam com a leitura (o underlay de um projeto reaberto baixa de lá).
+    ...(Array.isArray(r.drawings) ? { drawings: r.drawings } : {}),
   };
 }

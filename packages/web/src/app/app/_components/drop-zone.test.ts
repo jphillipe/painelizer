@@ -21,3 +21,14 @@ describe('zona de soltar: o que entra (M5)', () => {
     expect(r.rejected.map((x) => x.reason)).toEqual(['already added', 'would pass the 300.0 MB limit']);
   });
 });
+
+describe('mergeFiles — teto por arquivo (S22.3, Storage)', () => {
+  it('recusa o arquivo acima do teto por arquivo com o motivo, e aceita os outros', () => {
+    const small = new File([new Uint8Array(10)], 'a.pdf', { type: 'application/pdf' });
+    const big = new File([new Uint8Array(2048)], 'b.pdf', { type: 'application/pdf' });
+    const r = mergeFiles([], [small, big], 1024);
+    expect(r.files.map((f) => f.name)).toEqual(['a.pdf']);
+    expect(r.rejected).toEqual([{ name: 'b.pdf', reason: 'over the 1 KB per-file limit' }]);
+    expect(mergeFiles([], [big]).files.map((f) => f.name)).toEqual(['b.pdf']);
+  });
+});

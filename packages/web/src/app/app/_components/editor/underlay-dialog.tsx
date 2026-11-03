@@ -1,13 +1,16 @@
 'use client';
 
-import { FileImageIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
+import { CloudDownloadIcon, FileImageIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DRAWINGS_BUCKET, type DrawingRef } from '@/lib/drawings';
 import type { Rect } from '@/lib/editor/geometry';
+import { supabaseBrowser } from '@/lib/supabase/browser';
+import type { SupabaseEnv } from '@/lib/supabase/env';
 import { DEFAULT_UNDERLAY_OPACITY, initialTransform, underlayKb, type Underlay } from '@/lib/editor/underlay';
 import { isPdfFile, loadPdf, renderImageFile, renderPdfPage } from '@/lib/pdf-render';
 import { cn } from '@/lib/utils';
@@ -18,6 +21,9 @@ export interface UnderlayDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Arquivos soltos no passo 01 (quando ainda estão na memória): oferecidos primeiro. */
   sourceFiles: readonly File[];
+  /** Desenhos no Storage de onde a leitura saiu (S22.3): um projeto reaberto não tem os arquivos na memória, baixa daqui. */
+  storedDrawings?: readonly DrawingRef[] | undefined;
+  storage?: SupabaseEnv | undefined;
   /** Caixa das paredes, para a imagem nascer do tamanho da casa. */
   bounds: Rect | undefined;
   onPick: (underlay: Underlay) => void;
@@ -31,8 +37,25 @@ const THUMB_PX = 160;
  * Escolher a planta por baixo (M6): um arquivo dos soltos no passo 01 ou outro do disco; PDF mostra as páginas em
  * miniatura, uma é a escolhida; imagem entra direto. A página é renderizada em 2 400 px e vai para o draft.
  */
-export function UnderlayDialog({ open, onOpenChange, sourceFiles, bounds, onPick }: UnderlayDialogProps) {
+export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings = [], storage, bounds, onPick }: UnderlayDialogProps) {
   const [file, setFile] = useState<File | undefined>(undefined);
+  const [downloading, setDownloading] = useState<string | undefined>(undefined);
+  // Do Storage só o que não está na memória (o mesmo arquivo solto no passo 01 aparece uma vez).
+  const inMemory = new Set(sourceFiles.map((f) => f.name));
+  const stored = storage === undefined ? [] : storedDrawings.filter((d) => !inMemory.has(d.name));
+  const fetchStored = async (d: DrawingRef): Promise<void> => {
+    if (storage === undefined) return;
+    setDownloading(d.path);
+    try {
+      const { data, error } = await supabaseBrowser(storage).storage.from(DRAWINGS_BUCKET).download(d.path);
+      if (error !== null || data === null) throw new Error(error?.message ?? 'empty download');
+      setFile(new File([data], d.name, { type: d.type }));
+    } catch (e) {
+      toast.error(`Couldn’t download ${d.name}: ${(e as Error).message}`);
+    } finally {
+      setDownloading(undefined);
+    }
+  };
   const [thumbs, setThumbs] = useState<{ page: number; url: string }[] | undefined>(undefined);
   const [page, setPage] = useState<number | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -119,6 +142,13 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, bounds, onPick
                   <span className="text-ink-3">{formatBytes(f.size)}</span>
                 </button>
               ))}
+              {stored.map((d) => (
+                <button key={d.path} type="button" onClick={() => void fetchStored(d)} disabled={downloading !== undefined} aria-pressed={file?.name === d.name} className={cn('flex items-center gap-2 rounded-md border px-3 py-1.5 text-[13px] transition-colors disabled:opacity-60', file?.name === d.name ? 'border-selection bg-selection/8 text-navy-900' : 'border-line hover:border-line-strong')} title="Stored with the project">
+                  {downloading === d.path ? <Loader2Icon className="size-4 animate-spin" /> : <CloudDownloadIcon className="size-4 text-navy-900" />}
+                  <span className="font-mono">{d.name}</span>
+                  <span className="text-ink-3">{formatBytes(d.size)}</span>
+                </button>
+              ))}
               <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
                 Choose a file…
               </Button>
@@ -134,7 +164,7 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, bounds, onPick
                 }}
               />
             </div>
-            {file !== undefined && !sourceFiles.includes(file) ? (
+            {file !== undefined && !sourceFiles.includes(file) && !stored.some((d) => d.name === file.name) ? (
               <p className="text-[13px] text-ink-2">
                 <span className="font-mono">{file.name}</span> · {formatBytes(file.size)}
               </p>

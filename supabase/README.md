@@ -21,8 +21,8 @@ segurança). As chaves já estão em `packages/web/.env.local`; cadastro desliga
    NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
    ```
-4. **SQL Editor → New query**: cole `supabase/migrations/20261022000000_projects.sql` e **Run**.
-   (Com a CLI: `supabase link` e `supabase db push`.)
+4. **SQL Editor → New query**: cole `supabase/migrations/20261022000000_projects.sql` e **Run**; depois
+   `20261103000000_drawings.sql` (bucket dos desenhos). (Com a CLI: `supabase link` e `supabase db push`.)
 5. **Authentication → Sign In / Providers → Email**: deixe ligado. Em **Authentication → Settings**, desligue
    **Allow new users to sign up** — o app não tem cadastro; as contas são criadas aqui.
 6. **Authentication → Users → Add user → Create new user**: e-mail, senha e **Auto Confirm User** marcado.
@@ -40,3 +40,7 @@ login não foi configurado — para um deploy esquecido não expor a chave da AP
 - `projects`: `id`, `owner_id`/`owner_email` (quem criou), `name`, `data jsonb` (o `.panelizer.json` inteiro),
   `revision` (concorrência otimista), `created_at`, `updated_at` (trigger).
 - RLS: qualquer usuário autenticado lê, cria (como autor), edita e apaga — acesso de time.
+- Bucket `drawings` (S22.3, privado, 50 MB por objeto, só PDF e imagens): os desenhos do passo 01, uma pasta por
+  envio (`<uploadId>/<arquivo>`), subidos direto do navegador; o projeto guarda os caminhos em
+  `data -> '$panelizer' -> 'reading' -> 'drawings'`. RLS de time em `storage.objects` para esse bucket. Aplicada
+  em 2026-11-03 pelo conector MCP.

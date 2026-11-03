@@ -59,7 +59,9 @@ export function ProjectDataForm({ outcome, onOutcome, variant = 'card', confirm 
       toast.error(error.serverError ?? fieldMsg ?? 'Could not apply the project data.');
     },
   });
-  const apply = (data: ProjectData): void => execute({ output: outcome.output, meta: { model: outcome.model, pagesSent: outcome.pagesSent ?? [] }, data });
+  // S22.3: a reconversão mantém os desenhos do Storage de onde a leitura saiu.
+  const apply = (data: ProjectData): void =>
+    execute({ output: outcome.output, meta: { model: outcome.model, pagesSent: outcome.pagesSent ?? [], ...(outcome.drawings === undefined ? {} : { drawings: outcome.drawings }) }, data });
   const setup = variant === 'setup';
   const required = needs?.required ?? [];
 

@@ -1,3 +1,4 @@
+import { supabaseEnv } from '@/lib/supabase/env';
 import { hasKey } from '@/services/extract.service';
 import { listExamples } from '@/services/panels.service';
 import { NewProjectView } from './_components/new-project-view';
@@ -22,5 +23,6 @@ export const dynamic = 'force-dynamic';
  */
 export default function NewProjectPage() {
   const devTools = process.env.NODE_ENV !== 'production' || process.env.PANELIZER_DEV_TOOLS === '1';
-  return <NewProjectView examples={listExamples()} aiEnabled={hasKey()} devTools={devTools} />;
+  // S22.3: a URL e a chave publicável vão por props (o build do Cloud Run não tem variáveis; NEXT_PUBLIC_* não entra no bundle).
+  return <NewProjectView examples={listExamples()} aiEnabled={hasKey()} devTools={devTools} storage={supabaseEnv()} />;
 }

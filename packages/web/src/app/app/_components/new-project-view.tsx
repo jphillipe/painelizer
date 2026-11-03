@@ -31,6 +31,7 @@ import {
   type Reading,
 } from "@/lib/editor/project-file";
 import { projectPath, type ServerProject } from "@/lib/editor/project-sync";
+import type { SupabaseEnv } from "@/lib/supabase/env";
 import { idIndex } from "@/lib/editor/problems";
 import {
   editorReducer,
@@ -65,6 +66,8 @@ export interface NewProjectViewProps {
   project?: { id: string; name: string; revision: number; text: string; savedAt: string };
   /** Com `project`: 2 = editor, 3 = painéis (gera ao abrir). */
   initialStep?: 2 | 3;
+  /** URL e chave publicável do Supabase (S22.3), lidas no servidor a cada request: desenhos sobem e descem direto do Storage. */
+  storage?: SupabaseEnv | undefined;
 }
 
 const SOURCE_LABEL: Record<DraftSource, string> = {
@@ -85,6 +88,7 @@ export function NewProjectView({
   devTools = false,
   project,
   initialStep,
+  storage,
 }: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(project === undefined ? 1 : (initialStep ?? 2));
   // Identidade no servidor (S22.1): id, revisão a mandar na próxima gravação e quando gravou.
@@ -341,6 +345,7 @@ export function NewProjectView({
         onOutcome={onOutcome}
         onJobChange={setJob}
         onFilesChange={setUploaded}
+        storage={storage}
         onSample={
           devTools
             ? () => document.getElementById("sample")?.focus()
@@ -384,6 +389,8 @@ export function NewProjectView({
           steps={<StepBar active={step} done={done} onGo={setStep} compact />}
           onStartOver={requestStartOver}
           sourceFiles={uploaded}
+          storedDrawings={okOutcome?.drawings}
+          storage={storage}
           save={sync.status}
           onRetrySave={sync.retry}
         />

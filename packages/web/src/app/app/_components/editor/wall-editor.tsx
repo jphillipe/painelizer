@@ -13,6 +13,8 @@ import { byWall, countIssues, draftIssues, idIndex, parseEngineResult, parseWarn
 import { provenanceIndex } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
+import type { DrawingRef } from '@/lib/drawings';
+import type { SupabaseEnv } from '@/lib/supabase/env';
 import type { ExtractOutcome } from '@/types/extract';
 import { useEditorShortcuts } from './use-editor-shortcuts';
 import type { SaveStatus } from '@/lib/editor/project-sync';
@@ -33,6 +35,9 @@ export interface WallEditorProps {
   onStartOver: () => void;
   /** Arquivos soltos no passo 01 (M6: planta por baixo). */
   sourceFiles?: readonly File[] | undefined;
+  /** Desenhos no Storage de onde a leitura saiu (S22.3): a planta por baixo de um projeto reaberto baixa de lá. */
+  storedDrawings?: readonly DrawingRef[] | undefined;
+  storage?: SupabaseEnv | undefined;
   /** Auto-save no servidor (S22.1): estado do chip da top bar e o "Retry" dele. */
   save?: SaveStatus;
   onRetrySave?: () => void;
@@ -42,7 +47,7 @@ export interface WallEditorProps {
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
  * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
  */
-export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, save, onRetrySave }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave }: WallEditorProps) {
   const { draft } = state;
   // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
   const latest = useRef(state);
@@ -155,6 +160,8 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
       onStartOver={onStartOver}
       help={{ open: helpOpen, onOpenChange: setHelpOpen }}
       sourceFiles={sourceFiles}
+      storedDrawings={storedDrawings}
+      storage={storage}
       save={save}
       onRetrySave={onRetrySave}
     />

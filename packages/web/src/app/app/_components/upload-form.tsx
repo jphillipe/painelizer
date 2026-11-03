@@ -12,7 +12,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { DRAWING_MAX_BYTES } from '@/lib/drawings';
 import { estimateCost, formatUsd } from '@/lib/extract-cost';
+import type { SupabaseEnv } from '@/lib/supabase/env';
 import { recordDuration } from '@/lib/extract-timing';
 import { uploadFieldsSchema, type UploadFields } from '@/schemas/extract';
 import { EMPTY_PROJECT_DATA, type ExtractJob, type ExtractOutcome, type ExtractPreview } from '@/types/extract';
@@ -21,6 +23,7 @@ import { previewExtraction } from '../_actions/preview-extraction';
 import { DropZone } from './drop-zone';
 import { PlanReadSketch } from './plan-read-sketch';
 import { ProjectDataFields } from './project-data-fields';
+import { useDrawingsUpload } from './use-drawings-upload';
 
 export interface UploadFormProps {
   aiEnabled: boolean;
@@ -31,6 +34,8 @@ export interface UploadFormProps {
   onSample?: (() => void) | undefined;
   /** Arquivos atuais, para o editor oferecer a planta por baixo (M6). */
   onFilesChange?: ((files: File[]) => void) | undefined;
+  /** URL e chave publicável do Supabase (S22.3): com elas os desenhos sobem direto ao Storage; sem, vão no pedido. */
+  storage?: SupabaseEnv | undefined;
 }
 
 const AUTO = 'auto';
@@ -47,8 +52,10 @@ function newJobId(): string {
  * Fica montado (escondido) durante a leitura, para o humano voltar com arquivos e campos se ela falhar.
  * M7: prévia do que vai ser enviado (só para o custo no botão, desde 2026-10-23) antes de pagar; a leitura leva um `jobId` para a tela de espera acompanhar e recolher depois de um F5.
  */
-export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFilesChange }: UploadFormProps) {
+export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFilesChange, storage }: UploadFormProps) {
   const [files, setFiles] = useState<File[]>([]);
+  // S22.3: com Storage, os arquivos sobem assim que entram; a prévia e a leitura esperam os caminhos.
+  const upload = useDrawingsUpload(storage, files);
   const [filesError, setFilesError] = useState<string | undefined>(undefined);
   const [preview, setPreview] = useState<ExtractPreview | undefined>(undefined);
   const [previewing, setPreviewing] = useState(false);
@@ -76,7 +83,8 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
 
   const formData = (fields?: UploadFields): FormData => {
     const fd = new FormData();
-    for (const f of files) fd.append('files', f);
+    if (upload.refs !== undefined) fd.set('drawings', JSON.stringify(upload.refs));
+    else for (const f of files) fd.append('files', f);
     if (fields !== undefined) for (const [k, v] of Object.entries(fields)) fd.set(k, v);
     else {
       fd.set('pages', pagesField);
@@ -86,8 +94,9 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
   };
 
   // Prévia (M7): 800 ms depois da última mudança em arquivos, páginas ou pavimento; sem arquivos, nada.
+  const uploadsReady = !upload.enabled || upload.refs !== undefined;
   useEffect(() => {
-    if (files.length === 0 || (!previewAuto && !previewWanted)) {
+    if (files.length === 0 || (!previewAuto && !previewWanted) || !uploadsReady) {
       setPreview(undefined);
       return;
     }
@@ -102,11 +111,15 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     }, PREVIEW_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, pagesField, levelField, previewAuto, previewWanted]);
+  }, [files, pagesField, levelField, previewAuto, previewWanted, uploadsReady, upload.refs]);
 
   const submit = (fields: UploadFields) => {
     if (files.length === 0) {
       setFilesError('Add at least one PDF or image.');
+      return;
+    }
+    if (!uploadsReady) {
+      toast.error(upload.error ?? 'The drawings are still uploading.');
       return;
     }
     const fd = formData(fields);
@@ -147,7 +160,16 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
             </div>
           </div>
           <div className="flex flex-col justify-center gap-3 p-5 sm:p-6">
-            <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError} variant="hero" />
+            <DropZone files={files} onFiles={onFiles} disabled={isPending} error={filesError ?? upload.error} variant="hero" {...(upload.enabled ? { maxFileBytes: DRAWING_MAX_BYTES } : {})} />
+            {upload.uploading !== undefined ? (
+              <p className="flex items-center gap-2 text-[13px] text-ink-2" aria-live="polite">
+                <Loader2Icon className="size-3.5 animate-spin" /> Uploading {upload.uploading.done + 1} of {upload.uploading.total} to storage…
+              </p>
+            ) : upload.error !== undefined ? (
+              <Button type="button" variant="outline" size="sm" className="w-fit" onClick={upload.retry}>
+                Retry upload
+              </Button>
+            ) : null}
             <details className="text-sm">
               <summary className="cursor-pointer text-ink-2">Drawing checklist</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
@@ -247,8 +269,12 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
         </section>
 
         <div className="flex flex-col items-center gap-3 pt-2 text-center">
-          <Button type="submit" variant="accent" size="lg" className="h-14 px-9 text-[17px] shadow-2" disabled={!aiEnabled || isPending}>
-            {isPending ? (
+          <Button type="submit" variant="accent" size="lg" className="h-14 px-9 text-[17px] shadow-2" disabled={!aiEnabled || isPending || (files.length > 0 && !uploadsReady)}>
+            {files.length > 0 && upload.uploading !== undefined ? (
+              <>
+                <Loader2Icon className="size-5 animate-spin" /> Uploading…
+              </>
+            ) : isPending ? (
               <>
                 <Loader2Icon className="animate-spin" /> Reading the set…
               </>
