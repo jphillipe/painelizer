@@ -34,6 +34,9 @@ export function initialsOf(email: string): string {
 export const NEW_PROJECT_PARAM = 'new';
 export const NEW_PROJECT_HREF = `/app?${NEW_PROJECT_PARAM}=1`;
 
+/** Lista de projetos salvos (S22.2); ativo também em `/app/projects/<id>`. */
+export const PROJECTS_HREF = '/app/projects';
+
 export function wantsNewProject(params: { has(name: string): boolean } | null | undefined): boolean {
   return params?.has(NEW_PROJECT_PARAM) === true;
 }

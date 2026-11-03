@@ -920,7 +920,19 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     `SaveChip` na top bar ("Saved · just now", "Saving…", "Not saved" + Retry, "Edited elsewhere" + Reload); sessão
     local guarda `project {id, revision}` e a retomada adota a identidade. Testes: service (7), `project-sync` puro (4),
     hook (6, dom), top bar (2), persist (1); conferido no browser com dois reloads e conflito em segunda aba. Ver `04-decisoes.md` (2026-11-03).
-  - [ ] **S22.2 — Lista de projetos.** `/app/projects` (nome, paredes, atualizado, autor), abrir, renomear,
-    duplicar, apagar com confirmação; "Projects" no header.
+  - [x] **S22.2 — Lista de projetos (2026-11-03).** `/app/projects` (Server Component `force-dynamic` + `loading.tsx`):
+    tabela com nome (link ao editor), paredes, "updated" envelhecendo como o chip do editor, autor ("you" para quem está
+    logado) e menu `⋯` por linha — Open, Panels, Rename… (dialog; o nome novo vai também para o `name` dentro do
+    `.panelizer.json`, com a revisão subindo), Duplicate ("Copy of <nome>", autor = quem duplicou) e Delete… (`ConfirmDialog`
+    destrutivo). Estados: sem Supabase explica, erro do banco mostra a mensagem, vazio convida a começar. `ProjectsTable` ganhou
+    `list` (só `data->walls` atravessa a rede, não o arquivo inteiro) e `delete`; `projects.service` ganhou `listProjects`,
+    `renameProject` (gravação condicional com 3 tentativas), `duplicateProject`, `deleteProject`; `createProject` passou a usar o
+    `name` do arquivo quando a tela não manda nome (um sample não aparece mais como "Untitled project"). Lib pura `lib/projects.ts`
+    (`wallCountOf`, `withProjectName`, `copyName`, `nameFromData`, `ownerLabel`, `describeUpdated`; `NAME_MAX`/`projectName` saíram
+    do service para cá). Actions `renameProjectAction`/`duplicateProjectAction`/`deleteProjectAction` com `revalidatePath`.
+    "Projects" no header (ativo também em `/app/projects/<id>`). Testes: web 318 (eram 297): lib (6), service (+6), tela no
+    jsdom (7), header (+1), rota. Conferido no browser logado: sample → linha "Casa 28x40" com 5 paredes; Rename pelo dialog →
+    toast, lista relida e o editor abre com o nome novo e "Saved · just now"; Duplicate → "Copy of …" no topo; Delete → confirmação,
+    linha some; sem erro no console; 375 px sem rolagem horizontal. Ver `04-decisoes.md` (2026-11-03, S22.2).
   - [ ] **S22.3 — Desenhos no Storage.** Bucket `drawings` por projeto (PDFs do passo 01, subidos pela action
     de 300 MB); o underlay e releituras leem de lá. Painéis gerados não são guardados (reproduzíveis).

@@ -8,6 +8,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, ProjectRow } from '@/types/database';
 import type { Json } from '@/types/json';
 
+/**
+ * Uma linha como a lista a vê (S22.2): sem o `data` inteiro (uma leitura da IA passa de 500 KB), só a lista de
+ * paredes dele (`data->walls`), que o service conta.
+ */
+export type ProjectSummaryRow = Pick<ProjectRow, 'id' | 'name' | 'owner_email' | 'revision' | 'created_at' | 'updated_at'> & { walls: Json | null };
+
 export interface ProjectsTable {
   insert(row: { name: string; data: Json; owner_id: string | null; owner_email: string | null }): Promise<Pick<ProjectRow, 'id' | 'revision' | 'updated_at'>>;
   get(id: string): Promise<ProjectRow | undefined>;
@@ -16,6 +22,10 @@ export interface ProjectsTable {
    * `undefined` = nenhuma linha gravada (revisão divergente ou id inexistente).
    */
   updateIfRevision(id: string, expected: number, patch: { name: string; data: Json }): Promise<Pick<ProjectRow, 'revision' | 'updated_at'> | undefined>;
+  /** Todas as linhas que o usuário enxerga (RLS de time: todas), da mais recente para a mais antiga. */
+  list(): Promise<ProjectSummaryRow[]>;
+  /** `true` se apagou uma linha; `false` se o id não existia (ou já tinha sido apagado). */
+  delete(id: string): Promise<boolean>;
 }
 
 export class ProjectsTableError extends Error {
@@ -46,6 +56,17 @@ export function supabaseProjectsTable(client: SupabaseClient<Database>): Project
         .select('revision, updated_at');
       if (error !== null) throw new ProjectsTableError(error.message);
       return data?.[0];
+    },
+    async list() {
+      // `data->walls` é o caminho JSON do PostgREST: só a lista de paredes atravessa a rede, não o arquivo inteiro.
+      const { data, error } = await table().select('id, name, owner_email, revision, created_at, updated_at, walls:data->walls').order('updated_at', { ascending: false });
+      if (error !== null) throw new ProjectsTableError(error.message);
+      return (data ?? []) as ProjectSummaryRow[];
+    },
+    async delete(id) {
+      const { data, error } = await table().delete().eq('id', id).select('id');
+      if (error !== null) throw new ProjectsTableError(error.message);
+      return (data?.length ?? 0) > 0;
     },
   };
 }

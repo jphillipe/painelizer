@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDownIcon, LogOutIcon, PlusIcon, type LucideIcon } from 'lucide-react';
+import { ChevronDownIcon, FolderOpenIcon, LogOutIcon, PlusIcon, type LucideIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,7 +9,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { signOutAction } from '@/app/login/_actions/sign-out';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, type NavTarget } from '@/lib/site-nav';
+import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, PROJECTS_HREF, type NavTarget } from '@/lib/site-nav';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/services/auth.service';
 
@@ -18,9 +18,14 @@ interface NavItem extends NavTarget {
   icon: LucideIcon;
 }
 
-/** Rotas de `docs/10-design.md` §5; "Projects" entra na S22.2. */
-// O clique leva a `/app?new=1`: em qualquer passo da tela, isso volta ao passo 01 (com confirmação se houver trabalho).
-const NAV: readonly NavItem[] = [{ href: '/app', link: NEW_PROJECT_HREF, label: 'New project', icon: PlusIcon, exact: true }];
+/**
+ * Rotas de `docs/10-design.md` §5. "New project" leva a `/app?new=1`: em qualquer passo da tela, isso volta ao passo 01
+ * (com confirmação se houver trabalho). "Projects" (S22.2) é a lista, e fica ativo também no editor de um projeto salvo.
+ */
+const NAV: readonly NavItem[] = [
+  { href: '/app', link: NEW_PROJECT_HREF, label: 'New project', icon: PlusIcon, exact: true },
+  { href: PROJECTS_HREF, label: 'Projects', icon: FolderOpenIcon },
+];
 
 export interface SiteHeaderProps {
   /** Area do usuario, montada pelo servidor (avatar + menu, um skeleton enquanto carrega, ou nada). */

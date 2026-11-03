@@ -148,8 +148,8 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   transparente). Três áreas: **marca** — a logo da National Lumber (`public/brand/national-lumber.png`, 30×20 num
   tile de papel 40×40 com `shadow-1`, que levanta no hover; a logo é navy e sumiria direto sobre o fundo) +
   "Panelizer" (Barlow 600, 18px) sobre "NATIONAL LUMBER · WR GROUP" (10,5px, caixa alta, tracking 1,6px, gold-300);
-  **navegação** — grupo de pills (`rounded-pill`, borda papel/10, fundo papel/5) com "New project" (depois
-  "Projects"): ícone + rótulo (só ícone abaixo de `sm`), ativo pela rota (`aria-current="page"`, fundo papel/12,
+  **navegação** — grupo de pills (`rounded-pill`, borda papel/10, fundo papel/5) com "New project" e "Projects"
+  (S22.2; ativo também no editor de um projeto salvo): ícone + rótulo (só ícone abaixo de `sm`), ativo pela rota (`aria-current="page"`, fundo papel/12,
   ícone gold-300 e ponto dourado em `animate-pop`), hover papel/8; itens entram em `stagger`; **usuário** — avatar
   de iniciais (gold-btn sobre navy-900, `initialsOf`, ponto `ok` de sessão ativa), e-mail (≥ `md`) e chevron que
   gira ao abrir; o menu (`DropdownMenu`) traz "Signed in as" + e-mail e "Sign out". Em `/login` só a marca e a
@@ -268,7 +268,8 @@ números grandes em Barlow Condensed com unidade em eyebrow. Rotas `/`, `/how-it
 |---|---|---|
 | `/` | landing; por ora `redirect('/app')` | S20.0 |
 | `/app` | novo projeto: desenhos → revisão → painéis | S20.1–S20.3 |
-| `/app/projects`, `/app/projects/[id]` | projetos salvos | S22.1–S22.2 |
+| `/app/projects` | lista de projetos salvos: eyebrow + h1 + parágrafo e "New project" (accent) à direita; linha de contagem; tabela num Card sem padding (Name com o resto da largura e truncado, Walls em mono à direita, Updated envelhecendo, Author escondido abaixo de `sm`, menu `⋯` ghost icon-sm); Rename num Dialog com Input, Delete no `ConfirmDialog` destrutivo; vazio = Card com convite; sem Supabase = Alert; erro = Alert destrutivo; `loading.tsx` na mesma grade | S22.2 |
+| `/app/projects/[id]`, `/app/projects/[id]/panels` | projeto salvo no editor / nos painéis | S22.1 |
 | `/login` | palco com a parede que vira painéis + card de vidro; `?next=` volta aonde ia | S22.0 / 2026-10-23 |
 | qualquer outra | `app/not-found.tsx`: "Nothing was framed here." — parede com o vão sem header, "Back to the app" (accent) e "Sign in" (ghost); também o que `notFound()` mostra | 2026-10-23 |
 | erro de rota | `app/error.tsx` (cliente): "This page broke while loading.", Alert destrutivo com a mensagem do erro e a referência (`digest`), "Try again" (accent, chama o `reset` do Next) e "Back to the app" (ghost); o erro vai ao console. Sem `global-error.tsx` de propósito: o layout raiz só monta o shell | 2026-10-23 |

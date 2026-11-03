@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, wantsNewProject } from './site-nav';
+import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, PROJECTS_HREF, wantsNewProject } from './site-nav';
 
 describe('SiteHeader helpers (S22 header)', () => {
   it('iniciais do e-mail: duas partes → uma letra de cada; uma parte → duas letras', () => {
@@ -13,7 +13,9 @@ describe('SiteHeader helpers (S22 header)', () => {
   it('rota ativa: exata ou pai, conforme o item', () => {
     expect(isActivePath('/app', { href: '/app', exact: true })).toBe(true);
     expect(isActivePath('/app/projects', { href: '/app', exact: true })).toBe(false);
-    expect(isActivePath('/app/projects/1', { href: '/app/projects' })).toBe(true);
+    expect(isActivePath('/app/projects/1', { href: PROJECTS_HREF })).toBe(true);
+    expect(isActivePath('/app/projects/1/panels', { href: PROJECTS_HREF })).toBe(true);
+    expect(isActivePath('/app', { href: PROJECTS_HREF })).toBe(false);
     expect(isActivePath('/application', { href: '/app' })).toBe(false);
   });
 

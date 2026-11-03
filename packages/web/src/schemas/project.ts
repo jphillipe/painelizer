@@ -23,3 +23,14 @@ export const saveProjectSchema = z.object({
   name: z.string().trim().max(200).optional(),
   text: z.string().min(2, 'Nothing to save.'),
 });
+
+/** S22.2: renomear na lista (nome obrigatório: quem renomeia quis dar um nome). */
+export const renameProjectSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1, 'Give the project a name.').max(200, 'At most 200 characters.'),
+});
+
+/** S22.2: duplicar e apagar só precisam do id. */
+export const projectIdSchema = z.object({
+  id: z.string().uuid(),
+});

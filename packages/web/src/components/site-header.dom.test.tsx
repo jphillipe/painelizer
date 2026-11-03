@@ -41,7 +41,17 @@ describe('SiteHeader (S22 header)', () => {
     const nav = screen.getByRole('link', { name: 'New project' });
     expect(nav.getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('banner').getAttribute('data-tone')).toBe('navy');
+    expect(screen.getByRole('link', { name: 'Projects' }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('button', { name: `Account: ${user.email}` }).textContent).toContain('JP');
+  });
+
+  it('"Projects" (S22.2) leva à lista e fica ativo nela e no editor de um projeto salvo', () => {
+    pathname = '/app/projects/8f3c';
+    render(<SiteHeader userSlot={null} />);
+    const projects = screen.getByRole('link', { name: 'Projects' });
+    expect(projects.getAttribute('href')).toBe('/app/projects');
+    expect(projects.getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'New project' }).getAttribute('aria-current')).toBeNull();
   });
 
   it('sem usuário não há avatar; na tela de login não há navegação mesmo com usuário', () => {
