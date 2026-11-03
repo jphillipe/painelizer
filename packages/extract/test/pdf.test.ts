@@ -4,7 +4,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { formatPageText, listSheets, pageCount, readPageText, renderPageTiles, subsetPdf } from '../src/pdf';
 import { DEFAULT_TILE_OPTIONS, planTiles } from '../src/tiles';
 import { classifySheet } from '../src/select';
-import { makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
+import { makeLabeledPdf, makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
 
 const RINGGOLD = 'C:/Users/Phillipe/Desktop/painelizer/docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf';
 
@@ -70,6 +70,14 @@ describe('listSheets / subsetPdf', () => {
     expect(sheets).toEqual([
       { page: 1, sheet: 'A-100' },
       { page: 2, sheet: 'A-800' },
+    ]);
+  });
+
+  it('carimbo com rótulo (Matilda): número sem hífen ou com ponto, título abaixo do rótulo, sem o carimbo de rascunho', async () => {
+    const sheets = await listSheets(await makeLabeledPdf());
+    expect(sheets).toEqual([
+      { page: 1, sheet: 'A202', title: 'FIRST LEVEL FLOOR PLAN' },
+      { page: 2, sheet: 'SA1.1', title: 'APARTMENT FIRST LEVEL PLAN' },
     ]);
   });
 

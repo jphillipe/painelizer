@@ -56,7 +56,15 @@ export interface SheetInfo {
   title?: string;
 }
 
-const SHEET_PATTERN = /^[A-Z]{1,2}-\d{3}[A-Z]?$/;
+/**
+ * Número de folha no carimbo: `A-100`, `S-101A`; sem hífen, `A201`/`S101`; e com ponto, `SA1.1`/`A1.02`
+ * (conjunto Matilda, 2026-11-03: arquiteto numera `A201`, o estrutural `SA0.0`…`SA3.0`).
+ */
+const SHEET_PATTERN = /^(?:[A-Z]{1,2}-?\d{3}[A-Z]?|[A-Z]{1,2}-?\d\.\d{1,2}[A-Z]?)$/;
+/** Rótulo do carimbo sob o qual fica o título da folha ("DRAWING :", "Sheet Name:", "SHEET TITLE"); "SHEET:" sozinho é o do número. */
+const TITLE_LABEL = /^(?:DRAWING(?: TITLE)?|SHEET (?:TITLE|NAME)|TITLE)\s*:?$/i;
+/** Texto que é um rótulo de campo do carimbo ("DWG. NO. :", "DATE :"): nunca entra no título. */
+const FIELD_LABEL = /:\s*$/;
 const LINE_TOLERANCE = 2;
 
 type TextContentItem = Awaited<ReturnType<pdfjs.PDFPageProxy['getTextContent']>>['items'][number];
@@ -175,12 +183,30 @@ const TITLE_BELOW = 20;
 const TITLE_ABOVE = 160;
 /** Altura mínima do título em fração da altura do número: datas, escala e notas do carimbo ficam de fora. */
 const TITLE_MIN_RATIO = 0.25;
+/** Carimbo com rótulo: o título fica abaixo do rótulo, nesta largura de coluna (pt) e até esta distância. */
+const LABEL_COLUMN = 300;
+const LABEL_REACH = 130;
+/** Linhas do título separadas por mais do que isto (pt) são outra coisa (o carimbo "NOT FOR CONSTRUCTION", a escala). */
+const LABEL_LINE_GAP = 40;
+
+interface Placed {
+  text: string;
+  height: number;
+  x: number;
+  y: number;
+}
 
 /**
- * Número da folha de cada página (o texto `A-100`-like de maior altura, o do carimbo) e o título: os textos
- * logo acima do número (até 160 pt), na mesma coluna (±100 pt em x) e com pelo menos 1/4 da altura dele,
- * de cima para baixo — "Exterior Elevations", "Door Schedule New Wing & Units". Ringgold e Horace têm o
- * título ali; o nome do projeto e a tabela de revisões ficam mais acima e de fora.
+ * Número da folha de cada página (o texto `A-100`-like de maior altura, o do carimbo) e o título, por dois
+ * carimbos conhecidos:
+ * - **com rótulo** ("DRAWING :", "Sheet Name:"): os textos logo abaixo do rótulo, na coluna dele, linha a linha
+ *   enquanto não houver um salto maior que `LABEL_LINE_GAP` — "FIRST LEVEL FLOOR PLAN" (Matilda, arquiteto),
+ *   "APARTMENT FIRST LEVEL PLAN" em três linhas (Matilda, estrutural); o carimbo "DRAFT - NOT FOR CONSTRUCTION"
+ *   fica depois do salto e de fora;
+ * - **sem rótulo**: os textos logo acima do número (até 160 pt), na mesma coluna (±100 pt em x) e com pelo
+ *   menos 1/4 da altura dele, de cima para baixo — "Exterior Elevations", "Door Schedule New Wing & Units"
+ *   (Ringgold e Horace); o nome do projeto e a tabela de revisões ficam mais acima e de fora.
+ * Rótulos de campo ("DWG. NO. :", "DATE :") nunca entram no título.
  */
 export async function listSheets(data: Uint8Array): Promise<SheetInfo[]> {
   const { doc, close } = await open(data);
@@ -189,28 +215,18 @@ export async function listSheets(data: Uint8Array): Promise<SheetInfo[]> {
     for (let n = 1; n <= doc.numPages; n++) {
       const p = await doc.getPage(n);
       const content = await p.getTextContent();
-      let best: { text: string; height: number; x: number; y: number } | undefined;
-      const items = content.items.filter(isTextItem);
+      const items: Placed[] = content.items
+        .filter(isTextItem)
+        .map((i) => ({ text: i.str.trim(), height: i.height, x: i.transform[4] as number, y: i.transform[5] as number }))
+        .filter((i) => i.text !== '');
+      let best: Placed | undefined;
       for (const item of items) {
-        const text = item.str.trim();
-        if (!SHEET_PATTERN.test(text)) continue;
-        if (!best || item.height > best.height) {
-          best = { text, height: item.height, x: item.transform[4] as number, y: item.transform[5] as number };
-        }
+        if (!SHEET_PATTERN.test(item.text)) continue;
+        if (!best || item.height > best.height) best = item;
       }
       const info: SheetInfo = { page: n, sheet: best?.text };
       if (best !== undefined) {
-        const b = best;
-        const title = items
-          .filter((i) => i.str.trim() !== '' && !SHEET_PATTERN.test(i.str.trim()) && i.height >= TITLE_MIN_RATIO * b.height)
-          .filter((i) => {
-            const dx = (i.transform[4] as number) - b.x;
-            const dy = (i.transform[5] as number) - b.y;
-            return Math.abs(dx) <= TITLE_COLUMN && dy >= -TITLE_BELOW && dy <= TITLE_ABOVE;
-          })
-          .sort((a, c) => (c.transform[5] as number) - (a.transform[5] as number))
-          .map((i) => i.str.trim())
-          .join(' ');
+        const title = titleUnderLabel(items) ?? titleAboveNumber(items, best);
         if (title !== '') info.title = title;
       }
       out.push(info);
@@ -219,6 +235,51 @@ export async function listSheets(data: Uint8Array): Promise<SheetInfo[]> {
   } finally {
     await close();
   }
+}
+
+/** Texto que pode fazer parte de um título: não é número de folha nem rótulo de campo. */
+function isTitleText(i: Placed): boolean {
+  return !SHEET_PATTERN.test(i.text) && !FIELD_LABEL.test(i.text) && !TITLE_LABEL.test(i.text);
+}
+
+/** Carimbo com rótulo de título; `undefined` quando a página não tem o rótulo. */
+function titleUnderLabel(items: readonly Placed[]): string | undefined {
+  const label = items.find((i) => TITLE_LABEL.test(i.text));
+  if (label === undefined) return undefined;
+  // A coluna do título vai até o próximo rótulo da mesma linha ("ISSUE:", "DWG. NO. :"); sem outro, `LABEL_COLUMN`.
+  const nextLabel = items
+    .filter((i) => (FIELD_LABEL.test(i.text) || TITLE_LABEL.test(i.text)) && Math.abs(i.y - label.y) <= 4 && i.x > label.x + 5)
+    .sort((a, b) => a.x - b.x)[0];
+  const column = nextLabel === undefined ? LABEL_COLUMN : Math.min(LABEL_COLUMN, nextLabel.x - label.x - 5);
+  const below = items
+    .filter(isTitleText)
+    .filter((i) => i.height >= TITLE_MIN_RATIO * label.height)
+    .map((i) => ({ i, dx: i.x - label.x, dy: label.y - i.y }))
+    .filter(({ dx, dy }) => dx >= -10 && dx <= column && dy > 0 && dy <= LABEL_REACH)
+    .sort((a, b) => a.dy - b.dy || a.i.x - b.i.x);
+  const lines: string[] = [];
+  let last: number | undefined;
+  for (const { i, dy } of below) {
+    if (last !== undefined && dy - last > LABEL_LINE_GAP) break;
+    lines.push(i.text);
+    last = dy;
+  }
+  return lines.join(' ');
+}
+
+/** Carimbo sem rótulo: a coluna acima do número. */
+function titleAboveNumber(items: readonly Placed[], number: Placed): string {
+  return items
+    .filter(isTitleText)
+    .filter((i) => i.height >= TITLE_MIN_RATIO * number.height)
+    .filter((i) => {
+      const dx = i.x - number.x;
+      const dy = i.y - number.y;
+      return Math.abs(dx) <= TITLE_COLUMN && dy >= -TITLE_BELOW && dy <= TITLE_ABOVE;
+    })
+    .sort((a, c) => c.y - a.y)
+    .map((i) => i.text)
+    .join(' ');
 }
 
 /** Novo PDF só com as páginas pedidas (1-based, na ordem dada). */

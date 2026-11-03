@@ -936,3 +936,19 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     linha some; sem erro no console; 375 px sem rolagem horizontal. Ver `04-decisoes.md` (2026-11-03, S22.2).
   - [ ] **S22.3 — Desenhos no Storage.** Bucket `drawings` por projeto (PDFs do passo 01, subidos pela action
     de 300 MB); o underlay e releituras leem de lá. Painéis gerados não são guardados (reproduzíveis).
+- [x] **Seleção automática de folhas: carimbos sem hífen e com rótulo (2026-11-03)** — sem regra de framing. O conjunto
+  Matilda (49 Matilda St, Providence: 80 páginas, 11 unidades, 3 pavimentos + cellar, pricing set) não tinha nenhuma folha
+  reconhecida: o arquiteto numera `A201` (sem hífen) e o estrutural `SA1.1` (com ponto), e o título fica sob um rótulo
+  ("DRAWING :" na faixa inferior; "Sheet Name:" em três linhas na coluna da direita), não na coluna do número. A
+  seleção caía no fallback "primeiras 20 páginas" (capa, civil, egress, seis perspectivas em JPEG 2000, implantação).
+  `pdf.ts`: `SHEET_PATTERN` aceita `A-100`, `A201`, `SA1.1`, `A1.02`; `listSheets` lê o título sob o rótulo (coluna até
+  o próximo rótulo da linha, linha a linha até um salto > 40 pt — o carimbo "DRAFT - NOT FOR CONSTRUCTION" fica de fora)
+  e, sem rótulo, na coluna acima do número como antes; rótulos de campo ("DWG. NO. :") nunca entram no título.
+  `select.ts`: `sheetParts` (disciplina + série em qualquer grafia; estrutural = disciplina que começa com S),
+  cellar/basement = nível 0 (planta do cellar vira `otherPlan` quando se pede o 1º), `EGRESS`, `SITE SAFETY PLAN`,
+  `ROOF LEVEL PLAN` e `COVERSHEET` de fora. Resultado no Matilda com pavimento 1: 26 páginas sozinhas (A030 tipos de
+  parede, A201–A204, A301–A304, A401–A406, A801/A811 schedules, S101–S103, SA0.0–SA1.3), 4,4 MiB de PDF recortado, 6
+  recortes da A202; Ringgold e Horace iguais. Testes: extract 177 (eram 157): classificação Matilda, `sheetParts`,
+  `makeLabeledPdf` com os dois carimbos. A prévia do passo 01 usa o mesmo `buildRequest` do dry-run; não foi conferida no browser porque a sessão do pane expirou (precisa do login do humano).
+  Fica (fábrica): o Matilda é IBC (3 pavimentos, 50' de largura — headers fora das tabelas do IRC, vêm do estrutural) e
+  tem paredes entre unidades com studs alternados, que o motor não modela.

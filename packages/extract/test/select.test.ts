@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTO_PAGE_BUDGET, choosePages, classifySheet, sheetFromFileName, type Candidate } from '../src/select';
+import { AUTO_PAGE_BUDGET, choosePages, classifySheet, sheetFromFileName, sheetParts, type Candidate } from '../src/select';
 
 describe('classifySheet', () => {
   it.each([
@@ -35,6 +35,25 @@ describe('classifySheet', () => {
     [{ sheet: 'A-201' }, '', 'elevation'],
     [{ sheet: 'A-301' }, '', 'section'],
     [{ sheet: 'A-901' }, '', 'skip'],
+    // Matilda (2026-11-03): números sem hífen no arquiteto (A202), com ponto no estrutural (SA1.1); o título manda
+    [{ sheet: 'A202', title: 'FIRST LEVEL FLOOR PLAN' }, '', 'plan'],
+    [{ sheet: 'A201', title: 'CELLAR LEVEL FLOOR PLAN' }, '', 'plan'],
+    [{ sheet: 'A205', title: 'ROOF LEVEL PLAN' }, '', 'skip'],
+    [{ sheet: 'A011', title: 'DIAGRAM AND EGRESS PLANS' }, '', 'skip'],
+    [{ sheet: 'A101', title: 'CONSTRUCTION SITE SAFETY PLAN' }, '', 'skip'],
+    [{ sheet: 'A020', title: 'INSULATION DIAGRAMS' }, '', 'skip'],
+    [{ sheet: 'A030', title: 'WALL TYPES AND CEILING TYPES' }, '', 'schedule'],
+    [{ sheet: 'A401', title: 'TRANSVERSE SECTION' }, '', 'section'],
+    [{ sheet: 'A531', title: 'STAIR DETAIL PLANS' }, '', 'skip'],
+    [{ sheet: 'SA0.0', title: 'NOTES' }, '', 'structural'],
+    [{ sheet: 'SA1.1', title: 'APARTMENT FIRST LEVEL PLAN' }, '', 'structural'],
+    [{ sheet: 'SA1.4', title: 'APARTMENT ROOF LEVEL PLAN' }, '', 'skip'],
+    [{ sheet: 'SA2.0', title: 'APARTMENT ELEVATIONS' }, '', 'skip'],
+    [{ sheet: 'SA5.0', title: 'TYPICAL WOOD DETAILS' }, '', 'skip'],
+    [{ sheet: 'M202', title: 'FIRST LEVEL MECHANICAL PLAN' }, '', 'skip'],
+    [{ sheet: 'E202' }, '', 'skip'],
+    [{ sheet: 'A101' }, '', 'plan'],
+    [{ sheet: 'A1.02' }, '', 'plan'],
   ] as const)('%o %s → %s', (info, file, expected) => {
     expect(classifySheet(info, file)).toBe(expected);
   });
@@ -44,6 +63,20 @@ describe('classifySheet', () => {
     expect(classifySheet({ sheet: 'A-102' }, 'A-102-2ND-FLOOR-PLAN.pdf', 1)).toBe('otherPlan');
     expect(classifySheet({ sheet: 'A-100', title: 'Basement and 1st Floor Plans' }, '', 1)).toBe('plan');
     expect(classifySheet({ sheet: 'A-101', title: 'Floor Plans' }, '', 2)).toBe('plan');
+    // Porão e cellar são o nível 0: com o pavimento 1 pedido, a planta do cellar é otherPlan (Matilda).
+    expect(classifySheet({ sheet: 'A201', title: 'CELLAR LEVEL FLOOR PLAN' }, '', 1)).toBe('otherPlan');
+    expect(classifySheet({ sheet: 'A201', title: 'CELLAR LEVEL FLOOR PLAN' }, '', 0)).toBe('plan');
+    expect(classifySheet({ sheet: 'A204', title: 'THIRD LEVEL PLAN' }, '', 3)).toBe('plan');
+    expect(classifySheet({ sheet: 'A204', title: 'THIRD LEVEL PLAN' }, '', 1)).toBe('otherPlan');
+  });
+
+  it('sheetParts: disciplina e série em qualquer grafia', () => {
+    expect(sheetParts('A-101')).toEqual({ discipline: 'A', series: '1' });
+    expect(sheetParts('A202')).toEqual({ discipline: 'A', series: '2' });
+    expect(sheetParts('SA1.1')).toEqual({ discipline: 'SA', series: '1' });
+    expect(sheetParts('S-002')).toEqual({ discipline: 'S', series: '0' });
+    expect(sheetParts('FP-101')).toEqual({ discipline: 'FP', series: '1' });
+    expect(sheetParts('1 of 3')).toBeUndefined();
   });
 });
 
@@ -76,6 +109,11 @@ describe('choosePages', () => {
 });
 
 describe('sheetFromFileName', () => {
+  it('aceita o número sem hífen', () => {
+    expect(sheetFromFileName('A201_first_level.pdf')).toBe('A201');
+    expect(sheetFromFileName('A2010.pdf')).toBeUndefined();
+  });
+
   it.each([
     ['A-101-1ST-FLOOR-PLAN---NEW-WING-Rev.2.pdf', 'A-101'],
     ['A-605A-WINDOW-SCHEDULE-Rev.2.pdf', 'A-605A'],

@@ -28,3 +28,36 @@ export async function makePdf(): Promise<Uint8Array> {
 
   return doc.save();
 }
+
+/**
+ * Carimbos com rótulo (Matilda, 2026-11-03): página 1 como o arquiteto (faixa inferior com "DRAWING :" sobre o
+ * título e "DWG. NO. :" sobre o número `A202`, sem hífen; o carimbo "DRAFT - NOT FOR CONSTRUCTION" mais abaixo,
+ * depois de um salto); página 2 como o estrutural (coluna à direita, "Sheet Name:" sobre o título em três
+ * linhas e "SHEET:" sobre `SA1.1`).
+ */
+export async function makeLabeledPdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+
+  const architect = doc.addPage([PAGE_W, PAGE_H]);
+  architect.drawText('PROJECT :', { x: 100, y: 120, size: 8, font });
+  architect.drawText('MATILDA PINES, LLC', { x: 102, y: 100, size: 10, font });
+  architect.drawText('DRAWING :', { x: 300, y: 120, size: 8, font });
+  architect.drawText('FIRST LEVEL FLOOR PLAN', { x: 302, y: 100, size: 10, font });
+  architect.drawText('DRAFT - NOT FOR CONSTRUCTION', { x: 302, y: 40, size: 10, font });
+  architect.drawText('DWG. NO. :', { x: 500, y: 120, size: 8, font });
+  architect.drawText('49', { x: 520, y: 90, size: 10, font });
+  architect.drawText('A202', { x: 500, y: 40, size: 24, font });
+  architect.drawText('A403', { x: 200, y: 600, size: 6, font }); // referência de corte no desenho, menor
+
+  const structural = doc.addPage([PAGE_W, PAGE_H]);
+  structural.drawText('Sheet Name:', { x: 520, y: 300, size: 8, font });
+  structural.drawText('APARTMENT', { x: 520, y: 280, size: 9, font });
+  structural.drawText('FIRST LEVEL', { x: 520, y: 262, size: 9, font });
+  structural.drawText('PLAN', { x: 520, y: 244, size: 9, font });
+  structural.drawText('DRAFT', { x: 520, y: 150, size: 9, font });
+  structural.drawText('SHEET:', { x: 520, y: 80, size: 8, font });
+  structural.drawText('SA1.1', { x: 520, y: 50, size: 20, font });
+
+  return doc.save();
+}

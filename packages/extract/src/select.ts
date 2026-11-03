@@ -60,18 +60,30 @@ export const AUTO_BYTE_BUDGET = 19 * 1024 * 1024;
 
 const SCHEDULE = /\bSCHEDULES?\b|PARTITION TYPES?|WALL TYPES?|\bASSEMBLIES\b/;
 const SKIP =
-  /\bDEMO(LITION)?\b|\bRCPS?\b|REFLECTED|CEILING|LIFE SAFETY|VICINITY|COVER SHEET|\bCOVER\b|CODE (ANALYSIS|REVIEW|SUMMARY|COMPLIANCE)|SITE PLAN|SIGNAGE|FINISH|MOUNTING|ROOF PLAN|FOUNDATION|KITCHEN|BATH|STAIR|RAMP|ELEVATOR|SHAFT|SPECIAL INSPECTION|INTERIOR ELEVATION|INT\. ELEVATION|AIR SEALING|SHEATHING DETAIL|PERSPECTIVE|RENDERING|\b3D\b|AXONOMETRIC|FURNITURE|ELECTRICAL|POWER|LIGHTING|PLUMBING|MECHANICAL|HVAC|FIRE ALARM|SPRINKLER|SECURITY|\bDATA\b|TELECOM|LANDSCAPE|GRADING|UTILITY PLAN/;
+  /\bDEMO(LITION)?\b|\bRCPS?\b|REFLECTED|CEILING|LIFE SAFETY|\bEGRESS\b|VICINITY|COVER ?SHEET|\bCOVER\b|CODE (ANALYSIS|REVIEW|SUMMARY|COMPLIANCE)|SITE( SAFETY| LOGISTICS)? PLAN|SAFETY PLAN|SIGNAGE|FINISH|MOUNTING|ROOF( LEVEL)? PLAN|FOUNDATION|KITCHEN|BATH|STAIR|RAMP|ELEVATOR|SHAFT|SPECIAL INSPECTION|INTERIOR ELEVATION|INT\. ELEVATION|AIR SEALING|SHEATHING DETAIL|PERSPECTIVE|RENDERING|\b3D\b|AXONOMETRIC|FURNITURE|ELECTRICAL|POWER|LIGHTING|PLUMBING|MECHANICAL|HVAC|FIRE ALARM|SPRINKLER|SECURITY|\bDATA\b|TELECOM|LANDSCAPE|GRADING|UTILITY PLAN/;
 const DETAILS_ONLY = /\bDETAILS?\b/;
 const PLAN = /\bPLANS?\b/;
 const ELEVATION = /\bELEVATIONS?\b/;
 const SECTION = /\bSECTIONS?\b/;
 const STRUCTURAL = /FRAMING PLAN|SHEAR WALL|GENERAL NOTES|STRUCTURAL NOTES|DESIGN CRITERIA|\bLOADS?\b|HEADER/;
-const SKIPPED_DISCIPLINES = /^(M|E|P|FP|C|L|G|ID|T|LS)-/;
+/** Disciplinas que nunca vão (mecânica, elétrica, hidráulica, civil, paisagismo, geral, interiores, telecom, life safety). */
+const SKIPPED_DISCIPLINES = new Set(['M', 'E', 'P', 'FP', 'C', 'L', 'G', 'ID', 'T', 'LS']);
 
-/** Ordinais de pavimento no título: "1ST FLOOR", "FIRST FLOOR", "LEVEL 2"… */
+/**
+ * Disciplina e série do número da folha, em qualquer grafia: `A-101` → A/1, `A201` → A/2, `SA1.1` → SA/1,
+ * `S-002` → S/0. A série é o primeiro dígito do número (a centena nos `A-1xx`, o inteiro nos `SA1.x`).
+ * O estrutural é toda disciplina que começa com S (S, SA, SE…).
+ */
+export function sheetParts(sheet: string): { discipline: string; series: string } | undefined {
+  const m = /^([A-Z]{1,2})-?(\d)/.exec(sheet.toUpperCase());
+  return m === null ? undefined : { discipline: m[1]!, series: m[2]! };
+}
+
+/** Ordinais de pavimento no título: "1ST FLOOR", "FIRST FLOOR", "LEVEL 2"; porão e cellar são o nível 0. */
 function levelsIn(title: string): number[] {
   const out = new Set<number>();
   const words: [RegExp, number][] = [
+    [/\b(BASEMENT|CELLAR|LOWER LEVEL)\b/, 0],
     [/\b(1ST|FIRST|GROUND)\b/, 1],
     [/\b(2ND|SECOND)\b/, 2],
     [/\b(3RD|THIRD)\b/, 3],
@@ -90,15 +102,16 @@ function levelsIn(title: string): number[] {
  * @param level    pavimento pedido; planta de outro pavimento vira `otherPlan`
  */
 export function classifySheet(info: Pick<SheetInfo, 'sheet' | 'title'>, fileName = '', level?: number): SheetCategory {
-  const sheet = info.sheet ?? '';
+  const parts = info.sheet === undefined ? undefined : sheetParts(info.sheet);
   const title = `${info.title ?? ''} ${fileName.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ')}`.toUpperCase();
-  if (SKIPPED_DISCIPLINES.test(sheet)) return 'skip';
+  if (parts !== undefined && SKIPPED_DISCIPLINES.has(parts.discipline)) return 'skip';
 
-  const isStructural = sheet.startsWith('S-');
+  const isStructural = parts?.discipline.startsWith('S') === true;
   if (SCHEDULE.test(title) && !/SIGNAGE|FINISH/.test(title)) return 'schedule';
   if (SKIP.test(title)) return 'skip';
   if (isStructural) {
-    if (STRUCTURAL.test(title) || /^S-[01]\d\d/.test(sheet)) return 'structural';
+    // Série 0 (notas gerais, critérios) e 1 (plantas de estrutura) vão mesmo sem título reconhecível.
+    if (STRUCTURAL.test(title) || parts?.series === '0' || parts?.series === '1') return 'structural';
     return 'skip';
   }
   // "Exterior plan details", "wall section details": detalhe, não a planta nem o corte.
@@ -108,18 +121,20 @@ export function classifySheet(info: Pick<SheetInfo, 'sheet' | 'title'>, fileName
   if (ELEVATION.test(title)) return 'elevation';
   if (SECTION.test(title)) return 'section';
 
-  // Sem título reconhecível: pela numeração mais comum.
-  if (/^A-1\d\d/.test(sheet)) return planFor(title, level);
-  if (/^A-2\d\d/.test(sheet)) return 'elevation';
-  if (/^A-3\d\d/.test(sheet)) return 'section';
-  // Schedules: A-6xx pelo padrão AIA, A-8xx em escritórios como o do Ringgold.
-  if (/^A-[68]\d\d/.test(sheet)) return 'schedule';
+  // Sem título reconhecível: pela numeração mais comum (A-1xx plantas, A-2xx elevações, A-3xx cortes).
+  if (parts?.discipline === 'A') {
+    if (parts.series === '1') return planFor(title, level);
+    if (parts.series === '2') return 'elevation';
+    if (parts.series === '3') return 'section';
+    // Schedules: A-6xx pelo padrão AIA, A-8xx em escritórios como o do Ringgold.
+    if (parts.series === '6' || parts.series === '8') return 'schedule';
+  }
   return 'skip';
 }
 
-/** Número da folha no começo do nome do arquivo (`A-101-1ST-FLOOR-PLAN…pdf` → `A-101`), para PDF sem texto. */
+/** Número da folha no começo do nome do arquivo (`A-101-1ST-FLOOR-PLAN…pdf` → `A-101`, `A201_plan.pdf` → `A201`), para PDF sem texto. */
 export function sheetFromFileName(fileName: string): string | undefined {
-  return /^([A-Z]{1,2}-\d{3}[A-Z]?)(?![0-9])/i.exec(fileName)?.[1]?.toUpperCase();
+  return /^([A-Z]{1,2}-?\d{3}[A-Z]?)(?![0-9])/i.exec(fileName)?.[1]?.toUpperCase();
 }
 
 function planFor(title: string, level: number | undefined): SheetCategory {
