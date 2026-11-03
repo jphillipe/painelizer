@@ -7,6 +7,8 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
+import { useRouter, useSearchParams } from "next/navigation";
+import { wantsNewProject } from "@/lib/site-nav";
 import {
   useCallback,
   useEffect,
@@ -189,6 +191,19 @@ export function NewProjectView({
     (editor.dirty || result !== undefined || okOutcome !== undefined);
   const requestStartOver = () =>
     hasWork ? setConfirmingStartOver(true) : startOver();
+
+  // "New project" no header leva a /app?new=1: já nesta tela, o Link não remonta nada, então é o parâmetro que
+  // pede a volta ao passo 01 (com a confirmação de sempre quando há trabalho) e some da URL em seguida.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const wantsNew = wantsNewProject(searchParams);
+  const requestStartOverRef = useRef(requestStartOver);
+  requestStartOverRef.current = requestStartOver;
+  useEffect(() => {
+    if (!wantsNew) return;
+    router.replace("/app");
+    requestStartOverRef.current();
+  }, [wantsNew, router]);
 
   const onResume = useCallback(
     (s: SavedSession) => openProject(s.text, s.source, s.reading, s.dirty),

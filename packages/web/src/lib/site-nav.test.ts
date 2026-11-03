@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialsOf, isActivePath, isBareRoute } from './site-nav';
+import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, wantsNewProject } from './site-nav';
 
 describe('SiteHeader helpers (S22 header)', () => {
   it('iniciais do e-mail: duas partes → uma letra de cada; uma parte → duas letras', () => {
@@ -20,5 +20,15 @@ describe('SiteHeader helpers (S22 header)', () => {
   it('só /login fica sem navegação e sem usuário', () => {
     expect(isBareRoute('/login')).toBe(true);
     expect(isBareRoute('/app')).toBe(false);
+  });
+});
+
+describe('New project (header → /app?new=1)', () => {
+  it('o link pede uma obra nova e a tela reconhece o parâmetro', () => {
+    expect(NEW_PROJECT_HREF).toBe('/app?new=1');
+    expect(wantsNewProject(new URLSearchParams('new=1'))).toBe(true);
+    expect(wantsNewProject(new URLSearchParams('new'))).toBe(true);
+    expect(wantsNewProject(new URLSearchParams(''))).toBe(false);
+    expect(wantsNewProject(null)).toBe(false);
   });
 });

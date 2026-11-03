@@ -1,7 +1,10 @@
 /** Regras puras do header (components/site-header.tsx): rota ativa, tela sem navegação e iniciais do avatar. */
 
 export interface NavTarget {
+  /** Rota que marca o item como ativo. */
   href: string;
+  /** Para onde o clique leva, quando difere de `href` (ex.: `/app?new=1`). */
+  link?: string;
   /** Ativo só com o caminho exato (senão, também nos filhos). */
   exact?: boolean;
 }
@@ -25,4 +28,12 @@ export function initialsOf(email: string): string {
     .filter((c): c is string => c !== undefined)
     .join('')
     .toUpperCase();
+}
+
+/** Parâmetro que pede uma obra nova: o header leva a `/app?new=1`, e a tela, se já estiver em `/app`, volta ao passo 01. */
+export const NEW_PROJECT_PARAM = 'new';
+export const NEW_PROJECT_HREF = `/app?${NEW_PROJECT_PARAM}=1`;
+
+export function wantsNewProject(params: { has(name: string): boolean } | null | undefined): boolean {
+  return params?.has(NEW_PROJECT_PARAM) === true;
 }

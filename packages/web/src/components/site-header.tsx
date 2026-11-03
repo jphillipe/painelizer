@@ -9,7 +9,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { signOutAction } from '@/app/login/_actions/sign-out';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { initialsOf, isActivePath, isBareRoute, type NavTarget } from '@/lib/site-nav';
+import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, type NavTarget } from '@/lib/site-nav';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/services/auth.service';
 
@@ -19,7 +19,8 @@ interface NavItem extends NavTarget {
 }
 
 /** Rotas de `docs/10-design.md` §5; "Projects" entra na S22.2. */
-const NAV: readonly NavItem[] = [{ href: '/app', label: 'New project', icon: PlusIcon, exact: true }];
+// O clique leva a `/app?new=1`: em qualquer passo da tela, isso volta ao passo 01 (com confirmação se houver trabalho).
+const NAV: readonly NavItem[] = [{ href: '/app', link: NEW_PROJECT_HREF, label: 'New project', icon: PlusIcon, exact: true }];
 
 export interface SiteHeaderProps {
   /** Area do usuario, montada pelo servidor (avatar + menu, um skeleton enquanto carrega, ou nada). */
@@ -79,7 +80,7 @@ export function SiteHeader({ userSlot }: SiteHeaderProps) {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={item.link ?? item.href}
                     aria-current={active ? 'page' : undefined}
                     style={{ '--i': i } as CSSProperties}
                     className={cn(
