@@ -29,6 +29,8 @@ export interface SavedSession {
   dirty: boolean;
   /** Leitura da IA de onde o projeto veio, quando houver (proveniência). */
   reading?: Reading;
+  /** Projeto já salvo no servidor (S22.1): a retomada abre a URL dele em vez de criar outro. */
+  project?: { id: string; revision: number };
 }
 
 export interface SavedJob {
@@ -38,7 +40,7 @@ export interface SavedJob {
 
 const SOURCES: readonly DraftSource[] = ['extraction', 'sample', 'file'];
 
-export function sessionFromState(state: EditorState, reading: Reading | undefined, now: number): SavedSession | undefined {
+export function sessionFromState(state: EditorState, reading: Reading | undefined, now: number, project?: { id: string; revision: number }): SavedSession | undefined {
   const { draft, source } = state;
   if (draft === undefined || source === undefined) return undefined;
   const session: SavedSession = {
@@ -50,6 +52,7 @@ export function sessionFromState(state: EditorState, reading: Reading | undefine
     dirty: state.dirty,
   };
   if (reading !== undefined) session.reading = reading;
+  if (project !== undefined) session.project = { id: project.id, revision: project.revision };
   return session;
 }
 
@@ -85,6 +88,8 @@ export function loadSession(storage: StorageLike): SavedSession | undefined {
   if (s.source === undefined || !SOURCES.includes(s.source)) return undefined;
   const session: SavedSession = { version: 1, savedAt: s.savedAt, name: s.name, text: s.text, source: s.source, dirty: s.dirty === true };
   if (s.reading !== undefined && s.reading !== null && typeof s.reading === 'object' && s.reading.ok === true) session.reading = s.reading;
+  const p = s.project;
+  if (p !== undefined && p !== null && typeof p === 'object' && typeof p.id === 'string' && Number.isInteger(p.revision) && p.revision >= 1) session.project = { id: p.id, revision: p.revision };
   return session;
 }
 

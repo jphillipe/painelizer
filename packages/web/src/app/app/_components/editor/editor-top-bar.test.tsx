@@ -30,3 +30,26 @@ describe('EditorTopBar (SSR)', () => {
     expect(checking).toContain('Checking…');
   });
 });
+
+describe('EditorTopBar — chip do auto-save (S22.1)', () => {
+  const check: CheckState = { status: 'done', result: { ok: true, projectName: 'x', panels: [] as never, warnings: [] }, revision: 1, stale: false };
+  const render = (save: Parameters<typeof EditorTopBar>[0]['save']) => renderToStaticMarkup(<EditorTopBar {...base} check={check} problems={0} warnings={0} ready save={save} onRetrySave={() => {}} />);
+
+  it('salvo agora, salvando, erro com Retry e conflito com Reload', () => {
+    expect(render({ kind: 'saved', at: Date.now() - 5_000 })).toContain('Saved · just now');
+    expect(render({ kind: 'saving' })).toContain('Saving…');
+    const error = render({ kind: 'error', message: 'rede caiu' });
+    expect(error).toContain('Not saved');
+    expect(error).toContain('>Retry<');
+    expect(error).toContain('title="rede caiu"');
+    const conflict = render({ kind: 'conflict', message: 'edited elsewhere', revision: 4 });
+    expect(conflict).toContain('Edited elsewhere');
+    expect(conflict).toContain('>Reload<');
+    expect(render({ kind: 'deleted', message: 'gone' })).toContain('Deleted on the server');
+  });
+
+  it('sem projeto no servidor (local) ou sem a prop, nenhum chip', () => {
+    expect(render({ kind: 'local' })).not.toContain('Saved');
+    expect(render(undefined)).not.toContain('Saving');
+  });
+});

@@ -104,3 +104,19 @@ describe('describeAge', () => {
     expect(describeAge(NOW + 1000, NOW)).toBe('just now');
   });
 });
+
+describe('persist: projeto salvo no servidor (S22.1)', () => {
+  it('a sessão lembra id e revisão, e ignora um projeto malformado', () => {
+    const storage = new MemoryStorage();
+    const state = editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' });
+    const session = sessionFromState(state, undefined, NOW, { id: 'p1', revision: 3 });
+    expect(session?.project).toEqual({ id: 'p1', revision: 3 });
+    expect(sessionFromState(state, undefined, NOW)?.project).toBeUndefined();
+    saveSession(storage, session!);
+    expect(loadSession(storage)?.project).toEqual({ id: 'p1', revision: 3 });
+    storage.setItem(SESSION_KEY, JSON.stringify({ ...session, project: { id: 'p1', revision: 0 } }));
+    expect(loadSession(storage)?.project).toBeUndefined();
+    storage.setItem(SESSION_KEY, JSON.stringify({ ...session, project: 'p1' }));
+    expect(loadSession(storage)?.project).toBeUndefined();
+  });
+});

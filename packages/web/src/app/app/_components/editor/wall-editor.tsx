@@ -15,6 +15,7 @@ import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
 import type { ExtractOutcome } from '@/types/extract';
 import { useEditorShortcuts } from './use-editor-shortcuts';
+import type { SaveStatus } from '@/lib/editor/project-sync';
 import type { CheckState } from './use-project-check';
 import { Workspace } from './workspace';
 
@@ -32,13 +33,16 @@ export interface WallEditorProps {
   onStartOver: () => void;
   /** Arquivos soltos no passo 01 (M6: planta por baixo). */
   sourceFiles?: readonly File[] | undefined;
+  /** Auto-save no servidor (S22.1): estado do chip da top bar e o "Retry" dele. */
+  save?: SaveStatus;
+  onRetrySave?: () => void;
 }
 
 /**
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
  * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
  */
-export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, save, onRetrySave }: WallEditorProps) {
   const { draft } = state;
   // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
   const latest = useRef(state);
@@ -151,6 +155,8 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
       onStartOver={onStartOver}
       help={{ open: helpOpen, onOpenChange: setHelpOpen }}
       sourceFiles={sourceFiles}
+      save={save}
+      onRetrySave={onRetrySave}
     />
   );
 }

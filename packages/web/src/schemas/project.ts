@@ -9,3 +9,17 @@ export type GeneratePanelsInput = z.infer<typeof generatePanelsSchema>;
 
 /** Checagem do editor (S21): mesmo texto, sem gerar arquivos. */
 export const checkProjectSchema = generatePanelsSchema;
+
+/** S22.1: criar o projeto no servidor na primeira abertura (nome opcional; o texto é o `.panelizer.json`). */
+export const createProjectSchema = z.object({
+  name: z.string().trim().max(200).optional(),
+  text: z.string().min(2, 'Nothing to save.'),
+});
+
+/** S22.1: gravar uma edição; `revision` é a que o cliente carregou (concorrência otimista). */
+export const saveProjectSchema = z.object({
+  id: z.string().uuid(),
+  revision: z.number().int().min(1),
+  name: z.string().trim().max(200).optional(),
+  text: z.string().min(2, 'Nothing to save.'),
+});

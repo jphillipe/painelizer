@@ -1,7 +1,8 @@
 'use client';
 
-import { CircleCheckIcon, EllipsisIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { CircleCheckIcon, CloudCheckIcon, CloudOffIcon, EllipsisIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { describeSave, type SaveStatus } from '@/lib/editor/project-sync';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -32,6 +33,9 @@ export interface EditorTopBarProps {
   /** `StepBar` compacta. */
   steps: ReactNode;
   menu: readonly TopBarMenuItem[];
+  /** Auto-save no servidor (S22.1): "Saved · just now", "Saving…", "Not saved" com Retry, "Edited elsewhere" com Reload. */
+  save?: SaveStatus | undefined;
+  onRetrySave?: (() => void) | undefined;
 }
 
 /**
@@ -39,7 +43,7 @@ export interface EditorTopBarProps {
  * principal sempre visível. Downloads, configurações e "Start over" ficam no menu `⋯`. Abaixo de `sm` (M5) são
  * duas linhas fixas: passos + nome | status + Generate + menu — nada quebra em três.
  */
-export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu }: EditorTopBarProps) {
+export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu, save, onRetrySave }: EditorTopBarProps) {
   const hint = problems > 0 ? (needsData ? 'Fill in the project data first.' : `Fix ${problems} problem${problems === 1 ? '' : 's'} first.`) : check.status === 'error' ? (check.error ?? 'Could not check the project.') : '';
   return (
     <div className="no-print grid shrink-0 grid-cols-1 gap-x-4 gap-y-1.5 border-b border-line bg-card px-[var(--gutter)] py-2 sm:flex sm:flex-wrap sm:items-center">
@@ -56,6 +60,7 @@ export function EditorTopBar({ name, walls, openings, reviewed, check, problems,
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-none" aria-live="polite">
           <StatusChip check={check} problems={problems} warnings={warnings} />
+          {save !== undefined ? <SaveChip status={save} onRetry={onRetrySave} /> : null}
         </div>
         {hint !== '' ? <span className="hidden truncate text-[13px] text-ink-3 md:inline">{hint}</span> : null}
         <Button variant="accent" size="sm" disabled={pending || !ready} onClick={onGenerate} title={hint === '' ? undefined : hint} className="ml-auto shrink-0 sm:ml-0">
@@ -86,6 +91,55 @@ export function EditorTopBar({ name, walls, openings, reviewed, check, problems,
         </DropdownMenu>
       </div>
     </div>
+  );
+}
+
+/**
+ * Estado do auto-save (S22.1). "just now" envelhece sozinho (um tique por meio minuto). Conflito e erro trazem a
+ * ação na própria barra: recarregar para ver a versão de quem gravou antes, ou tentar de novo.
+ */
+function SaveChip({ status, onRetry }: { status: SaveStatus; onRetry: (() => void) | undefined }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (status.kind !== 'saved') return;
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [status]);
+  const label = describeSave(status, now);
+  if (label.tone === 'muted') return null;
+  if (status.kind === 'saving') {
+    return (
+      <Badge key="saving" variant="outline">
+        <Loader2Icon className="animate-spin" /> {label.text}
+      </Badge>
+    );
+  }
+  if (status.kind === 'saved') {
+    return (
+      <Badge key="saved" variant="outline" className="animate-pop" title={new Date(status.at).toLocaleString()}>
+        <CloudCheckIcon /> {label.text}
+      </Badge>
+    );
+  }
+  if (status.kind === 'conflict') {
+    return (
+      <Badge key="conflict" variant="warning" className="animate-pop" title={status.message}>
+        <TriangleAlertIcon /> {label.text}
+        <button type="button" className="ml-1 underline underline-offset-2" onClick={() => window.location.reload()}>
+          Reload
+        </button>
+      </Badge>
+    );
+  }
+  return (
+    <Badge key={status.kind} variant="destructive" className="animate-pop" title={'message' in status ? status.message : undefined}>
+      <CloudOffIcon /> {label.text}
+      {status.kind === 'error' && onRetry !== undefined ? (
+        <button type="button" className="ml-1 underline underline-offset-2" onClick={onRetry}>
+          Retry
+        </button>
+      ) : null}
+    </Badge>
   );
 }
 

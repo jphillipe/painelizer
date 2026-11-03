@@ -28,6 +28,7 @@ import { CalibrationBanner, UnderlayControls, calibrationPoint, withPixelAt, typ
 import { UnderlayDialog } from './underlay-dialog';
 import { underlayOf, type Underlay } from '@/lib/editor/underlay';
 import { WallElevation } from './wall-elevation';
+import type { SaveStatus } from '@/lib/editor/project-sync';
 import type { CheckState } from './use-project-check';
 import { WallRows } from './wall-rows';
 
@@ -60,6 +61,9 @@ export interface WorkspaceProps {
   help: { open: boolean; onOpenChange: (open: boolean) => void };
   /** Arquivos soltos no passo 01, para a planta por baixo (M6). */
   sourceFiles?: readonly File[] | undefined;
+  /** Auto-save no servidor (S22.1). */
+  save?: SaveStatus | undefined;
+  onRetrySave?: (() => void) | undefined;
 }
 
 /**
@@ -68,7 +72,7 @@ export interface WorkspaceProps {
  * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
  * outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [] }: WorkspaceProps) {
+export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], save, onRetrySave }: WorkspaceProps) {
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
@@ -196,7 +200,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">
-      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} />
+      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} save={save} onRetrySave={onRetrySave} />
       {wide ? (
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="flex min-h-0 flex-col border-r border-line bg-card" aria-label="Navigator">

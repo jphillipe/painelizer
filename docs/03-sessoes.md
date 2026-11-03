@@ -911,11 +911,15 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     páginas (planta, ampliadas da ala nova, tipos de parede, schedules, notas estruturais) é obrigatório — P43. Testes: 157 no extract, 276 no
     web, suíte do repositório verde. Fora: detecção geométrica de cômodos no core (sessão própria), plantas não ortogonais.
     Ver `04-decisoes.md` (2026-10-30) e P42.
-  - [ ] **S22.1 — Projeto com id e auto-save no servidor.** `projects.service` (criar, carregar, gravar com
-    `revision`; `deps` com cliente falso nos testes); o projeto ganha id na primeira abertura e a URL vira
-    `/app/projects/[id]`; cada edição grava com o debounce de hoje e a top bar diz "Saved · just now";
-    `revision` divergente → aviso "edited elsewhere" em vez de sobrescrever; `localStorage` fica como buffer de
-    queda e para o job de extração. Passo 03 em `/app/projects/[id]/panels`.
+  - [x] **S22.1 — Projeto com id e auto-save no servidor (2026-11-03).** `services/projects.service.ts` (criar,
+    carregar, gravar com `revision` otimista; `ProjectsTable` injetável, adaptador em `lib/supabase/projects-table.ts`,
+    testes com `Map`), actions `createProjectAction`/`saveProjectAction`, rotas `app/app/projects/[id]` e `[id]/panels`
+    (Server Components que carregam a linha; 404 / volta ao `/app` sem Supabase; loading do workspace), tela
+    `NewProjectView` com `project`/`initialStep`: id na primeira abertura e URL por `history.replaceState` sem remontar;
+    `use-project-sync.ts` (debounce 500 ms, uma gravação por vez, conflito/apagado param, erro tenta de novo) e
+    `SaveChip` na top bar ("Saved · just now", "Saving…", "Not saved" + Retry, "Edited elsewhere" + Reload); sessão
+    local guarda `project {id, revision}` e a retomada adota a identidade. Testes: service (7), `project-sync` puro (4),
+    hook (6, dom), top bar (2), persist (1); conferido no browser com dois reloads e conflito em segunda aba. Ver `04-decisoes.md` (2026-11-03).
   - [ ] **S22.2 — Lista de projetos.** `/app/projects` (nome, paredes, atualizado, autor), abrir, renomear,
     duplicar, apagar com confirmação; "Projects" no header.
   - [ ] **S22.3 — Desenhos no Storage.** Bucket `drawings` por projeto (PDFs do passo 01, subidos pela action

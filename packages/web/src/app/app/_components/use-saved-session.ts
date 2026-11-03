@@ -33,7 +33,15 @@ export interface SavedSessionApi {
  * de retomada. Um job de extração em voo também fica gravado: se a página recarregar no meio, o humano fica
  * sabendo que a leitura se perdeu (a server action não tem como entregar o resultado a uma página nova).
  */
-export function useSavedSession(editor: EditorState, reading: Reading | undefined, job: ExtractJob | undefined, onResume: (session: SavedSession) => void, onResumeJob?: (job: ExtractJob) => void): SavedSessionApi {
+export function useSavedSession(
+  editor: EditorState,
+  reading: Reading | undefined,
+  job: ExtractJob | undefined,
+  onResume: (session: SavedSession) => void,
+  onResumeJob?: (job: ExtractJob) => void,
+  /** Projeto salvo no servidor (S22.1), para a sessão local lembrar o id e a revisão. */
+  project?: { id: string; revision: number },
+): SavedSessionApi {
   const [saved, setSaved] = useState<SavedSession | undefined>(undefined);
   const pending = useRef<SavedSession | undefined>(undefined);
   const jobRef = useRef(job);
@@ -68,14 +76,14 @@ export function useSavedSession(editor: EditorState, reading: Reading | undefine
       return;
     }
     setSaved(undefined);
-    const session = sessionFromState(editor, reading, Date.now());
+    const session = sessionFromState(editor, reading, Date.now(), project);
     pending.current = session;
     const timer = window.setTimeout(() => {
       if (pending.current !== undefined) saveSession(store, pending.current);
       pending.current = undefined;
     }, SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [editor, reading]);
+  }, [editor, reading, project]);
 
   // Job em voo.
   useEffect(() => {

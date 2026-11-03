@@ -25,10 +25,12 @@ import { useWorkspaceLayout } from "@/components/shell-layout";
 import { engineText } from "./editor/use-project-check";
 import { describeAge, type SavedSession } from "@/lib/editor/persist";
 import {
+  parseProjectFile,
   projectFileText,
   type ParsedProjectFile,
   type Reading,
 } from "@/lib/editor/project-file";
+import { projectPath, type ServerProject } from "@/lib/editor/project-sync";
 import { idIndex } from "@/lib/editor/problems";
 import {
   editorReducer,
@@ -39,6 +41,7 @@ import { prefersReducedMotion } from "@/lib/motion";
 import type { ExtractJob, ExtractOutcome } from "@/types/extract";
 import type { Example, GenerateResult } from "@/types/panels";
 import { cancelExtraction } from "../_actions/cancel-extraction";
+import { createProjectAction } from "../_actions/create-project";
 import { extractionResult } from "../_actions/extraction-result";
 import { generatePanels } from "../_actions/generate-panels";
 import { AdvancedImport } from "./advanced-import";
@@ -50,6 +53,7 @@ import { ResultView } from "./result-view";
 import { SampleCards } from './sample-cards';
 import { doneSteps, StepBar, type StepId } from "./step-bar";
 import { UploadForm } from "./upload-form";
+import { useProjectSync } from "./use-project-sync";
 import { useSavedSession } from "./use-saved-session";
 
 export interface NewProjectViewProps {
@@ -57,6 +61,10 @@ export interface NewProjectViewProps {
   aiEnabled: boolean;
   /** 'Advanced' (M5): só em desenvolvimento ou com PANELIZER_DEV_TOOLS=1. Os exemplos aparecem sempre (2026-10-23). */
   devTools?: boolean;
+  /** Projeto salvo no servidor (S22.1), carregado pela rota `/app/projects/[id]`: a tela abre no editor com ele. */
+  project?: { id: string; name: string; revision: number; text: string; savedAt: string };
+  /** Com `project`: 2 = editor, 3 = painéis (gera ao abrir). */
+  initialStep?: 2 | 3;
 }
 
 const SOURCE_LABEL: Record<DraftSource, string> = {
@@ -75,8 +83,14 @@ export function NewProjectView({
   examples,
   aiEnabled,
   devTools = false,
+  project,
+  initialStep,
 }: NewProjectViewProps) {
-  const [step, setStep] = useState<StepId>(1);
+  const [step, setStep] = useState<StepId>(project === undefined ? 1 : (initialStep ?? 2));
+  // Identidade no servidor (S22.1): id, revisão a mandar na próxima gravação e quando gravou.
+  const [server, setServer] = useState<ServerProject | undefined>(
+    project === undefined ? undefined : { id: project.id, revision: project.revision, savedAt: project.savedAt },
+  );
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
   const [job, setJob] = useState<ExtractJob | undefined>(undefined);
   // Arquivos do passo 01 (M6): a planta por baixo das paredes escolhe entre eles.
@@ -107,22 +121,46 @@ export function NewProjectView({
       ),
   });
 
+  const { executeAsync: createOnServer } = useAction(createProjectAction);
   const openProject = useCallback(
     (
       text: string,
       source: DraftSource,
       reading: Reading | undefined,
       dirty = false,
+      existing?: ServerProject,
     ) => {
       setOutcome(reading);
       dispatch({ type: "load", text, source, dirty });
       setResult(undefined);
       setStep(2);
+      setServer(existing);
+      if (existing !== undefined) {
+        window.history.replaceState(null, "", projectPath(existing.id));
+        return;
+      }
+      // S22.1: o projeto ganha id no servidor na primeira abertura; a URL troca sem remontar a tela (os arquivos
+      // soltos no passo 01 continuam disponíveis para a planta de fundo). Sem Supabase, segue só no navegador.
+      void createOnServer({ text, ...(reading?.projectName === undefined ? {} : { name: reading.projectName }) }).then((r) => {
+        const data = r.data;
+        if (data === undefined) {
+          toast.error(r.serverError ?? "Could not save the project on the server.");
+          return;
+        }
+        if (!data.ok) {
+          if (data.reason !== "unconfigured") toast.error(data.message);
+          return;
+        }
+        setServer({ id: data.id, revision: data.revision, savedAt: data.savedAt });
+        window.history.replaceState(null, "", projectPath(data.id));
+      });
     },
-    [],
+    [createOnServer],
   );
   const onOutcome = (o: ExtractOutcome) => {
-    if (o.ok) openProject(o.projectText, "extraction", o);
+    // Reconverter a leitura (project data) de um projeto já salvo mantém a identidade no servidor; uma leitura nova
+    // (passo 01, sem projeto aberto) cria o projeto.
+    if (o.ok) openProject(o.projectText, "extraction", o, false, server);
     else if (o.reason === "cancelled") {
       // M7: cancelar não é erro; o passo 01 volta com arquivos e campos intactos.
       setOutcome(undefined);
@@ -183,7 +221,9 @@ export function NewProjectView({
     setOutcome(undefined);
     setResult(undefined);
     dispatch({ type: "reset" });
+    setServer(undefined);
     setStep(1);
+    if (window.location.pathname !== "/app") window.history.replaceState(null, "", "/app");
   };
   // Há o que perder: edições, um resultado, ou uma leitura paga.
   const hasWork =
@@ -206,7 +246,14 @@ export function NewProjectView({
   }, [wantsNew, router]);
 
   const onResume = useCallback(
-    (s: SavedSession) => openProject(s.text, s.source, s.reading, s.dirty),
+    (s: SavedSession) =>
+      openProject(
+        s.text,
+        s.source,
+        s.reading,
+        s.dirty,
+        s.project === undefined ? undefined : { id: s.project.id, revision: s.project.revision, savedAt: new Date(s.savedAt).toISOString() },
+      ),
     [openProject],
   );
   const onResumeJob = useCallback((j: ExtractJob) => setJob(j), []);
@@ -216,7 +263,38 @@ export function NewProjectView({
     job,
     onResume,
     onResumeJob,
+    server,
   );
+  const sync = useProjectSync(editor, okOutcome, server, setServer);
+
+  // Projeto vindo da rota (S22.1): abre no editor; no passo 03 gera os painéis assim que o draft carrega.
+  const loadedFromRoute = useRef(false);
+  useEffect(() => {
+    if (project === undefined || loadedFromRoute.current) return;
+    loadedFromRoute.current = true;
+    const file = parseProjectFile(project.text);
+    openProject(file.projectText, file.reading === undefined ? "file" : "extraction", file.reading, false, {
+      id: project.id,
+      revision: project.revision,
+      savedAt: project.savedAt,
+    });
+    if (initialStep === 3) setStep(3);
+  }, [project, initialStep, openProject]);
+  const autoGenerated = useRef(false);
+  useEffect(() => {
+    if (initialStep !== 3 || autoGenerated.current || editor.draft === undefined || step !== 3) return;
+    autoGenerated.current = true;
+    generatedFrom.current = editor.revision;
+    generate.execute({ projectText: engineText(editor.draft) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStep, editor.draft, step]);
+
+  // A URL acompanha o passo do projeto salvo: /app/projects/<id> no editor, /panels no passo 03.
+  useEffect(() => {
+    if (server === undefined) return;
+    const target = step === 3 ? projectPath(server.id, 3) : projectPath(server.id);
+    if (step >= 2 && window.location.pathname !== target) window.history.replaceState(null, "", target);
+  }, [step, server]);
 
   useEffect(() => {
     window.scrollTo({
@@ -306,6 +384,8 @@ export function NewProjectView({
           steps={<StepBar active={step} done={done} onGo={setStep} compact />}
           onStartOver={requestStartOver}
           sourceFiles={uploaded}
+          save={sync.status}
+          onRetrySave={sync.retry}
         />
       ) : (
         <div className="space-y-8">
