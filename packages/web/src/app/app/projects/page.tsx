@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProjectsPage() {
   const [list, user] = await Promise.all([listProjects(), currentUser()]);
   const me = user?.email;
-  if (list.ok) return <ProjectsView projects={list.projects} state="ok" {...(me === undefined ? {} : { me })} />;
-  return <ProjectsView projects={[]} state={list.reason} message={list.message} {...(me === undefined ? {} : { me })} />;
+  const now = Date.now();
+  if (list.ok) return <ProjectsView projects={list.projects} state="ok" now={now} {...(me === undefined ? {} : { me })} />;
+  return <ProjectsView projects={[]} state={list.reason} message={list.message} now={now} {...(me === undefined ? {} : { me })} />;
 }

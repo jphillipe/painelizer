@@ -30,6 +30,8 @@ export interface ProjectsViewProps {
   message?: string;
   /** E-mail de quem está logado: o autor vira "you". */
   me?: string;
+  /** Relógio do servidor no render (ms): o cliente hidrata com o mesmo "now" e só depois passa a envelhecer sozinho. */
+  now: number;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface ProjectsViewProps {
  * confirmação). Renomear e duplicar passam pelo service, que também troca o nome dentro do arquivo; depois de
  * cada ação a lista é relida do servidor (`revalidatePath` na action + `router.refresh()`).
  */
-export function ProjectsView({ projects, state, message, me }: ProjectsViewProps) {
+export function ProjectsView({ projects, state, message, me, now: serverNow }: ProjectsViewProps) {
   const router = useRouter();
   const [renaming, setRenaming] = useState<ProjectSummary | undefined>(undefined);
   const [deleting, setDeleting] = useState<ProjectSummary | undefined>(undefined);
@@ -72,9 +74,11 @@ export function ProjectsView({ projects, state, message, me }: ProjectsViewProps
     },
   });
 
-  // "now" fixo por render da lista: "just now" envelhece a cada meio minuto, como o chip do editor.
-  const [now, setNow] = useState(() => Date.now());
+  // "now" vem do servidor para o HTML e a hidratação dizerem a mesma idade ("2 min ago" ≠ "1 min ago" dava
+  // hydration mismatch); depois de montar, envelhece a cada meio minuto, como o chip do editor.
+  const [now, setNow] = useState(serverNow);
   useEffect(() => {
+    setNow(Date.now());
     const t = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(t);
   }, []);
@@ -143,7 +147,7 @@ export function ProjectsView({ projects, state, message, me }: ProjectsViewProps
                         </Link>
                       </TableCell>
                       <TableCell className="text-right font-mono text-[13px] tabular-nums">{p.walls}</TableCell>
-                      <TableCell className="whitespace-nowrap text-ink-2" title={new Date(p.updatedAt).toLocaleString()}>
+                      <TableCell className="whitespace-nowrap text-ink-2" title={p.updatedAt}>
                         {describeUpdated(p.updatedAt, now)}
                       </TableCell>
                       <TableCell className="hidden max-w-0 truncate text-ink-2 sm:table-cell" title={p.ownerEmail ?? undefined}>

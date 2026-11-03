@@ -61,7 +61,7 @@ async function openMenu(u: ReturnType<typeof userEvent.setup>, name: string) {
 
 describe('ProjectsView (S22.2)', () => {
   it('lista nome (link ao editor), paredes, idade e autor ("you" para quem está logado)', () => {
-    render(<ProjectsView projects={projects} state="ok" me="NICK@wr.com" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" me="NICK@wr.com" />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Saved projects');
     expect(screen.getByText('2 projects · most recently updated first')).toBeTruthy();
     const rows = screen.getAllByRole('row').slice(1);
@@ -78,21 +78,21 @@ describe('ProjectsView (S22.2)', () => {
   });
 
   it('sem projetos mostra o convite; sem Supabase explica; erro do banco mostra a mensagem', () => {
-    const { unmount } = render(<ProjectsView projects={[]} state="ok" />);
+    const { unmount } = render(<ProjectsView now={Date.now()} projects={[]} state="ok" />);
     expect(screen.getByText('No projects yet')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Start a project' })).toBeTruthy();
     unmount();
-    render(<ProjectsView projects={[]} state="unconfigured" />);
+    render(<ProjectsView now={Date.now()} projects={[]} state="unconfigured" />);
     expect(screen.getByText('Projects are not saved on this server')).toBeTruthy();
     cleanup();
-    render(<ProjectsView projects={[]} state="failed" message="rede caiu" />);
+    render(<ProjectsView now={Date.now()} projects={[]} state="failed" message="rede caiu" />);
     expect(screen.getByText('Could not load the projects')).toBeTruthy();
     expect(screen.getByText('rede caiu')).toBeTruthy();
   });
 
   it('Open e Panels no menu levam às rotas do projeto', async () => {
     const u = userEvent.setup();
-    render(<ProjectsView projects={projects} state="ok" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" />);
     let menu = await openMenu(u, 'Casa 28x40');
     await u.click(within(menu).getByRole('menuitem', { name: 'Open' }));
     expect(push).toHaveBeenLastCalledWith('/app/projects/b2');
@@ -103,7 +103,7 @@ describe('ProjectsView (S22.2)', () => {
 
   it('Rename abre o dialog com o nome atual, manda o nome novo e relê a lista; vazio não sai', async () => {
     const u = userEvent.setup();
-    render(<ProjectsView projects={projects} state="ok" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" />);
     const menu = await openMenu(u, 'Ringgold St');
     await u.click(within(menu).getByRole('menuitem', { name: 'Rename…' }));
     const input = await screen.findByLabelText('Name');
@@ -122,7 +122,7 @@ describe('ProjectsView (S22.2)', () => {
   it('Rename com o mesmo nome só fecha; recusa do servidor fica no dialog', async () => {
     const u = userEvent.setup();
     responses['rename'] = () => ({ ok: false, reason: 'failed', message: 'The project is being edited right now. Try again in a moment.' });
-    render(<ProjectsView projects={projects} state="ok" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" />);
     let menu = await openMenu(u, 'Ringgold St');
     await u.click(within(menu).getByRole('menuitem', { name: 'Rename…' }));
     await u.click(await screen.findByRole('button', { name: 'Save' }));
@@ -139,7 +139,7 @@ describe('ProjectsView (S22.2)', () => {
 
   it('Duplicate chama a action e avisa com o nome da cópia', async () => {
     const u = userEvent.setup();
-    render(<ProjectsView projects={projects} state="ok" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" />);
     const menu = await openMenu(u, 'Ringgold St');
     await u.click(within(menu).getByRole('menuitem', { name: 'Duplicate' }));
     await waitFor(() => expect(calls).toEqual([{ kind: 'duplicate', input: { id: 'a1' } }]));
@@ -149,7 +149,7 @@ describe('ProjectsView (S22.2)', () => {
 
   it('Delete pede confirmação; "Keep it" não apaga; confirmar apaga e relê; erro de rede vira toast', async () => {
     const u = userEvent.setup();
-    render(<ProjectsView projects={projects} state="ok" />);
+    render(<ProjectsView now={Date.now()} projects={projects} state="ok" />);
     let menu = await openMenu(u, 'Casa 28x40');
     await u.click(within(menu).getByRole('menuitem', { name: 'Delete…' }));
     expect((await screen.findByRole('dialog')).textContent).toContain('Delete “Casa 28x40”?');

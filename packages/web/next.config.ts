@@ -14,6 +14,10 @@ const config: NextConfig = {
   experimental: {
     // Upload do PDF da planta por server action (S20.3).
     serverActions: { bodySizeLimit: '300mb' },
+    // O proxy de login (src/proxy.ts, S22.0) guarda o corpo do pedido, e esse buffer tem teto próprio: 10 MB por
+    // padrão. Acima disso o corpo chega truncado à action ("Unexpected end of form", 500) — visto com um conjunto
+    // de 19,7 MB em 2026-11-03. Mesmo teto do serverActions; o do Cloud Run (32 MB por pedido) continua até a S22.3.
+    proxyClientMaxBodySize: '300mb',
   },
 };
 
