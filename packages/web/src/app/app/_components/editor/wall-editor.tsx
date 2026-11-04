@@ -57,8 +57,6 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
   // Última geometria em que a casa fechava: no fallback (casa aberta no meio de um arraste), as paredes não
   // citadas no erro mantêm as plates dela em vez de pular para o eixo nu (anti-flicker).
   const lastGood = useRef<PlanGeometry | undefined>(undefined);
-  const lastLoaded = useRef<ProjectDraft | undefined>(undefined);
-  const loadId = useRef(0);
   const geometry = useMemo<PlanGeometry | undefined>(() => (draft === undefined ? undefined : planGeometry(draft, lastGood.current)), [draft]);
   useEffect(() => {
     if (geometry !== undefined && geometry.houseError === undefined && geometry.walls.length > 0) lastGood.current = geometry;
@@ -119,16 +117,11 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
     name,
     slug: projectSlug(name),
   };
-  // Um `load` (outro projeto, leitura reconvertida) zera histórico e `dirty`: é quando o workspace remonta
-  // (aba, filtro e card dispensado voltam ao início). Renomear o projeto ou editar não remonta.
-  if (draft !== lastLoaded.current && state.past.length === 0 && state.future.length === 0 && !state.dirty) {
-    lastLoaded.current = draft;
-    loadId.current += 1;
-  }
-
   return (
     <EditorContext value={value}>
-      <Workspace key={`${state.source ?? ''}:${loadId.current}`} />
+      {/* Um `load` (outro projeto, leitura reconvertida) remonta o workspace: aba, filtro e card dispensado voltam ao
+          início. Editar, renomear e o reducer reexecutado pelo React não remontam (`EditorState.loads`). */}
+      <Workspace key={state.loads} />
     </EditorContext>
   );
 }

@@ -430,3 +430,19 @@ describe('S30: seleção múltipla e operações de parede', () => {
     expect(editorReducer(s, { type: 'joinWalls', wallIds: ['W01', 'W02'] })).toBe(s);
   });
 });
+
+describe('Correção da S30: reducer estável sob reaplicação', () => {
+  it('o mesmo estado com a mesma ação devolve o mesmo resultado (o React reaplica a fila ao rebasear)', () => {
+    const action: EditorAction = { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' };
+    const first = editorReducer(initialEditorState, action);
+    const replayed = editorReducer(initialEditorState, action);
+    expect(replayed).toBe(first);
+    expect(replayed.draft).toBe(first.draft);
+    const edit: EditorAction = { type: 'moveWalls', wallIds: ['W01'], dx: 1, dy: 0 };
+    expect(editorReducer(first, edit)).toBe(editorReducer(first, edit));
+    // Ação nova (outro dispatch) com o mesmo conteúdo continua calculando de novo, e cada carga conta.
+    const other = editorReducer(initialEditorState, { ...action });
+    expect(other).not.toBe(first);
+    expect([first.loads, editorReducer(first, { ...action }).loads, editorReducer(first, { type: 'reset' }).loads]).toEqual([1, 2, 2]);
+  });
+});

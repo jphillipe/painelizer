@@ -74,6 +74,13 @@ export interface EditorState {
   /** Transação aberta (um arraste): commits com o mesmo id substituem o draft sem empilhar histórico. */
   txn: string | undefined;
   revision: number;
+  /**
+   * Cargas (`load`/`reset`) desde o início: a chave do workspace, que remonta só quando outro projeto entra. Contada
+   * aqui, não pela identidade do draft: o React pode reexecutar o reducer (atualização rebaseada na hidratação ou numa
+   * transição) e o mesmo `load` devolve um draft novo a cada vez — com a identidade como chave, o workspace remontava a
+   * cada render ("Maximum update depth exceeded" ao abrir um exemplo logo depois de `/app?new=1`).
+   */
+  loads: number;
   /** Alguma edição desde a carga. */
   dirty: boolean;
   /** Opacidade/visibilidade do underlay (S23): estado de UI, fora do draft — não grava nem sobe `revision`. */
@@ -163,20 +170,45 @@ export const initialEditorState: EditorState = {
   future: [],
   txn: undefined,
   revision: 0,
+  loads: 0,
   dirty: false,
 };
 
+/** Resultados já calculados, por estado de entrada e ação (os objetos), para `editorReducer` ser estável sob reaplicação. */
+const replays = new WeakMap<EditorState, WeakMap<EditorAction, EditorState>>();
+
+/**
+ * O reducer do editor, **estável sob reaplicação**: o mesmo estado com a mesma ação (os mesmos objetos) devolve o mesmo
+ * resultado, não um igual. O React reaplica as ações da fila quando rebaseia uma atualização (uma de prioridade menor
+ * ficou para trás — atrás de uma transição de rota que ainda não terminou, por exemplo); sem isto, cada reaplicação do
+ * `load` relia o texto e devolvia um draft novo, cada draft novo disparava os efeitos que dependem dele, que pediam outro
+ * render, que reaplicava o `load` — "Maximum update depth exceeded" ao abrir um exemplo logo depois de `/app?new=1`
+ * (correção da S30). Quem despacha cria um objeto de ação novo a cada vez, então fora da reaplicação nada muda.
+ */
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  let byAction = replays.get(state);
+  const known = byAction?.get(action);
+  if (known !== undefined) return known;
+  const next = reduce(state, action);
+  if (byAction === undefined) {
+    byAction = new WeakMap();
+    replays.set(state, byAction);
+  }
+  byAction.set(action, next);
+  return next;
+}
+
+function reduce(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'load': {
       const load = draftFromText(action.text);
       if (!load.ok) {
-        return { ...initialEditorState, loadError: load.problems.map((p) => p.text).join('; '), loadProblems: load.problems, source: action.source, revision: state.revision + 1 };
+        return { ...initialEditorState, loadError: load.problems.map((p) => p.text).join('; '), loadProblems: load.problems, source: action.source, revision: state.revision + 1, loads: state.loads + 1 };
       }
-      return { ...initialEditorState, draft: load.draft, loadProblems: load.problems, source: action.source, revision: state.revision + 1, dirty: action.dirty === true };
+      return { ...initialEditorState, draft: load.draft, loadProblems: load.problems, source: action.source, revision: state.revision + 1, loads: state.loads + 1, dirty: action.dirty === true };
     }
     case 'reset':
-      return { ...initialEditorState, revision: state.revision + 1 };
+      return { ...initialEditorState, revision: state.revision + 1, loads: state.loads + 1 };
     case 'select':
       return { ...state, selection: action.selection, txn: undefined };
     case 'endTransaction':
