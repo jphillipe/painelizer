@@ -26,14 +26,16 @@ import {
   frameWalls,
   housePlanSvg,
   noticeOf,
-  panelizeFrame,
+  panelizeFrameWithCandidates,
   panelSvg,
-  splitWall,
+  splitWallWithCandidates,
   wallBreakCandidates,
   type BomLine,
   type CutLine,
   type EngineNotice,
+  type HouseWall,
   type Panel,
+  type Wall,
   type WallFrame,
   type Warning,
 } from 'core';
@@ -98,8 +100,8 @@ export class BuildError extends Error {
  * checagem com debounce do editor paga a cada pausa; `buildProject` continua daqui para gerar os arquivos.
  * Inclui o que pode derrubar o `build` sem desenhar nada: nome de arquivo repetido e lista de material inválida.
  */
-export function panelizeProject(project: Project): { panels: Panel[]; problems: BuildProblem[]; bom: BomLine[] } {
-  const { panels, problems } = panelize(project);
+export function panelizeProject(project: Project): { panels: Panel[]; problems: BuildProblem[]; bom: BomLine[]; walls: WallBreaks[] } {
+  const { panels, problems, walls } = panelize(project);
   const usedNames = new Map<string, string>();
   for (const panel of panels) {
     const name = svgFileName(panel.id);
@@ -123,44 +125,76 @@ export function panelizeProject(project: Project): { panels: Panel[]; problems: 
       problems.push(problemOf(e, 'bom'));
     }
   }
-  return { panels, problems, bom };
+  return { panels, problems, bom, walls };
 }
 
-function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[] } {
+function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]; walls: WallBreaks[] } {
   const panels: Panel[] = [];
   const problems: BuildProblem[] = [];
+  const walls: WallBreaks[] = [];
 
   /** Erro de uma parede: ganha a parede como contexto (`parede W01, abertura J1: …`). */
   const problem = (wallId: string, e: unknown): void => {
     problems.push(problemOf(e, 'wall', wallId));
   };
+  /**
+   * Quebras e candidatos da parede (S29), em x do arquivo (`s0` = início da plate a partir do `start`). Os
+   * candidatos vêm da própria divisão; só a parede que não dividiu (erro) monta a parede inteira de novo.
+   */
+  const record = (wallId: string, manual: boolean, s0: number, own: readonly Panel[] | undefined, candidates: readonly number[]): void => {
+    const breaks = own?.slice(1).map((p) => tidy(p.wallOffset + s0));
+    walls.push({ wallId, ...(breaks === undefined ? {} : { breaks }), candidates: candidates.map((x) => tidy(x + s0)), manual });
+  };
+  const candidatesAfterError = (wall: Wall): number[] => {
+    try {
+      return wallBreakCandidates(wall, project.config);
+    } catch (e) {
+      if (e instanceof RangeError) return [];
+      throw e;
+    }
+  };
 
-  if (project.house !== undefined) {
+  const house = project.house;
+  if (house !== undefined) {
     // Casa em planta (S13): a planta inteira é enquadrada de uma vez (cantos e T dependem de todas as
     // paredes; um erro aí é um problema só), depois cada parede vira painel separadamente.
     let frames: WallFrame[] = [];
     try {
-      frames = frameWalls(project.house);
+      frames = frameWalls(house);
     } catch (e) {
       problems.push(problemOf(e, 'plan'));
     }
-    for (const frame of frames) {
+    for (const w of house.walls) {
+      const manual = w.panelBreaks !== undefined;
+      const frame = frames.find((x) => x.wallId === w.id);
+      if (frame === undefined) {
+        record(w.id, manual, 0, undefined, []);
+        continue;
+      }
+      const s0 = plateOffset(w, frame);
       try {
-        panels.push(...panelizeFrame(frame, project.config));
+        const r = panelizeFrameWithCandidates(frame, project.config);
+        panels.push(...r.panels);
+        record(w.id, manual, s0, r.panels, r.candidates);
       } catch (e) {
         problem(frame.wallId, e);
+        record(w.id, manual, s0, undefined, candidatesAfterError(frame.wall));
       }
     }
   } else {
     for (const wall of project.walls) {
+      const manual = wall.panelBreaks !== undefined;
       try {
-        panels.push(...splitWall(wall, project.config));
+        const r = splitWallWithCandidates(wall, project.config);
+        panels.push(...r.panels);
+        record(wall.id, manual, 0, r.panels, r.candidates);
       } catch (e) {
         problem(wall.id, e);
+        record(wall.id, manual, 0, undefined, candidatesAfterError(wall));
       }
     }
   }
-  return { panels, problems };
+  return { panels, problems, walls };
 }
 
 /**
@@ -171,51 +205,16 @@ export interface WallBreaks {
   wallId: string;
   /** Quebras em uso (forçadas ou automáticas). Ausente quando a parede não virou painéis (erro). */
   breaks?: number[];
-  /** Onde a parede pode ser quebrada (`wallBreakCandidates`); vazio quando a parede nem enquadra. */
+  /** Onde a parede pode ser quebrada (`breakCandidates`); vazio quando a parede nem enquadra. */
   candidates: number[];
   /** A parede tem `panelBreaks` (quebras do revisor). */
   manual: boolean;
 }
 
-/**
- * Quebras e candidatos de cada parede, na ordem do arquivo, a partir dos painéis já gerados (`panels` pode vir
- * vazio ou parcial quando houve erro). Nunca lança por causa do projeto: parede que não enquadra sai sem
- * candidatos.
- */
-export function wallBreaks(project: Project, panels: readonly Panel[]): WallBreaks[] {
-  const used = (wallId: string, s0: number): number[] | undefined => {
-    const own = panels.filter((p) => p.wallId === wallId).sort((a, b) => a.wallOffset - b.wallOffset);
-    return own.length === 0 ? undefined : own.slice(1).map((p) => tidy(p.wallOffset + s0));
-  };
-  const candidates = (wall: Parameters<typeof wallBreakCandidates>[0], s0: number): number[] => {
-    try {
-      return wallBreakCandidates(wall, project.config).map((x) => tidy(x + s0));
-    } catch (e) {
-      if (e instanceof RangeError) return [];
-      throw e;
-    }
-  };
-  const entry = (wallId: string, manual: boolean, s0: number, wall: Parameters<typeof wallBreakCandidates>[0] | undefined): WallBreaks => {
-    const breaks = used(wallId, s0);
-    return { wallId, ...(breaks === undefined ? {} : { breaks }), candidates: wall === undefined ? [] : candidates(wall, s0), manual };
-  };
-
-  const house = project.house;
-  if (house === undefined) return project.walls.map((w) => entry(w.id, w.panelBreaks !== undefined, 0, w));
-  let frames: WallFrame[] = [];
-  try {
-    frames = frameWalls(house);
-  } catch (e) {
-    if (!(e instanceof RangeError)) throw e;
-  }
-  return house.walls.map((w) => {
-    const frame = frames.find((f) => f.wallId === w.id);
-    if (frame === undefined) return entry(w.id, w.panelBreaks !== undefined, 0, undefined);
-    // Distância do start à ponta da plate, ao longo do eixo (negativa quando a plate começa antes do ponto).
-    const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
-    const s0 = len === 0 ? 0 : ((frame.plateStart.x - w.start.x) * (w.end.x - w.start.x) + (frame.plateStart.y - w.start.y) * (w.end.y - w.start.y)) / len;
-    return entry(w.id, w.panelBreaks !== undefined, s0, frame.wall);
-  });
+/** Distância do `start` à ponta da plate, ao longo do eixo (negativa quando a plate começa antes do ponto). */
+function plateOffset(w: HouseWall, frame: WallFrame): number {
+  const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+  return len === 0 ? 0 : ((frame.plateStart.x - w.start.x) * (w.end.x - w.start.x) + (frame.plateStart.y - w.start.y) * (w.end.y - w.start.y)) / len;
 }
 
 /** Sem resto de ponto flutuante da conversão (1e-6"). */

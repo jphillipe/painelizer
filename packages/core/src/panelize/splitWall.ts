@@ -43,17 +43,34 @@ import { framePanel, nudgeWall, resolveHeaders } from './panelizeWall';
  * @throws RangeError os de `panelizeWall`; sem divisão possível; lap sem lugar; plate sem stud para emendar
  */
 export function splitWall(given: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
+  return splitWallWithCandidates(given, config, tables).panels;
+}
+
+/** Painéis de `splitWall` e os candidatos a quebra que a divisão usou (S29). */
+export interface WallSplit {
+  panels: Panel[];
+  /** Os de `wallBreakCandidates`, em x da parede, crescentes — do mesmo painel inteiro que a divisão montou. */
+  candidates: number[];
+}
+
+/**
+ * `splitWall` mais os candidatos a quebra, sem montar a parede inteira de novo (o editor mostra os dois a cada
+ * checagem). Os painéis são os mesmos de `splitWall`.
+ *
+ * @throws RangeError os de `splitWall`
+ */
+export function splitWallWithCandidates(given: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): WallSplit {
   // O header não depende da posição da abertura: resolvido uma vez, vale no deslocamento, na parede inteira e
   // em cada trecho (na ordem de `wall.openings`, que nenhum passo reordena).
   const headers = resolveHeaders(given, config, tables);
   const nudged = nudgeWall(given, config, tables, headers);
-  const panels = splitNudged(nudged.wall, config, tables, headers);
+  const { panels, candidates } = splitNudged(nudged.wall, config, tables, headers);
   // Aviso do deslocamento (P40) no painel que ficou com a abertura.
   for (const { offset, warning } of nudged.warnings) {
     const p = panels.find((q) => offset >= q.wallOffset - EPS && offset < q.wallOffset + q.length - EPS) ?? panels[0]!;
     p.warnings.unshift(warning);
   }
-  return panels;
+  return { panels, candidates };
 }
 
 function splitNudged(
@@ -61,7 +78,7 @@ function splitNudged(
   config: Config,
   tables: readonly HeaderTable[] | HeaderTables | undefined,
   headers: readonly ResolvedHeader[],
-): Panel[] {
+): WallSplit {
   const cfg = config.panel ?? DEFAULT_PANEL_CONFIG;
   validatePanelConfig(cfg);
   const stock = config.stockLengths ?? DEFAULT_STOCK_LENGTHS;
@@ -74,15 +91,15 @@ function splitNudged(
   const strips = teeStrips(wall.joints);
   const origin = wall.layoutOrigin ?? 0;
   const ctx = { zones: plan.zones, strips };
+  const candidates = breakCandidates(whole, config, ctx);
   if (wall.panelBreaks !== undefined) {
     const forced = forcedBreaks(
       wall.panelBreaks,
       { length: wall.length, reject: (x) => whyNotBreak(x, whole, config, ctx), wallId: wall.id },
       cfg,
     );
-    return panelsAt(forced, wall, whole, config, tables, headers, strips, stock, level, cfg);
+    return { panels: panelsAt(forced, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
   }
-  const candidates = breakCandidates(whole, config, ctx);
   const isModule = (c: number): boolean => {
     const k = (c - origin) / cfg.module;
     return Math.abs(k - Math.round(k)) < 1e-6;
@@ -97,7 +114,7 @@ function splitNudged(
     },
     cfg,
   );
-  return panelsAt(breaks, wall, whole, config, tables, headers, strips, stock, level, cfg);
+  return { panels: panelsAt(breaks, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
 }
 
 /** Os painéis da parede com as quebras dadas: lap da double top em cada junta, trechos, emendas e peso. */
@@ -251,7 +268,9 @@ function estimateWeight(whole: Panel, a: number, b: number, config: Config, cfg:
 
 /**
  * Candidatos a quebra da parede (S29), em x da parede, crescentes — o que o editor oferece para arrastar a
- * quebra. Mesmo cálculo de `splitWall` (deslocamento P40, painel inteiro, zonas e faixas de T).
+ * quebra. Mesmo cálculo de `splitWall` (deslocamento P40, painel inteiro, zonas e faixas de T); quem também
+ * divide a parede usa `splitWallWithCandidates`, que não monta a parede inteira duas vezes. Este serve quando a
+ * divisão falha (a quebra forçada recusada continua corrigível).
  *
  * @throws RangeError os de `panelizeWall`
  */

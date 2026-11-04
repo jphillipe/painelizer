@@ -88,7 +88,7 @@ export {
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
 export { panelizeWall, planOpenings, resolveHeaders, type OpeningPlan } from './panelize/panelizeWall';
-export { panelId, splitWall, wallBreakCandidates } from './panelize/splitWall';
+export { panelId, splitWall, splitWallWithCandidates, wallBreakCandidates, type WallSplit } from './panelize/splitWall';
 export {
   breakCandidates,
   chooseBreaks,
@@ -114,7 +114,7 @@ export {
 export { frameWalls, type FrameConnections, type TeeAt, type WallFrame } from './house/frame';
 // Geometria do eixo exposta para o editor de paredes do app (S21) desenhar com as mesmas regras do motor.
 export { across, along, axisOf, crossing, pointAt, type Axis } from './house/axis';
-export { panelizeFrame, panelizeHouse, type HouseResult } from './house/panelizeHouse';
+export { panelizeFrame, panelizeFrameWithCandidates, panelizeHouse, type HouseResult } from './house/panelizeHouse';
 export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';
 export * from './output/bom';

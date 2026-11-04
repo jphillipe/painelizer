@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BuildError, buildProject, panelizeProject, problemText, svgFileName, wallBreaks } from '../src/build';
+import { BuildError, buildProject, panelizeProject, problemText, svgFileName } from '../src/build';
 import { parseProject, projectFrom, type Project } from '../src/project';
 
 const EXAMPLE = new URL('../examples/casa-exemplo.json', import.meta.url);
@@ -336,13 +336,13 @@ describe('svgFileName', () => {
   });
 });
 
-describe('wallBreaks (S29: quebras e candidatos para o editor)', () => {
+describe('panelizeProject.walls (S29: quebras e candidatos para o editor)', () => {
   const fx = JSON.parse(readFileSync(new URL('../../core/test/fixtures/wall-480-split.json', import.meta.url), 'utf8')) as {
     config: object;
     wall: Record<string, unknown>;
   };
   const loose = (wall: Record<string, unknown> = {}): Project => projectFrom({ config: fx.config, walls: [{ ...fx.wall, ...wall }] });
-  const run = (p: Project) => wallBreaks(p, panelizeProject(p).panels);
+  const run = (p: Project) => panelizeProject(p).walls;
   const excluded = new Set([176, 192, 208, 336, 352, 368]);
   const candidates = Array.from({ length: 29 }, (_, i) => (i + 1) * 16).filter((c) => !excluded.has(c));
 

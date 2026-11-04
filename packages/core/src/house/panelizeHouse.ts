@@ -12,7 +12,7 @@
 import type { Config } from '../config';
 import type { Panel, PanelFacing, Warning } from '../panel';
 import type { Point } from '../wall';
-import { splitWall } from '../panelize/splitWall';
+import { splitWallWithCandidates } from '../panelize/splitWall';
 import type { HeaderTables } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
 import { frameWalls, type WallFrame } from './frame';
@@ -52,6 +52,20 @@ export function panelizeFrame(
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
 ): Panel[] {
+  return panelizeFrameWithCandidates(frame, config, tables).panels;
+}
+
+/**
+ * `panelizeFrame` mais os candidatos a quebra da parede (S29), em x do painel (da plate), como
+ * `splitWallWithCandidates`.
+ *
+ * @throws RangeError os de `splitWall`
+ */
+export function panelizeFrameWithCandidates(
+  frame: WallFrame,
+  config: Config,
+  tables?: readonly HeaderTable[] | HeaderTables,
+): { panels: Panel[]; candidates: number[] } {
   // Direção unitária da plate em planta: a parede é paralela a um eixo, então é ±1 num eixo e 0 no outro.
   const ux = Math.sign(frame.plateEnd.x - frame.plateStart.x);
   const uy = Math.sign(frame.plateEnd.y - frame.plateStart.y);
@@ -60,8 +74,12 @@ export function panelizeFrame(
   // start→end; se o lado de fora está aí, a elevação é a vista de fora.
   const facing: { facing: PanelFacing } | Record<string, never> =
     frame.outside === undefined ? {} : { facing: frame.outside === 'right' ? 'exterior' : 'interior' };
-  return splitWall(frame.wall, config, tables).map((p) => {
-    const a = p.wallOffset;
-    return { ...p, plan: { start: at(a), end: at(a + p.length) }, ...facing };
-  });
+  const { panels, candidates } = splitWallWithCandidates(frame.wall, config, tables);
+  return {
+    panels: panels.map((p) => {
+      const a = p.wallOffset;
+      return { ...p, plan: { start: at(a), end: at(a + p.length) }, ...facing };
+    }),
+    candidates,
+  };
 }
