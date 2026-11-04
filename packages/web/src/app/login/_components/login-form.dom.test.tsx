@@ -7,16 +7,19 @@ import type { SignInResult } from '@/services/auth.service';
 
 // A action de verdade importa `server-only`; aqui interessa o que o formulário faz com a resposta.
 vi.mock('../_actions/sign-in', () => ({ signInAction: {} }));
+vi.mock('../_actions/request-password-reset', () => ({ requestPasswordResetAction: { reset: true } }));
 const push = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh }) }));
 let reply: SignInResult = { ok: true, user: { id: 'u1', email: 'alice@example.com' } };
+/** S32: resposta do "esqueci a senha". */
+let resetReply: { ok: true } | { ok: false; message: string } = { ok: true };
 const execute = vi.fn<(input: SignInInput) => void>();
 vi.mock('next-safe-action/hooks', () => ({
-  useAction: (_action: unknown, opts: { onSuccess: (r: { data: SignInResult }) => void }) => ({
+  useAction: (action: { reset?: boolean }, opts: { onSuccess: (r: { data: unknown; input: unknown }) => void }) => ({
     execute: (input: SignInInput) => {
       execute(input);
-      opts.onSuccess({ data: reply });
+      opts.onSuccess({ data: action.reset === true ? resetReply : reply, input });
     },
     isPending: false,
   }),
@@ -28,6 +31,7 @@ beforeEach(() => {
   push.mockReset();
   refresh.mockReset();
   execute.mockReset();
+  resetReply = { ok: true };
 });
 afterEach(cleanup);
 
@@ -65,5 +69,36 @@ describe('LoginForm (S22.0)', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Email or password is incorrect.'));
     expect(push).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(screen.getByLabelText('Password'));
+  });
+});
+
+describe('LoginForm — esqueci a senha (S32)', () => {
+  it('"Forgot password?" troca pelo formulário do link; a resposta não diz se a conta existe; volta ao login', async () => {
+    const user = userEvent.setup();
+    render(<LoginForm next="/app" />);
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    expect(screen.queryByLabelText('Password')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Send the link' }));
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    expect(execute).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText('Email'), 'alice@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send the link' }));
+    await waitFor(() => expect(execute).toHaveBeenCalledWith({ email: 'alice@example.com' }));
+    expect(screen.getByRole('status').textContent).toContain('If there is an account for alice@example.com');
+    await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
+    expect(screen.getByLabelText('Password')).toBeTruthy();
+  });
+
+  it('limite de envio aparece no card; aviso da URL (link vencido) aparece acima do formulário', async () => {
+    const user = userEvent.setup();
+    resetReply = { ok: false, message: 'Too many emails were sent. Wait a few minutes and try again.' };
+    const { unmount } = render(<LoginForm next="/app" />);
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    await user.type(screen.getByLabelText('Email'), 'alice@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send the link' }));
+    expect(await screen.findByText('Too many emails were sent. Wait a few minutes and try again.')).toBeTruthy();
+    unmount();
+    render(<LoginForm next="/app" notice="This link has expired or was already used. Ask for a new one." />);
+    expect(screen.getByText('This link has expired or was already used. Ask for a new one.')).toBeTruthy();
   });
 });

@@ -37,7 +37,7 @@ export interface EditorTopBarProps {
   /** Auto-save no servidor (S22.1): "Saved · just now", "Saving…", "Not saved" com Retry, "Edited elsewhere" com Reload. */
   save?: SaveStatus | undefined;
   onRetrySave?: (() => void) | undefined;
-  /** S23 (A4): saídas do conflito além de recarregar ("Save as copy" também quando o projeto foi apagado). */
+  /** S23 (A4): saídas do conflito além de recarregar ("Save as new project" também quando o projeto foi apagado ou foi para a lixeira, S32). */
   saveActions?: SaveConflictActions | undefined;
 }
 
@@ -138,7 +138,7 @@ function SaveChip({ status, onRetry, actions }: { status: SaveStatus; onRetry: (
   const copyButton =
     actions?.saveAsCopy !== undefined ? (
       <button type="button" className="ml-1 underline underline-offset-2" onClick={actions.saveAsCopy}>
-        Save as copy
+        Save as new project
       </button>
     ) : null;
   if (status.kind === 'conflict') {

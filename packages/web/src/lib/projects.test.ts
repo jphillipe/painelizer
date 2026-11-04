@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { copyName, describeUpdated, NAME_MAX, nameFromData, ownerLabel, projectName, wallCountOf, withProjectName } from './projects';
+import { copyName, describeUpdated, encodeCursor, NAME_MAX, nameFromData, ownerLabel, parseCursor, projectName, projectsHref, revisionCopyName, wallCountOf, withCurrentHeavyKeys, withProjectName } from './projects';
 
 describe('lista de projetos (S22.2)', () => {
   it('conta paredes só quando `walls` é uma lista', () => {
@@ -50,5 +50,36 @@ describe('lista de projetos (S22.2)', () => {
     expect(describeUpdated('2026-11-03T11:30:00Z', now)).toBe('30 min ago');
     expect(describeUpdated('2026-11-01T12:00:00Z', now)).toBe('2 days ago');
     expect(describeUpdated('nope', now)).toBe('—');
+  });
+});
+
+describe('lista de projetos — páginas, filtros e histórico (S32)', () => {
+  const id = '0f1e2d3c-4b5a-4987-8a6b-5c4d3e2f1a0b';
+
+  it('cursor vai e volta pela URL; texto que não é cursor dá null', () => {
+    const at = '2026-11-04T10:00:00.123456+00:00';
+    const text = encodeCursor({ at, id });
+    expect(parseCursor(text)).toEqual({ at, id });
+    expect(parseCursor(decodeURIComponent(encodeURIComponent(text)))).toEqual({ at, id });
+    expect(parseCursor('lixo')).toBeNull();
+    expect(parseCursor(`não-é-data~${id}`)).toBeNull();
+    expect(parseCursor(`${at}~123`)).toBeNull();
+  });
+
+  it('URL da lista só leva o que difere do padrão', () => {
+    const none = { search: '', mine: false, trash: false };
+    expect(projectsHref(none)).toBe('/app/projects');
+    expect(projectsHref({ search: 'casa 2', mine: true, trash: false })).toBe('/app/projects?q=casa+2&mine=1');
+    expect(projectsHref({ ...none, trash: true }, 'c~d')).toBe('/app/projects?trash=1&before=c%7Ed');
+  });
+
+  it('nome do retrato restaurado e a leitura/planta da linha atual por cima do retrato', () => {
+    expect(revisionCopyName('Casa', 40)).toBe('Casa (revision 40)');
+    expect(revisionCopyName('x'.repeat(NAME_MAX), 1)).toHaveLength(NAME_MAX);
+    expect(revisionCopyName('  ', 2)).toBe('Untitled project (revision 2)');
+    const snap = { name: 'Casa', walls: [1], $drawings: [] };
+    expect(withCurrentHeavyKeys(snap, { walls: [2], $panelizer: { r: 1 }, $underlay: { i: 'x' } })).toEqual({ name: 'Casa', walls: [1], $drawings: [], $panelizer: { r: 1 }, $underlay: { i: 'x' } });
+    expect(withCurrentHeavyKeys({ walls: [], $underlay: 'velha' }, { walls: [] })).toEqual({ walls: [] });
+    expect(withCurrentHeavyKeys([1], { a: 1 })).toEqual([1]);
   });
 });

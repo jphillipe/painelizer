@@ -29,7 +29,7 @@ export interface ServerProjectApi {
   session: SavedSessionApi;
   /** Auto-save (S22.1): o chip da top bar e o "Retry". */
   sync: ProjectSyncApi;
-  /** Conflito ou projeto apagado (S23, A4): "Save as copy" e "Overwrite". */
+  /** Conflito ou projeto apagado (S23, A4): "Save as new project" e "Overwrite". */
   saveActions: SaveConflictActions;
 }
 

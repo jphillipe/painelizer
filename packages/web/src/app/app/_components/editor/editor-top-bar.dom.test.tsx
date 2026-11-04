@@ -11,10 +11,10 @@ const base = { name: 'Casa', walls: 4, openings: 2, pending: false, needsData: f
 
 /** S23 (A4): o conflito não oferece mais só "Reload" (que apagava as edições sem dizer). */
 describe('EditorTopBar — conflito do auto-save (S23)', () => {
-  it('Save as copy sai direto; Overwrite e Reload pedem confirmação; "Keep working" não faz nada', async () => {
+  it('Save as new project sai direto; Overwrite e Reload pedem confirmação; "Keep working" não faz nada', async () => {
     const actions = { saveAsCopy: vi.fn(), overwrite: vi.fn(), reload: vi.fn() };
     render(<EditorTopBar {...base} save={{ kind: 'conflict', message: 'edited elsewhere', revision: 7 }} saveActions={actions} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Save as copy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save as new project' }));
     expect(actions.saveAsCopy).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Overwrite' }));
@@ -38,7 +38,7 @@ describe('EditorTopBar — conflito do auto-save (S23)', () => {
   it('projeto apagado no servidor: oferece salvar como cópia', () => {
     const actions = { saveAsCopy: vi.fn() };
     render(<EditorTopBar {...base} save={{ kind: 'deleted', message: 'gone' }} saveActions={actions} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Save as copy' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save as new project' }));
     expect(actions.saveAsCopy).toHaveBeenCalledTimes(1);
   });
 });

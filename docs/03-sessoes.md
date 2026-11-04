@@ -1309,11 +1309,45 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   na raiz: `pnpm check` duas vezes (core 677, cli 157, extract 210 + 1 pulado, web 431) e `pnpm --filter web build`.
   Não feito (fora do item): XLSX; editar preços e `fireBlockAt` no dialog de configurações; rótulo do bloco de fogo
   na folha (a S36 traz rótulo e cota de fileira).
-- [ ] **S32 — Time e contas (web + supabase, SRF).** `teams`/`team_members` com papéis admin/editor e RLS por time
+- [x] **S32 — Time e contas (web + supabase, SRF).** `teams`/`team_members` com papéis admin/editor e RLS por time
   (hoje `using (true)`), `updated_by`; convite por e-mail por um admin (service role isolada numa action); reset e
   troca de senha, `/app/account`; lixeira (`deleted_at`) e `project_revisions` (snapshot a cada N gravações);
   lista com busca, filtro "mine" e paginação por `updated_at`; "Save as new project" em conflito/apagado; "Add
   drawings" em projeto de arquivo ou sample; `/api/health?deep=1` autenticado. Tipos do banco gerados.
+  Feita em 2026-11-04 (sessão encadeada; SRF; aprovada por delegação, sem revisão prévia do humano; commit, sem
+  push; **migrações escritas, não aplicadas** — passos em `supabase/README.md`, "S32 — aplicar", e **o deploy passa a
+  depender delas**). **Migrações**: `20261104000200_teams.sql` (`teams`, `team_members` com `role` e `email`,
+  checagens `private.is_team_member/is_team_admin/has_team/default_team_id` `security definer` fora da API, trigger
+  `keep_one_admin`, função `add_team_member(team, email, role)` → `added`/`already_member`/`no_account`/`forbidden`;
+  backfill: time "National Lumber" com todas as contas como admin) e `20261104000300_projects_team.sql`
+  (`projects.team_id` com default do time de quem grava, `updated_by`/`updated_by_email` por trigger do JWT,
+  `deleted_at`/`deleted_by`; RLS por time — apagar de vez só da lixeira e só admin; `project_revisions` com retrato
+  na criação e a cada 20 gravações, os 20 mais recentes, sem `$panelizer`/`$underlay`; bucket só para quem está num
+  time; `orphan_drawings` lendo também `$drawings`; `sweep_trashed_projects` de 30 dias). SQL conferido em PGlite
+  (`s32-pglite-check.mjs` na pasta de notas): backfill, default do time, conta sem time sem acesso, último admin
+  protegido (achou um bug: o trigger lia `auth.users` como o chamador — virou `security definer`), lixeira,
+  retratos, órfãos e funções fechadas. **Web**: `types/database.ts` à mão (3 tabelas, colunas e a função);
+  `ProjectsTable` com lixeira (`get`/`updateIfRevision` não veem projeto na lixeira), `list` com busca `ilike`,
+  `ownerId`, cursor `updated_at~id` (lixeira por `deleted_at`), retratos; `projects.service`: `listProjects`
+  paginado (50), `trashProject`/`restoreProject`/`deleteProject` (de vez), `listRevisions`/`restoreRevision` (vira
+  projeto novo "… (revision N)" com a leitura e a planta da linha atual), `no_team`. `team.service` +
+  `TeamTable`: `myTeam`, `myRole`, `inviteMember` (conta existente pela função; sem conta, `inviteUserByEmail` com a
+  chave secret de `lib/supabase/admin.ts`, importada só pela action de convite), `setMemberRole`, `removeMember`.
+  `auth.service`: `requestPasswordReset` (resposta igual com ou sem conta), `changePassword` (8+), `verifyEmailLink`
+  (`token_hash` ou `code`) e a rota `/auth/confirm`. Telas: `/app/account` (senha, time, papéis, convite),
+  "Account and team" no menu do usuário, "Forgot password?" no login, lista com abas All/Mine/Trash, busca, "Older →",
+  History, Move to trash/Restore/Delete forever; "Save as copy" virou "Save as new project"; "Add drawings to the
+  project…" no dialog da planta de fundo (sobe ao bucket e grava em `$drawings`, que duplicar, apagar e a limpeza
+  respeitam). `/api/health`: `invites` no raso; `?deep=1` com login consulta cada tabela e o bucket, aponta a
+  migração que falta, 503 em falha. Docs: `supabase/README.md` (esquema e "S32 — aplicar": migrações, URL Configuration,
+  modelos de e-mail, chave secret), `docs/12` (3c e 3d), `.env.example`. Testes: web 431 → 468 (services de time,
+  health e auth novos; lista, lixeira, páginas e histórico no service e na tela; conta e "esqueci a senha" em jsdom;
+  libs puras). Verde na raiz: `pnpm check` duas vezes e `pnpm --filter web build` (`/app/account` e `/auth/confirm`
+  dinâmicas). Conferido no navegador **sem Supabase** (porta 3001, chaves vazias): lista e conta com o aviso de não
+  configurado, `/api/health` e `?deep=1`, `/auth/confirm` voltando ao login; sem erro no console. **Não conferido**:
+  nada contra o Supabase real (RLS, triggers, PostgREST, `ilike`/cursor no PostgREST, e-mails de convite e
+  recuperação, `verifyOtp`), a tela de login com o formulário (sem Supabase ela mostra o aviso), o botão "Add drawings"
+  (só aparece com Storage) e o chip de conflito no editor (só testes).
 - [ ] **S33 — Playwright (SRF).** Login, sample, editar, F5 com retomada, gerar, baixar PDF, lista de projetos;
   roda no CI de PR contra `supabase start` local (`supabase/config.toml` + seed); testes de integração dos
   adaptadores reais (`projects-table`, `drawings-store`) e das RLS; testes das server actions com services mockados.

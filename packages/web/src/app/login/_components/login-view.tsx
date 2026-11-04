@@ -13,7 +13,7 @@ const PIECES = sketchPieces().length;
  * painéis, e o card de vidro com o formulário por cima. Em telas estreitas a parede fica acima do card, menor.
  * Pede o modo `stage` ao shell: largura toda, sem rodapé, rolagem normal.
  */
-export function LoginView({ next }: { next: string }) {
+export function LoginView({ next, notice }: { next: string; notice?: string }) {
   useShellMode('stage');
   return (
     <section className="login-surface on-navy relative flex flex-1 flex-col text-paper">
@@ -34,7 +34,7 @@ export function LoginView({ next }: { next: string }) {
               <h1 className="text-[34px] leading-tight text-paper">Welcome back.</h1>
               <p className="text-sm text-paper/75">Use the account the National Lumber team created for you.</p>
             </div>
-            <LoginForm next={next} tone="dark" className="mt-6" />
+            <LoginForm next={next} tone="dark" className="mt-6" {...(notice === undefined ? {} : { notice })} />
           </div>
         </div>
 

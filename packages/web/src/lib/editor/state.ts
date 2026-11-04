@@ -25,6 +25,7 @@ import {
   type Point,
   type ProjectDraft,
 } from './draft';
+import { extraDrawingsOf, PROJECT_DRAWINGS_KEY, type DrawingRef } from '../drawings';
 import { inView, UNDERLAY_KEY, underlayOf, withoutView, type Underlay, type UnderlayView } from './underlay';
 import { duplicateWalls, joinWalls, splitWall, type WallOp } from './wall-ops';
 
@@ -130,6 +131,8 @@ export type EditorAction =
   | { type: 'setReviewed'; wallId: string; reviewed: boolean }
   /** Planta do arquiteto por baixo (M6): imagem e calibração em `$underlay` na raiz; `undefined` remove. Undoável. */
   | { type: 'setUnderlay'; underlay: Underlay | undefined }
+  /** S32: desenhos subidos ao Storage pelo editor (`$drawings` na raiz; projeto de arquivo ou sample). Undoável. */
+  | { type: 'addDrawings'; drawings: readonly DrawingRef[] }
   /** Só opacidade/visibilidade do underlay: estado de UI (S23) — o draft, a revisão e o histórico não mudam. */
   | { type: 'setUnderlayView'; opacity?: number; visible?: boolean }
   /** `preset` (S21.4): id e tag que a leitura já tinha para uma abertura que ficou fora do projeto (sem posição). */
@@ -348,6 +351,13 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
       const next = commit(state, Object.keys(extra).length === 0 ? omit(d, 'extra') : { ...d, extra });
       // Desenho novo (ou removido) volta à vista padrão; calibrar o mesmo desenho mantém a vista.
       return action.underlay === undefined || action.underlay.image !== before?.image ? omit(next, 'underlayView') : next;
+    }
+    case 'addDrawings': {
+      if (action.drawings.length === 0) return state;
+      const known = new Set(extraDrawingsOf(d.extra).map((x) => x.path));
+      const added = action.drawings.filter((x) => !known.has(x.path));
+      if (added.length === 0) return state;
+      return commit(state, { ...d, extra: { ...(d.extra ?? {}), [PROJECT_DRAWINGS_KEY]: [...extraDrawingsOf(d.extra), ...added] } });
     }
     case 'setUnderlayView': {
       const current = viewedUnderlay(state);

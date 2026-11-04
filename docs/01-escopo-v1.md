@@ -41,7 +41,8 @@ equipe usando só o desenho gerado.
 ### App e dados (Fase 5–6)
 - App web (`packages/web`, Next.js no Cloud Run — `docs/12`) com login e projetos salvos no **Supabase** (S22:
   auth, tabela `projects` com `data jsonb`, revisão para conflito; S22.3: desenhos no bucket `drawings`; S24:
-  jobs de leitura no banco). Ferramenta interna: um time, sem papéis ainda (S32).
+  jobs de leitura no banco). Ferramenta interna; desde a S32, projetos por time com papéis admin/editor, convite
+  por e-mail, lixeira e histórico de retratos.
 
 ### Saídas
 - Desenho de elevação por painel (SVG → PDF), com cotas, ID, orientação, lista de peças na margem.

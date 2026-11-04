@@ -34,6 +34,9 @@ export function initialsOf(email: string): string {
 export const NEW_PROJECT_PARAM = 'new';
 export const NEW_PROJECT_HREF = `/app?${NEW_PROJECT_PARAM}=1`;
 
+/** Conta e time (S32): senha, membros e convites. */
+export const ACCOUNT_HREF = '/app/account';
+
 /** Lista de projetos salvos (S22.2); ativo também em `/app/projects/<id>`. */
 export const PROJECTS_HREF = '/app/projects';
 

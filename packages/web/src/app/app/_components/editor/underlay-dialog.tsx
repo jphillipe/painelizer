@@ -1,13 +1,13 @@
 'use client';
 
 import { errorMessage } from '@/lib/errors';
-import { CloudDownloadIcon, FileImageIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
+import { CloudDownloadIcon, CloudUploadIcon, FileImageIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { DRAWINGS_BUCKET, type DrawingRef } from '@/lib/drawings';
+import { DRAWING_MAX_BYTES, DRAWINGS_BUCKET, drawingPath, newUploadId, type DrawingRef } from '@/lib/drawings';
 import type { Rect } from '@/lib/editor/geometry';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { SupabaseEnv } from '@/lib/supabase/env';
@@ -27,6 +27,11 @@ export interface UnderlayDialogProps {
   /** Caixa das paredes, para a imagem nascer do tamanho da casa. */
   bounds: Rect | undefined;
   onPick: (underlay: Underlay) => void;
+  /**
+   * S32: "Add drawings" — sobe arquivos do disco ao Storage e os registra no projeto (`$drawings`), para um projeto
+   * aberto de arquivo ou sample guardar a planta como os que vieram da leitura. Sem Storage, o botão não aparece.
+   */
+  onAddDrawings?: ((drawings: DrawingRef[]) => void) | undefined;
 }
 
 /** Largura da planta por baixo: legível ao dar zoom sem passar de ~400 KB em JPEG. */
@@ -37,7 +42,7 @@ const THUMB_PX = 160;
  * Escolher a planta por baixo (M6): um arquivo dos soltos no passo 01 ou outro do disco; PDF mostra as páginas em
  * miniatura, uma é a escolhida; imagem entra direto. A página é renderizada em 2 400 px e vai para o draft.
  */
-export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings = [], storage, bounds, onPick }: UnderlayDialogProps) {
+export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings = [], storage, bounds, onPick, onAddDrawings }: UnderlayDialogProps) {
   const [file, setFile] = useState<File | undefined>(undefined);
   const [downloading, setDownloading] = useState<string | undefined>(undefined);
   // Do Storage só o que não está na memória (o mesmo arquivo solto no passo 01 aparece uma vez).
@@ -55,6 +60,41 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
     } finally {
       setDownloading(undefined);
     }
+  };
+  const [adding, setAdding] = useState<{ done: number; total: number } | undefined>(undefined);
+  const addInput = useRef<HTMLInputElement>(null);
+  /** Sobe ao bucket numa pasta nova (`<uploadId>/`), um por vez; o primeiro vira o escolhido para a planta. */
+  const addDrawings = async (files: File[]): Promise<void> => {
+    if (storage === undefined || onAddDrawings === undefined || files.length === 0) return;
+    const tooBig = files.filter((f) => f.size > DRAWING_MAX_BYTES);
+    const ok = files.filter((f) => f.size <= DRAWING_MAX_BYTES);
+    if (tooBig.length > 0) toast.error(`Over 50 MB, not added: ${tooBig.map((f) => f.name).join(', ')}`);
+    if (ok.length === 0) return;
+    const folder = newUploadId();
+    const bucket = supabaseBrowser(storage).storage.from(DRAWINGS_BUCKET);
+    const used = new Set<string>();
+    const refs: DrawingRef[] = [];
+    setAdding({ done: 0, total: ok.length });
+    try {
+      for (const f of ok) {
+        let path = drawingPath(folder, f.name);
+        for (let n = 2; used.has(path); n++) path = drawingPath(folder, f.name).replace(/(\.[^.]*)?$/, `-${n}$1`);
+        used.add(path);
+        const { error } = await bucket.upload(path, f, { upsert: false, ...(f.type === '' ? {} : { contentType: f.type }) });
+        if (error !== null) throw new Error(`${f.name}: ${error.message}`);
+        refs.push({ name: f.name, path, size: f.size, type: f.type });
+        setAdding({ done: refs.length, total: ok.length });
+      }
+    } catch (e) {
+      toast.error(`Couldn’t add the drawing ${errorMessage(e)}`);
+    } finally {
+      setAdding(undefined);
+    }
+    if (refs.length === 0) return;
+    onAddDrawings(refs);
+    toast.success(refs.length === 1 ? `Added ${refs[0]!.name} to the project.` : `Added ${refs.length} drawings to the project.`);
+    const first = ok.find((f) => f.name === refs[0]!.name);
+    if (first !== undefined) setFile(first);
   };
   const [thumbs, setThumbs] = useState<{ page: number; url: string }[] | undefined>(undefined);
   const [page, setPage] = useState<number | undefined>(undefined);
@@ -152,6 +192,27 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
               <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
                 Choose a file…
               </Button>
+              {storage !== undefined && onAddDrawings !== undefined ? (
+                <>
+                  <Button variant="outline" size="sm" disabled={adding !== undefined} onClick={() => addInput.current?.click()} title="Upload drawings and keep them with the project, for everyone who opens it">
+                    {adding !== undefined ? <Loader2Icon className="animate-spin" /> : <CloudUploadIcon />}
+                    {adding !== undefined ? `Adding ${adding.done + 1} of ${adding.total}…` : 'Add drawings to the project…'}
+                  </Button>
+                  <input
+                    ref={addInput}
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,application/pdf,image/*"
+                    className="sr-only"
+                    aria-label="Drawings to add to the project"
+                    onChange={(e) => {
+                      const files = [...(e.target.files ?? [])];
+                      e.target.value = '';
+                      void addDrawings(files);
+                    }}
+                  />
+                </>
+              ) : null}
               <input
                 ref={input}
                 type="file"

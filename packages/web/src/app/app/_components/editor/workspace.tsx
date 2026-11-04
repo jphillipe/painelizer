@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
 import { wallById } from '@/lib/editor/draft';
+import { extraDrawingsOf } from '@/lib/drawings';
 import { projectFileName, projectFileText } from '@/lib/editor/project-file';
 import { reviewedCount, selectedWallIds, viewedUnderlay, type Selection } from '@/lib/editor/state';
 import type { Underlay } from '@/lib/editor/underlay';
@@ -217,7 +218,16 @@ export function Workspace() {
         </div>
       )}
       <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
-      <UnderlayDialog open={underlayOpen} onOpenChange={setUnderlayOpen} sourceFiles={sourceFiles} storedDrawings={storedDrawings} storage={storage} bounds={geometry?.bounds} onPick={setUnderlay} />
+      <UnderlayDialog
+        open={underlayOpen}
+        onOpenChange={setUnderlayOpen}
+        sourceFiles={sourceFiles}
+        storedDrawings={[...storedDrawings, ...extraDrawingsOf(draft.extra)]}
+        storage={storage}
+        bounds={geometry?.bounds}
+        onPick={setUnderlay}
+        onAddDrawings={(drawings) => dispatch({ type: 'addDrawings', drawings })}
+      />
       <ProjectSettingsDialog open={settingsOpen} onOpenChange={(open) => !open && select({ kind: 'none' })} draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} />
     </div>
   );

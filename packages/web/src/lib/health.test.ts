@@ -10,14 +10,16 @@ describe('healthReport', () => {
       K_SERVICE: 'panelizer',
       K_REVISION: 'panelizer-00003-abc',
     });
-    expect(report).toEqual({ ok: true, ai: true, auth: true, service: 'panelizer', revision: 'panelizer-00003-abc' });
+    expect(report).toEqual({ ok: true, ai: true, auth: true, invites: false, service: 'panelizer', revision: 'panelizer-00003-abc' });
     expect(JSON.stringify(report)).not.toContain('sk-ant');
   });
 
   it('chave vazia ou só espaços conta como ausente; fora do Cloud Run não há revisão', () => {
     expect(healthReport({ ANTHROPIC_API_KEY: '  ', NEXT_PUBLIC_SUPABASE_URL: 'u' })).toEqual({
-      ok: true, ai: false, auth: false, service: null, revision: null,
+      ok: true, ai: false, auth: false, invites: false, service: null, revision: null,
     });
-    expect(healthReport({})).toMatchObject({ ai: false, auth: false });
+    expect(healthReport({})).toMatchObject({ ai: false, auth: false, invites: false });
+    expect(healthReport({ SUPABASE_SECRET_KEY: 'sb_secret_x' })).toMatchObject({ invites: true });
+    expect(JSON.stringify(healthReport({ SUPABASE_SECRET_KEY: 'sb_secret_x' }))).not.toContain('sb_secret');
   });
 });

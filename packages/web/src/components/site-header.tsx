@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDownIcon, FolderOpenIcon, LogOutIcon, PlusIcon, type LucideIcon } from 'lucide-react';
+import { ChevronDownIcon, FolderOpenIcon, LogOutIcon, PlusIcon, UserCogIcon, type LucideIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -9,7 +9,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { signOutAction } from '@/app/login/_actions/sign-out';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, PROJECTS_HREF, type NavTarget } from '@/lib/site-nav';
+import { ACCOUNT_HREF, initialsOf, isActivePath, isBareRoute, NEW_PROJECT_HREF, PROJECTS_HREF, type NavTarget } from '@/lib/site-nav';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/services/auth.service';
 
@@ -141,6 +141,10 @@ export function UserMenu({ user }: { user: SessionUser }) {
           {user.email}
         </p>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => router.push(ACCOUNT_HREF)}>
+          <UserCogIcon />
+          Account and team
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={isPending} onSelect={() => execute()}>
           <LogOutIcon />
           {isPending ? 'Signing out…' : 'Sign out'}

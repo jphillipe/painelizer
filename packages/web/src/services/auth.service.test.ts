@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ supabaseServer: async () => undefined }));
 
-const { currentUser, isAuthConfigured, requireUser, signIn, signOut, SignedOutError } = await import('./auth.service');
+const { changePassword, currentUser, isAuthConfigured, requestPasswordReset, requireUser, signIn, signOut, SignedOutError, verifyEmailLink } = await import('./auth.service');
 type AuthApi = import('./auth.service').AuthApi;
 type AuthDeps = import('./auth.service').AuthDeps;
 
@@ -14,6 +14,10 @@ function fakeAuth(over: Partial<AuthApi> = {}): AuthApi {
     signInWithPassword: async () => ({ data: { user: alice }, error: null }),
     signOut: async () => ({ error: null }),
     getUser: async () => ({ data: { user: alice }, error: null }),
+    resetPasswordForEmail: async () => ({ error: null }),
+    updateUser: async () => ({ data: { user: alice }, error: null }),
+    verifyOtp: async () => ({ data: { user: alice }, error: null }),
+    exchangeCodeForSession: async () => ({ data: { user: alice }, error: null }),
     ...over,
   };
 }
@@ -67,5 +71,51 @@ describe('auth.service (S22.0)', () => {
     await signOut(deps(fakeAuth({ signOut: async () => { out += 1; return { error: null }; } })));
     expect(out).toBe(1);
     await expect(signOut(deps(fakeAuth({ signOut: async () => { throw new Error('boom'); } })))).resolves.toBeUndefined();
+  });
+});
+
+describe('auth.service — senha e links de e-mail (S32)', () => {
+  it('"esqueci a senha" responde igual com ou sem conta; rede fora e limite de envio viram mensagem', async () => {
+    const sent: unknown[] = [];
+    const ok = deps(fakeAuth({ resetPasswordForEmail: async (email, options) => { sent.push([email, options.redirectTo]); return { error: null }; } }));
+    expect(await requestPasswordReset('a@b.c', 'http://localhost:3000/auth/confirm', ok)).toEqual({ ok: true });
+    expect(sent).toEqual([['a@b.c', 'http://localhost:3000/auth/confirm']]);
+    const unknown = deps(fakeAuth({ resetPasswordForEmail: async () => ({ error: { message: 'User not found', code: 'user_not_found', status: 404 } }) }));
+    expect(await requestPasswordReset('x@b.c', 'r', unknown)).toEqual({ ok: true });
+    const limited = deps(fakeAuth({ resetPasswordForEmail: async () => ({ error: { message: 'rate', code: 'over_email_send_rate_limit', status: 429 } }) }));
+    expect(await requestPasswordReset('a@b.c', 'r', limited)).toMatchObject({ ok: false, message: expect.stringContaining('Too many emails') });
+    const down = deps(fakeAuth({ resetPasswordForEmail: async () => ({ error: { message: 'fetch failed', status: 0 } }) }));
+    expect(await requestPasswordReset('a@b.c', 'r', down)).toMatchObject({ ok: false, message: expect.stringContaining('Could not reach') });
+    expect(await requestPasswordReset('a@b.c', 'r', deps(undefined))).toMatchObject({ ok: false });
+  });
+
+  it('trocar a senha: mínimo de 8, códigos do Supabase em frases, sem Supabase explica', async () => {
+    const calls: string[] = [];
+    const ok = deps(fakeAuth({ updateUser: async (a) => { calls.push(a.password); return { data: { user: alice }, error: null }; } }));
+    expect(await changePassword('curta', ok)).toMatchObject({ ok: false, message: 'Use at least 8 characters.' });
+    expect(calls).toEqual([]);
+    expect(await changePassword('uma senha boa', ok)).toEqual({ ok: true });
+    expect(calls).toEqual(['uma senha boa']);
+    const same = deps(fakeAuth({ updateUser: async () => ({ data: { user: null }, error: { message: 'same', code: 'same_password', status: 422 } }) }));
+    expect(await changePassword('uma senha boa', same)).toMatchObject({ ok: false, message: expect.stringContaining('different from the current') });
+    const weird = deps(fakeAuth({ updateUser: async () => ({ data: { user: null }, error: { message: 'Boom', code: 'unexpected_failure', status: 500 } }) }));
+    expect(await changePassword('uma senha boa', weird)).toEqual({ ok: false, message: 'Could not change the password: Boom' });
+    expect(await changePassword('uma senha boa', deps(undefined))).toMatchObject({ ok: false, message: expect.stringContaining('not set up') });
+  });
+
+  it('link do e-mail: token_hash pelo verifyOtp, code pela troca PKCE; link velho diz para pedir outro', async () => {
+    const seen: unknown[] = [];
+    const d = deps(
+      fakeAuth({
+        verifyOtp: async (params) => { seen.push(['otp', params]); return { data: { user: alice }, error: null }; },
+        exchangeCodeForSession: async (code) => { seen.push(['code', code]); return { data: { user: alice }, error: null }; },
+      }),
+    );
+    expect(await verifyEmailLink({ tokenHash: 'h1', type: 'invite' }, d)).toEqual({ ok: true, user: alice });
+    expect(await verifyEmailLink({ code: 'c1' }, d)).toEqual({ ok: true, user: alice });
+    expect(seen).toEqual([['otp', { token_hash: 'h1', type: 'invite' }], ['code', 'c1']]);
+    const expired = deps(fakeAuth({ verifyOtp: async () => ({ data: { user: null }, error: { message: 'Token has expired or is invalid', code: 'otp_expired', status: 403 } }) }));
+    expect(await verifyEmailLink({ tokenHash: 'h', type: 'recovery' }, expired)).toMatchObject({ ok: false, message: expect.stringContaining('expired or was already used') });
+    expect(await verifyEmailLink({ code: 'c' }, deps(undefined))).toMatchObject({ ok: false });
   });
 });

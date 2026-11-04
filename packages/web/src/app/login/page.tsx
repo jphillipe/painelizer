@@ -10,12 +10,13 @@ import { LoginView } from './_components/login-view';
  * logado, volta ao app (o proxy também faz isso; aqui é a segunda barreira). Sem Supabase configurado, explica em
  * vez de mostrar um formulário que não funciona.
  */
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
+  const { next, error } = await searchParams;
   const to = safeNext(next);
   if (!isAuthConfigured()) return <NotConfigured />;
   if ((await currentUser()) !== undefined) redirect(to);
-  return <LoginView next={to} />;
+  // S32: link de e-mail vencido ou usado volta aqui com a frase (`/auth/confirm`), curta e só texto.
+  return <LoginView next={to} {...(error === undefined ? {} : { notice: error.slice(0, 200) })} />;
 }
 
 function NotConfigured() {

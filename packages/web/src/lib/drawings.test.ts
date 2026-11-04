@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DRAWING_MAX_BYTES, drawingPath, drawingsOfProjectData, movedDrawings, newUploadId, safeDrawingName, tooLargeForStorage, uploadIdOf, uploadIdsOf, withProjectDrawings } from './drawings';
+import { DRAWING_MAX_BYTES, drawingPath, drawingsOfProjectData, extraDrawingsOf, movedDrawings, newUploadId, safeDrawingName, tooLargeForStorage, uploadIdOf, uploadIdsOf, withProjectDrawings } from './drawings';
 
 describe('desenhos no Storage (S22.3)', () => {
   it('nome seguro: só o nome base, caracteres fora do seguro viram _, extensão preservada, 120 no máximo', () => {
@@ -46,5 +46,26 @@ describe('desenhos no Storage (S22.3)', () => {
     expect(tooLargeForStorage(DRAWING_MAX_BYTES + 1)).toBe(true);
     expect(newUploadId()).not.toBe(newUploadId());
     expect(newUploadId()).toMatch(/^[0-9a-f-]{36}$|^up-/);
+  });
+});
+
+describe('desenhos de projeto sem leitura (S32, $drawings)', () => {
+  const a = { name: 'A.pdf', path: 'u1/A.pdf', size: 3, type: 'application/pdf' };
+  const b = { name: 'B.png', path: 'u2/B.png', size: 4, type: 'image/png' };
+
+  it('$drawings conta depois dos da leitura; forma inválida fica fora', () => {
+    expect(extraDrawingsOf({ $drawings: [b, { x: 1 }] })).toEqual([b]);
+    expect(extraDrawingsOf({ $drawings: 'x' })).toEqual([]);
+    expect(drawingsOfProjectData({ walls: [], $drawings: [b] })).toEqual([b]);
+    expect(drawingsOfProjectData({ $panelizer: { reading: { drawings: [a] } }, $drawings: [b] })).toEqual([a, b]);
+  });
+
+  it('trocar a lista devolve cada um ao seu lugar (duplicar)', () => {
+    const data = { name: 'Casa', $panelizer: { version: 1, reading: { drawings: [a] } }, $drawings: [b] };
+    const moved = withProjectDrawings(data, movedDrawings([a, b], 'u9'));
+    expect(moved.$panelizer.reading.drawings).toEqual([{ ...a, path: 'u9/A.pdf' }]);
+    expect(moved.$drawings).toEqual([{ ...b, path: 'u9/B.png' }]);
+    const only = withProjectDrawings({ walls: [], $drawings: [b] }, movedDrawings([b], 'u9'));
+    expect(only).toEqual({ walls: [], $drawings: [{ ...b, path: 'u9/B.png' }] });
   });
 });

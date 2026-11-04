@@ -6,7 +6,7 @@ import { authActionClient } from '@/lib/safe-action';
 import { projectIdSchema } from '@/schemas/project';
 import { deleteProject } from '@/services/projects.service';
 
-/** S22.2: apagar pela lista, depois da confirmação na tela. Sem lixeira: a linha some (decisão em 04-decisoes). */
+/** S22.2; S32: apagar de vez, só da lixeira e só admin (a RLS recusa o resto), depois da confirmação na tela. */
 export const deleteProjectAction = authActionClient.inputSchema(projectIdSchema).action(async ({ parsedInput }) => {
   const result = await deleteProject(parsedInput.id);
   if (result.ok) revalidatePath(PROJECTS_HREF);

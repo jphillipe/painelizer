@@ -154,7 +154,37 @@ protegido. O login do app continua sendo a barreira de verdade: a URL pública s
 ```
 
 `ai: false` quer dizer que `ANTHROPIC_API_KEY` não chegou (segredo ou `--set-secrets`); `auth: false`, que faltam as
-variáveis do Supabase. O script lê esse endpoint no fim de cada deploy e avisa. Fonte: `src/lib/health.ts`.
+variáveis do Supabase; `invites: false` (S32), que não há `SUPABASE_SECRET_KEY` (convidar conta nova fica desligado,
+o resto funciona). O script lê esse endpoint no fim de cada deploy e avisa. Fonte: `src/lib/health.ts`.
+
+**`/api/health?deep=1` (S32)**: só com login (abra no navegador já logado; sem sessão, 401). Consulta de verdade cada
+tabela que o app usa e o bucket, com a sessão de quem pede, e diz o time e o papel:
+
+```json
+{"ok":true,…,"deep":{"ok":true,"supabase":"ok","user":"nick@…","team":{"name":"National Lumber","role":"admin"},
+ "checks":{"projects":{"ok":true,"ms":41},"teams":{"ok":true,"ms":38},…}}}
+```
+
+Uma tabela que falta vem com `"migration": "20261104000200_teams.sql"` (migração não aplicada) e a resposta é 503.
+Fonte: `src/services/health.service.ts`.
+
+### 3d. Chave secret do Supabase (S32, convites por e-mail)
+
+Para um admin convidar quem ainda não tem conta, o servidor precisa da chave *secret* do Supabase (só a action de
+convite a usa; `packages/web/src/lib/supabase/admin.ts`). Sem ela, o app funciona e o admin adiciona apenas contas já
+criadas no painel. Uma vez, no PowerShell (crie antes a chave `panelizer-invites` em Supabase › Settings › API Keys ›
+Secret keys e cole-a no arquivo temporário):
+
+```powershell
+gcloud secrets create supabase-secret-key --data-file="$env:TEMP\supabase-secret.txt" --replication-policy=automatic
+Remove-Item "$env:TEMP\supabase-secret.txt"
+gcloud secrets add-iam-policy-binding supabase-secret-key --member="serviceAccount:$projectNumber-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+gcloud run services update panelizer --region us-east1 --update-secrets "SUPABASE_SECRET_KEY=supabase-secret-key:latest"
+```
+
+O deploy pelo Actions mantém o segredo montado (vem da revisão anterior). O `scripts/deploy-cloud-run.ps1` só monta
+`ANTHROPIC_API_KEY`: se rodar o script, rode o `update-secrets` acima de novo. `/api/health` passa a dizer
+`"invites": true`. Os modelos de e-mail e as Redirect URLs do Supabase estão em `supabase/README.md`, "S32 — aplicar".
 
 Atenção ao build da imagem: ele roda **sem** `.env.local` e sem variáveis. Uma página que lê `process.env` ou o
 usuário sem passar por `cookies()`/`headers()` é pré-renderizada estática nesse build, e o site serve o HTML

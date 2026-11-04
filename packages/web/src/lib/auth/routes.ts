@@ -48,3 +48,36 @@ export function routeFor(pathname: string, search: string, ctx: RouteContext): R
   }
   return { kind: 'pass' };
 }
+
+/** Rota que recebe os links de e-mail do Supabase (S32): convite e "esqueci a senha". Fora do guard de login. */
+export const AUTH_CONFIRM_PATH = '/auth/confirm';
+
+/** Para onde a sessão aberta pelo link leva: a conta, com o aviso de escolher a senha. */
+export const AFTER_INVITE = '/app/account?welcome=1';
+export const AFTER_RECOVERY = '/app/account?reset=1';
+
+interface HeadersLike {
+  get(name: string): string | null;
+}
+
+/**
+ * Origem pública do pedido (S32), para o link do e-mail voltar ao mesmo endereço: atrás do Cloud Run vale o
+ * `x-forwarded-host`/`x-forwarded-proto`; sem eles, o `host` (http em localhost, https fora).
+ */
+export function requestOrigin(headers: HeadersLike): string {
+  const host = (headers.get('x-forwarded-host') ?? headers.get('host') ?? 'localhost:3000').split(',')[0]!.trim();
+  const forwarded = headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+  const proto = forwarded === 'http' || forwarded === 'https' ? forwarded : local ? 'http' : 'https';
+  return `${proto}://${host}`;
+}
+
+/**
+ * `redirectTo` do convite e da recuperação: `<origem>/auth/confirm?next=…`. Com os modelos de e-mail do
+ * `supabase/README.md` (S32) o link já vem com `token_hash`; com o modelo padrão, o Supabase devolve um `code` aqui.
+ * A URL precisa estar em Authentication › URL Configuration › Redirect URLs.
+ */
+export function emailLinkRedirect(headers: HeadersLike, kind: 'invite' | 'recovery'): string {
+  const next = kind === 'invite' ? AFTER_INVITE : AFTER_RECOVERY;
+  return `${requestOrigin(headers)}${AUTH_CONFIRM_PATH}?next=${encodeURIComponent(next)}`;
+}

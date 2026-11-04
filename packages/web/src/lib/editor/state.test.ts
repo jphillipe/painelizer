@@ -268,6 +268,19 @@ describe('M5: moveWalls e setReviewed', () => {
 
 describe('M6: underlay', () => {
   const u = { version: 1 as const, source: { name: 'a.pdf', page: 1 }, image: 'data:image/png;base64,AA', width: 10, height: 10, scale: 1, origin: { x: 0, y: 0 }, rotation: 0 as const, opacity: 0.35, visible: true };
+  it('addDrawings (S32) acrescenta em `$drawings` sem repetir caminho, com histórico', () => {
+    const a = { name: 'A.pdf', path: 'u1/A.pdf', size: 3, type: 'application/pdf' };
+    const b = { name: 'B.png', path: 'u1/B.png', size: 4, type: 'image/png' };
+    const s1 = editorReducer(loaded(), { type: 'addDrawings', drawings: [a] });
+    expect(s1.draft?.extra?.['$drawings']).toEqual([a]);
+    const s2 = editorReducer(s1, { type: 'addDrawings', drawings: [a, b] });
+    expect(s2.draft?.extra?.['$drawings']).toEqual([a, b]);
+    expect(editorReducer(s2, { type: 'addDrawings', drawings: [b] })).toBe(s2);
+    expect(editorReducer(s2, { type: 'addDrawings', drawings: [] })).toBe(s2);
+    const undone = editorReducer(s2, { type: 'undo' });
+    expect(undone.draft?.extra?.['$drawings']).toEqual([a]);
+  });
+
   it('setUnderlay grava em `$underlay` com histórico (sem a vista); remover apaga a chave', () => {
     const s = editorReducer(loaded(), { type: 'setUnderlay', underlay: u });
     expect(draftOf(s).extra?.['$underlay']).toMatchObject({ source: { name: 'a.pdf' } });

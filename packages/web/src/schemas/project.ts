@@ -42,3 +42,9 @@ export const renameProjectSchema = z.object({
 export const projectIdSchema = z.object({
   id: z.string().uuid(),
 });
+
+/** S32: restaurar um retrato do histórico como projeto novo. */
+export const projectRevisionSchema = z.object({
+  id: z.string().uuid(),
+  revision: z.number().int().min(1),
+});

@@ -14,7 +14,7 @@ export type CreateWhen = 'now' | 'on-edit';
 interface CreateRequest {
   generation: number;
   when: CreateWhen;
-  /** Só na cópia ("Save as copy"): o nome do projeto novo. */
+  /** Só na cópia ("Save as new project"): o nome do projeto novo. */
   name?: string;
 }
 
