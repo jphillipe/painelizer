@@ -4,8 +4,9 @@
  * estruturais ficavam nas elevações, cortes e folhas S-, que a IA nunca via.
  *
  * Regras:
- * - Cada página vira uma categoria pelo título do carimbo (`SheetInfo.title`) e pelo nome do arquivo; sem
- *   título reconhecível, pelo número da folha (A-1xx planta, A-2xx elevação, A-3xx corte, S-1xx estrutura).
+ * - Cada página vira uma categoria pelo título do carimbo (`SheetInfo.title`) e, num PDF de uma página ou numa
+ *   página sem título reconhecível, também pelo nome do arquivo (`fileNameCounts`, S25); sem nada disso, pelo
+ *   número da folha (A-1xx planta, A-2xx elevação, A-3xx corte, S-1xx estrutura).
  *   A numeração muda de escritório para escritório (schedules em A-6xx no Horace, em A-8xx no Ringgold), por
  *   isso o título vem antes do número.
  * - Ordem de importância: planta do pavimento pedido, schedules e tipos de parede, estrutural (notas gerais e
@@ -95,15 +96,40 @@ function levelsIn(title: string): number[] {
   return [...out];
 }
 
+/** Algum termo das categorias aparece no texto (título do carimbo): ele basta para classificar a folha. */
+function recognizedTitle(text: string): boolean {
+  const t = text.toUpperCase();
+  return [SCHEDULE, SKIP, STRUCTURAL, DETAILS_ONLY, PLAN, ELEVATION, SECTION].some((re) => re.test(t));
+}
+
+/** Nome do arquivo como texto de título: sem extensão, hífens e sublinhados viram espaço. */
+function fileNameText(fileName: string): string {
+  return fileName.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim();
+}
+
+/**
+ * O nome do arquivo entra no título? (S25, 2026-11-04) Só num PDF de uma página (o conjunto do Horace: uma folha
+ * por arquivo, título no nome) ou numa página cujo carimbo não trouxe título reconhecível. Antes entrava em toda
+ * página: "Bath" ou "Schedule" no nome de um PDF multi-folha classificava todas as páginas dele como `skip` ou
+ * `schedule`.
+ */
+export function fileNameCounts(info: Pick<SheetInfo, 'title'>, fileName: string, pagesInFile: number): boolean {
+  if (fileNameText(fileName) === '') return false;
+  return pagesInFile <= 1 || info.title === undefined || !recognizedTitle(info.title);
+}
+
 /**
  * Categoria de uma folha.
  *
- * @param fileName nome do arquivo (o conjunto do Horace vem com uma folha por arquivo, título no nome)
- * @param level    pavimento pedido; planta de outro pavimento vira `otherPlan`
+ * @param fileName    nome do arquivo (o conjunto do Horace vem com uma folha por arquivo, título no nome)
+ * @param level       pavimento pedido; planta de outro pavimento vira `otherPlan`
+ * @param pagesInFile páginas do PDF de onde a folha vem: com mais de uma, o nome só conta em página sem título
+ *                    reconhecível (`fileNameCounts`)
  */
-export function classifySheet(info: Pick<SheetInfo, 'sheet' | 'title'>, fileName = '', level?: number): SheetCategory {
+export function classifySheet(info: Pick<SheetInfo, 'sheet' | 'title'>, fileName = '', level?: number, pagesInFile = 1): SheetCategory {
   const parts = info.sheet === undefined ? undefined : sheetParts(info.sheet);
-  const title = `${info.title ?? ''} ${fileName.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ')}`.toUpperCase();
+  const name = fileNameCounts(info, fileName, pagesInFile) ? fileNameText(fileName) : '';
+  const title = `${info.title ?? ''} ${name}`.toUpperCase();
   if (parts !== undefined && SKIPPED_DISCIPLINES.has(parts.discipline)) return 'skip';
 
   const isStructural = parts?.discipline.startsWith('S') === true;
@@ -143,6 +169,11 @@ function planFor(title: string, level: number | undefined): SheetCategory {
   return levels.length === 0 || levels.includes(level) ? 'plan' : 'otherPlan';
 }
 
+/** Chave de uma página no conjunto: índice da fonte em `sources` e página 1-based (`"2:15"`). Única grafia (S25). */
+export function pageKey(source: number, page: number): string {
+  return `${source}:${page}`;
+}
+
 export interface Candidate {
   /** Índice do arquivo em `sources`. */
   source: number;
@@ -156,14 +187,20 @@ export interface Candidate {
   titled?: boolean;
 }
 
+/** Cópia de uma folha que a seleção descartou porque a mesma folha já ia por outra página. */
+export interface DuplicateCandidate {
+  dropped: Candidate;
+  kept: Candidate;
+}
+
 /**
- * Escolhe as páginas dentro do orçamento. Devolve as escolhidas (ordem de arquivo e página) e as que ficaram
- * de fora por orçamento (para avisar).
+ * Escolhe as páginas dentro do orçamento. Devolve as escolhidas (ordem de arquivo e página), as que ficaram
+ * de fora por orçamento e as cópias de folha descartadas (as duas para avisar; S25: a cópia saía calada).
  */
 export function choosePages(
   candidates: readonly Candidate[],
   budget: { maxPages: number; maxBytes: number } = { maxPages: AUTO_PAGE_BUDGET, maxBytes: AUTO_BYTE_BUDGET },
-): { chosen: Candidate[]; dropped: Candidate[] } {
+): { chosen: Candidate[]; dropped: Candidate[]; duplicates: DuplicateCandidate[] } {
   // Mesma folha em dois arquivos (a planta de segurança reusa "A-101"): fica uma, a com título no carimbo.
   const bySheet = new Map<string, Candidate>();
   for (const c of candidates) {
@@ -171,7 +208,12 @@ export function choosePages(
     const seen = bySheet.get(c.sheet);
     if (seen === undefined || (!seen.titled && c.titled === true)) bySheet.set(c.sheet, c);
   }
-  const duplicate = (c: Candidate) => c.sheet !== undefined && bySheet.get(c.sheet) !== c;
+  const duplicate = (c: Candidate) => c.category !== 'skip' && c.sheet !== undefined && bySheet.get(c.sheet) !== c;
+  const order = (a: Candidate, b: Candidate) => a.source - b.source || a.page - b.page;
+  const duplicates = candidates
+    .filter(duplicate)
+    .sort(order)
+    .map((c) => ({ dropped: c, kept: bySheet.get(c.sheet!)! }));
   const wanted = candidates
     .filter((c) => c.category !== 'skip' && !duplicate(c))
     .map((c, i) => ({ c, i }))
@@ -187,6 +229,5 @@ export function choosePages(
       dropped.push(c);
     }
   }
-  const order = (a: Candidate, b: Candidate) => a.source - b.source || a.page - b.page;
-  return { chosen: chosen.sort(order), dropped: dropped.sort(order) };
+  return { chosen: chosen.sort(order), dropped: dropped.sort(order), duplicates };
 }

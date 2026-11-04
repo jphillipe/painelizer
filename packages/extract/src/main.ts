@@ -14,8 +14,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { buildRequest, droppedWarning, ExtractError, extractWalls, finish, selectPages, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
-import { formatPageText, readPageText } from './pdf';
+import { buildRequest, ExtractError, extractWalls, finish, selectionWarnings, selectPages, type Effort, type ExtractOptions, type ExtractRequest, type ExtractResult } from './client';
+import { noticeText } from './notices';
+import { formatPageText, openPdf } from './pdf';
+import { pageKey } from './select';
 import { RESPONSE_SCHEMA } from './prompt';
 import type { TileOptions } from './tiles';
 
@@ -309,7 +311,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
     // Páginas: explícitas ou pelo carimbo (planta, schedules, estrutural, elevações e cortes; `select.ts`).
     let pages = args.pages;
     if (pages === undefined) {
-      const name = inputPath.split(/[\/]/).pop() ?? 'planta.pdf';
+      const name = inputPath.split(/[\\/]/).pop() ?? 'planta.pdf';
       const selection = await selectPages([{ kind: 'pdf', name, data: pdf }], args.level);
       pages = selection.pages[0] ?? [];
       if (pages.length === 0) {
@@ -317,15 +319,20 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         return 1;
       }
       const label = (p: number) => {
-        const info = selection.sheets.get(`0:${p}`);
+        const info = selection.sheets.get(pageKey(0, p));
         return `${p}=${info?.sheet ?? '?'}`;
       };
       io.stdout(`páginas pelo carimbo: ${pages.map(label).join(' ')}`);
-      for (const w of droppedWarning(selection.dropped)) io.stderr(`aviso: ${w}`);
+      for (const w of selectionWarnings(selection)) io.stderr(`aviso: ${noticeText(w)}`);
     }
 
     io.mkdir(outDir);
-    for (const p of pages) write(`paginas/${p}.txt`, formatPageText(await readPageText(pdf, p)) + '\n');
+    const opened = await openPdf(pdf);
+    try {
+      for (const p of pages) write(`paginas/${p}.txt`, formatPageText(await opened.pageText(p)) + '\n');
+    } finally {
+      await opened.close();
+    }
 
     const hints = strip({ level: args.level, projectName: args.name, extra: args.hint });
     const building = strip({ groundSnowLoad: args.snow, buildingWidth: args.width, windSpeed: args.wind, exposure: args.exposure });
@@ -344,7 +351,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
 
     let result: ExtractResult;
     if (args.dryRun) {
-      const { params, pdfs, tiles, tileWarnings } = await buildRequest(req, opts);
+      const { params, pdfs, tiles, tileWarnings, textChars, provenance } = await buildRequest(req, opts);
       const written: Record<string, unknown>[] = [];
       for (const input of pdfs) {
         for (const t of input.tiles ?? []) {
@@ -370,6 +377,8 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         model: params.model,
         max_tokens: params.max_tokens,
         effort: params.output_config.effort,
+        provenance,
+        text_chars: textChars,
         system: params.system[0]?.text,
         pages,
         pdf_bytes: pdf.byteLength,
@@ -379,7 +388,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         schema: RESPONSE_SCHEMA,
       };
       write('pedido.json', JSON.stringify(summary, null, 2) + '\n');
-      for (const w of tileWarnings) io.stderr(`aviso: ${w}`);
+      for (const w of tileWarnings) io.stderr(`aviso: ${noticeText(w)}`);
       io.stdout(
         `dry-run: ${pages.length} página(s), ${tiles.count} recorte(s) → ${outDir} (paginas/${tiles.count > 0 ? ', recortes/' : ''}, pedido.json); nada enviado`,
       );
@@ -401,8 +410,8 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
       `${result.output.walls.length} parede(s), ${openings} abertura(s) → ${outDir} ` +
         `(${result.model}; ${result.usage.inputTokens} tokens de entrada, ${result.usage.outputTokens} de saída${tilesSent > 0 ? `; ${tilesSent} recorte(s)` : ''})`,
     );
-    for (const w of result.warnings) io.stderr(`aviso: ${w}`);
-    for (const p of result.problems) io.stderr(`problema: ${p}`);
+    for (const w of result.warnings) io.stderr(`aviso: ${noticeText(w)}`);
+    for (const p of result.problems) io.stderr(`problema: ${noticeText(p)}`);
     if (result.problems.length > 0) io.stderr('projeto.json precisa de ajuste antes do `panelizer build`; ver revisao.md');
     return 0;
   } catch (e) {

@@ -1,5 +1,5 @@
-export { readPageText, formatPageText, listSheets, subsetPdf, pageCount, renderPageTiles } from './pdf';
-export type { PageText, TextLine, TextRun, SheetInfo, RenderedTile } from './pdf';
+export { readPageText, formatPageText, listSheets, subsetPdf, pageCount, renderPageTiles, openPdf } from './pdf';
+export type { PageText, TextLine, TextRun, SheetInfo, RenderedTile, PdfFile } from './pdf';
 export { planTiles, allocateTiles, tileCaption, tileTokens, estimateTileBytes, DEFAULT_TILE_OPTIONS, TILE_MAX_EDGE, TILE_MAX_TOKENS, MAX_IMAGES_PER_REQUEST } from './tiles';
 export type { TileOptions, TileGrid, TileRect, TilePage, TileFormat } from './tiles';
 export { ExtractionOutput, WallOut, OpeningOut, OpeningTypeOut, WallTypeOut, HeaderScheduleOut, RoomOut, PositionSource } from './schema';
@@ -18,6 +18,13 @@ export {
   autoPages,
   selectPages,
   droppedWarning,
+  selectionWarnings,
+  usageOf,
+  PROMPT_HASH,
+  DEFAULT_EFFORT,
+  EFFORTS,
+  REQUEST_TIMEOUT_MS,
+  MAX_RETRIES,
   API_REQUEST_LIMIT,
   apiErrorInfo,
   ExtractError,
@@ -26,6 +33,18 @@ export {
   MAX_AUTO_PAGES,
   tileOptionsOf,
 } from './client';
-export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, ExtractProgress, ExtractPreviewInfo, Effort, DroppedPage, TilesInfo, TiledPage, PageSelection } from './client';
-export { classifySheet, choosePages, tiledCategory, AUTO_PAGE_BUDGET, AUTO_BYTE_BUDGET } from './select';
-export type { SheetCategory, Candidate } from './select';
+export type { ExtractRequest, ExtractSource, ExtractOptions, ExtractResult, ExtractProgress, ExtractPreviewInfo, Effort, DroppedPage, DuplicatePage, TilesInfo, TiledPage, PageSelection, ExtractUsage, ReadingProvenance } from './client';
+export { classifySheet, choosePages, tiledCategory, pageKey, fileNameCounts, AUTO_PAGE_BUDGET, AUTO_BYTE_BUDGET } from './select';
+export type { SheetCategory, Candidate, DuplicateCandidate } from './select';
+export {
+  EXTRACT_WARNING_CODES,
+  EXTRACT_PROBLEM_CODES,
+  EXTRACT_ERROR_CODES,
+  LEGACY_EXTRACT_CODES,
+  ExtractInputError,
+  extractionNotice,
+  legacyNotice,
+  noticeText,
+  readingNotices,
+} from './notices';
+export type { ExtractErrorCode, ExtractProblemCode, ExtractWarningCode, ReadingNotice } from './notices';

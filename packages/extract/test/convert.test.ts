@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseProject, type Project } from 'cli/project';
 import { convert, derivedStudLengths, reviewReport, toProject } from '../src/convert';
+import { noticeText } from '../src/notices';
 import { ExtractionOutput } from '../src/schema';
 
 const ringgold = ExtractionOutput.parse(JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')));
@@ -36,7 +37,7 @@ describe('convert — Ringgold em formato solto', () => {
     // duas, como o checkpoint) e o aviso tem que chegar ao humano pelo relatório, não sumir.
     expect(result.problems).toEqual([]);
     expect(result.warnings).toHaveLength(2);
-    for (const w of result.warnings) {
+    for (const w of result.warnings.map(noticeText)) {
       expect(w).toMatch(/^1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede S2, abertura S2-(D1|A): 1 jack por lado .*8\.25".*hipótese P30/);
     }
   });
@@ -92,7 +93,7 @@ describe('convert — formato de planta', () => {
     expect(p.config.building).toEqual({ groundSnowLoad: 30, buildingWidth: 336 });
     // Sem vento no fixture: o motor avisa (kings não conferidos) e o aviso chega ao revisor.
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toMatch(/^1-W1-P1 WIND_SPEED_MISSING: /);
+    expect(noticeText(result.warnings[0]!)).toMatch(/^1-W1-P1 WIND_SPEED_MISSING: /);
     expect(result.problems).toEqual([]);
   });
 
@@ -103,7 +104,7 @@ describe('convert — formato de planta', () => {
     };
     const r = convert(noLoads);
     expect(r.problems).toHaveLength(1);
-    expect(r.problems[0]).toMatch(/^motor: parede W1, abertura W1-J1: .*config\.building/);
+    expect(noticeText(r.problems[0]!)).toMatch(/^motor: parede W1, abertura W1-J1: .*config\.building/);
     expect(reviewReport(noLoads, r)).toContain('- motor: parede W1, abertura W1-J1');
   });
 
@@ -120,7 +121,7 @@ describe('convert — formato de planta', () => {
     };
     const r = convert(broken);
     expect(r.problems).toHaveLength(1);
-    expect(r.problems[0]).toMatch(/start\/end|planta/);
+    expect(noticeText(r.problems[0]!)).toMatch(/start\/end|planta/);
   });
 
   it('building só entra com neve e largura; só vento não basta', () => {
@@ -141,14 +142,14 @@ describe('altura de parede informada pelo humano', () => {
   it('sem cortes e sem altura informada: problema claro, sem passar pelo parser', () => {
     const r = convert(noHeight);
     expect(r.problems).toHaveLength(1);
-    expect(r.problems[0]).toMatch(/^altura: .*4 parede\(s\) sem altura: N1, S1, S2, I1\)/);
+    expect(noticeText(r.problems[0]!)).toMatch(/^altura: .*4 parede\(s\) sem altura: N1, S1, S2, I1\)/);
     const walls = r.project['walls'] as Record<string, unknown>[];
     expect(walls[0]).not.toHaveProperty('height');
   });
 
   it('com wallHeight nas opções, as paredes ganham a altura e o pré-corte é derivado dela', () => {
     const r = convert(noHeight, { wallHeight: `9' - 1 1/8"` });
-    expect(r.problems.filter((p) => p.startsWith('altura'))).toEqual([]);
+    expect(r.problems.map(noticeText).filter((p) => p.startsWith('altura'))).toEqual([]);
     const walls = r.project['walls'] as Record<string, unknown>[];
     expect(walls.every((w) => w['height'] === `9' - 1 1/8"`)).toBe(true);
     expect((r.project['config'] as Record<string, unknown>)['studLength']).toEqual([104.625]);
@@ -166,7 +167,7 @@ describe('altura de parede informada pelo humano', () => {
       windSpeed: 130, // o lido vence
       exposure: 'B',
     });
-    expect(r.problems.filter((p) => p.includes('config.building'))).toEqual([]);
+    expect(r.problems.map(noticeText).filter((p) => p.includes('config.building'))).toEqual([]);
   });
 
   it('pavimentos acima e apoio do piso entram só em parede portante sem o dado', () => {
@@ -218,7 +219,7 @@ describe('reviewReport', () => {
     expect(report).toContain('- abertura W1-J1 (W1): sem posição');
     // Abertura sem posição não trava mais o parser: sai do projeto e vira aviso (decisão de 2026-10-15).
     expect(converted.problems).toEqual([]);
-    expect(report).toContain('- extração ABERTURA_SEM_POSICAO: parede W1, abertura W1-J1');
+    expect(report).toContain('- extração OPENING_UNPLACED: parede W1, abertura W1-J1');
   });
 
   it('abertura sem posição: fora do projeto, um aviso por abertura, e o resto da parede sai em painéis', () => {
@@ -230,19 +231,19 @@ describe('reviewReport', () => {
     };
     const r = convert(unplaced, { studLength: [92.625, 104.625] });
     expect(r.problems).toEqual([]);
-    expect(r.warnings[0]).toBe(
-      'extração ABERTURA_SEM_POSICAO: parede S2, abertura S2-D1 (1): a leitura não achou a cota do eixo — os ' +
+    expect(noticeText(r.warnings[0]!)).toBe(
+      'extração OPENING_UNPLACED: parede S2, abertura S2-D1 (1): a leitura não achou a cota do eixo — os ' +
         'painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição',
     );
     const s2 = (r.project['walls'] as { id: string; openings: { id: string }[] }[]).find((w) => w.id === 'S2')!;
     expect(s2.openings.map((o) => o.id)).toEqual(['S2-A']);
     // Sem a porta vizinha, a janela de S2 não precisa mais da hipótese P30.
-    expect(r.warnings.filter((w) => w.includes('hipótese P30'))).toEqual([]);
+    expect(r.warnings.map(noticeText).filter((w) => w.includes('hipótese P30'))).toEqual([]);
   });
 
   it('avisos do motor ganham seção própria', () => {
     const r = convert(ringgold);
-    const withWarning = { ...r, warnings: ['1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo'] };
+    const withWarning = { ...r, warnings: [{ source: 'engine' as const, panelId: '1-S2-P1', code: 'HEADER_JACKS_BELOW_TABLE', message: 'exemplo' }] };
     const report = reviewReport(ringgold, withWarning);
     expect(report).toContain('## Avisos do motor\n\n- 1-S2-P1 HEADER_JACKS_BELOW_TABLE: exemplo');
     expect(reviewReport(ringgold, { ...r, warnings: [] })).not.toContain('## Avisos do motor');
@@ -268,7 +269,7 @@ describe('alturas: projeto, humano, padrão da fábrica (P2)', () => {
   it('nada no projeto nem do humano: topo do RO a 82 1/2" e um aviso com as aberturas', () => {
     const r = convert(bare, { studLength: [92.625, 104.625] });
     expect(config(r)['headerHeight']).toBe(`6' - 10 1/2"`);
-    const w = r.warnings.find((x) => x.startsWith('extração ALTURA_PADRAO'));
+    const w = r.warnings.map(noticeText).find((x) => x.startsWith('extração DEFAULT_HEADER_HEIGHT'));
     expect(w).toContain('5 abertura(s)');
     expect(w).toContain('N1-A, S1-A, S2-D1, S2-A, I1-U2');
   });
@@ -278,13 +279,13 @@ describe('alturas: projeto, humano, padrão da fábrica (P2)', () => {
     const types = config(r)['openingTypes'] as Record<string, { sillHeight?: string }>;
     expect(types['A2']!.sillHeight).toBe(`2' - 0"`);
     expect(types['1']!.sillHeight).toBeUndefined();
-    expect(r.warnings.find((x) => x.startsWith('extração ALTURA_PADRAO'))).toMatch(/2 abertura\(s\) .*: S2-D1, I1-U2 —/);
+    expect(r.warnings.map(noticeText).find((x) => x.startsWith('extração DEFAULT_HEADER_HEIGHT'))).toMatch(/2 abertura\(s\) .*: S2-D1, I1-U2 —/);
   });
 
   it('altura de header do humano: vale para o projeto e não há aviso', () => {
     const r = convert(bare, { studLength: [92.625, 104.625], headerHeight: `7' - 0"` });
     expect(config(r)['headerHeight']).toBe(`7' - 0"`);
-    expect(r.warnings.filter((x) => x.startsWith('extração ALTURA_PADRAO'))).toEqual([]);
+    expect(r.warnings.map(noticeText).filter((x) => x.startsWith('extração DEFAULT_HEADER_HEIGHT'))).toEqual([]);
   });
 
   it('a leitura vence o humano', () => {
@@ -312,8 +313,8 @@ describe('abertura sem tag com medida incompleta', () => {
     const r = convert(withOpening({}), { studLength: [92.625, 104.625] });
     expect(r.problems).toEqual([]);
     expect(opening(r)[0]).toMatchObject({ id: 'I1-OP-1', roughWidth: `3' - 0"`, roughHeight: `6' - 10 1/2"` });
-    expect(r.warnings).toContain(
-      `extração ALTURA_RO_PORTA: parede I1, abertura I1-OP-1 (door): a leitura deu a largura do RO (3' - 0") mas não ` +
+    expect(r.warnings.map(noticeText)).toContain(
+      `extração DOOR_RO_HEIGHT_ASSUMED: parede I1, abertura I1-OP-1 (door): a leitura deu a largura do RO (3' - 0") mas não ` +
         `a altura — RO do subfloor até a base do header, 6' - 10 1/2" (P4); confira`,
     );
   });
@@ -327,7 +328,7 @@ describe('abertura sem tag com medida incompleta', () => {
     const r = convert(withOpening({ roughWidth: null }), { studLength: [92.625, 104.625] });
     expect(r.problems).toEqual([]);
     expect(opening(r)).toEqual([]);
-    expect(r.warnings.find((w) => w.startsWith('extração ABERTURA_SEM_MEDIDA: parede I1, abertura I1-OP-1'))).toBeDefined();
+    expect(r.warnings.map(noticeText).find((w) => w.startsWith('extração OPENING_UNSIZED: parede I1, abertura I1-OP-1'))).toBeDefined();
   });
 
   it('janela sem tag e sem altura: fora (não há de onde tirar a altura)', () => {

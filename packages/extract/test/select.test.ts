@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTO_PAGE_BUDGET, choosePages, classifySheet, sheetFromFileName, sheetParts, type Candidate } from '../src/select';
+import { AUTO_PAGE_BUDGET, choosePages, classifySheet, fileNameCounts, pageKey, sheetFromFileName, sheetParts, type Candidate } from '../src/select';
 
 describe('classifySheet', () => {
   it.each([
@@ -137,5 +137,63 @@ describe('choosePages — mesma folha em dois arquivos', () => {
 
   it('sem título em nenhuma: a primeira', () => {
     expect(choosePages([c(3, 'A-101', false), c(4, 'A-101', false)]).chosen.map((x) => x.source)).toEqual([3]);
+  });
+});
+
+describe('classifySheet — nome do arquivo só em PDF de 1 página ou página sem título (S25, B1)', () => {
+  const name = 'Ringgold-Bath-Schedule-Set.pdf';
+
+  it('PDF multi-folha: "Bath"/"Schedule" no nome não mexem nas páginas com título reconhecível', () => {
+    expect(classifySheet({ sheet: 'A-101', title: 'FIRST FLOOR PLAN' }, name, undefined, 12)).toBe('plan');
+    expect(classifySheet({ sheet: 'A-201', title: 'EXTERIOR ELEVATIONS' }, name, undefined, 12)).toBe('elevation');
+    expect(classifySheet({ sheet: 'S-101', title: 'FOUNDATION PLAN' }, name, undefined, 12)).toBe('skip');
+    // Antes: SCHEDULE no nome era testado primeiro e todas viravam `schedule`.
+    expect(classifySheet({ sheet: 'A-101', title: 'FIRST FLOOR PLAN' }, name)).toBe('schedule');
+  });
+
+  it('PDF multi-folha: página sem título (ou com título sem termo conhecido) ainda usa o nome', () => {
+    expect(classifySheet({ sheet: 'A-201' }, name, undefined, 12)).toBe('schedule');
+    expect(classifySheet({ sheet: 'A-201', title: 'RINGGOLD ST MULTIFAMILY' }, 'Cover.pdf', undefined, 12)).toBe('skip');
+    expect(classifySheet({ sheet: 'A-201', title: 'RINGGOLD ST MULTIFAMILY' }, 'set.pdf', undefined, 12)).toBe('elevation');
+  });
+
+  it('PDF de 1 página (Horace): o nome entra mesmo com título no carimbo', () => {
+    expect(classifySheet({ sheet: 'A-452', title: 'ENLARGED PLANS & ELEVATIONS' }, 'A-452-ENLARGED-BATHROOM-PLANS-&-ELEVATIONS-Rev.2.pdf', undefined, 1)).toBe('skip');
+    expect(classifySheet({ sheet: 'A-606', title: 'NEW WING & UNITS' }, 'A-606-DOOR-SCHEDULE-NEW-WING-&-UNITS-Rev.2.pdf', undefined, 1)).toBe('schedule');
+  });
+
+  it('fileNameCounts', () => {
+    expect(fileNameCounts({ title: 'FIRST FLOOR PLAN' }, 'x-bath.pdf', 3)).toBe(false);
+    expect(fileNameCounts({}, 'x-bath.pdf', 3)).toBe(true);
+    expect(fileNameCounts({ title: 'FIRST FLOOR PLAN' }, 'x-bath.pdf', 1)).toBe(true);
+    expect(fileNameCounts({ title: 'FIRST FLOOR PLAN' }, '', 1)).toBe(false);
+  });
+});
+
+describe('choosePages — cópias descartadas viram lista (S25, B8)', () => {
+  const c = (source: number, page: number, sheet: string, titled: boolean, category: Candidate['category'] = 'plan'): Candidate => ({ source, page, category, bytes: 10, sheet, titled });
+
+  it('devolve cada cópia descartada com a página que foi no lugar', () => {
+    const kept = c(1, 1, 'A-101', true);
+    const r = choosePages([c(0, 1, 'A-101', false), kept, c(2, 1, 'A-102', false), c(3, 4, 'A-102', false)]);
+    expect(r.chosen.map((x) => [x.source, x.page])).toEqual([
+      [1, 1],
+      [2, 1],
+    ]);
+    expect(r.duplicates.map((d) => [d.dropped.source, d.dropped.page, d.kept.source, d.kept.page])).toEqual([
+      [0, 1, 1, 1],
+      [3, 4, 2, 1],
+    ]);
+  });
+
+  it('página `skip` com o mesmo número não é cópia (não ia de qualquer jeito)', () => {
+    const r = choosePages([c(0, 1, 'A-101', true), c(1, 1, 'A-101', false, 'skip')]);
+    expect(r.duplicates).toEqual([]);
+  });
+});
+
+describe('pageKey', () => {
+  it('índice da fonte e página', () => {
+    expect(pageKey(2, 15)).toBe('2:15');
   });
 });

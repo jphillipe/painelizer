@@ -11,7 +11,7 @@
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { buildRequest, ExtractError, extractWalls, type Effort, type ExtractOptions, type ExtractRequest, type ExtractSource } from '../src/client';
-import { formatPageText, readPageText } from '../src/pdf';
+import { formatPageText } from '../src/pdf';
 import type { ImageMediaType } from '../src/prompt';
 
 const IMAGE_TYPES: Record<string, ImageMediaType> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
@@ -71,11 +71,10 @@ async function main(argv: string[]): Promise<number> {
   const opts: ExtractOptions = { ...(effort === undefined ? {} : { effort }) };
 
   const started = Date.now();
-  const { params, pagesSent, pagesDropped, tiles: tileInfo, tileWarnings, pdfs } = await buildRequest(req, opts);
-  for (const sent of pagesSent) {
-    const src = sources.find((s) => s.name === sent.name);
-    if (src?.kind !== 'pdf') continue;
-    for (const p of sent.pages) write(`paginas/${sent.name.replace(/\.pdf$/i, '')}-${p}.txt`, formatPageText(await readPageText(src.data, p)) + '\n');
+  const { params, pagesSent, pagesDropped, tiles: tileInfo, tileWarnings, selectionWarnings, pdfs, textChars, provenance } = await buildRequest(req, opts);
+  // O texto posicionado já vem lido em cada `PdfInput` (S25: sem reabrir o PDF nem procurar a fonte pelo nome).
+  for (const input of pdfs) {
+    for (const t of input.pages) write(`paginas/${input.name.replace(/\.pdf$/i, '')}-${t.page}.txt`, formatPageText(t) + '\n');
   }
   const tilesWritten: Record<string, unknown>[] = [];
   for (const input of pdfs) {
@@ -91,6 +90,8 @@ async function main(argv: string[]): Promise<number> {
       {
         model: params.model,
         effort: params.output_config.effort,
+        provenance,
+        text_chars: textChars,
         pagesSent,
         pagesDropped,
         tiles: tilesWritten,
@@ -104,7 +105,7 @@ async function main(argv: string[]): Promise<number> {
   );
   const pages = pagesSent.reduce((n, p) => n + p.pages.length, 0);
   process.stdout.write(`${pages} página(s) de ${pagesSent.length} PDF(s), ${pagesDropped.length} fora, ${tileInfo.count} recorte(s) (${(tileInfo.encodedBytes / 1048576).toFixed(1)} MB) em ${((Date.now() - started) / 1000).toFixed(0)} s\n`);
-  for (const w of tileWarnings) process.stderr.write(`aviso: ${w}\n`);
+  for (const w of [...selectionWarnings, ...tileWarnings]) process.stderr.write(`aviso: ${w}\n`);
   if (dryRun) {
     process.stdout.write(`dry-run → ${outDir}; nada enviado\n`);
     return 0;
@@ -129,7 +130,7 @@ async function main(argv: string[]): Promise<number> {
   write('projeto.json', JSON.stringify(result.project, null, 2) + '\n');
   write('extracao.json', JSON.stringify(result.output, null, 2) + '\n');
   write('revisao.md', result.report);
-  write('resultado.json', JSON.stringify({ model: result.model, usage: result.usage, pagesSent: result.pagesSent, pagesDropped: result.pagesDropped, tilesSent: result.tilesSent, warnings: result.warnings, problems: result.problems, seconds: Math.round((Date.now() - started) / 1000) }, null, 2) + '\n');
+  write('resultado.json', JSON.stringify({ model: result.model, provenance: result.provenance, usage: result.usage, pagesSent: result.pagesSent, pagesDropped: result.pagesDropped, tilesSent: result.tilesSent, warnings: result.warnings, problems: result.problems, seconds: Math.round((Date.now() - started) / 1000) }, null, 2) + '\n');
   const openings = result.output.walls.reduce((n, w) => n + w.openings.length, 0);
   process.stdout.write(`${result.output.walls.length} parede(s), ${openings} abertura(s), ${result.output.rooms.length} cômodo(s) → ${outDir} (${result.usage.inputTokens} in / ${result.usage.outputTokens} out, ${Math.round((Date.now() - started) / 1000)} s)\n`);
   for (const w of result.warnings) process.stderr.write(`aviso: ${w}\n`);

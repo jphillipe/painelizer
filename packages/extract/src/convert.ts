@@ -7,6 +7,7 @@
 import { parseFeetInches } from 'core';
 import { buildProject, BuildError } from 'cli/build';
 import { projectFrom, ProjectError } from 'cli/project';
+import { extractionNotice, noticeText, type ReadingNotice } from './notices';
 import type { ExtractionOutput, OpeningOut, WallOut } from './schema';
 
 export interface ConvertOptions {
@@ -46,13 +47,13 @@ export function wallsWithoutHeight(out: ExtractionOutput, opts: ConvertOptions):
 export interface Converted {
   /** JSON de entrada do CLI (`panelizer build`). */
   project: Record<string, unknown>;
-  /** O que impede o `build`: erros do parser do CLI (`parser: …`) ou do motor (`motor: …`). Vazio = o build roda. */
-  problems: string[];
+  /** O que impede o `build`: erros do parser do CLI, do motor ou dado faltando (altura). Vazio = o build roda. */
+  problems: ReadingNotice[];
   /**
-   * Avisos (`<painel> <código>: mensagem`): da extração (abertura sem posição, fora do projeto) e do motor no
-   * build. Não impedem nada, mas o revisor precisa ver.
+   * Avisos da extração (abertura sem posição, fora do projeto) e do motor no build (com `panelId`). Não impedem
+   * nada, mas o revisor precisa ver. Texto do CLI: `noticeText`.
    */
-  warnings: string[];
+  warnings: ReadingNotice[];
 }
 
 const PLATE = 1.5;
@@ -75,7 +76,7 @@ function sillOf(t: ExtractionOutput['openingTypes'][number], opts: ConvertOption
  * Aviso das aberturas que ficam com a altura padrão da fábrica (P2) porque nem o projeto nem o humano deram:
  * portas sem altura própria e janelas sem altura própria nem peitoril. Vazio quando a altura veio do projeto.
  */
-export function defaultHeightWarnings(out: ExtractionOutput, opts: ConvertOptions = {}): string[] {
+export function defaultHeightWarnings(out: ExtractionOutput, opts: ConvertOptions = {}): ReadingNotice[] {
   const header = projectHeaderHeight(out, opts);
   if (!header.factory) return [];
   const types = new Map(out.openingTypes.map((t) => [t.tag, t]));
@@ -91,9 +92,14 @@ export function defaultHeightWarnings(out: ExtractionOutput, opts: ConvertOption
   }
   if (ids.length === 0) return [];
   return [
-    `extração ALTURA_PADRAO: ${ids.length} abertura(s) sem altura no projeto ficam com o topo do RO a ${FACTORY_HEADER_HEIGHT} ` +
-      `do subfloor (padrão da fábrica, P2): ${ids.slice(0, 10).join(', ')}${ids.length > 10 ? '…' : ''} — confira nas ` +
-      'elevações ou informe a altura do header / do peitoril',
+    extractionNotice(
+      'DEFAULT_HEADER_HEIGHT',
+      `${ids.length} abertura(s) sem altura no projeto ficam com o topo do RO a ${FACTORY_HEADER_HEIGHT} ` +
+        `do subfloor (padrão da fábrica, P2): ${ids.slice(0, 10).join(', ')}${ids.length > 10 ? '…' : ''} — confira nas ` +
+        'elevações ou informe a altura do header / do peitoril',
+      {},
+      { count: ids.length, height: FACTORY_HEADER_HEIGHT, openingIds: ids },
+    ),
   ];
 }
 
@@ -162,27 +168,42 @@ function isUnplaced(o: OpeningOut): boolean {
  * Aberturas sem posição ficam fora do projeto (decisão do humano, 2026-10-15): a parede sai em painéis sem
  * elas e o revisor recebe um aviso por abertura, em vez de nada ser gerado até existir o editor.
  */
-export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {}): string[] {
+export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {}): ReadingNotice[] {
   const header = projectHeaderHeight(out, opts).value;
   return out.walls.flatMap((w) =>
     w.openings.flatMap((o) => {
       const what = `parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'})`;
+      const where = { wallId: w.id, openingId: o.id };
+      const kind = { ...(o.tag === null ? {} : { tag: o.tag }), ...(o.type === null ? {} : { type: o.type }) };
       if (isUnplaced(o)) {
         return [
-          `extração ABERTURA_SEM_POSICAO: ${what}: a leitura não achou a cota do eixo — os painéis da parede saem ` +
-            'SEM esta abertura; enquadre na obra ou informe a posição',
+          extractionNotice(
+            'OPENING_UNPLACED',
+            `${what}: a leitura não achou a cota do eixo — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição`,
+            where,
+            kind,
+          ),
         ];
       }
       if (isUnsized(o)) {
         return [
-          `extração ABERTURA_SEM_MEDIDA: ${what}: sem tag no schedule e sem largura/altura do RO na leitura — os ` +
-            'painéis da parede saem SEM esta abertura; enquadre na obra ou informe o RO',
+          extractionNotice(
+            'OPENING_UNSIZED',
+            `${what}: sem tag no schedule e sem largura/altura do RO na leitura — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe o RO`,
+            where,
+            kind,
+          ),
         ];
       }
       if (needsDoorHeight(o)) {
+        const headerHeight = o.headerHeight ?? header;
         return [
-          `extração ALTURA_RO_PORTA: ${what}: a leitura deu a largura do RO (${o.roughWidth}) mas não a altura — ` +
-            `RO do subfloor até a base do header, ${o.headerHeight ?? header} (P4); confira`,
+          extractionNotice(
+            'DOOR_RO_HEIGHT_ASSUMED',
+            `${what}: a leitura deu a largura do RO (${o.roughWidth}) mas não a altura — RO do subfloor até a base do header, ${headerHeight} (P4); confira`,
+            where,
+            { ...kind, roughWidth: o.roughWidth ?? '', headerHeight },
+          ),
         ];
       }
       return [];
@@ -199,26 +220,34 @@ function isScaled(o: OpeningOut): boolean {
  * Aberturas com posição estimada pela escala (decisão do humano, 2026-10-30): ficam no projeto no lugar
  * aproximado, com um aviso por abertura para o revisor conferir a cota — melhor do que sumir da parede.
  */
-export function estimatedOpenings(out: ExtractionOutput): string[] {
+export function estimatedOpenings(out: ExtractionOutput): ReadingNotice[] {
   return out.walls.flatMap((w) =>
     w.openings
       .filter((o) => isScaled(o) && !isUnsized(o))
-      .map(
-        (o) =>
-          `extração ABERTURA_ESTIMADA: parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): posição medida no desenho pela ` +
-          `escala, sem cota (confiança ${o.confidence.toFixed(2)}) — confira a posição na planta e ajuste`,
+      .map((o) =>
+        extractionNotice(
+          'OPENING_ESTIMATED',
+          `parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): posição medida no desenho pela ` +
+            `escala, sem cota (confiança ${o.confidence.toFixed(2)}) — confira a posição na planta e ajuste`,
+          { wallId: w.id, openingId: o.id },
+          { ...(o.tag === null ? {} : { tag: o.tag }), ...(o.type === null ? {} : { type: o.type }), confidence: Number(o.confidence.toFixed(2)) },
+        ),
       ),
   );
 }
 
 /** Cômodos que o modelo listou sem nenhuma porta: ou é um vão aberto, ou a leitura perdeu a porta. */
-export function roomsWithoutDoors(out: ExtractionOutput): string[] {
+export function roomsWithoutDoors(out: ExtractionOutput): ReadingNotice[] {
   return out.rooms
     .filter((r) => r.doors.length === 0)
-    .map(
-      (r) =>
-        `extração COMODO_SEM_PORTA: ${r.name}${r.level === null ? '' : ` (pavimento ${r.level})`}: nenhuma porta encontrada` +
-        `${r.note === null || r.note.trim() === '' ? '' : ` — ${r.note.trim()}`}; confira na planta e adicione a abertura na parede certa`,
+    .map((r) =>
+      extractionNotice(
+        'ROOM_WITHOUT_DOOR',
+        `${r.name}${r.level === null ? '' : ` (pavimento ${r.level})`}: nenhuma porta encontrada` +
+          `${r.note === null || r.note.trim() === '' ? '' : ` — ${r.note.trim()}`}; confira na planta e adicione a abertura na parede certa`,
+        {},
+        { room: r.name, ...(r.level === null ? {} : { level: r.level }) },
+      ),
     );
 }
 
@@ -295,27 +324,44 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
  */
 export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Converted {
   const project = toProject(out, opts);
-  const problems: string[] = [];
-  const warnings: string[] = [...unplacedOpenings(out, opts), ...estimatedOpenings(out), ...roomsWithoutDoors(out), ...defaultHeightWarnings(out, opts)];
+  const problems: ReadingNotice[] = [];
+  const warnings: ReadingNotice[] = [...unplacedOpenings(out, opts), ...estimatedOpenings(out), ...roomsWithoutDoors(out), ...defaultHeightWarnings(out, opts)];
   const noHeight = wallsWithoutHeight(out, opts);
   if (noHeight.length > 0) {
     // O parser do CLI reclamaria de `studLength`; a causa é a altura, e é isso que o revisor precisa saber.
-    problems.push(
-      `altura: os desenhos não trazem cortes nem pé-direito (${noHeight.length} parede(s) sem altura: ${noHeight.slice(0, 5).join(', ')}${noHeight.length > 5 ? '…' : ''}); informe a altura da parede (subfloor ao topo da double top plate)`,
-    );
+    problems.push({
+      source: 'project',
+      code: 'WALL_HEIGHT_MISSING',
+      message: `os desenhos não trazem cortes nem pé-direito (${noHeight.length} parede(s) sem altura: ${noHeight.slice(0, 5).join(', ')}${noHeight.length > 5 ? '…' : ''}); informe a altura da parede (subfloor ao topo da double top plate)`,
+      params: { count: noHeight.length, wallIds: noHeight },
+    });
     return { project, problems, warnings };
   }
   try {
     const parsed = projectFrom(project, out.projectName);
     const built = buildProject(parsed);
-    for (const w of built.warnings) warnings.push(`${w.panelId} ${w.warning.code}: ${w.warning.message}`);
+    for (const w of built.warnings) warnings.push({ source: 'engine', panelId: w.panelId, ...w.warning });
   } catch (e) {
-    if (e instanceof ProjectError) problems.push(`parser: ${e.message}`);
-    else if (e instanceof BuildError) for (const p of e.problems) problems.push(`motor: ${p}`);
-    else if (e instanceof RangeError) problems.push(`motor: ${e.message}`);
+    if (e instanceof ProjectError) problems.push(parserNotice(e, out.projectName));
+    else if (e instanceof BuildError) for (const p of e.problems) problems.push({ source: 'engine', ...p });
+    else if (e instanceof RangeError) problems.push({ source: 'engine', code: 'ENGINE_INTERNAL', message: e.message });
     else throw e;
   }
   return { project, problems, warnings };
+}
+
+/** Erro do parser → problema: o caminho relativo ao projeto (`walls[2].openings`) e, se veio do core, o código dele. */
+function parserNotice(e: ProjectError, source: string): ReadingNotice {
+  const path = e.path.startsWith(`${source}.`) ? e.path.slice(source.length + 1) : e.path;
+  const n: ReadingNotice = { source: 'parser', code: 'PROJECT_INVALID', message: e.message, path, params: { path } };
+  const engine = e.engine;
+  if (engine !== undefined) {
+    n.code = engine.code;
+    n.params = { ...engine.params, path };
+    if (engine.wallId !== undefined) n.wallId = engine.wallId;
+    if (engine.openingId !== undefined) n.openingId = engine.openingId;
+  }
+  return n;
 }
 
 export interface ReportOptions {
@@ -418,7 +464,7 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
     lines.push('');
   }
 
-  for (const p of converted.problems) review.push(p);
+  for (const p of converted.problems) review.push(noticeText(p));
 
   lines.push('## Revisar');
   lines.push('');
@@ -429,7 +475,7 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
   if (converted.warnings.length > 0) {
     lines.push('## Avisos do motor');
     lines.push('');
-    for (const w of converted.warnings) lines.push(`- ${w}`);
+    for (const w of converted.warnings) lines.push(`- ${noticeText(w)}`);
     lines.push('');
   }
 

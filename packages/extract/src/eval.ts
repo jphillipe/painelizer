@@ -78,7 +78,7 @@ export function evaluateReading(out: ExtractionOutput, truth: ReadingTruth): Eva
   const converted = convert(out);
   const warnings: Record<string, number> = {};
   for (const w of converted.warnings) {
-    const code = /^(?:extração |\S+ )([A-Z][A-Z0-9_]+):/.exec(w)?.[1] ?? 'outro';
+    const code = w.code;
     warnings[code] = (warnings[code] ?? 0) + 1;
   }
 

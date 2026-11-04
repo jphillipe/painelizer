@@ -5,6 +5,7 @@ import { buildRequest, DEFAULT_MODEL, ExtractError, extractWalls, finish, previe
 import * as pdfModule from '../src/pdf';
 import { subsetPdf } from '../src/pdf';
 import { FULL_SYSTEM_PROMPT } from '../src/prompt';
+import { noticeText } from '../src/notices';
 import { makePdf } from './helpers/makePdf';
 
 const ringgoldOutput = JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')) as unknown;
@@ -129,8 +130,8 @@ describe('previewExtraction — recortes só planejados', () => {
     expect(preview.tiles.pages[0]).toMatchObject({ name: 'planta.pdf', page: 1, tiles: 1 });
     expect(preview.encodedBytes).toBeGreaterThan(preview.tiles.encodedBytes);
     expect(preview.sheets).toEqual([
-      { name: 'planta.pdf', page: 1, sheet: 'A-100', category: 'plan' },
-      { name: 'planta.pdf', page: 2, sheet: 'A-800', category: 'schedule' },
+      { source: 0, name: 'planta.pdf', page: 1, sheet: 'A-100', category: 'plan' },
+      { source: 0, name: 'planta.pdf', page: 2, sheet: 'A-800', category: 'schedule' },
     ]);
   });
 
@@ -143,7 +144,7 @@ describe('previewExtraction — recortes só planejados', () => {
     })();
     const preview = await previewExtraction({ sources: [{ kind: 'pdf', name: 'foto.pdf', data: blank, pages: [1] }] });
     expect(preview.tiles.count).toBe(1);
-    expect(preview.sheets[0]).toEqual({ name: 'foto.pdf', page: 1, category: 'plan' });
+    expect(preview.sheets[0]).toEqual({ source: 0, name: 'foto.pdf', page: 1, category: 'plan' });
   });
 });
 
@@ -157,7 +158,7 @@ describe('extractWalls com cliente falso', () => {
     expect(result.output.walls.map((w) => w.id)).toEqual(['N1', 'S1', 'S2', 'I1']);
     expect(result.problems).toEqual([]);
     // P30: porta e janela a 8 1/4" na S2 — 1 jack por lado nas duas, com aviso para o revisor
-    expect(result.warnings.map((w) => w.slice(0, 40))).toEqual([
+    expect(result.warnings.map(noticeText).map((w) => w.slice(0, 40))).toEqual([
       '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
       '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
     ]);
@@ -228,11 +229,13 @@ describe('finish — respostas gravadas', () => {
   });
 });
 
-describe.skipIf(!process.env['ANTHROPIC_API_KEY'] || !existsSync(RINGGOLD))('extração real (só com ANTHROPIC_API_KEY e o PDF)', () => {
+// S23: a chave sozinha não basta — ela fica no ambiente para o app e o `read-set`, e um `pnpm test` (inclusive o do
+// deploy) não pode virar uma chamada paga. Rodar com `EXTRACT_LIVE=1 pnpm --filter extract test`.
+describe.skipIf(process.env['EXTRACT_LIVE'] !== '1' || !process.env['ANTHROPIC_API_KEY'] || !existsSync(RINGGOLD))('extração real (só com EXTRACT_LIVE=1, ANTHROPIC_API_KEY e o PDF)', () => {
   it('26 Ringgold St: A-100 + A-800 → 4+ paredes sem problemas no CLI', async () => {
     const pdf = new Uint8Array(readFileSync(RINGGOLD));
     const result = await extractWalls({ pdf, pages: [3, 15], hints: { level: 1 } });
     expect(result.output.walls.length).toBeGreaterThanOrEqual(4);
-    expect(result.problems.filter((p) => p.startsWith('parser:'))).toEqual([]);
+    expect(result.problems.map(noticeText).filter((p) => p.startsWith('parser:'))).toEqual([]);
   }, 600_000);
 });

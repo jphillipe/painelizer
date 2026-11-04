@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { convert, estimatedOpenings, reviewReport, roomsWithoutDoors } from '../src/convert';
+import { noticeText } from '../src/notices';
 import { ExtractionOutput, type OpeningOut } from '../src/schema';
 
 const base = ExtractionOutput.parse(JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')));
@@ -35,26 +36,26 @@ describe('schema — compatibilidade com leituras antigas', () => {
 });
 
 describe('posição estimada pela escala (scaled)', () => {
-  it('fica no projeto e gera ABERTURA_ESTIMADA; com cota ou regra não avisa', () => {
+  it('fica no projeto e gera OPENING_ESTIMATED; com cota ou regra não avisa', () => {
     const scaled = withOpening({ positionSource: 'scaled', confidence: 0.45 });
-    const warnings = estimatedOpenings(scaled);
+    const warnings = estimatedOpenings(scaled).map(noticeText);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toMatch(/^extração ABERTURA_ESTIMADA: parede I1, abertura I1-U2/);
+    expect(warnings[0]).toMatch(/^extração OPENING_ESTIMATED: parede I1, abertura I1-U2/);
     expect(warnings[0]).toContain('confiança 0.45');
     const converted = convert(scaled);
     const i1 = (converted.project['walls'] as { id: string; openings: unknown[] }[]).find((w) => w.id === 'I1');
     expect(i1?.openings).toHaveLength(1);
-    expect(converted.warnings.some((w) => w.includes('ABERTURA_ESTIMADA'))).toBe(true);
-    expect(converted.warnings.some((w) => w.includes('ABERTURA_SEM_POSICAO'))).toBe(false);
+    expect(converted.warnings.map(noticeText).some((w) => w.includes('OPENING_ESTIMATED'))).toBe(true);
+    expect(converted.warnings.map(noticeText).some((w) => w.includes('OPENING_UNPLACED'))).toBe(false);
 
     expect(estimatedOpenings(withOpening({ positionSource: 'dimension' }))).toEqual([]);
     expect(estimatedOpenings(withOpening({ positionSource: 'rule' }))).toEqual([]);
   });
 
-  it('scaled sem posição nenhuma continua ABERTURA_SEM_POSICAO (fora do projeto), não estimada', () => {
+  it('scaled sem posição nenhuma continua OPENING_UNPLACED (fora do projeto), não estimada', () => {
     const out = withOpening({ positionSource: 'scaled', center: null, offset: null });
     expect(estimatedOpenings(out)).toEqual([]);
-    expect(convert(out).warnings.some((w) => w.includes('ABERTURA_SEM_POSICAO: parede I1'))).toBe(true);
+    expect(convert(out).warnings.map(noticeText).some((w) => w.includes('OPENING_UNPLACED: parede I1'))).toBe(true);
   });
 
   it('o relatório marca a estimada em "Revisar" e mostra a fonte na tabela de aberturas', () => {
@@ -75,12 +76,12 @@ describe('cômodos sem porta', () => {
       { name: 'Bathroom', level: 1, doors: [], note: 'símbolo não visível' },
       { name: 'Vestibule', level: null, doors: [], note: null },
     ]);
-    const warnings = roomsWithoutDoors(out);
+    const warnings = roomsWithoutDoors(out).map(noticeText);
     expect(warnings).toEqual([
-      'extração COMODO_SEM_PORTA: Bathroom (pavimento 1): nenhuma porta encontrada — símbolo não visível; confira na planta e adicione a abertura na parede certa',
-      'extração COMODO_SEM_PORTA: Vestibule: nenhuma porta encontrada; confira na planta e adicione a abertura na parede certa',
+      'extração ROOM_WITHOUT_DOOR: Bathroom (pavimento 1): nenhuma porta encontrada — símbolo não visível; confira na planta e adicione a abertura na parede certa',
+      'extração ROOM_WITHOUT_DOOR: Vestibule: nenhuma porta encontrada; confira na planta e adicione a abertura na parede certa',
     ]);
-    expect(convert(out).warnings.filter((w) => w.includes('COMODO_SEM_PORTA'))).toHaveLength(2);
+    expect(convert(out).warnings.map(noticeText).filter((w) => w.includes('ROOM_WITHOUT_DOOR'))).toHaveLength(2);
   });
 
   it('o relatório ganha a seção Cômodos e lista os sem porta em Revisar', () => {
