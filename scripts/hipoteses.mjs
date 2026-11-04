@@ -6,16 +6,21 @@ import { join, relative } from 'node:path';
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const PENDENCIAS = join(root, 'docs', '05-pendencias.md');
 const OUT = join(root, 'docs', '08-revisar.md');
-const SCAN = ['packages/core/src', 'packages/core/test', 'packages/cli/src', 'packages/cli/test', 'packages/cli/examples', 'packages/extract/src', 'packages/extract/test'];
+const SCAN = [
+  'packages/core/src', 'packages/core/test', 'packages/cli/src', 'packages/cli/test', 'packages/cli/examples',
+  'packages/extract/src', 'packages/extract/test', 'packages/extract/scripts', 'packages/web/src',
+];
 
 // --- 1. pendências -------------------------------------------------------------------------------------
 const lines = readFileSync(PENDENCIAS, 'utf8').split('\n');
 const items = [];
 let cur = null;
 for (const line of lines) {
-  const start = line.match(/^- \[([ x])\] \*\*(P\d+) — (.+?)\*\*(.*)$/);
+  // `- [ ] **Pnn — título.** texto` (o padrão) ou `- **Pnn — …**` sem caixa, que conta como aberta (S27: P42 e
+  // P43 ficaram meses assim, fora do 08).
+  const start = line.match(/^- (?:\[([ x])\] )?\*\*(P\d+) — (.+?)\*\*(.*)$/);
   if (start) {
-    cur = { open: start[1] === ' ', id: start[2], title: start[3].replace(/\.$/, ''), text: start[4].trim() };
+    cur = { open: start[1] !== 'x', id: start[2], title: start[3].replace(/\.$/, ''), text: start[4].trim() };
     items.push(cur);
     continue;
   }
@@ -23,7 +28,7 @@ for (const line of lines) {
   cur = null;
 }
 const hypothesisOf = (text) => {
-  const all = [...text.matchAll(/hipótese(?: de medida)?:\s*(.+?)(?=\s—\s(?:S\d|Checkpoint|feita)|\.\s+\*\*Resposta|$)/g)];
+  const all = [...text.matchAll(/hipótese(?: de medida)?:\s*(.+?)(?=\s—\s(?:S\d|Checkpoint|feita)|\.\s+\*\*Resposta|\.?\s+\*\*Hipótese medida|$)/g)];
   if (all.length === 0) return null;
   return all[all.length - 1][1].replace(/\s+/g, ' ').replace(/[.;]\s*$/, '');
 };
@@ -35,7 +40,7 @@ const walk = (dir) => {
     if (name === 'node_modules' || name.startsWith('__snapshots__')) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) { walk(p); continue; }
-    if (!/\.(ts|json|mjs)$/.test(name)) continue;
+    if (!/\.(ts|tsx|json|mjs)$/.test(name)) continue;
     const src = readFileSync(p, 'utf8').split('\n');
     src.forEach((l, i) => {
       // só comentários e $comment: um id de abertura "P1" num fixture não é referência a pendência

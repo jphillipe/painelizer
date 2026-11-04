@@ -1,0 +1,18 @@
+# S27: o estilo que o repo já usa (Prettier em .prettierrc.json segue o mesmo).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 120
+
+[*.md]
+trim_trailing_whitespace = false
+
+# PowerShell 5.1 lê UTF-8 sem BOM como ANSI: os scripts de deploy têm acento.
+[*.ps1]
+charset = utf-8-bom

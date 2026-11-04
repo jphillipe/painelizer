@@ -11,6 +11,10 @@ node_modules
 /dist
 /docs
 /supabase
+# S27: mesmos cortes do .dockerignore (scripts de deploy, workflows, testes e fixtures).
+/scripts
+/.github
+**/test/
 *.log
 .env
 .env.*

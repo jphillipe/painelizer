@@ -1,0 +1,25 @@
+{
+  // Opções comuns aos 4 pacotes (S27). Cada pacote estende este arquivo e acrescenta só o que é dele:
+  // `lib`/`types` (o core não vê DOM nem Node), `jsx` e o plugin do Next no web.
+  // Typecheck é `tsc --noEmit` (TypeScript 7); nada é emitido.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "noEmit": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  }
+}

@@ -13,3 +13,7 @@ supabase
 !.env.example
 **/*.tsbuildinfo
 packages/web/next-env.d.ts
+# S27: nada disto entra na imagem; o build do Next não lê testes, fixtures, scripts de deploy nem workflows.
+scripts
+.github
+**/test

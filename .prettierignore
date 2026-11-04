@@ -1,0 +1,19 @@
+# S27: só `pnpm format:check` (fora do CI). O reformat geral é um commit separado do humano (docs/04, 2026-11-04).
+node_modules
+**/.next
+out
+dist
+*.tsbuildinfo
+pnpm-lock.yaml
+packages/web/next-env.d.ts
+
+# Texto à mão: docs com tabelas e quebras próprias; SQL o Prettier não lê.
+docs
+supabase
+*.md
+
+# A verdade dos testes e as tabelas IRC: nem um byte muda por formatação (CLAUDE.md).
+packages/core/test/fixtures
+packages/core/test/__snapshots__
+packages/core/src/data
+packages/cli/examples

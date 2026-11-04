@@ -6,6 +6,9 @@
   "scripts": {
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "format:check": "prettier --check .",
     "panelizer": "pnpm --filter cli panelizer",
     "hipoteses": "node scripts/hipoteses.mjs",
     "extract": "pnpm --filter extract extract",
@@ -14,5 +17,18 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.8.1"
+  "packageManager": "pnpm@10.8.1",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "16.4.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
 }
