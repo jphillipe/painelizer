@@ -6,7 +6,7 @@ import { DEFAULT_TILE_OPTIONS, planTiles } from '../src/tiles';
 import { classifySheet } from '../src/select';
 import { makeLabeledPdf, makePdf, PAGE_H, PAGE_W } from './helpers/makePdf';
 
-const RINGGOLD = 'C:/Users/Phillipe/Desktop/painelizer/docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf';
+const RINGGOLD = new URL('../../../docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf', import.meta.url);
 
 describe('readPageText — texto posicionado', () => {
   it('devolve dimensões da página e as linhas agrupadas por y, com x de cada trecho', async () => {

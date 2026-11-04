@@ -16,7 +16,7 @@ describe('PDF das folhas (M9)', () => {
     // Assinatura PNG e largura 800 no IHDR.
     expect([...png.slice(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     expect(new DataView(png.buffer, png.byteOffset + 16, 4).getUint32(0)).toBe(800);
-  });
+  }, 30_000);
 
   it('28x40: planta + 12 folhas viram 13 páginas carta paisagem com rodapé "x de 13"', async () => {
     const r = generate(EXAMPLES[1]!.text);

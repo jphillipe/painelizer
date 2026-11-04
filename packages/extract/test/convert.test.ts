@@ -4,10 +4,9 @@ import { parseProject, type Project } from 'cli/project';
 import { convert, derivedStudLengths, reviewReport, toProject } from '../src/convert';
 import { ExtractionOutput } from '../src/schema';
 
-const ROOT = 'C:/Users/Phillipe/Desktop/painelizer/';
 const ringgold = ExtractionOutput.parse(JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')));
 const corner = ExtractionOutput.parse(JSON.parse(readFileSync(new URL('./fixtures/corner-output.json', import.meta.url), 'utf8')));
-const checkpoint = parseProject(readFileSync(ROOT + 'packages/cli/examples/ringgold-checkpoint.json', 'utf8'), 'checkpoint');
+const checkpoint = parseProject(readFileSync(new URL('../../cli/examples/ringgold-checkpoint.json', import.meta.url), 'utf8'), 'checkpoint');
 
 /** O que a extração tem obrigação de acertar: geometria, seção, papel e aberturas resolvidas. */
 function essence(p: Project) {

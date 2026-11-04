@@ -17,7 +17,7 @@ import {
 } from './draft';
 
 const ringgoldOutput = JSON.parse(
-  readFileSync('C:/Users/Phillipe/Desktop/painelizer/packages/extract/test/fixtures/ringgold-output.json', 'utf8'),
+  readFileSync(new URL('../../../../extract/test/fixtures/ringgold-output.json', import.meta.url), 'utf8'),
 ) as Parameters<typeof toProject>[0];
 
 function load(text: string): ProjectDraft {

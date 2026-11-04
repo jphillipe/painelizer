@@ -8,7 +8,7 @@ const { fromFiles, fromRecorded, toSource, preview } = await import('./extract.s
 const { registry, jobProgress, takeResult } = await import('./extract-jobs');
 
 const ringgoldRaw = JSON.parse(
-  readFileSync('C:/Users/Phillipe/Desktop/painelizer/packages/extract/test/fixtures/ringgold-output.json', 'utf8'),
+  readFileSync(new URL('../../../extract/test/fixtures/ringgold-output.json', import.meta.url), 'utf8'),
 ) as unknown;
 const pdf: UploadedFile = { name: 'plan.pdf', type: 'application/pdf', bytes: Uint8Array.from([0x25, 0x50, 0x44, 0x46]) };
 const png: UploadedFile = { name: 'photo.PNG', type: '', bytes: Uint8Array.from([0x89, 0x50]) };

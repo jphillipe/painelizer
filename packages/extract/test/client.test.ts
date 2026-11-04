@@ -8,7 +8,7 @@ import { FULL_SYSTEM_PROMPT } from '../src/prompt';
 import { makePdf } from './helpers/makePdf';
 
 const ringgoldOutput = JSON.parse(readFileSync(new URL('./fixtures/ringgold-output.json', import.meta.url), 'utf8')) as unknown;
-const RINGGOLD = 'C:/Users/Phillipe/Desktop/painelizer/docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf';
+const RINGGOLD = new URL('../../../docs/examples/26 Ringgold St  Providence RI Rev 5 Stamped (1) (1).pdf', import.meta.url);
 
 function fakeMessage(overrides: Record<string, unknown>): Anthropic.Message {
   return {
