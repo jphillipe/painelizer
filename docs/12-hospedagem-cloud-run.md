@@ -20,7 +20,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\deploy-cloud-run.ps1
 (se ainda não existir), dá a permissão à conta de serviço e roda o deploy, sem perguntas; no fim imprime a URL.
 Serve também para cada atualização. `-DryRun` só confere conta, projeto e `.env.local` sem fazer nada;
 `-UpdateKey` grava a chave atual do `.env.local` como versão nova do segredo. As seções 2 e 3 explicam o que
-o script faz, para quem preferir comando a comando.
+o script faz, para quem preferir comando a comando. Para o deploy sair sozinho a cada push na `main`, ver a seção 7.
 
 ## 1. Uma vez: programas e acesso
 
@@ -155,3 +155,30 @@ Abra http://localhost:8080. É exatamente o que o Cloud Run roda.
 ## 6. Domínio próprio (depois)
 
 Cloud Run › panelizer › Manage custom domains, ou Firebase Hosting na frente. Não é necessário para testes.
+
+## 7. Deploy automático a cada push na main (GitHub Actions)
+
+`.github/workflows/deploy.yml` roda a cada push na `main` (e pelo botão Actions › Deploy › Run workflow):
+
+1. **Tests and typecheck** — `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`. Se algo falhar,
+   o deploy não acontece. Os testes que precisam da chave da Anthropic ou dos PDFs de `docs/examples` se pulam.
+2. **Cloud Run** — entra no Google sem chave guardada (Workload Identity Federation), roda
+   `gcloud run deploy --source .` e confere `/api/health`; falha se `ai` ou `auth` vierem `false`.
+
+O deploy pelo Actions **só troca o código**: variáveis do Supabase, segredo da Anthropic, memória, timeout e
+acesso público vêm da revisão anterior, como o Cloud Run faz quando a linha de comando não os menciona. Para
+mudar qualquer um deles, rode `scripts/deploy-cloud-run.ps1` (que continua servindo para deploy manual).
+
+**Uma vez**, com a conta que já faz o deploy manual:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-github-deploy.ps1
+```
+
+O script cria a conta de serviço `github-deploy` (papéis Cloud Run Source Developer no projeto e Service Account
+User na conta padrão do Cloud Run — nada de mudar IAM) e o pool `github` com um provedor OIDC que só aceita
+tokens do repositório `jphillipe/painelizer` na `main`: fork, outro repositório ou outro branch não entram.
+No fim imprime o provedor e a conta, que precisam bater com o `env` do workflow. `-DryRun` só confere.
+
+Um deploy de cada vez (`concurrency`): um push durante um deploy espera ele terminar. Cada push na `main` vira
+um deploy de 5 a 8 minutos; trabalho que ainda não deve ir para o ar fica em outro branch.

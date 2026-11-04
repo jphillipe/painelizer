@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -187,7 +187,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
             <p className="eyebrow">Project details</p>
             <p className="text-[13px] text-ink-3">everything optional now — the review step asks for what the engine needs</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid items-start gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="level"
@@ -233,11 +233,13 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
                   <FormControl>
                     <Input {...field} placeholder="e.g. 3,15 — empty: by title block" className="font-mono" />
                   </FormControl>
-                  <FormDescription>Page numbers, for every PDF. Empty: the floor plan and schedule sheets are picked by their title block.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <p className="text-[13px] text-ink-3 sm:col-span-3">
+              PDF pages: page numbers, for every PDF. Empty: the floor plan and schedule sheets are picked by their title block.
+            </p>
           </div>
           <div className="space-y-3 border-t border-line-faint pt-4">
             <details className="text-sm">
