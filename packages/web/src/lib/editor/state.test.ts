@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { textFromDraft, wallById, type ProjectDraft } from './draft';
-import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, viewedUnderlay, type EditorAction, type EditorState } from './state';
+import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, selectedWallIds, toggledWall, viewedUnderlay, wallsSelection, type EditorAction, type EditorState } from './state';
 
 const loaded = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' });
 const loose = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[2]!.text, source: 'sample' });
@@ -234,22 +234,22 @@ describe('edição de aberturas', () => {
   });
 });
 
-describe('M5: moveWall e setReviewed', () => {
-  it('moveWall desloca as duas pontas; offsets das aberturas ficam (a abertura vai junto); parede solta não move', () => {
+describe('M5: moveWalls e setReviewed', () => {
+  it('moveWalls desloca as duas pontas; offsets das aberturas ficam (a abertura vai junto); parede solta não move', () => {
     const s = loaded();
     const before = wallById(draftOf(s), 'W01')!;
-    const moved = editorReducer(s, { type: 'moveWall', wallId: 'W01', dx: 12, dy: -1 });
+    const moved = editorReducer(s, { type: 'moveWalls', wallIds: ['W01'], dx: 12, dy: -1 });
     const w = wallById(draftOf(moved), 'W01')!;
     expect(w.start).toEqual({ x: before.start!.x + 12, y: before.start!.y - 1 });
     expect(w.end).toEqual({ x: before.end!.x + 12, y: before.end!.y - 1 });
     expect(w.openings).toEqual(before.openings);
     expect(moved.dirty).toBe(true);
-    expect(editorReducer(s, { type: 'moveWall', wallId: 'W01', dx: 0, dy: 0 })).toBe(s);
+    expect(editorReducer(s, { type: 'moveWalls', wallIds: ['W01'], dx: 0, dy: 0 })).toBe(s);
     const l = loose();
-    expect(editorReducer(l, { type: 'moveWall', wallId: 'N1', dx: 1, dy: 0 })).toBe(l);
+    expect(editorReducer(l, { type: 'moveWalls', wallIds: ['N1'], dx: 1, dy: 0 })).toBe(l);
     // Um nudge com txn repetido é um undo só.
     let t = s;
-    for (let i = 0; i < 5; i += 1) t = editorReducer(t, { type: 'moveWall', wallId: 'W01', dx: 1, dy: 0, txn: 'nudge' });
+    for (let i = 0; i < 5; i += 1) t = editorReducer(t, { type: 'moveWalls', wallIds: ['W01'], dx: 1, dy: 0, txn: 'nudge' });
     expect(t.past).toHaveLength(1);
     expect(wallById(draftOf(t), 'W01')!.start!.x).toBe(before.start!.x + 5);
   });
@@ -369,5 +369,64 @@ describe('S29: catálogo editável', () => {
     expect(marks(s)).toEqual(before.map((m) => (m === 'HDR1' ? 'H-A' : m)));
     expect(before.filter((m) => m === 'HDR1')).toHaveLength(2);
     expect(Object.keys(draftOf(run(s, { type: 'setHeaderEntry', mark: 'HDR2', value: undefined })).config.headerSchedule ?? {})).toEqual(['H-A']);
+  });
+});
+
+describe('S30: seleção múltipla e operações de parede', () => {
+  it('toggledWall põe e tira; uma parede volta a `wall`, nenhuma a `none`; abertura conta como a parede dela', () => {
+    const one = toggledWall({ kind: 'none' }, 'W01');
+    expect(one).toEqual({ kind: 'wall', wallId: 'W01' });
+    const two = toggledWall(one, 'W03');
+    expect(two).toEqual({ kind: 'walls', wallIds: ['W01', 'W03'] });
+    expect(toggledWall(two, 'W01')).toEqual({ kind: 'wall', wallId: 'W03' });
+    expect(toggledWall({ kind: 'wall', wallId: 'W01' }, 'W01')).toEqual({ kind: 'none' });
+    expect(toggledWall({ kind: 'opening', wallId: 'W02', openingId: 'J2' }, 'W04')).toEqual({ kind: 'walls', wallIds: ['W02', 'W04'] });
+    expect(selectedWallIds({ kind: 'project' })).toEqual([]);
+    expect(wallsSelection(['W01', 'W01'])).toEqual({ kind: 'wall', wallId: 'W01' });
+  });
+
+  it('removeWalls apaga todas num undo só; a seleção some', () => {
+    const s = run(loaded(), { type: 'select', selection: { kind: 'walls', wallIds: ['W01', 'W05'] } }, { type: 'removeWalls', wallIds: ['W01', 'W05'] });
+    expect(draftOf(s).walls.map((w) => w.id)).toEqual(['W02', 'W03', 'W04']);
+    expect(s.past).toHaveLength(1);
+    expect(s.selection).toEqual({ kind: 'none' });
+    expect(editorReducer(s, { type: 'removeWalls', wallIds: ['W99'] })).toBe(s);
+  });
+
+  it('seleção múltipla encolhe quando uma das paredes some', () => {
+    const s = run(loaded(), { type: 'select', selection: { kind: 'walls', wallIds: ['W01', 'W05'] } }, { type: 'removeWall', wallId: 'W05' });
+    expect(s.selection).toEqual({ kind: 'wall', wallId: 'W01' });
+  });
+
+  it('moveWalls desloca o conjunto; updateWalls muda o campo comum em todas', () => {
+    const s = run(loaded(), { type: 'moveWalls', wallIds: ['W01', 'W02'], dx: 12, dy: 6, txn: 't' }, { type: 'moveWalls', wallIds: ['W01', 'W02'], dx: 1, dy: 0, txn: 't' });
+    expect(s.past).toHaveLength(1);
+    expect([wallById(draftOf(s), 'W01')!.start, wallById(draftOf(s), 'W02')!.end]).toEqual([{ x: 13, y: 6 }, { x: 493, y: 342 }]);
+    const u = editorReducer(loaded(), { type: 'updateWalls', wallIds: ['W03', 'W05'], patch: { height: 109.125, section: '2x4' } });
+    expect(draftOf(u).walls.map((w) => w.height)).toEqual([97.125, 97.125, 109.125, 97.125, 109.125]);
+    expect(wallById(draftOf(u), 'W03')!.section).toBe('2x4');
+  });
+
+  it('addWall com segmento ("Draw wall"): pontas a 1/16", propriedades da parede de referência; segmento curto é no-op', () => {
+    const s = editorReducer(loaded(), { type: 'addWall', afterWallId: 'W05', segment: { start: { x: 264, y: 168.01 }, end: { x: 480, y: 168.01 } } });
+    const w = wallById(draftOf(s), 'W06')!;
+    expect([w.start, w.end, w.section, w.exterior]).toEqual([{ x: 264, y: 168 }, { x: 480, y: 168 }, '2x4', false]);
+    expect(s.selection).toEqual({ kind: 'wall', wallId: 'W06' });
+    const l = loaded();
+    expect(editorReducer(l, { type: 'addWall', segment: { start: { x: 0, y: 0 }, end: { x: 0.5, y: 0 } } })).toBe(l);
+  });
+
+  it('duplicateWalls, splitWall e joinWalls selecionam o resultado; recusa não muda o estado', () => {
+    const dup = editorReducer(loaded(), { type: 'duplicateWalls', wallIds: ['W01', 'W02'] });
+    expect(dup.selection).toEqual({ kind: 'walls', wallIds: ['W06', 'W07'] });
+    const split = editorReducer(loaded(), { type: 'splitWall', wallId: 'W01', at: 240 });
+    expect(split.selection).toEqual({ kind: 'walls', wallIds: ['W01', 'W06'] });
+    const joined = editorReducer(split, { type: 'joinWalls', wallIds: ['W01', 'W06'] });
+    expect(joined.selection).toEqual({ kind: 'wall', wallId: 'W01' });
+    expect(draftOf(joined).walls).toEqual(draftOf(loaded()).walls);
+    expect(joined.past).toHaveLength(2);
+    const s = loaded();
+    expect(editorReducer(s, { type: 'splitWall', wallId: 'W01', at: 180 })).toBe(s);
+    expect(editorReducer(s, { type: 'joinWalls', wallIds: ['W01', 'W02'] })).toBe(s);
   });
 });

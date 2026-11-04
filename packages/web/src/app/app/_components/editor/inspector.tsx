@@ -1,41 +1,22 @@
 'use client';
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import type { Dispatch } from 'react';
 import { Button } from '@/components/ui/button';
 import { Kbd, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { openingById, wallById, type ProjectDraft } from '@/lib/editor/draft';
-import { neighborWall } from './use-editor-shortcuts';
-import type { Issue } from '@/lib/editor/problems';
-import type { WallProvenance } from '@/lib/editor/provenance';
-import type { EditorAction, EditorState, Selection } from '@/lib/editor/state';
-import type { ShownBreaks } from '@/lib/editor/breaks';
-import { cn } from '@/lib/utils';
-import type { ExtractOutcome } from '@/types/extract';
+import { openingById, wallById } from '@/lib/editor/draft';
+import type { Selection } from '@/lib/editor/state';
+import { useEditor } from './editor-context';
 import { OpeningProperties } from './opening-properties';
-import { ProjectProperties } from './project-properties';
+import { neighborWall } from './use-editor-shortcuts';
 import { WallProperties } from './wall-properties';
+import { WallsProperties } from './walls-properties';
 
-export interface InspectorProps {
-  state: EditorState;
-  draft: ProjectDraft;
-  dispatch: Dispatch<EditorAction>;
-  /** Quebras de painel por parede (S29); ausente fora do workspace. */
-  breaks?: ReadonlyMap<string, ShownBreaks> | undefined;
-  provenance: ReadonlyMap<string, WallProvenance>;
-  issues: readonly Issue[];
-  outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
-  onOutcome: (outcome: ExtractOutcome) => void;
-  showProjectData: boolean;
-  /**
-   * Workspace (S21.4): sem moldura (o painel já é a moldura) e as configurações do projeto vivem num dialog —
-   * a seleção `project` mostra o estado vazio aqui.
-   */
-  flat?: boolean;
-}
-
-/** Painel de propriedades: muda com a seleção (projeto, parede, abertura). Remonta por id para zerar campos. */
-export function Inspector({ state, draft, dispatch, breaks, provenance, issues, outcome, onOutcome, showProjectData, flat = false }: InspectorProps) {
+/**
+ * Painel de propriedades do workspace: muda com a seleção (parede, várias paredes, abertura); as configurações do
+ * projeto vivem num dialog, então "projeto" e "nada" mostram o estado vazio. Remonta por id para zerar campos.
+ */
+export function Inspector() {
+  const { state, draft, dispatch, breaks, provenance, issues } = useEditor();
   const sel = state.selection;
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
   const currentWall = sel.kind === 'wall' || sel.kind === 'opening' ? sel.wallId : undefined;
@@ -82,6 +63,12 @@ export function Inspector({ state, draft, dispatch, breaks, provenance, issues, 
           </Button>
         </>
       ) : null}
+      {sel.kind === 'walls' ? (
+        <>
+          <ChevronRightIcon className="size-3.5" />
+          <span className="text-ink">{sel.wallIds.length} walls</span>
+        </>
+      ) : null}
       {sel.kind === 'opening' ? (
         <>
           <ChevronRightIcon className="size-3.5" />
@@ -93,17 +80,17 @@ export function Inspector({ state, draft, dispatch, breaks, provenance, issues, 
   );
 
   let body: React.ReactNode;
-  if (sel.kind === 'none' || (sel.kind === 'project' && flat)) {
+  if (sel.kind === 'none' || sel.kind === 'project') {
     body = (
       <div className="space-y-3 text-[13px] text-ink-3">
-        <p>{flat ? 'Pick a wall on the plan or in the list to edit it.' : 'Select a wall in the list to edit it, or open the project settings.'}</p>
+        <p>Pick a wall on the plan or in the list to edit it. Shift+click adds walls to the selection.</p>
         <Button variant="outline" size="sm" onClick={() => select({ kind: 'project' })}>
           Project settings
         </Button>
       </div>
     );
-  } else if (sel.kind === 'project') {
-    body = <ProjectProperties draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} showProjectData={showProjectData} />;
+  } else if (sel.kind === 'walls') {
+    body = <WallsProperties draft={draft} wallIds={sel.wallIds} dispatch={dispatch} onSelect={select} />;
   } else {
     const wall = wallById(draft, sel.wallId);
     if (wall === undefined) {
@@ -114,12 +101,11 @@ export function Inspector({ state, draft, dispatch, breaks, provenance, issues, 
           key={wall.id}
           draft={draft}
           wall={wall}
-          breaks={breaks?.get(wall.id)}
+          breaks={breaks.get(wall.id)}
           provenance={provenance.get(wall.id)}
           issues={issues.filter((i) => i.wallId === wall.id && i.openingId === undefined)}
           dispatch={dispatch}
           onSelect={select}
-          collapsible={flat}
         />
       );
     } else {
@@ -136,16 +122,15 @@ export function Inspector({ state, draft, dispatch, breaks, provenance, issues, 
             provenance={provenance.get(wall.id)?.openings.get(opening.id)}
             issues={issues.filter((i) => i.wallId === wall.id && i.openingId === opening.id)}
             dispatch={dispatch}
-            collapsible={flat}
           />
         );
     }
   }
 
   // Troca de item (M4): o conteúdo entra em fade curto; a chave muda com a seleção, não com cada edição.
-  const bodyKey = sel.kind === 'wall' ? `wall:${sel.wallId}` : sel.kind === 'opening' ? `opening:${sel.wallId}/${sel.openingId}` : sel.kind;
+  const bodyKey = sel.kind === 'wall' ? `wall:${sel.wallId}` : sel.kind === 'walls' ? `walls:${sel.wallIds.join(',')}` : sel.kind === 'opening' ? `opening:${sel.wallId}/${sel.openingId}` : sel.kind;
   return (
-    <div className={cn('space-y-4', flat ? 'p-4' : 'rounded-md border bg-card p-4 shadow-1')} aria-label="Properties">
+    <div className="space-y-4 p-4" aria-label="Properties">
       {crumb}
       <div key={bodyKey} className="animate-fade-in">
         {body}

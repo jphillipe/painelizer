@@ -11,8 +11,12 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
       title: 'Walls and openings',
       rows: [
         ['N', 'Add a wall after the selected one (turning left from its end)'],
+        ['W', 'Draw walls on the plan: click the start, then the end (Esc stops)'],
+        [`${mod}+D`, 'Duplicate the selected walls'],
+        [`${mod}+A`, 'Select every wall'],
+        ['Shift + click', 'Add a wall to the selection, or drop it'],
         ['O', 'Add an opening at the center of the selected wall'],
-        ['Delete', 'Remove the selection (with the plan focused)'],
+        ['Delete', 'Remove the selection, one wall or many (with the plan focused)'],
         [']  /  [', 'Next / previous wall'],
         ['Esc', 'Clear the selection'],
         [`${mod}+Z  /  ${mod}+Shift+Z`, 'Undo / redo'],
@@ -21,11 +25,12 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
     {
       title: 'Plan (click it first)',
       rows: [
-        ['← → ↑ ↓', 'Nudge the selected wall or opening by 1"'],
+        ['← → ↑ ↓', 'Nudge the selected walls or opening by 1"'],
         ['Shift + arrows', 'Nudge by 1/8"'],
         ['Alt + arrows', 'Nudge by 12"'],
         ['+  /  −', 'Zoom in / out'],
         ['F', 'Fit the plan in view'],
+        ['Drag a selected wall', 'Move the selection (1" snap, Shift = 1/8")'],
         ['Drag an end', 'Move it along the axis (Shift = 1/8" snap)'],
         ['Drag an opening', 'Slide it along the wall'],
         ['Scroll / pinch', 'Zoom at the pointer'],

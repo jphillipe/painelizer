@@ -1,9 +1,10 @@
 'use client';
 
 import { OctagonXIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useEffect, type Dispatch } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { breaksByWall, shownBreaks } from '@/lib/editor/breaks';
 import type { ProjectDraft } from '@/lib/editor/draft';
 import { geometryIssues, planGeometry, type PlanGeometry } from '@/lib/editor/geometry';
 import { readingWarningResolved } from '@/lib/editor/issue-help';
@@ -13,60 +14,32 @@ import { byWall, countIssues, draftIssues, idIndex, issueFromNotice, parseEngine
 import { provenanceIndex } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
-import type { DrawingRef } from '@/lib/drawings';
-import type { SupabaseEnv } from '@/lib/supabase/env';
-import type { ExtractOutcome } from '@/types/extract';
-import { useEditorShortcuts } from './use-editor-shortcuts';
-import type { SaveStatus } from '@/lib/editor/project-sync';
+import { EditorContext, useProjectIO, type EditorContextValue } from './editor-context';
 import type { CheckState } from './use-project-check';
-import type { SaveConflictActions } from './editor-top-bar';
 import { Workspace } from './workspace';
 
 export interface WallEditorProps {
   state: EditorState;
   dispatch: Dispatch<EditorAction>;
-  /** Leitura da IA de onde o projeto veio (proveniência, notas, relatório); ausente para exemplo e arquivo. */
-  outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
   check: CheckState;
-  pending: boolean;
-  onGenerate: () => void;
-  onOutcome: (outcome: ExtractOutcome) => void;
-  /** `StepBar` compacta para a top bar do workspace. */
-  steps: ReactNode;
-  onStartOver: () => void;
-  /** Arquivos soltos no passo 01 (M6: planta por baixo). */
-  sourceFiles?: readonly File[] | undefined;
-  /** Desenhos no Storage de onde a leitura saiu (S22.3): a planta por baixo de um projeto reaberto baixa de lá. */
-  storedDrawings?: readonly DrawingRef[] | undefined;
-  storage?: SupabaseEnv | undefined;
-  /** Auto-save no servidor (S22.1): estado do chip da top bar e o "Retry" dele. */
-  save?: SaveStatus;
-  onRetrySave?: () => void;
-  /** S23 (A4): "Save as copy" e "Overwrite" do conflito. */
-  saveActions?: SaveConflictActions;
 }
 
 /**
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
- * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
+ * proveniência da IA, quebras de painel — publicada no `EditorContext` (S30). A interface é o `Workspace` (S21.4);
+ * o que vem de fora (leitura, gerar, desenhos, auto-save) chega pelo `ProjectIOContext`.
  */
-export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave, saveActions }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorProps) {
   const { draft } = state;
+  const { outcome } = useProjectIO();
   // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
   const latest = useRef(state);
   latest.current = state;
   const dispatch = useCallback<Dispatch<EditorAction>>(
     (action) => {
-      if (action.type !== 'removeWall' && action.type !== 'removeOpening') {
-        rawDispatch(action);
-        return;
-      }
-      const d = latest.current.draft;
-      const wall = d?.walls.find((w) => w.id === action.wallId);
-      const exists = action.type === 'removeWall' ? wall !== undefined : wall?.openings.some((o) => o.id === action.openingId) === true;
+      const label = removalLabel(latest.current.draft, action);
       rawDispatch(action);
-      if (!exists) return;
-      const label = action.type === 'removeWall' ? `wall ${action.wallId}` : `opening ${action.openingId}`;
+      if (label === undefined) return;
       const after = latest.current.revision + 1;
       toast(`Removed ${label}`, {
         action: {
@@ -108,10 +81,9 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
   }, [draft, state.loadProblems, check.result, outcome, geometry, ids]);
   const issuesByWall = useMemo(() => byWall(issues), [issues]);
   const groups = useMemo(() => groupIssues(issues, ids), [issues, ids]);
-  // Lista de atalhos (M5): `?` ou o botão da toolbar.
-  const [helpOpen, setHelpOpen] = useState(false);
-  const openHelp = useCallback(() => setHelpOpen(true), []);
-  useEditorShortcuts(state, dispatch, draft !== undefined, { onHelp: openHelp });
+  // Quebras de painel (S29): candidatos da última checagem; as do revisor vêm do draft (valem antes da resposta).
+  const breakInfo = useMemo(() => breaksByWall(check.result), [check.result]);
+  const breaks = useMemo(() => new Map((draft?.walls ?? []).map((w) => [w.id, shownBreaks(w, breakInfo.get(w.id))])), [draft?.walls, breakInfo]);
 
   if (draft === undefined) {
     return (
@@ -129,8 +101,24 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
   const counts = countIssues(issues);
   // O que o motor vai exigir, lido do próprio draft (antes da checagem): o card de setup pede tudo de uma vez.
   const needs = projectDataNeeds(draft);
-  const needsData = outcome !== undefined && needs.required.length > 0;
-  const ready = check.status === 'done' && !check.stale && counts.problems === 0;
+  const value: EditorContextValue = {
+    state,
+    draft,
+    dispatch,
+    geometry,
+    issues,
+    issuesByWall,
+    groups,
+    provenance,
+    breaks,
+    check,
+    counts,
+    ready: check.status === 'done' && !check.stale && counts.problems === 0,
+    needs,
+    needsData: outcome !== undefined && needs.required.length > 0,
+    name,
+    slug: projectSlug(name),
+  };
   // Um `load` (outro projeto, leitura reconvertida) zera histórico e `dirty`: é quando o workspace remonta
   // (aba, filtro e card dispensado voltam ao início). Renomear o projeto ou editar não remonta.
   if (draft !== lastLoaded.current && state.past.length === 0 && state.future.length === 0 && !state.dirty) {
@@ -139,36 +127,20 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
   }
 
   return (
-    <Workspace
-      key={`${state.source ?? ''}:${loadId.current}`}
-      state={state}
-      draft={draft}
-      dispatch={dispatch}
-      geometry={geometry}
-      issues={issues}
-      issuesByWall={issuesByWall}
-      groups={groups}
-      provenance={provenance}
-      outcome={outcome}
-      check={check}
-      counts={counts}
-      ready={ready}
-      pending={pending}
-      needsData={needsData}
-      needs={needs}
-      name={name}
-      slug={projectSlug(name)}
-      onGenerate={onGenerate}
-      onOutcome={onOutcome}
-      steps={steps}
-      onStartOver={onStartOver}
-      help={{ open: helpOpen, onOpenChange: setHelpOpen }}
-      sourceFiles={sourceFiles}
-      storedDrawings={storedDrawings}
-      storage={storage}
-      save={save}
-      onRetrySave={onRetrySave}
-      saveActions={saveActions}
-    />
+    <EditorContext value={value}>
+      <Workspace key={`${state.source ?? ''}:${loadId.current}`} />
+    </EditorContext>
   );
+}
+
+/** O que uma ação de remoção vai tirar ("wall W02", "3 walls", "opening J1"); `undefined` quando não remove nada. */
+function removalLabel(d: ProjectDraft | undefined, action: EditorAction): string | undefined {
+  if (d === undefined) return undefined;
+  if (action.type === 'removeWall') return d.walls.some((w) => w.id === action.wallId) ? `wall ${action.wallId}` : undefined;
+  if (action.type === 'removeWalls') {
+    const n = d.walls.filter((w) => action.wallIds.includes(w.id)).length;
+    return n === 0 ? undefined : n === 1 ? `wall ${d.walls.find((w) => action.wallIds.includes(w.id))!.id}` : `${n} walls`;
+  }
+  if (action.type === 'removeOpening') return d.walls.find((w) => w.id === action.wallId)?.openings.some((o) => o.id === action.openingId) === true ? `opening ${action.openingId}` : undefined;
+  return undefined;
 }

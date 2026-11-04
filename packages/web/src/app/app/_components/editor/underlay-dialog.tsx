@@ -1,5 +1,6 @@
 'use client';
 
+import { errorMessage } from '@/lib/errors';
 import { CloudDownloadIcon, FileImageIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -50,7 +51,7 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
       if (error !== null || data === null) throw new Error(error?.message ?? 'empty download');
       setFile(new File([data], d.name, { type: d.type }));
     } catch (e) {
-      toast.error(`Couldn’t download ${d.name}: ${(e as Error).message}`);
+      toast.error(`Couldn’t download ${d.name}: ${errorMessage(e)}`);
     } finally {
       setDownloading(undefined);
     }
@@ -87,7 +88,7 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
           setThumbs([...out]);
         }
       } catch (e) {
-        if (!cancelled) toast.error(`Couldn’t read ${file.name}: ${(e as Error).message}`);
+        if (!cancelled) toast.error(`Couldn’t read ${file.name}: ${errorMessage(e)}`);
       }
     })();
     return () => {
@@ -115,7 +116,7 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
       toast.success(`Drawing placed under the plan (${underlayKb(underlay)} KB). Now set its scale: click two points of a known dimension.`);
       onOpenChange(false);
     } catch (e) {
-      toast.error(`Couldn’t render the drawing: ${(e as Error).message}`);
+      toast.error(`Couldn’t render the drawing: ${errorMessage(e)}`);
     } finally {
       setBusy(false);
     }

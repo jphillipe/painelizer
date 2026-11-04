@@ -1,25 +1,18 @@
 'use client';
 
-import { useMemo, useRef, useState, type Dispatch, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
-import { breaksByWall, shownBreaks } from '@/lib/editor/breaks';
-import { wallById, type ProjectDraft } from '@/lib/editor/draft';
+import { wallById } from '@/lib/editor/draft';
 import { projectFileName, projectFileText } from '@/lib/editor/project-file';
-import type { PlanGeometry } from '@/lib/editor/geometry';
-import type { IssueGroup } from '@/lib/editor/issue-groups';
-import type { Issue } from '@/lib/editor/problems';
-import type { WallProvenance } from '@/lib/editor/provenance';
-import type { ProjectDataNeeds } from '@/lib/editor/requirements';
-import { reviewedCount, viewedUnderlay, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
+import { reviewedCount, selectedWallIds, viewedUnderlay, type Selection } from '@/lib/editor/state';
+import type { Underlay } from '@/lib/editor/underlay';
 import type { LevelFilter } from '@/lib/editor/wall-filters';
 import { useMediaQuery, WIDE_QUERY } from '@/lib/use-media-query';
-import type { DrawingRef } from '@/lib/drawings';
-import type { SupabaseEnv } from '@/lib/supabase/env';
-import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
+import { useEditor, useProjectIO } from './editor-context';
 import { EditorToolbar } from './editor-toolbar';
-import { EditorTopBar, type SaveConflictActions, type TopBarMenuItem } from './editor-top-bar';
+import { EditorTopBar, type TopBarMenuItem } from './editor-top-bar';
 import { Inspector } from './inspector';
 import { IssueGroupsList } from './issue-groups-list';
 import { Navigator, type NavigatorTab } from './navigator';
@@ -29,57 +22,19 @@ import { ReadingPanel } from './reading-panel';
 import { ShortcutsDialog } from './shortcuts-dialog';
 import { CalibrationBanner, UnderlayControls, calibrationPoint, withPixelAt, type Calibration } from './underlay-controls';
 import { UnderlayDialog } from './underlay-dialog';
-import type { Underlay } from '@/lib/editor/underlay';
+import { useEditorShortcuts } from './use-editor-shortcuts';
 import { WallElevation } from './wall-elevation';
-import type { SaveStatus } from '@/lib/editor/project-sync';
-import type { CheckState } from './use-project-check';
 import { WallRows } from './wall-rows';
-
-export interface WorkspaceProps {
-  state: EditorState;
-  draft: ProjectDraft;
-  dispatch: Dispatch<EditorAction>;
-  geometry: PlanGeometry | undefined;
-  issues: readonly Issue[];
-  issuesByWall: ReadonlyMap<string | undefined, Issue[]>;
-  groups: readonly IssueGroup[];
-  provenance: ReadonlyMap<string, WallProvenance>;
-  outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
-  check: CheckState;
-  counts: { problems: number; warnings: number };
-  ready: boolean;
-  pending: boolean;
-  /** A leitura veio sem altura / precuts: oferecer o card "Before you review". */
-  needsData: boolean;
-  /** O que o motor exige deste projeto (lib/editor/requirements). */
-  needs: ProjectDataNeeds;
-  name: string;
-  slug: string;
-  onGenerate: () => void;
-  onOutcome: (outcome: ExtractOutcome) => void;
-  /** `StepBar` compacta, para a top bar. */
-  steps: ReactNode;
-  onStartOver: () => void;
-  /** Lista de atalhos (M5), aberta por ? (WallEditor) ou pelo botão da toolbar. */
-  help: { open: boolean; onOpenChange: (open: boolean) => void };
-  /** Arquivos soltos no passo 01, para a planta por baixo (M6). */
-  sourceFiles?: readonly File[] | undefined;
-  /** Desenhos no Storage (S22.3) e as chaves para baixá-los. */
-  storedDrawings?: readonly DrawingRef[] | undefined;
-  storage?: SupabaseEnv | undefined;
-  /** Auto-save no servidor (S22.1). */
-  save?: SaveStatus | undefined;
-  onRetrySave?: (() => void) | undefined;
-  saveActions?: SaveConflictActions | undefined;
-}
 
 /**
  * Workspace do passo 02 (S21.4, docs/10-design.md §4): top bar, navegador (Walls / Issues / Reading), planta no
- * centro e inspetor à direita; abaixo de `lg`, planta em cima e abas embaixo (inspetor vira aba). Só estado de
- * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
- * outro projeto entra.
+ * centro e inspetor à direita; abaixo de `lg`, planta em cima e abas embaixo (inspetor vira aba). Lê o editor e o
+ * projeto dos contextos (S30); aqui só estado de interface (aba, card de setup dispensado, pavimento, underlay,
+ * "Draw wall", atalhos). Remontado por `key` quando outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], storedDrawings = [], storage, save, onRetrySave, saveActions }: WorkspaceProps) {
+export function Workspace() {
+  const { state, draft, dispatch, geometry, issuesByWall, breaks, groups, provenance, check, counts, ready, needs, needsData, name, slug } = useEditor();
+  const { outcome, onOutcome, pending, onGenerate, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave, saveActions } = useProjectIO();
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
@@ -88,6 +43,10 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
   // Planta do arquiteto por baixo (M6): dialog de escolha e calibração em curso.
   const [underlayOpen, setUnderlayOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | undefined>(undefined);
+  // Lista de atalhos (M5) e "Draw wall" (S30).
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  const canvas = useRef<PlanCanvasHandle>(null);
   // S23: com a vista (opacidade/visível) do editor por cima; a vista não está no arquivo.
   const underlay = viewedUnderlay(state);
   const setUnderlay = (u: Underlay | undefined): void => dispatch({ type: 'setUnderlay', underlay: u });
@@ -101,17 +60,24 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
       setCalibration({ kind: 'scale', points: [...calibration.points, px] });
     }
   };
-  const canvas = useRef<PlanCanvasHandle>(null);
-  // Quebras de painel (S29): candidatos da última checagem; as do revisor vêm do draft (valem antes da resposta).
-  const breakInfo = useMemo(() => breaksByWall(check.result), [check.result]);
-  const breaks = useMemo(() => new Map(draft.walls.map((w) => [w.id, shownBreaks(w, breakInfo.get(w.id))])), [draft.walls, breakInfo]);
-  const setBreaks = (wallId: string, list: number[] | undefined, txn?: string): void => dispatch({ type: 'setPanelBreaks', wallId, breaks: list, ...(txn === undefined ? {} : { txn }) });
+
+  // A planta aparece para projeto em planta, vazio (para desenhar a primeira parede) ou com underlay; projeto solto
+  // mostra a elevação da parede selecionada.
+  const showPlan = geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0 || geometry.format === 'empty' || (underlay !== undefined && geometry.format !== 'loose'));
+  const toggleDraw = showPlan
+    ? (): void => {
+        setDrawing((on) => !on);
+        canvas.current?.focus();
+      }
+    : undefined;
+  useEditorShortcuts(state, dispatch, true, { onHelp: () => setHelpOpen(true), onToggleDraw: toggleDraw, drawing: drawing && showPlan });
 
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
   /** Seleção vinda de uma lista: traz a parede para a vista e, em tela estreita, abre o inspetor. */
   const selectFromList = (selection: Selection): void => {
     select(selection);
-    if (selection.kind === 'wall' || selection.kind === 'opening') canvas.current?.focusWall(selection.wallId);
+    const last = selectedWallIds(selection).at(-1);
+    if (last !== undefined) canvas.current?.focusWall(last);
     if (!wide) setTab('inspector');
   };
   const openSettings = (): void => select({ kind: 'project' });
@@ -129,7 +95,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     <>
       <UnderlayControls underlay={underlay} calibration={calibration} onCalibration={setCalibration} onChoose={() => setUnderlayOpen(true)} onChange={setUnderlay} onView={(view) => dispatch({ type: 'setUnderlayView', ...view })} />
       <span className="mx-1 h-4 w-px bg-line" aria-hidden />
-      <EditorToolbar state={state} dispatch={dispatch} embedded onHelp={() => help.onOpenChange(true)} />
+      <EditorToolbar state={state} dispatch={dispatch} onHelp={() => setHelpOpen(true)} drawing={drawing && showPlan} onToggleDraw={toggleDraw} />
     </>
   );
   const selectedWall = state.selection.kind === 'wall' || state.selection.kind === 'opening' ? wallById(draft, state.selection.wallId) : undefined;
@@ -138,28 +104,30 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     <Card className="step-enter workspace-pane flex-1 gap-0 p-6 md:p-8">
       <ProjectDataForm outcome={outcome} onOutcome={onOutcome} variant="setup" needs={needs} confirm={state.dirty} onSkip={() => setDismissed(true)} />
     </Card>
-  ) : geometry !== undefined && (geometry.walls.length > 0 || geometry.broken.length > 0 || (underlay !== undefined && geometry.format !== 'loose')) ? (
+  ) : showPlan && geometry !== undefined ? (
     <PlanCanvas
       ref={canvas}
-      fill
       toolbar={toolbar}
       geometry={geometry}
       selection={state.selection}
       issuesByWall={issuesByWall}
       northAngle={draft.northAngle}
-      fitKey={`${state.source ?? ''}:${name}:${draft.walls.length}`}
+      // Reenquadra só quando outro projeto entra (o workspace remonta a cada carga): desenhar ou acrescentar uma
+      // parede não tira a planta do lugar (S30).
+      fitKey={`${state.source ?? ''}:${name}`}
       onSelect={select}
       onEndpointDrag={(wallId, end, point, txn) => dispatch({ type: 'moveEndpoint', wallId, end, point, txn })}
       onOpeningDrag={(wallId, openingId, s0, roughWidth, txn) => dispatch({ type: 'moveOpening', wallId, openingId, s0, roughWidth, txn })}
-      onWallNudge={(wallId, dx, dy, txn) => dispatch({ type: 'moveWall', wallId, dx, dy, txn })}
+      onWallsMove={(wallIds, dx, dy, txn) => dispatch({ type: 'moveWalls', wallIds, dx, dy, txn })}
       breaks={breaks}
-      onBreaksChange={setBreaks}
+      onBreaksChange={(wallId, list, txn) => dispatch({ type: 'setPanelBreaks', wallId, breaks: list, ...(txn === undefined ? {} : { txn }) })}
       onDragEnd={() => dispatch({ type: 'endTransaction' })}
       level={level}
       onLevel={setLevel}
       underlay={underlay}
       onCalibrationPoint={calibration === undefined ? undefined : onCalibrationPoint}
       onCalibrationCancel={() => setCalibration(undefined)}
+      onDrawWall={drawing ? (start, end) => dispatch({ type: 'addWall', afterWallId: selectedWallIds(state.selection).at(-1), segment: { start, end } }) : undefined}
       overlay={underlay !== undefined && calibration !== undefined ? <CalibrationBanner underlay={underlay} calibration={calibration} onCalibration={setCalibration} onChange={setUnderlay} /> : undefined}
     />
   ) : (
@@ -169,9 +137,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
         // Projeto solto (M5): a elevação esquemática da parede selecionada no lugar da caixa vazia.
         <WallElevation draft={draft} wall={selectedWall} selection={state.selection} onSelect={select} className="min-h-0 flex-1" />
       ) : (
-        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed bg-paper-2 p-6 text-center text-sm text-ink-3">
-          {draft.walls.length === 0 ? 'No walls yet. Add one with the toolbar.' : 'Walls given by length only, so there is no plan. Pick a wall in the list to see its elevation and edit it.'}
-        </div>
+        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed bg-paper-2 p-6 text-center text-sm text-ink-3">Walls given by length only, so there is no plan. Pick a wall in the list to see its elevation and edit it.</div>
       )}
     </div>
   );
@@ -210,7 +176,6 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     },
     { id: 'reading', label: 'Reading', content: <ReadingPanel outcome={outcome} source={state.source} slug={slug} /> },
   ];
-  const inspector = <Inspector state={state} draft={draft} dispatch={dispatch} breaks={breaks} provenance={provenance} issues={issues} outcome={outcome} onOutcome={onOutcome} showProjectData={false} flat />;
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">
@@ -224,7 +189,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
             {center}
           </section>
           <aside className="workspace-pane border-l border-line bg-card" aria-label="Properties">
-            {inspector}
+            <Inspector />
           </aside>
         </div>
       ) : (
@@ -232,10 +197,26 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
           <section className="h-[45dvh] shrink-0 border-b border-line p-3" aria-label="Plan">
             {center}
           </section>
-          <Navigator tab={tab} onTab={setTab} tabs={[...navTabs, { id: 'inspector', label: 'Inspector', content: <div className="workspace-pane flex-1">{inspector}</div> }]} className="bg-card" />
+          <Navigator
+            tab={tab}
+            onTab={setTab}
+            tabs={[
+              ...navTabs,
+              {
+                id: 'inspector',
+                label: 'Inspector',
+                content: (
+                  <div className="workspace-pane flex-1">
+                    <Inspector />
+                  </div>
+                ),
+              },
+            ]}
+            className="bg-card"
+          />
         </div>
       )}
-      <ShortcutsDialog open={help.open} onOpenChange={help.onOpenChange} />
+      <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <UnderlayDialog open={underlayOpen} onOpenChange={setUnderlayOpen} sourceFiles={sourceFiles} storedDrawings={storedDrawings} storage={storage} bounds={geometry?.bounds} onPick={setUnderlay} />
       <ProjectSettingsDialog open={settingsOpen} onOpenChange={(open) => !open && select({ kind: 'none' })} draft={draft} dispatch={dispatch} outcome={outcome} dirty={state.dirty} onOutcome={onOutcome} />
     </div>

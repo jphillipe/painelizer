@@ -74,14 +74,6 @@ export function inView(u: Underlay | undefined, view: UnderlayView | undefined):
   return { ...u, ...(view.opacity === undefined ? {} : { opacity: Math.min(1, Math.max(0.05, view.opacity)) }), ...(view.visible === undefined ? {} : { visible: view.visible }) };
 }
 
-/** Draft sem o underlay (para o motor e a checagem: a imagem pesa centenas de KB e o motor não a lê). */
-export function withoutUnderlay<T extends Pick<ProjectDraft, 'extra'>>(d: T): T {
-  if (d.extra?.[UNDERLAY_KEY] === undefined) return d;
-  const extra = { ...d.extra };
-  delete extra[UNDERLAY_KEY];
-  return Object.keys(extra).length === 0 ? (({ ...d, extra: undefined }) as T) : { ...d, extra };
-}
-
 function rot(p: Point, rotation: Rotation): Point {
   switch (rotation) {
     case 90:

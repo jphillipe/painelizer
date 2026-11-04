@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { DRAWING_MAX_BYTES } from '@/lib/drawings';
+import { DRAWING_MAX_BYTES, randomId } from '@/lib/drawings';
 import { estimateCost, formatUsd } from '@/lib/extract-cost';
 import type { SupabaseEnv } from '@/lib/supabase/env';
 import { recordDuration } from '@/lib/extract-timing';
@@ -42,10 +42,6 @@ const AUTO = 'auto';
 /** Acima disto não há prévia (nem custo no botão), porque a prévia sobe os arquivos. O estado de "pedir a prévia" não tinha botão e saiu na S27. */
 const AUTO_PREVIEW_BYTES = 40 * 1024 * 1024;
 const PREVIEW_DELAY_MS = 800;
-
-function newJobId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `job-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 /**
  * Passo 1: os desenhos (vários arquivos) e os detalhes do projeto → action `extractWalls`.
@@ -120,7 +116,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
       return;
     }
     const fd = formData(fields);
-    const jobId = newJobId();
+    const jobId = randomId('job');
     fd.set('jobId', jobId);
     startedAt.current = Date.now();
     onJobChange({ jobId, startedAt: startedAt.current, files: files.map((f) => ({ name: f.name, size: f.size })) });

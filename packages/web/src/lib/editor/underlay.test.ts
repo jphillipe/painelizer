@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { draftFromText, textFromDraft } from './draft';
-import { imageToPlan, initialTransform, planToImage, rotated, scaleFromPoints, svgMatrix, UNDERLAY_KEY, underlayOf, withoutUnderlay, withPixelAt, withScale, type Underlay } from './underlay';
+import { imageToPlan, initialTransform, planToImage, rotated, scaleFromPoints, svgMatrix, UNDERLAY_KEY, underlayOf, withPixelAt, withScale, type Underlay } from './underlay';
 
 const base: Underlay = { version: 1, source: { name: 'A-100.pdf', page: 3 }, image: 'data:image/jpeg;base64,AAAA', width: 2000, height: 1000, scale: 0.25, origin: { x: 0, y: 0 }, rotation: 0, opacity: 0.35, visible: true };
 
@@ -71,7 +71,7 @@ describe('underlay (M6): transformação imagem ↔ planta', () => {
 });
 
 describe('underlay no draft', () => {
-  it('fica em `$underlay`, sobrevive à serialização, é validado na leitura e `withoutUnderlay` o tira', () => {
+  it('fica em `$underlay`, sobrevive à serialização, e é validado na leitura', () => {
     const r = draftFromText(EXAMPLES[1]!.text);
     if (!r.ok) throw new Error('fixture');
     const d = { ...r.draft, extra: { ...(r.draft.extra ?? {}), [UNDERLAY_KEY]: base } };
@@ -82,9 +82,5 @@ describe('underlay no draft', () => {
     expect(underlayOf({ extra: { [UNDERLAY_KEY]: { version: 2 } } })).toBeUndefined();
     expect(underlayOf({ extra: { [UNDERLAY_KEY]: { ...base, scale: 0 } } })).toBeUndefined();
     expect(underlayOf({ extra: { [UNDERLAY_KEY]: { ...base, rotation: 45, opacity: 7 } } })).toMatchObject({ rotation: 0, opacity: 1 });
-    const stripped = withoutUnderlay(d);
-    expect(stripped.extra?.[UNDERLAY_KEY]).toBeUndefined();
-    expect(textFromDraft(stripped)).not.toContain('$underlay');
-    expect(withoutUnderlay(r.draft)).toBe(r.draft);
   });
 });

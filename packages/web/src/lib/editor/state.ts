@@ -10,6 +10,8 @@
 import {
   draftFromText,
   isIdFree,
+  isReviewed,
+  REVIEWED_KEY,
   isPlanWall,
   nextOpeningId,
   nextWallId,
@@ -24,12 +26,35 @@ import {
   type ProjectDraft,
 } from './draft';
 import { inView, UNDERLAY_KEY, underlayOf, withoutView, type Underlay, type UnderlayView } from './underlay';
+import { duplicateWalls, joinWalls, splitWall, type WallOp } from './wall-ops';
 
 export type Selection =
   | { kind: 'none' }
   | { kind: 'project' }
   | { kind: 'wall'; wallId: string }
+  /** Seleção múltipla (S30): duas ou mais paredes, na ordem em que entraram. Uma volta a `wall`. */
+  | { kind: 'walls'; wallIds: string[] }
   | { kind: 'opening'; wallId: string; openingId: string };
+
+/** Paredes da seleção: a parede, as paredes, ou a parede da abertura. */
+export function selectedWallIds(s: Selection): string[] {
+  if (s.kind === 'wall' || s.kind === 'opening') return [s.wallId];
+  return s.kind === 'walls' ? s.wallIds : [];
+}
+
+/** Seleção das paredes dadas: nenhuma → `none`, uma → `wall`, mais → `walls` (sem repetição). */
+export function wallsSelection(ids: readonly string[]): Selection {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return { kind: 'none' };
+  if (unique.length === 1) return { kind: 'wall', wallId: unique[0]! };
+  return { kind: 'walls', wallIds: unique };
+}
+
+/** Shift/Ctrl+clique (S30): põe a parede na seleção, ou tira se já estava. Uma abertura selecionada conta como a parede dela. */
+export function toggledWall(s: Selection, wallId: string): Selection {
+  const ids = selectedWallIds(s);
+  return wallsSelection(ids.includes(wallId) ? ids.filter((id) => id !== wallId) : [...ids, wallId]);
+}
 
 export type DraftSource = 'extraction' | 'sample' | 'file';
 
@@ -77,11 +102,23 @@ export type EditorAction =
   | { type: 'moveEndpoint'; wallId: string; end: 'start' | 'end'; point: Point; txn?: string }
   /** Parede solta: `length`; em planta: move `end` ao longo do eixo. */
   | { type: 'setWallLength'; wallId: string; length: number }
-  /** Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento e papel; em planta, continua da ponta `end` virando 90°. */
-  | { type: 'addWall'; afterWallId?: string }
+  /**
+   * Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento e papel; em planta, continua da
+   * ponta `end` virando 90° — ou, com `segment` (S30: "Draw wall"), entre os dois pontos dados.
+   */
+  | { type: 'addWall'; afterWallId?: string | undefined; segment?: { start: Point; end: Point } }
   | { type: 'removeWall'; wallId: string }
-  /** Parede inteira deslocada (M5: nudge pelo teclado); aberturas vão junto (offsets não mudam). Só em planta. */
-  | { type: 'moveWall'; wallId: string; dx: number; dy: number; txn?: string }
+  /** Seleção múltipla (S30): apaga, move ou edita campos comuns de várias paredes — um undo só. */
+  | { type: 'removeWalls'; wallIds: readonly string[] }
+  /** Paredes inteiras deslocadas (M5 nudge; S30 arraste do corpo); aberturas vão junto (offsets não mudam). Só em planta. */
+  | { type: 'moveWalls'; wallIds: readonly string[]; dx: number; dy: number; txn?: string }
+  | { type: 'updateWalls'; wallIds: readonly string[]; patch: Patch<Pick<DraftWall, 'height' | 'section' | 'exterior' | 'bearing' | 'level' | 'floorsSupported' | 'floorSpan' | 'wallType'>> }
+  /** Cópias logo depois das originais, deslocadas na planta; a seleção passa às cópias (`wall-ops`). */
+  | { type: 'duplicateWalls'; wallIds: readonly string[] }
+  /** Divide em `at` (do `start`); os dois pedaços ficam selecionados. Recusa = estado igual (o inspetor diz por quê). */
+  | { type: 'splitWall'; wallId: string; at: number }
+  /** Junta duas colineares que se encostam; fica a primeira do arquivo, selecionada. */
+  | { type: 'joinWalls'; wallIds: readonly [string, string] }
   /** Marca de revisão humana (M5): `$reviewed` no `extra` da parede — o CLI ignora chaves com `$`. */
   | { type: 'setReviewed'; wallId: string; reviewed: boolean }
   /** Planta do arquiteto por baixo (M6): imagem e calibração em `$underlay` na raiz; `undefined` remove. Undoável. */
@@ -105,12 +142,7 @@ export type EditorAction =
   | { type: 'renameHeaderEntry'; mark: string; newMark: string };
 
 export const HISTORY_LIMIT = 100;
-/** Chave da marca de revisão no `extra` da parede (sobrevive à serialização; o CLI ignora). */
-export const REVIEWED_KEY = '$reviewed';
-
-export function isReviewed(w: Pick<DraftWall, 'extra'>): boolean {
-  return w.extra?.[REVIEWED_KEY] === true;
-}
+export { isReviewed, REVIEWED_KEY };
 
 export function reviewedCount(walls: readonly Pick<DraftWall, 'extra'>[]): number {
   return walls.filter(isReviewed).length;
@@ -226,8 +258,13 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         const precut = d.config.studLength?.[0];
         if (precut !== undefined) wall.height = precut + 3 * (d.config.plateThickness ?? 1.5);
       }
-      const plan = ref === undefined ? d.walls.length === 0 || isPlanWall(d.walls[0]!) : isPlanWall(ref);
-      if (plan) {
+      const plan = action.segment !== undefined || (ref === undefined ? d.walls.length === 0 || isPlanWall(d.walls[0]!) : isPlanWall(ref));
+      if (action.segment !== undefined) {
+        const { start, end } = action.segment;
+        if (Math.hypot(end.x - start.x, end.y - start.y) < MIN_WALL_LENGTH) return state;
+        wall.start = round(start);
+        wall.end = round(end);
+      } else if (plan) {
         if (ref?.start !== undefined && ref.end !== undefined) {
           // Continua da ponta end, virando 90° à esquerda (sentido anti-horário em planta).
           const len = Math.hypot(ref.end.x - ref.start.x, ref.end.y - ref.start.y) || 1;
@@ -250,13 +287,27 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       if (!d.walls.some((w) => w.id === action.wallId)) return state;
       return commit(state, { ...d, walls: d.walls.filter((w) => w.id !== action.wallId) });
     }
-    case 'moveWall': {
-      const w = d.walls.find((x) => x.id === action.wallId);
-      if (w === undefined || w.start === undefined || w.end === undefined || (action.dx === 0 && action.dy === 0)) return state;
-      const start = round({ x: w.start.x + action.dx, y: w.start.y + action.dy });
-      const end = round({ x: w.end.x + action.dx, y: w.end.y + action.dy });
-      return commit(state, mapWall(d, action.wallId, () => ({ ...w, start, end })), action.txn);
+    case 'removeWalls': {
+      if (!d.walls.some((w) => action.wallIds.includes(w.id))) return state;
+      return commit(state, { ...d, walls: d.walls.filter((w) => !action.wallIds.includes(w.id)) });
     }
+    case 'moveWalls': {
+      const { dx, dy } = action;
+      const moving = d.walls.filter((w) => action.wallIds.includes(w.id) && w.start !== undefined && w.end !== undefined);
+      if (moving.length === 0 || (dx === 0 && dy === 0)) return state;
+      const walls = d.walls.map((w) => (moving.includes(w) ? { ...w, start: round({ x: w.start!.x + dx, y: w.start!.y + dy }), end: round({ x: w.end!.x + dx, y: w.end!.y + dy }) } : w));
+      return commit(state, { ...d, walls }, action.txn);
+    }
+    case 'updateWalls': {
+      if (!d.walls.some((w) => action.wallIds.includes(w.id))) return state;
+      return commit(state, { ...d, walls: d.walls.map((w) => (action.wallIds.includes(w.id) ? applyPatch(w, action.patch) : w)) });
+    }
+    case 'duplicateWalls':
+      return applyOp(state, duplicateWalls(d, action.wallIds));
+    case 'splitWall':
+      return applyOp(state, splitWall(d, action.wallId, action.at));
+    case 'joinWalls':
+      return applyOp(state, joinWalls(d, action.wallIds[0], action.wallIds[1]));
     case 'setUnderlay': {
       const extra = { ...(d.extra ?? {}) };
       const before = underlayOf(d);
@@ -349,6 +400,11 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
   return state;
 }
 
+/** Resultado de uma operação de parede: commit com as paredes resultantes selecionadas; recusa não muda nada. */
+function applyOp(state: EditorState, op: WallOp): EditorState {
+  return op.ok ? { ...commit(state, op.draft), selection: wallsSelection(op.wallIds) } : state;
+}
+
 /** Catálogo com a entrada trocada ou apagada; catálogo vazio sai do config. */
 function withEntry<K extends 'openingTypes' | 'headerSchedule'>(
   config: DraftConfig,
@@ -436,6 +492,7 @@ function round(p: Point): Point {
 function reselect(state: EditorState, oldId: string, newId: string): EditorState {
   const s = state.selection;
   if (s.kind === 'wall' && s.wallId === oldId) return { ...state, selection: { kind: 'wall', wallId: newId } };
+  if (s.kind === 'walls') return { ...state, selection: { kind: 'walls', wallIds: s.wallIds.map((id) => (id === oldId ? newId : id)) } };
   if (s.kind === 'opening' && s.wallId === oldId) return { ...state, selection: { ...s, wallId: newId } };
   return state;
 }
@@ -444,6 +501,10 @@ function reselect(state: EditorState, oldId: string, newId: string): EditorState
 function fixSelection(state: EditorState): EditorState {
   const { draft, selection } = state;
   if (draft === undefined || selection.kind === 'none' || selection.kind === 'project') return state;
+  if (selection.kind === 'walls') {
+    const kept = selection.wallIds.filter((id) => draft.walls.some((w) => w.id === id));
+    return kept.length === selection.wallIds.length ? state : { ...state, selection: wallsSelection(kept) };
+  }
   const wall = draft.walls.find((w) => w.id === selection.wallId);
   if (wall === undefined) return { ...state, selection: { kind: 'none' } };
   if (selection.kind === 'opening' && !wall.openings.some((o) => o.id === selection.openingId)) {

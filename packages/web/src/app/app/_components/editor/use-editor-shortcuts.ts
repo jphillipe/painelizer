@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, type Dispatch } from 'react';
-import type { EditorAction, EditorState } from '@/lib/editor/state';
+import { selectedWallIds, wallsSelection, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
 
 /**
  * Delete só apaga a seleção quando o foco está na planta ou em lugar nenhum (`body`): com um botão da lista,
@@ -34,44 +34,64 @@ export function neighborWall(walls: readonly { id: string }[], current: string |
 export interface EditorShortcutHandlers {
   /** `?` */
   onHelp?: (() => void) | undefined;
+  /** `W` liga/desliga o "Draw wall" (S30); ausente sem planta. Com `drawing`, Esc sai do modo em vez de desselecionar. */
+  onToggleDraw?: (() => void) | undefined;
+  drawing?: boolean;
+}
+
+/** Remove a seleção: a abertura, a parede ou as paredes (S30, um undo só). */
+export function removeSelection(sel: Selection, dispatch: Dispatch<EditorAction>): boolean {
+  if (sel.kind === 'opening') dispatch({ type: 'removeOpening', wallId: sel.wallId, openingId: sel.openingId });
+  else if (sel.kind === 'wall') dispatch({ type: 'removeWall', wallId: sel.wallId });
+  else if (sel.kind === 'walls') dispatch({ type: 'removeWalls', wallIds: sel.wallIds });
+  else return false;
+  return true;
 }
 
 /**
  * Atalhos do editor: Delete remove a seleção (foco na planta), Esc desseleciona, Ctrl+Z / Ctrl+Shift+Z (ou Ctrl+Y)
- * undo/redo; M5: N parede, O abertura, ] / [ próxima / anterior parede, ? atalhos. As setas são do canvas
- * (só com ele em foco).
+ * undo/redo; M5: N parede, O abertura, ] / [ próxima / anterior parede, ? atalhos; S30: W desenha paredes, Ctrl+D
+ * duplica, Ctrl+A seleciona todas. As setas são do canvas (só com ele em foco); tecla que o canvas já tratou
+ * (`defaultPrevented`, ex. Esc soltando a ponta do desenho) não chega aqui.
  */
 export function useEditorShortcuts(state: EditorState, dispatch: Dispatch<EditorAction>, enabled: boolean, handlers: EditorShortcutHandlers = {}): void {
   const sel = state.selection;
   const walls = state.draft?.walls;
-  const { onHelp } = handlers;
+  const { onHelp, onToggleDraw, drawing = false } = handlers;
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (inEditableContext(e.target)) return;
+      if (e.defaultPrevented || inEditableContext(e.target)) return;
       const mod = e.ctrlKey || e.metaKey;
       const wallId = sel.kind === 'wall' || sel.kind === 'opening' ? sel.wallId : undefined;
+      const selected = selectedWallIds(sel);
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         dispatch({ type: e.shiftKey ? 'redo' : 'undo' });
       } else if (mod && e.key.toLowerCase() === 'y') {
         e.preventDefault();
         dispatch({ type: 'redo' });
+      } else if (mod && e.key.toLowerCase() === 'd' && !e.shiftKey) {
+        // Sem seleção de parede, o atalho do navegador (favorito) segue.
+        if (selected.length === 0 || sel.kind === 'opening') return;
+        e.preventDefault();
+        dispatch({ type: 'duplicateWalls', wallIds: selected });
+      } else if (mod && e.key.toLowerCase() === 'a' && !e.shiftKey && walls !== undefined && walls.length > 0) {
+        e.preventDefault();
+        dispatch({ type: 'select', selection: wallsSelection(walls.map((w) => w.id)) });
       } else if (mod || e.altKey) {
         return;
       } else if (e.key === 'Escape') {
-        if (sel.kind !== 'none') dispatch({ type: 'select', selection: { kind: 'none' } });
+        if (drawing && onToggleDraw !== undefined) onToggleDraw();
+        else if (sel.kind !== 'none') dispatch({ type: 'select', selection: { kind: 'none' } });
       } else if (e.key === 'Delete' && deleteAllowed(e.target)) {
-        if (sel.kind === 'opening') {
-          e.preventDefault();
-          dispatch({ type: 'removeOpening', wallId: sel.wallId, openingId: sel.openingId });
-        } else if (sel.kind === 'wall') {
-          e.preventDefault();
-          dispatch({ type: 'removeWall', wallId: sel.wallId });
-        }
+        if (removeSelection(sel, dispatch)) e.preventDefault();
       } else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
-        dispatch(wallId === undefined ? { type: 'addWall' } : { type: 'addWall', afterWallId: wallId });
+        dispatch({ type: 'addWall', afterWallId: selected.at(-1) });
+      } else if ((e.key === 'w' || e.key === 'W') && onToggleDraw !== undefined) {
+        e.preventDefault();
+        onToggleDraw();
       } else if ((e.key === 'o' || e.key === 'O') && wallId !== undefined) {
         e.preventDefault();
         dispatch({ type: 'addOpening', wallId });
@@ -86,5 +106,5 @@ export function useEditorShortcuts(state: EditorState, dispatch: Dispatch<Editor
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [enabled, sel, walls, dispatch, onHelp]);
+  }, [enabled, sel, walls, dispatch, onHelp, onToggleDraw, drawing]);
 }

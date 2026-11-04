@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { isIdFree, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
-import { IssueText, OriginalText } from './issue-text';
+import { OriginalText } from './issue-text';
 import { confidenceTone, type OpeningProvenance } from '@/lib/editor/provenance';
 import { catalogTags, headerMarks, openingWidth, resolveDraftOpening } from '@/lib/editor/resolve';
 import type { EditorAction } from '@/lib/editor/state';
@@ -22,8 +22,6 @@ export interface OpeningPropertiesProps {
   provenance: OpeningProvenance | undefined;
   issues: readonly Issue[];
   dispatch: Dispatch<EditorAction>;
-  /** Workspace (S21.4): issues no topo e seções recolhíveis. */
-  collapsible?: boolean;
 }
 
 const RO = '__ro__';
@@ -34,7 +32,7 @@ const round = (n: number): number => Math.round(n * 16) / 16;
  * Painel de propriedades da abertura: tamanho por tag do schedule ou RO manual, posição por centro ou borda
  * (convertidas com a largura resolvida), header por marca do schedule, especificado aqui ou pela tabela.
  */
-export function OpeningProperties({ draft, wall, opening, provenance, issues, dispatch, collapsible = false }: OpeningPropertiesProps) {
+export function OpeningProperties({ draft, wall, opening, provenance, issues, dispatch }: OpeningPropertiesProps) {
   const o = opening;
   const id = o.id;
   const set = (patch: Extract<EditorAction, { type: 'updateOpening' }>['patch']): void => dispatch({ type: 'updateOpening', wallId: wall.id, openingId: id, patch });
@@ -50,10 +48,10 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
 
   return (
     <div className="space-y-6">
-      {collapsible ? <IssueCallout issues={issues} /> : null}
+      <IssueCallout issues={issues} />
       <Section
         title={`Opening on ${wall.id}`}
-        collapsible={collapsible}
+        collapsible
         actions={
           <Button variant="ghost" size="xs" className="text-destructive" onClick={() => dispatch({ type: 'removeOpening', wallId: wall.id, openingId: id })}>
             <Trash2Icon /> Remove opening
@@ -119,7 +117,7 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
         </div>
       </Section>
 
-      <Section title="Position (from the wall start)" collapsible={collapsible}>
+      <Section title="Position (from the wall start)" collapsible>
         <div className="grid grid-cols-2 gap-3">
           <Field id={`o-${id}-posby`} label="Given as">
             <EnumSelect
@@ -145,7 +143,7 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
         </div>
       </Section>
 
-      <Section title="Heights" collapsible={collapsible} defaultOpen={!collapsible || o.sillHeight !== undefined || o.headerHeight !== undefined}>
+      <Section title="Heights" collapsible defaultOpen={o.sillHeight !== undefined || o.headerHeight !== undefined}>
         <div className="grid grid-cols-2 gap-3">
           {kind !== 'door' ? (
             <Field id={`o-${id}-sill`} label="Sill height" hint="Bottom of RO above subfloor (windows)">
@@ -158,7 +156,7 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
         </div>
       </Section>
 
-      <Section title="Header and studs" collapsible={collapsible} defaultOpen={!collapsible || issues.length > 0 || headerBy !== undefined}>
+      <Section title="Header and studs" collapsible defaultOpen={issues.length > 0 || headerBy !== undefined}>
         <div className="grid grid-cols-2 gap-3">
           <Field id={`o-${id}-hby`} label="Header">
             <EnumSelect
@@ -193,7 +191,7 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
       </Section>
 
       {provenance !== undefined ? (
-        <Section title="From the AI reading" collapsible={collapsible} defaultOpen={!collapsible || confidenceTone(provenance.confidence) !== 'success'}>
+        <Section title="From the AI reading" collapsible defaultOpen={confidenceTone(provenance.confidence) !== 'success'}>
           <p className="text-[13px]">
             Confidence <Badge variant={TONE_VARIANT[confidenceTone(provenance.confidence)]} className="font-mono">{provenance.confidence.toFixed(2)}</Badge>
             <span className="ml-2 font-mono text-ink-3">
@@ -203,17 +201,6 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
         </Section>
       ) : null}
 
-      {issues.length > 0 && !collapsible ? (
-        <Section title={`Issues on this opening (${issues.length})`}>
-          <ul className="space-y-1 text-[12px]">
-            {issues.map((i, n) => (
-              <li key={`${n}-${i.text}`} className={i.severity === 'problem' ? 'text-destructive' : 'text-warning'}>
-                <IssueText issue={i} />
-              </li>
-            ))}
-          </ul>
-        </Section>
-      ) : null}
     </div>
   );
 }

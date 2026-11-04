@@ -1,19 +1,19 @@
 'use client';
 
-import { CheckIcon, PlusIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
-import type { Dispatch } from 'react';
+import { CheckIcon, CopyIcon, PlusIcon, RotateCcwIcon, ScissorsIcon, Trash2Icon } from 'lucide-react';
+import { useState, type Dispatch } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { movedBreak, suggestBreak, withBreak, withoutBreak, type ShownBreaks } from '@/lib/editor/breaks';
-import { isIdFree, isPlanWall, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
+import { isIdFree, isPlanWall, wallLength, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
-import { IssueText } from './issue-text';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
 import { resolveDraftOpening } from '@/lib/editor/resolve';
 import { isReviewed, type EditorAction, type Patch, type Selection } from '@/lib/editor/state';
 import { cn } from '@/lib/utils';
+import { splitWall, suggestSplit } from '@/lib/editor/wall-ops';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
 import { IssueCallout } from './issue-callout';
 
@@ -26,12 +26,10 @@ export interface WallPropertiesProps {
   issues: readonly Issue[];
   dispatch: Dispatch<EditorAction>;
   onSelect: (s: Selection) => void;
-  /** Workspace (S21.4): issues no topo, seções recolhíveis (Framing fechada quando não tem issue), leitura da IA em uma linha. */
-  collapsible?: boolean;
 }
 
 /** Painel de propriedades da parede: identidade, geometria (planta ou solta), framing, aberturas, proveniência. */
-export function WallProperties({ draft, wall, breaks, provenance, issues, dispatch, onSelect, collapsible = false }: WallPropertiesProps) {
+export function WallProperties({ draft, wall, breaks, provenance, issues, dispatch, onSelect }: WallPropertiesProps) {
   const id = wall.id;
   const set = (patch: Extract<EditorAction, { type: 'updateWall' }>['patch']): void => dispatch({ type: 'updateWall', wallId: id, patch });
   const plan = isPlanWall(wall);
@@ -41,16 +39,16 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
     else ends[end] = v as 'through' | 'butt';
     set({ ends: Object.keys(ends).length === 0 ? undefined : ends });
   };
-  const length = wall.length ?? (wall.start !== undefined && wall.end !== undefined ? Math.hypot(wall.end.x - wall.start.x, wall.end.y - wall.start.y) : undefined);
+  const length = wallLength(wall);
   const framingIssue = issues.some((i) => /section|exterior|bearing|floors|building|king|header|wind/i.test(i.kind ?? i.code ?? i.text));
   const reviewed = isReviewed(wall);
 
   return (
     <div className="space-y-6">
-      {collapsible ? <IssueCallout issues={issues} /> : null}
+      <IssueCallout issues={issues} />
       <Section
         title="Wall"
-        collapsible={collapsible}
+        collapsible
         actions={
           <span className="flex items-center gap-2">
             {/* Marca de revisão humana (M5): fica no arquivo (`$reviewed`), conta na top bar e filtra a lista. */}
@@ -67,6 +65,9 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
               </span>
               Reviewed
             </button>
+            <Button variant="ghost" size="icon-xs" aria-label={`Duplicate ${id}`} title="Duplicate (Ctrl+D)" onClick={() => dispatch({ type: 'duplicateWalls', wallIds: [id] })}>
+              <CopyIcon />
+            </Button>
             <Button variant="ghost" size="xs" className="text-destructive" onClick={() => dispatch({ type: 'removeWall', wallId: id })}>
               <Trash2Icon /> Remove wall
             </Button>
@@ -89,7 +90,7 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
         </div>
       </Section>
 
-      <Section title={plan ? 'Geometry (axis, from the project origin)' : 'Geometry (by length)'} collapsible={collapsible}>
+      <Section title={plan ? 'Geometry (axis, from the project origin)' : 'Geometry (by length)'} collapsible>
         {plan ? (
           <div className="grid grid-cols-2 gap-3">
             <Field id={`w-${id}-sx`} label="Start x">
@@ -126,9 +127,10 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
             </Field>
           </div>
         )}
+        <SplitControl draft={draft} wallId={id} dispatch={dispatch} />
       </Section>
 
-      <Section title="Framing" collapsible={collapsible} defaultOpen={!collapsible || framingIssue || wall.section === undefined || wall.exterior === undefined || wall.bearing === undefined}>
+      <Section title="Framing" collapsible defaultOpen={framingIssue || wall.section === undefined || wall.exterior === undefined || wall.bearing === undefined}>
         <div className="grid grid-cols-2 gap-3">
           <Field id={`w-${id}-section`} label="Section">
             <EnumSelect id={`w-${id}-section`} value={wall.section} noneLabel="Not set" options={SECTION_OPTIONS} onChange={(v) => set({ section: v as DraftWall['section'] })} />
@@ -151,13 +153,13 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
         </div>
       </Section>
 
-      <PanelBreaksSection id={id} length={length} breaks={breaks} collapsible={collapsible} issue={issues.some((i) => i.code === 'PANEL_BREAK_INVALID' || i.code === 'PANEL_TOO_LONG')} onChange={(list) => dispatch({ type: 'setPanelBreaks', wallId: id, breaks: list })} />
+      <PanelBreaksSection id={id} length={length} breaks={breaks} issue={issues.some((i) => i.code === 'PANEL_BREAK_INVALID' || i.code === 'PANEL_TOO_LONG')} onChange={(list) => dispatch({ type: 'setPanelBreaks', wallId: id, breaks: list })} />
 
-      <ExtraStudsSection id={id} length={length} studs={wall.extraStuds} collapsible={collapsible} onChange={(extraStuds) => set({ extraStuds })} />
+      <ExtraStudsSection id={id} length={length} studs={wall.extraStuds} onChange={(extraStuds) => set({ extraStuds })} />
 
       <Section
         title={`Openings (${wall.openings.length})`}
-        collapsible={collapsible}
+        collapsible
         actions={
           <Button variant="outline" size="xs" onClick={() => dispatch({ type: 'addOpening', wallId: id })}>
             <PlusIcon /> Add opening
@@ -186,7 +188,7 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
       </Section>
 
       {provenance !== undefined ? (
-        <Section title="From the AI reading" collapsible={collapsible} defaultOpen={!collapsible || confidenceTone(provenance.confidence) !== 'success'}>
+        <Section title="From the AI reading" collapsible defaultOpen={confidenceTone(provenance.confidence) !== 'success'}>
           <div className="space-y-1 text-[13px]">
             <p>
               Confidence <Badge variant={TONE_VARIANT[confidenceTone(provenance.confidence)]} className="font-mono">{provenance.confidence.toFixed(2)}</Badge>
@@ -201,17 +203,29 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
         </Section>
       ) : null}
 
-      {issues.length > 0 && !collapsible ? (
-        <Section title={`Issues on this wall (${issues.length})`}>
-          <ul className="space-y-1 text-[12px]">
-            {issues.map((i, n) => (
-              <li key={`${n}-${i.text}`} className={i.severity === 'problem' ? 'text-destructive' : 'text-warning'}>
-                <IssueText issue={i} />
-              </li>
-            ))}
-          </ul>
-        </Section>
-      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Dividir a parede (S30): um ponto do `start` (sugerido no meio, fora das aberturas) e o botão; o que impede o
+ * corte (abertura ou studs extras no ponto) aparece abaixo. Os dois pedaços ficam selecionados (juntar desfaz).
+ */
+function SplitControl({ draft, wallId, dispatch }: { draft: ProjectDraft; wallId: string; dispatch: Dispatch<EditorAction> }) {
+  const [at, setAt] = useState<number | undefined>(() => suggestSplit(draft, wallId));
+  if (at === undefined && suggestSplit(draft, wallId) === undefined) return null;
+  const check = at === undefined ? undefined : splitWall(draft, wallId, at);
+  return (
+    <div className="mt-3 space-y-1">
+      <div className="flex items-end gap-2">
+        <Field id={`w-${wallId}-split`} label="Split at (from start)" className="flex-1">
+          <MeasureInput id={`w-${wallId}-split`} value={at} positive onCommit={setAt} />
+        </Field>
+        <Button variant="outline" size="sm" disabled={check?.ok !== true} onClick={() => at !== undefined && dispatch({ type: 'splitWall', wallId, at })}>
+          <ScissorsIcon /> Split
+        </Button>
+      </div>
+      {check !== undefined && !check.ok ? <p className="text-[12px] text-destructive">{check.reason}</p> : <p className="text-[12px] text-ink-3">Openings, extra studs and panel breaks go with their piece; select both pieces to join them back.</p>}
     </div>
   );
 }
@@ -220,15 +234,15 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
  * Quebras de painel da parede (S29), em x do arquivo (do `start` na planta). Automáticas até a primeira edição;
  * daí a lista inteira vai para `panelBreaks` e o motor usa exatamente ela. "Automatic" apaga o campo.
  */
-function PanelBreaksSection({ id, length, breaks, collapsible, issue, onChange }: { id: string; length: number | undefined; breaks: ShownBreaks | undefined; collapsible: boolean; issue: boolean; onChange: (list: number[] | undefined) => void }) {
+function PanelBreaksSection({ id, length, breaks, issue, onChange }: { id: string; length: number | undefined; breaks: ShownBreaks | undefined; issue: boolean; onChange: (list: number[] | undefined) => void }) {
   const list = breaks?.breaks ?? [];
   const manual = breaks?.manual === true;
   const suggestion = length === undefined || breaks === undefined ? undefined : suggestBreak(length, list, breaks.candidates);
   return (
     <Section
       title={`Panels (${list.length + 1})`}
-      collapsible={collapsible}
-      defaultOpen={!collapsible || manual || issue}
+      collapsible
+      defaultOpen={manual || issue}
       actions={
         <span className="flex items-center gap-1">
           {manual ? (
@@ -267,7 +281,7 @@ function PanelBreaksSection({ id, length, breaks, collapsible, issue, onChange }
 }
 
 /** Studs de altura inteira pedidos pelo projeto (`extraStuds`): x da borda esquerda do primeiro, quantos, rótulo. */
-function ExtraStudsSection({ id, length, studs, collapsible, onChange }: { id: string; length: number | undefined; studs: DraftWall['extraStuds']; collapsible: boolean; onChange: (studs: DraftWall['extraStuds']) => void }) {
+function ExtraStudsSection({ id, length, studs, onChange }: { id: string; length: number | undefined; studs: DraftWall['extraStuds']; onChange: (studs: DraftWall['extraStuds']) => void }) {
   const list = studs ?? [];
   const update = (i: number, patch: Patch<NonNullable<DraftWall['extraStuds']>[number]>): void =>
     onChange(list.map((s, n) => (n === i ? Object.fromEntries(Object.entries({ ...s, ...patch }).filter(([, v]) => v !== undefined)) : s)));
@@ -279,8 +293,8 @@ function ExtraStudsSection({ id, length, studs, collapsible, onChange }: { id: s
   return (
     <Section
       title={`Extra studs (${list.length})`}
-      collapsible={collapsible}
-      defaultOpen={!collapsible || list.length > 0}
+      collapsible
+      defaultOpen={list.length > 0}
       actions={
         <Button variant="outline" size="xs" onClick={add}>
           <PlusIcon /> Add stud
@@ -317,11 +331,11 @@ const END_OPTIONS = [
   { value: 'through', label: 'Through (plate runs to the outer face)' },
   { value: 'butt', label: 'Butt (plate stops at the inner face)' },
 ] as const;
-const SECTION_OPTIONS = [
+export const SECTION_OPTIONS = [
   { value: '2x4', label: '2x4' },
   { value: '2x6', label: '2x6' },
 ] as const;
-const SPAN_OPTIONS = [
+export const SPAN_OPTIONS = [
   { value: 'center', label: 'Center bearing' },
   { value: 'clear', label: 'Clear span' },
 ] as const;

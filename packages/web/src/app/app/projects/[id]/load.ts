@@ -1,11 +1,8 @@
 import 'server-only';
 import { notFound, redirect } from 'next/navigation';
-import { devToolsEnabled } from '@/lib/dev-tools';
-import { supabaseEnv } from '@/lib/supabase/env';
-import { hasKey } from '@/services/extract.service';
-import { listExamples } from '@/services/panels.service';
 import { loadProject } from '@/services/projects.service';
 import type { NewProjectViewProps } from '../../_components/new-project-view';
+import { newProjectViewProps } from '../../_components/view-props';
 
 /**
  * Props da tela para um projeto salvo (S22.1): carrega a linha pelo id; inexistente → 404; servidor sem Supabase →
@@ -18,12 +15,8 @@ export async function projectPageProps(id: string): Promise<Omit<NewProjectViewP
     if (loaded.reason === 'unconfigured') redirect('/app');
     throw new Error(loaded.message);
   }
-  const devTools = devToolsEnabled();
   return {
-    examples: listExamples(),
-    aiEnabled: hasKey(),
-    devTools,
-    storage: supabaseEnv(),
+    ...newProjectViewProps(),
     project: { id: loaded.project.id, name: loaded.project.name, revision: loaded.project.revision, text: loaded.project.text, savedAt: loaded.project.updatedAt },
   };
 }

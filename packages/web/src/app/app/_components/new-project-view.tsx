@@ -1,64 +1,33 @@
-"use client";
+'use client';
 
-import {
-  ArrowLeftIcon,
-  HistoryIcon,
-  OctagonXIcon,
-  RotateCcwIcon,
-} from "lucide-react";
-import { useAction } from "next-safe-action/hooks";
-import { useRouter, useSearchParams } from "next/navigation";
-import { wantsNewProject } from "@/lib/site-nav";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
-import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useWorkspaceLayout } from "@/components/shell-layout";
-import { engineText } from "./editor/use-project-check";
-import { draftFromText } from "@/lib/editor/draft";
-import { describeAge, type SavedSession } from "@/lib/editor/persist";
-import {
-  parseProjectFile,
-  projectFileText,
-  type ParsedProjectFile,
-  type Reading,
-} from "@/lib/editor/project-file";
-import { projectPath, type ServerProject } from "@/lib/editor/project-sync";
-import { copyName } from "@/lib/projects";
-import type { SupabaseEnv } from "@/lib/supabase/env";
-import { idIndex } from "@/lib/editor/problems";
-import {
-  editorReducer,
-  initialEditorState,
-  type DraftSource,
-} from "@/lib/editor/state";
-import { prefersReducedMotion } from "@/lib/motion";
-import type { ExtractJob, ExtractOutcome } from "@/types/extract";
-import type { Example, GenerateResult } from "@/types/panels";
-import { cancelExtraction } from "../_actions/cancel-extraction";
-import { extractionResult } from "../_actions/extraction-result";
-import { generatePanels } from "../_actions/generate-panels";
-import { AdvancedImport } from "./advanced-import";
-import { ConfirmDialog } from "./confirm-dialog";
-import { useProjectCheck } from "./editor/use-project-check";
-import { OriginalText } from "./editor/issue-text";
-import { WallEditor } from "./editor/wall-editor";
-import { ExtractProgress } from "./extract-progress";
-import { ResultView } from "./result-view";
-import { SampleCards } from './sample-cards';
-import { doneSteps, StepBar, type StepId } from "./step-bar";
-import { UploadForm } from "./upload-form";
-import { useProjectCreate, type CreateWhen } from "./use-project-create";
-import { useProjectSync } from "./use-project-sync";
-import { useSavedSession } from "./use-saved-session";
+import { useAction } from 'next-safe-action/hooks';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { useWorkspaceLayout } from '@/components/shell-layout';
+import { draftFromText } from '@/lib/editor/draft';
+import type { SavedSession } from '@/lib/editor/persist';
+import { idIndex } from '@/lib/editor/problems';
+import { parseProjectFile, projectFileText, type ParsedProjectFile, type Reading } from '@/lib/editor/project-file';
+import type { ServerProject } from '@/lib/editor/project-sync';
+import { editorReducer, initialEditorState, type DraftSource } from '@/lib/editor/state';
+import { prefersReducedMotion } from '@/lib/motion';
+import { wantsNewProject } from '@/lib/site-nav';
+import type { SupabaseEnv } from '@/lib/supabase/env';
+import type { ExtractOutcome } from '@/types/extract';
+import type { Example, GenerateResult } from '@/types/panels';
+import { generatePanels } from '../_actions/generate-panels';
+import { ConfirmDialog } from './confirm-dialog';
+import { ProjectIOContext, type ProjectIO } from './editor/editor-context';
+import { engineText, useProjectCheck } from './editor/use-project-check';
+import { WallEditor } from './editor/wall-editor';
+import { ExtractProgress } from './extract-progress';
+import { PanelsStep, ReadReadyAlert, ResumeBanner, ReviewUnavailable, UploadHero, UploadStep } from './new-project-steps';
+import { ResultView } from './result-view';
+import { doneSteps, StepBar, type StepId } from './step-bar';
+import type { CreateWhen } from './use-project-create';
+import { useExtractionJob } from './use-extraction-job';
+import { useServerProject } from './use-server-project';
 
 export interface NewProjectViewProps {
   examples: readonly Example[];
@@ -73,37 +42,18 @@ export interface NewProjectViewProps {
   storage?: SupabaseEnv | undefined;
 }
 
-const SOURCE_LABEL: Record<DraftSource, string> = {
-  extraction: "from an AI reading",
-  sample: "a sample project",
-  file: "from a project file",
-};
-
 /**
  * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos leva de
  * volta aos concluídos. O passo 02 é o editor (S21): o projeto vive no `editorReducer` (draft, seleção,
  * histórico) e a leitura da IA (`outcome`) fica como proveniência. Com Supabase o projeto vive no servidor
- * (S22, auto-save em `useProjectSync`); a sessão no navegador (M2, uma por projeto desde a S23) é o buffer de
- * F5 e queda, com banner de retomada.
+ * (`useServerProject`: id, auto-save, sessão no navegador como buffer de F5 com banner de retomada); a leitura em
+ * curso em `useExtractionJob`; as telas fora do editor em `new-project-steps.tsx` (S30).
  */
-export function NewProjectView({
-  examples,
-  aiEnabled,
-  devTools = false,
-  project,
-  initialStep,
-  storage,
-}: NewProjectViewProps) {
+export function NewProjectView({ examples, aiEnabled, devTools = false, project, initialStep, storage }: NewProjectViewProps) {
   const [step, setStep] = useState<StepId>(project === undefined ? 1 : (initialStep ?? 2));
-  // Identidade no servidor (S22.1): id, revisão a mandar na próxima gravação e quando gravou.
-  const [server, setServer] = useState<ServerProject | undefined>(
-    project === undefined ? undefined : { id: project.id, revision: project.revision, savedAt: project.savedAt },
-  );
   const [outcome, setOutcome] = useState<ExtractOutcome | undefined>(undefined);
-  const [job, setJob] = useState<ExtractJob | undefined>(undefined);
   // Arquivos do passo 01 (M6): a planta por baixo das paredes escolhe entre eles.
   const [uploaded, setUploaded] = useState<File[]>([]);
-  const extracting = job !== undefined;
   const [result, setResult] = useState<GenerateResult | undefined>(undefined);
   // Revisão do draft de que `result` saiu: editar depois marca o resultado como desatualizado.
   const [resultRevision, setResultRevision] = useState(0);
@@ -121,49 +71,47 @@ export function NewProjectView({
         setStep(3);
       }
     },
-    onError: ({ error }) =>
-      toast.error(
-        error.serverError ??
-          error.validationErrors?.projectText?._errors?.[0] ??
-          "Could not generate panels.",
-      ),
+    onError: ({ error }) => toast.error(error.serverError ?? error.validationErrors?.projectText?._errors?.[0] ?? 'Could not generate panels.'),
   });
 
-  // S22.1: o projeto ganha id no servidor na primeira abertura; a URL troca sem remontar a tela (os arquivos
-  // soltos no passo 01 continuam disponíveis para a planta de fundo). Sem Supabase, segue só no navegador.
-  // S23: o texto enviado é a baseline do auto-save (A2), "Start over" descarta a resposta em voo (A3), sample só
-  // cria na primeira edição (A6) — ver `useProjectCreate`.
-  const creation = useProjectCreate(editor, okOutcome, (created, copy) => {
-    setServer(created);
-    window.history.replaceState(null, "", projectPath(created.id));
-    if (copy !== undefined) toast.success(`Saved as “${copy}”.`);
+  // A leitura recolhida de um job retomado e a sessão retomada chamam funções definidas mais abaixo (que dependem
+  // da identidade no servidor): passam por refs, com a versão do render mais recente.
+  const outcomeRef = useRef<(o: ExtractOutcome) => void>(() => {});
+  const openRef = useRef<OpenProject | undefined>(undefined);
+  const extraction = useExtractionJob((o) => outcomeRef.current(o));
+  const onResume = useCallback(
+    (s: SavedSession) =>
+      openRef.current?.(s.text, s.source, s.reading, s.dirty, s.project === undefined ? undefined : { id: s.project.id, revision: s.project.revision, savedAt: new Date(s.savedAt).toISOString() }),
+    [],
+  );
+  const remote = useServerProject({
+    initial: project === undefined ? undefined : { id: project.id, revision: project.revision, savedAt: project.savedAt },
+    editor,
+    dispatch,
+    reading: okOutcome,
+    job: extraction.job,
+    step,
+    onResume,
+    onResumeJob: extraction.setJob,
   });
-  const { opened: createOpened, cancel: cancelCreate } = creation;
-  const openProject = useCallback(
-    (
-      text: string,
-      source: DraftSource,
-      reading: Reading | undefined,
-      dirty = false,
-      existing?: ServerProject,
-      /** Sample (A6): só ganha linha no banco na primeira edição. */
-      createWhen: CreateWhen = source === "sample" ? "on-edit" : "now",
-    ) => {
-      createOpened(existing === undefined ? createWhen : undefined);
+  const { identify, forget, session, sync, saveActions } = remote;
+
+  const openProject = useCallback<OpenProject>(
+    (text, source, reading, dirty = false, existing, createWhen = source === 'sample' ? 'on-edit' : 'now') => {
+      identify(existing, createWhen);
       setOutcome(reading);
-      dispatch({ type: "load", text, source, dirty });
+      dispatch({ type: 'load', text, source, dirty });
       setResult(undefined);
       setStep(2);
-      setServer(existing);
-      if (existing !== undefined) window.history.replaceState(null, "", projectPath(existing.id));
     },
-    [createOpened],
+    [identify],
   );
-  const onOutcome = (o: ExtractOutcome) => {
+  openRef.current = openProject;
+  const onOutcome = (o: ExtractOutcome): void => {
     // Reconverter a leitura (project data) de um projeto já salvo mantém a identidade no servidor; uma leitura nova
     // (passo 01, sem projeto aberto) cria o projeto.
-    if (o.ok) openProject(o.projectText, "extraction", o, false, server);
-    else if (o.reason === "cancelled") {
+    if (o.ok) openProject(o.projectText, 'extraction', o, false, remote.server);
+    else if (o.reason === 'cancelled') {
       // M7: cancelar não é erro; o passo 01 volta com arquivos e campos intactos.
       setOutcome(undefined);
       toast(o.message);
@@ -172,116 +120,47 @@ export function NewProjectView({
       toast.error(o.message);
     }
   };
-  // M7: leitura em curso — cancelar e, para um job retomado depois de um F5, recolher o resultado do servidor.
-  const { execute: cancelRead } = useAction(cancelExtraction);
-  const { executeAsync: fetchResult } = useAction(extractionResult);
-  // `onOutcome` é recriado a cada render (lê `server`); o callback chama o do render mais recente.
-  const onOutcomeRef = useRef(onOutcome);
-  onOutcomeRef.current = onOutcome;
-  const onResumedDone = useCallback(async () => {
-    const current = job;
-    if (current === undefined) return;
-    const r = await fetchResult({ jobId: current.jobId });
-    setJob(undefined);
-    if (r.data === null || r.data === undefined)
-      toast.warning(
-        "The read finished, but its result was already collected or has expired.",
-      );
-    else onOutcomeRef.current(r.data);
-  }, [job, fetchResult]);
-  const onResumedEnded = useCallback(
-    (
-      status: "failed" | "cancelled" | "unknown",
-      message: string | undefined,
-    ) => {
-      setJob(undefined);
-      if (status === "unknown")
-        toast.warning(
-          "The server no longer knows this read (it may have restarted). Upload the set again.",
-        );
-      else if (status === "cancelled") toast(message ?? "Read cancelled.");
-      else toast.error(message ?? "The read failed.");
-    },
-    [],
-  );
-  const openFile = (file: ParsedProjectFile) => {
-    if (file.projectText.trim() === "") return;
-    openProject(
-      file.projectText,
-      file.reading === undefined ? "file" : "extraction",
-      file.reading,
-    );
+  outcomeRef.current = onOutcome;
+  const openFile = (file: ParsedProjectFile): void => {
+    if (file.projectText.trim() !== '') openProject(file.projectText, file.reading === undefined ? 'file' : 'extraction', file.reading);
   };
   // Leitura gravada de exemplo (S23, A6): projeto novo — mesmo com outro aberto — que só vai ao banco na primeira edição.
-  const onSampleOutcome = (o: ExtractOutcome) => {
-    if (o.ok) openProject(o.projectText, "extraction", o, false, undefined, "on-edit");
+  const onSampleOutcome = (o: ExtractOutcome): void => {
+    if (o.ok) openProject(o.projectText, 'extraction', o, false, undefined, 'on-edit');
     else onOutcome(o);
   };
-  const openSample = (text: string) => {
-    if (text.trim() !== "") openProject(text, "sample", undefined);
+  const openSample = (text: string): void => {
+    if (text.trim() !== '') openProject(text, 'sample', undefined);
   };
-  const runProject = () => {
+  const runProject = (): void => {
     if (editor.draft === undefined) return;
     generatedFrom.current = editor.revision;
     generate.execute({ projectText: engineText(editor.draft) });
   };
-  const startOver = () => {
-    cancelCreate();
+  const startOver = (): void => {
+    forget();
     setConfirmingStartOver(false);
     setOutcome(undefined);
     setResult(undefined);
-    dispatch({ type: "reset" });
-    setServer(undefined);
+    dispatch({ type: 'reset' });
     setStep(1);
-    if (window.location.pathname !== "/app") window.history.replaceState(null, "", "/app");
+    if (window.location.pathname !== '/app') window.history.replaceState(null, '', '/app');
   };
   // Há o que perder: edições, um resultado, ou uma leitura paga.
-  const hasWork =
-    editor.draft !== undefined &&
-    (editor.dirty || result !== undefined || okOutcome !== undefined);
-  const requestStartOver = () =>
-    hasWork ? setConfirmingStartOver(true) : startOver();
+  const hasWork = editor.draft !== undefined && (editor.dirty || result !== undefined || okOutcome !== undefined);
+  const requestStartOver = (): void => (hasWork ? setConfirmingStartOver(true) : startOver());
 
   // "New project" no header leva a /app?new=1: já nesta tela, o Link não remonta nada, então é o parâmetro que
   // pede a volta ao passo 01 (com a confirmação de sempre quando há trabalho) e some da URL em seguida.
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const wantsNew = wantsNewProject(searchParams);
+  const wantsNew = wantsNewProject(useSearchParams());
   const requestStartOverRef = useRef(requestStartOver);
   requestStartOverRef.current = requestStartOver;
   useEffect(() => {
     if (!wantsNew) return;
-    router.replace("/app");
+    router.replace('/app');
     requestStartOverRef.current();
   }, [wantsNew, router]);
-
-  const onResume = useCallback(
-    (s: SavedSession) =>
-      openProject(
-        s.text,
-        s.source,
-        s.reading,
-        s.dirty,
-        s.project === undefined ? undefined : { id: s.project.id, revision: s.project.revision, savedAt: new Date(s.savedAt).toISOString() },
-      ),
-    [openProject],
-  );
-  const onResumeJob = useCallback((j: ExtractJob) => setJob(j), []);
-  const session = useSavedSession(editor, okOutcome, job, onResume, {
-    onResumeJob,
-    project: server,
-    generation: creation.generation,
-  });
-  const sync = useProjectSync(editor, okOutcome, server, setServer);
-
-  // Conflito ou projeto apagado (S23, A4): o que está no editor vira um projeto novo, "Copy of <nome>".
-  const saveAsCopy = () => {
-    if (editor.draft === undefined) return;
-    const name = copyName(editor.draft.name ?? okOutcome?.projectName ?? "Untitled project");
-    dispatch({ type: "updateProject", patch: { name } });
-    creation.copy(name);
-  };
-  const saveActions = { saveAsCopy, overwrite: sync.overwrite };
 
   // Projeto vindo da rota (S22.1): abre no editor; no passo 03 gera os painéis assim que o draft carrega.
   const loadedFromRoute = useRef(false);
@@ -295,11 +174,12 @@ export function NewProjectView({
     // as edições sobem logo em seguida.
     const local = session.unsaved(project.id, project.revision, file.projectText);
     const onServer = local === undefined ? undefined : draftFromText(file.projectText);
+    const source = file.reading === undefined ? 'file' : 'extraction';
     if (local !== undefined && onServer?.ok === true) {
-      openProject(local.text, file.reading === undefined ? "file" : "extraction", file.reading, true, { ...identity, text: projectFileText(onServer.draft, file.reading) });
-      toast("Restored your changes from this browser that hadn’t reached the server yet. Saving them now.");
+      openProject(local.text, source, file.reading, true, { ...identity, text: projectFileText(onServer.draft, file.reading) });
+      toast('Restored your changes from this browser that hadn’t reached the server yet. Saving them now.');
     } else {
-      openProject(file.projectText, file.reading === undefined ? "file" : "extraction", file.reading, false, identity);
+      openProject(file.projectText, source, file.reading, false, identity);
     }
     if (initialStep === 3) setStep(3);
     // Uma vez por montagem (`loadedFromRoute`): `session` muda depois sem pedir nova carga.
@@ -315,254 +195,84 @@ export function NewProjectView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStep, editor.draft, step]);
 
-  // A URL acompanha o passo do projeto salvo: /app/projects/<id> no editor, /panels no passo 03.
+  const { extracting } = extraction;
   useEffect(() => {
-    if (server === undefined) return;
-    const target = step === 3 ? projectPath(server.id, 3) : projectPath(server.id);
-    if (step >= 2 && window.location.pathname !== target) window.history.replaceState(null, "", target);
-  }, [step, server]);
-
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }, [step, extracting]);
 
   const done = doneSteps(editor.draft !== undefined, result !== undefined);
-  const resultStale =
-    result !== undefined && resultRevision !== editor.revision;
-  const canRegenerate =
-    check.status === "done" &&
-    !check.stale &&
-    check.result?.ok === true &&
-    !generate.isPending;
-  const projectFile =
-    editor.draft === undefined
-      ? undefined
-      : projectFileText(editor.draft, okOutcome);
-  const ids = useMemo(
-    () => (editor.draft === undefined ? undefined : idIndex(editor.draft)),
-    [editor.draft],
-  );
-
+  const ids = useMemo(() => (editor.draft === undefined ? undefined : idIndex(editor.draft)), [editor.draft]);
   const workspace = step === 2 && editor.draft !== undefined;
   useWorkspaceLayout(workspace);
 
-  // O passo 1 fica montado em todo passo (escondido): arquivos e campos do upload sobrevivem a ir ao editor e
-  // voltar, e à espera da leitura. Com `hidden` por classe, não por atributo (o `grid` venceria o atributo).
-  const uploadVisible = step === 1 && !extracting;
-  const upload = (
-    <section
-      key="upload"
-      className={
-        uploadVisible
-          ? "step-enter no-print mx-auto w-full max-w-[1040px] space-y-5"
-          : "hidden"
-      }
-      aria-hidden={!uploadVisible}
-    >
-      <UploadForm
-        aiEnabled={aiEnabled}
-        onOutcome={onOutcome}
-        onJobChange={setJob}
-        onFilesChange={setUploaded}
-        storage={storage}
-        onSample={
-          devTools
-            ? () => document.getElementById("sample")?.focus()
-            : undefined
-        }
-      />
-      <SampleCards examples={examples} disabled={generate.isPending || extracting} onPick={openSample} onOutcome={onSampleOutcome} />
-      {devTools ? (
-        <Card className="gap-3 p-5">
-          <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
-        </Card>
-      ) : null}
-      <ul className="flex flex-wrap justify-center gap-x-8 gap-y-2 pt-2 text-[13px] text-ink-2">
-        <li className="flex items-center gap-2">
-          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
-          The read takes several minutes and can be cancelled
-        </li>
-        <li className="flex items-center gap-2">
-          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
-          Every wall shows its confidence and the dimension it came from
-        </li>
-        <li className="flex items-center gap-2">
-          <span aria-hidden className="size-1.5 rounded-pill bg-gold" />
-          Deterministic engine · IRC 2021 R602.7
-        </li>
-      </ul>
-    </section>
-  );
+  const io: ProjectIO = {
+    outcome: okOutcome,
+    onOutcome,
+    pending: generate.isPending,
+    onGenerate: runProject,
+    steps: <StepBar active={step} done={done} onGo={setStep} compact />,
+    onStartOver: requestStartOver,
+    sourceFiles: uploaded,
+    storedDrawings: okOutcome?.drawings ?? [],
+    storage,
+    save: sync.status,
+    onRetrySave: sync.retry,
+    saveActions,
+  };
 
   return (
     <>
       {workspace ? (
-        <WallEditor
-          state={editor}
-          dispatch={dispatch}
-          outcome={okOutcome}
-          check={check}
-          pending={generate.isPending}
-          onGenerate={runProject}
-          onOutcome={onOutcome}
-          steps={<StepBar active={step} done={done} onGo={setStep} compact />}
-          onStartOver={requestStartOver}
-          sourceFiles={uploaded}
-          storedDrawings={okOutcome?.drawings}
-          storage={storage}
-          save={sync.status}
-          onRetrySave={sync.retry}
-          saveActions={saveActions}
-        />
+        <ProjectIOContext value={io}>
+          <WallEditor state={editor} dispatch={dispatch} check={check} />
+        </ProjectIOContext>
       ) : (
         <div className="space-y-8">
           {step === 1 ? (
-            // O hero só no passo 01 (M3; refeito em 2026-10-23: rail de passos no topo, título em display, centrado).
             <>
               <StepBar active={step} done={done} onGo={setStep} rail />
-              <header className="no-print mx-auto max-w-2xl space-y-3 text-center pb-4">
-                <p className="eyebrow">New project</p>
-                <h1 className="font-display text-5xl leading-[.98] tracking-[-1px] text-navy-900 sm:text-6xl">
-                  Drop the drawings.
-                  <br />
-                  Get the panels.
-                </h1>
-                <p className="mx-auto max-w-xl text-lg text-ink-2">
-                  The AI reads the set, you check every wall, and the engine
-                  frames each panel. Nothing is built before your review.
-                </p>
-              </header>
+              <UploadHero />
             </>
           ) : (
             <>
-              <h1 className="sr-only">
-                {step === 2 ? "Review walls" : "Panels"}
-              </h1>
+              <h1 className="sr-only">{step === 2 ? 'Review walls' : 'Panels'}</h1>
               <StepBar active={step} done={done} onGo={setStep} />
             </>
           )}
-
-          {step === 1 &&
-          okOutcome !== undefined &&
-          editor.draft !== undefined &&
-          !extracting ? (
-            <Alert className="no-print mx-auto max-w-[1040px]">
-              <HistoryIcon />
-              <AlertTitle>Walls read from your set</AlertTitle>
-              <AlertDescription>
-                <p>
-                  {okOutcome.walls.length} walls ·{" "}
-                  {okOutcome.openingTypes.length} opening types · level{" "}
-                  {okOutcome.level}. Nothing is built until you generate.
-                </p>
-                <div className="mt-1">
-                  <Button variant="accent" size="sm" onClick={() => setStep(2)}>
-                    Review walls
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {step === 1 &&
-          !extracting &&
-          editor.draft === undefined &&
-          session.saved !== undefined ? (
-            <ResumeBanner
-              saved={session.saved}
-              onResume={session.resume}
-              onDiscard={session.discard}
-            />
-          ) : null}
-
-          {step === 1 && job ? (
-            <ExtractProgress
-              job={job}
-              onCancel={() => cancelRead({ jobId: job.jobId })}
-              onResumedDone={onResumedDone}
-              onResumedEnded={onResumedEnded}
-            />
-          ) : null}
-
-          {step === 2 ? (
-            // Com draft aberto o passo 02 é o workspace (retorno acima); aqui só o que não abriu.
-            <section key="review" className="step-enter no-print space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="eyebrow">02 · Review walls</p>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setStep(1)}>
-                    <ArrowLeftIcon /> Back to drawings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={requestStartOver}
-                  >
-                    <RotateCcwIcon /> Start over
-                  </Button>
-                </div>
-              </div>
-              <Alert variant="destructive">
-                <OctagonXIcon />
-                <AlertTitle>
-                  {editor.loadError !== undefined
-                    ? "This project can’t be opened"
-                    : "Nothing to review"}
-                </AlertTitle>
-                <AlertDescription>
-                  {editor.loadError ??
-                    (outcome && !outcome.ok
-                      ? outcome.message
-                      : "Upload drawings or pick a sample first.")}
-                  {editor.loadError === undefined && outcome && !outcome.ok && outcome.detail !== undefined ? (
-                    <OriginalText text={outcome.detail} />
-                  ) : null}
-                </AlertDescription>
-              </Alert>
-            </section>
-          ) : null}
-
+          {step === 1 && okOutcome !== undefined && editor.draft !== undefined && !extracting ? <ReadReadyAlert reading={okOutcome} onReview={() => setStep(2)} /> : null}
+          {step === 1 && !extracting && editor.draft === undefined && session.saved !== undefined ? <ResumeBanner saved={session.saved} onResume={session.resume} onDiscard={session.discard} /> : null}
+          {step === 1 && extraction.job !== undefined ? <ExtractProgress job={extraction.job} onCancel={extraction.cancel} onResumedDone={extraction.onResumedDone} onResumedEnded={extraction.onResumedEnded} /> : null}
+          {step === 2 ? <ReviewUnavailable loadError={editor.loadError} outcome={outcome} onBack={() => setStep(1)} onStartOver={requestStartOver} /> : null}
           {step === 3 ? (
-            <section key="panels" className="step-enter space-y-4">
-              <div className="no-print flex flex-wrap items-center justify-between gap-3">
-                <p className="eyebrow">03 · Panels</p>
-                <div className="flex gap-2">
-                  {editor.draft !== undefined ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setStep(2)}
-                    >
-                      <ArrowLeftIcon /> Back to review
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={requestStartOver}
-                  >
-                    <RotateCcwIcon /> Start over
-                  </Button>
-                </div>
-              </div>
+            <PanelsStep onBack={editor.draft !== undefined ? () => setStep(2) : undefined} onStartOver={requestStartOver}>
               <ResultView
                 result={result}
                 pending={generate.isPending}
-                projectFile={projectFile}
-                stale={resultStale}
-                canRegenerate={canRegenerate}
+                projectFile={editor.draft === undefined ? undefined : projectFileText(editor.draft, okOutcome)}
+                stale={result !== undefined && resultRevision !== editor.revision}
+                canRegenerate={check.status === 'done' && !check.stale && check.result?.ok === true && !generate.isPending}
                 onRegenerate={runProject}
                 ids={ids}
               />
-            </section>
+            </PanelsStep>
           ) : null}
         </div>
       )}
 
-      {upload}
+      <UploadStep
+        visible={step === 1 && !extracting}
+        aiEnabled={aiEnabled}
+        devTools={devTools}
+        storage={storage}
+        examples={examples}
+        busy={generate.isPending || extracting}
+        onOutcome={onOutcome}
+        onJobChange={extraction.setJob}
+        onFilesChange={setUploaded}
+        onSample={openSample}
+        onSampleOutcome={onSampleOutcome}
+        onProjectFile={openFile}
+      />
 
       <ConfirmDialog
         open={confirmingStartOver}
@@ -570,8 +280,8 @@ export function NewProjectView({
         title="Start over?"
         description={
           okOutcome !== undefined
-            ? "This closes the project and its AI reading. A read takes several minutes and costs money; save the project file from the menu first if you may want it back."
-            : "This closes the project and discards your edits and the generated panels."
+            ? 'This closes the project and its AI reading. A read takes several minutes and costs money; save the project file from the menu first if you may want it back.'
+            : 'This closes the project and discards your edits and the generated panels.'
         }
         confirmLabel="Start over"
         destructive
@@ -581,39 +291,13 @@ export function NewProjectView({
   );
 }
 
-/** Sessão gravada neste navegador (M2): oferece retomar antes de qualquer coisa. */
-function ResumeBanner({
-  saved,
-  onResume,
-  onDiscard,
-}: {
-  saved: SavedSession;
-  onResume: () => void;
-  onDiscard: () => void;
-}) {
-  return (
-    <Alert className="step-enter no-print">
-      <HistoryIcon />
-      <AlertTitle>Resume “{saved.name}”?</AlertTitle>
-      <AlertDescription>
-        <p>
-          Saved in this browser {describeAge(saved.savedAt, Date.now())} ·{" "}
-          {SOURCE_LABEL[saved.source]}
-          {saved.dirty ? " · with your edits" : ""}
-          {saved.reading !== undefined
-            ? ` · ${saved.reading.walls.length} walls read`
-            : ""}
-          .
-        </p>
-        <div className="mt-1 flex gap-2">
-          <Button variant="accent" size="sm" onClick={onResume}>
-            Resume
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onDiscard}>
-            Discard
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
-  );
-}
+/** Abre um texto de projeto no editor (amostra, arquivo, leitura, sessão retomada ou projeto da rota). */
+type OpenProject = (
+  text: string,
+  source: DraftSource,
+  reading: Reading | undefined,
+  dirty?: boolean,
+  existing?: ServerProject,
+  /** Sample (A6): só ganha linha no banco na primeira edição. */
+  createWhen?: CreateWhen,
+) => void;

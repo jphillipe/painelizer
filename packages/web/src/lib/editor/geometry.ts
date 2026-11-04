@@ -9,7 +9,7 @@
  * Única camada do cliente que importa `core` (com os demais módulos de `lib/editor`).
  */
 
-import { axisOf, frameWalls, pointAt, sectionDepth, type Axis, type HouseWall, type Opening, type WallFrame } from 'core';
+import { axisOf, frameWalls, pointAt, type Axis, type HouseWall, type Opening, type WallFrame } from 'core';
 import { draftFormat, isPlanWall, type DraftFormat, type DraftOpening, type DraftWall, type Point, type ProjectDraft, type WallSection } from './draft';
 import { noticeOfError, noticeText } from '@/lib/notices';
 import type { Notice } from '@/types/panels';
@@ -280,4 +280,3 @@ export function geometryIssues(g: PlanGeometry, ids: IdIndex): Issue[] {
   return issues;
 }
 
-export const sectionThickness = sectionDepth;

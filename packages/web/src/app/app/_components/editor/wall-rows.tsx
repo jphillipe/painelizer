@@ -2,11 +2,11 @@
 
 import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
-import { isPlanWall, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
+import { wallLength, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
-import { isReviewed, reviewedCount, type Selection } from '@/lib/editor/state';
+import { isReviewed, reviewedCount, selectedWallIds, toggledWall, type Selection } from '@/lib/editor/state';
 import { countByFilter, filterWalls, type LevelFilter, type WallFilter } from '@/lib/editor/wall-filters';
 import { cn } from '@/lib/utils';
 
@@ -29,12 +29,6 @@ const FILTERS: { id: WallFilter; label: string }[] = [
 
 const TONE_DOT = { success: 'bg-success', warning: 'bg-warning', destructive: 'bg-destructive' } as const;
 
-function wallLength(w: DraftWall): number | undefined {
-  if (!isPlanWall(w)) return w.length;
-  if (w.start === undefined || w.end === undefined) return undefined;
-  return Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
-}
-
 function role(w: DraftWall): string {
   const pos = w.exterior === undefined ? '?' : w.exterior ? 'ext' : 'int';
   const load = w.bearing === undefined ? '?' : w.bearing ? 'bearing' : 'non-bearing';
@@ -49,7 +43,8 @@ function openingLabel(o: DraftOpening): string {
 /**
  * Lista compacta de paredes do workspace (S21.4): uma linha por parede com papel, comprimento, pontos de issue e
  * de confiança; filtros em chips (M5: "Not reviewed" quando a revisão faz sentido, pavimento igual ao da planta);
- * a parede selecionada expande as aberturas. Selecionar centraliza a planta (quem decide é o `Workspace`).
+ * a parede selecionada expande as aberturas. Selecionar centraliza a planta (quem decide é o `Workspace`); Shift/Ctrl/⌘
+ * + clique põe ou tira a parede da seleção múltipla (S30).
  */
 export function WallRows({ draft, selection, provenance, issuesByWall, onSelect, level = 'all' }: WallRowsProps) {
   const [filter, setFilter] = useState<WallFilter>('all');
@@ -57,6 +52,7 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect,
   const reviewing = hasProvenance || reviewedCount(draft.walls) > 0;
   const counts = countByFilter(draft.walls, issuesByWall, provenance, level);
   const walls = filterWalls(draft.walls, filter, issuesByWall, provenance, level);
+  const selectedIds = selectedWallIds(selection);
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
   const selectedOpening = selection.kind === 'opening' ? selection.openingId : undefined;
   const filters = FILTERS.filter((f) => (f.id !== 'lowConfidence' || hasProvenance) && (f.id !== 'notReviewed' || reviewing));
@@ -102,14 +98,14 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect,
             const issues = issuesByWall.get(w.id) ?? [];
             const problems = issues.filter((x) => x.severity === 'problem').length;
             const warnings = issues.length - problems;
-            const selected = selectedWall === w.id;
+            const selected = selectedIds.includes(w.id);
             const length = wallLength(w);
             const reviewed = isReviewed(w);
             return (
               <li key={w.id} className={cn('border-l-2 border-transparent transition-colors duration-200', selected && 'border-selection bg-selection/8')}>
                 <button
                   type="button"
-                  onClick={() => onSelect({ kind: 'wall', wallId: w.id })}
+                  onClick={(e) => onSelect(e.shiftKey || e.ctrlKey || e.metaKey ? toggledWall(selection, w.id) : { kind: 'wall', wallId: w.id })}
                   aria-pressed={selected}
                   className={cn('grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 px-3 py-2 text-left transition-colors duration-200 hover:bg-paper-2', selected && 'hover:bg-selection/12')}
                 >
@@ -135,7 +131,7 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect,
                     ) : null}
                   </span>
                 </button>
-                {selected && w.openings.length > 0 ? (
+                {selectedWall === w.id && w.openings.length > 0 ? (
                   <ul className="pb-2 pl-7 pr-3" aria-label={`Openings of ${w.id}`}>
                     {w.openings.map((o) => {
                       const oIssues = issues.filter((i) => i.openingId === o.id);

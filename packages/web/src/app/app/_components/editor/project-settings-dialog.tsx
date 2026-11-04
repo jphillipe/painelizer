@@ -29,7 +29,7 @@ export function ProjectSettingsDialog({ open, onOpenChange, draft, dispatch, out
           <DialogTitle>Project settings</DialogTitle>
           <DialogDescription>Framing, panels, building data and the schedules the reading found. Changes apply as you leave each field.</DialogDescription>
         </DialogHeader>
-        <ProjectProperties draft={draft} dispatch={dispatch} outcome={outcome} dirty={dirty} onOutcome={onOutcome} showProjectData />
+        <ProjectProperties draft={draft} dispatch={dispatch} outcome={outcome} dirty={dirty} onOutcome={onOutcome} />
       </DialogContent>
     </Dialog>
   );

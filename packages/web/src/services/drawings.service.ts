@@ -5,6 +5,7 @@
  * `undefined` e os desenhos continuam vindo no corpo do pedido (desenvolvimento sem chaves).
  */
 
+import { errorMessage } from '@/lib/errors';
 import 'server-only';
 import { movedDrawings, newUploadId, uploadIdsOf, type DrawingRef } from '@/lib/drawings';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -24,10 +25,6 @@ export const defaultDeps: DrawingsDeps = {
 
 export type DownloadResult = { ok: true; files: UploadedFile[] } | { ok: false; reason: 'unconfigured' | 'failed'; message: string };
 
-function failure(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
 /** Os desenhos de um envio como o `extract` os lê (nome do humano, tipo e bytes), na ordem dada. */
 export async function downloadDrawings(refs: readonly DrawingRef[], deps: DrawingsDeps = defaultDeps): Promise<DownloadResult> {
   const store = await deps.store();
@@ -37,7 +34,7 @@ export async function downloadDrawings(refs: readonly DrawingRef[], deps: Drawin
     try {
       files.push({ name: ref.name, type: ref.type, bytes: await store.download(ref.path) });
     } catch (e) {
-      return { ok: false, reason: 'failed', message: `Could not read ${ref.name} from storage: ${failure(e)}` };
+      return { ok: false, reason: 'failed', message: `Could not read ${ref.name} from storage: ${errorMessage(e)}` };
     }
   }
   return { ok: true, files };

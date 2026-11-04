@@ -5,6 +5,7 @@
  * arquivo, e a chamada registrada como job (progresso, cancelamento, resultado recolhível depois de um F5).
  */
 
+import { errorMessage } from '@/lib/errors';
 import 'server-only';
 import {
   apiErrorInfo,
@@ -231,7 +232,7 @@ export function replayRecorded(input: { sampleId?: string | undefined; responseJ
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    return { ok: false, reason: 'input', message: `Not valid JSON: ${(e as Error).message}` };
+    return { ok: false, reason: 'input', message: `Not valid JSON: ${errorMessage(e)}` };
   }
   return fromRecorded(raw);
 }

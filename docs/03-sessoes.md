@@ -1245,12 +1245,40 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   pelo motor, quebra fora da marca acusa `PANEL_BREAK_INVALID` com os candidatos ainda na tela, "Automatic" volta ao
   motor, "Add type"/"Add mark" no dialog. Não feito (fora do item): a mensagem de erro em parede de planta cita x da
   plate (não do `start`); quebra em parede solta só pelo inspetor (a planta não desenha parede solta).
-- [ ] **S30 — Editor: produtividade (web, SRF).** Seleção múltipla com ações em lote (mover, apagar, campos
+- [x] **S30 — Editor: produtividade (web, SRF).** Seleção múltipla com ações em lote (mover, apagar, campos
   comuns); duplicar parede; dividir/juntar parede redistribuindo aberturas; arrastar o corpo move a parede
   selecionada (pan só no fundo); "Draw wall" por dois cliques com snap ortogonal e a pontas/eixos vizinhos;
   `EditorContext` + `ProjectIOContext` no lugar das 28 props do `workspace.tsx`; `plan-canvas.tsx` em
   `usePlanGestures`/`useViewportAnimation`/`useCanvasKeys` + `plan-canvas-shapes.tsx`; `new-project-view.tsx` em
   `useServerProject`/`useExtractionJob` + passos; ramos e exports mortos apagados (doc 13 §D).
+  Feita em 2026-11-04 (sessão encadeada; SRF, nenhuma regra do motor; commit, sem push). **Seleção**: `Selection`
+  ganhou `walls` (duas ou mais; uma volta a `wall`), com `selectedWallIds`/`toggledWall`/`wallsSelection`; Shift/Ctrl/⌘ +
+  clique põe e tira na planta e na lista, Ctrl+A seleciona todas. **Ações em lote** no reducer: `removeWalls`,
+  `moveWalls` (substitui `moveWall`: setas e arraste), `updateWalls` (campos comuns no inspetor `walls-properties.tsx`,
+  "Mixed" quando diferem), `duplicateWalls` (Ctrl+D; cópias a (+24, −24), aberturas `<parede>-O1`…), `splitWall`
+  (inspetor: "Split at", sugerido no meio fora das aberturas) e `joinWalls` (duas de planta colineares que se encostam),
+  puros em `lib/editor/wall-ops.ts`; recusa = estado igual, com o motivo no inspetor. **Planta**: o corpo de uma parede
+  selecionada arrasta a seleção (snap 1", Shift 1/8"; parede não selecionada e fundo fazem pan); "Draw wall" (botão e
+  `W`) por dois cliques com snap em ponta, alinhamento a pontas/eixos vizinhos e ortogonal (`lib/editor/draw.ts`), em
+  corrente (a próxima começa no fim da anterior; duplo clique ou Esc fecha, Esc de novo sai); planta vazia aparece com
+  um quadro de 40′ × 30′ para a primeira parede; o enquadramento só muda com outro projeto. **Estrutura**:
+  `plan-canvas.tsx` 831 → 260 linhas (`useViewportAnimation`, `usePlanGestures`, `useCanvasKeys`,
+  `plan-canvas-shapes.tsx`); `EditorContext` (o que o `WallEditor` deriva do draft) + `ProjectIOContext` (leitura,
+  gerar, desenhos, auto-save) no lugar das 28 props do `Workspace` (agora nenhuma) e das 15 do `WallEditor` (3); atalhos
+  e ajuda moram no `Workspace`; `new-project-view.tsx` 619 → 303 (`useServerProject`, `useExtractionJob`,
+  `new-project-steps.tsx`). **Doc 13 §D**: saíram o `EditorToolbar` não-`embedded`, o `Inspector` com moldura e
+  `ProjectProperties` (`showProjectData`), o 4:3 do `PlanCanvas`, o `collapsible` falso de parede e abertura,
+  `withoutUnderlay`, `sectionThickness`, `illustrationPlan` e `ui/separator.tsx`; `failure(e)` repetido →
+  `errorMessage` (`lib/errors.ts`, também nos `(e as Error).message`), `newJobId` ≈ `newUploadId` → `randomId`, e as
+  props comuns de `/app` e `/app/projects/[id]` (o `devTools` calculado duas vezes) em `view-props.ts`. De quebra:
+  soltar o ponteiro aplica o último quadro do arraste (antes se perdia). Verde na raiz: `pnpm check` (core 638, cli 144,
+  extract 210 + 1 pulado, web 426) e `pnpm --filter web build`; core, cli, fixtures e snapshots sem um byte mudado.
+  Conferido no app (dev sem Supabase, house-28x40, pane oculto, eventos de ponteiro reais por script): Shift+clique
+  W01 + W05 e inspetor "2 walls"; arrastar o corpo move as duas e Ctrl+Z desfaz num passo; Duplicate (W06/W07
+  selecionadas) e Delete em lote com o toast "Removed 2 walls"; Split da W01 em 20′ e Join de volta; "Draw wall" da W05 à
+  W02 (18′, plate 17′-7 1/2", motor sem issue). Não feito (fora do item): seleção por caixa e marcar revisão em lote.
+  Achado anterior à S30 (reproduzido no HEAD `044f85f`): `/app?new=1` e logo depois abrir um exemplo derruba o editor
+  com "Maximum update depth exceeded" (Tabs do Radix desmontando enquanto o `router.replace` termina).
 - [ ] **S31 — Motor: o que falta do escopo v1 (regra de framing: submeter; P novas).** (a) Blocking horizontal como
   `role: 'block'` entre studs quando `height > config.fireBlockAt` (default 120", P11) — hoje só avisa; (b)
   cruzamento em + (hipótese a registrar: ladder único na faixa e cortes da double top fundidos; hoje `layoutPlates`

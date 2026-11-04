@@ -17,9 +17,14 @@ export interface DrawingRef {
   type: string;
 }
 
-/** Id de um envio (a pasta no bucket): UUID quando há, senão tempo + aleatório. */
+/** Id único: UUID quando há, senão `<prefixo>-<tempo>-<aleatório>`. */
+export function randomId(prefix: string): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Id de um envio (a pasta no bucket). */
 export function newUploadId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `up-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return randomId('up');
 }
 
 /**

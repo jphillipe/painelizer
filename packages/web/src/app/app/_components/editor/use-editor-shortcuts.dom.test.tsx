@@ -78,4 +78,41 @@ describe('useEditorShortcuts no DOM (M10)', () => {
     fireEvent.keyDown(document.body, { key: 'Delete' });
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  it('S30: Delete apaga as paredes selecionadas; Ctrl+D duplica; Ctrl+A seleciona todas; W e Esc ligam e desligam o desenho', () => {
+    const dispatch = vi.fn();
+    const onToggleDraw = vi.fn();
+    const many = editorReducer(house(), { type: 'select', selection: { kind: 'walls', wallIds: ['W01', 'W03'] } });
+    const { rerender } = renderHook(({ drawing }: { drawing: boolean }) => useEditorShortcuts(many, dispatch, true, { onToggleDraw, drawing }), { initialProps: { drawing: false } });
+    fireEvent.keyDown(document.body, { key: 'Delete' });
+    fireEvent.keyDown(document.body, { key: 'd', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+    expect(dispatch.mock.calls.map((c) => c[0])).toEqual([
+      { type: 'removeWalls', wallIds: ['W01', 'W03'] },
+      { type: 'duplicateWalls', wallIds: ['W01', 'W03'] },
+      { type: 'select', selection: { kind: 'walls', wallIds: ['W01', 'W02', 'W03', 'W04', 'W05'] } },
+    ]);
+    fireEvent.keyDown(document.body, { key: 'w' });
+    expect(onToggleDraw).toHaveBeenCalledTimes(1);
+    // Desenhando, Esc sai do modo e não desseleciona.
+    dispatch.mockClear();
+    rerender({ drawing: true });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onToggleDraw).toHaveBeenCalledTimes(2);
+    expect(dispatch).not.toHaveBeenCalled();
+    // Tecla que a planta já tratou (preventDefault) não chega aqui.
+    const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    e.preventDefault();
+    document.body.dispatchEvent(e);
+    expect(onToggleDraw).toHaveBeenCalledTimes(2);
+  });
+
+  it('S30: Ctrl+D sem parede selecionada fica com o navegador', () => {
+    const dispatch = vi.fn();
+    renderHook(() => useEditorShortcuts(house(), dispatch, true));
+    const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
 });

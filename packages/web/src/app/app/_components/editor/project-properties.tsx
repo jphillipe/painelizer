@@ -15,12 +15,10 @@ export interface ProjectPropertiesProps {
   outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
   dirty: boolean;
   onOutcome: (outcome: ExtractOutcome) => void;
-  /** O card de dados do projeto já está no topo do editor (pede dados): não repetir aqui. */
-  showProjectData: boolean;
 }
 
 /** Propriedades do projeto: carimbo, config de framing, divisão em painéis, dados da casa, catálogo editável (S29). */
-export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, showProjectData }: ProjectPropertiesProps) {
+export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }: ProjectPropertiesProps) {
   const c = draft.config;
   const setProject = (patch: Extract<EditorAction, { type: 'updateProject' }>['patch']): void => dispatch({ type: 'updateProject', patch });
   const setConfig = (patch: Extract<EditorAction, { type: 'updateConfig' }>['patch']): void => dispatch({ type: 'updateConfig', patch });
@@ -122,7 +120,7 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
         <p className="text-[12px] text-ink-3">Snow load and width together enable the IRC header table; wind speed enables the king stud table.</p>
       </Section>
 
-      {outcome !== undefined && showProjectData ? (
+      {outcome !== undefined ? (
         // M5: um só conjunto de campos. O que tem campo próprio acima (header height, building) não se repete; aqui
         // fica só o que é aplicado pela reconversão da leitura (altura para as paredes sem altura, peitoril das
         // janelas sem elevação), recolhido e dizendo que reconstrói o projeto.

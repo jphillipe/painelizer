@@ -205,7 +205,7 @@ export function draftFromText(text: string): DraftLoad {
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    return { ok: false, problems: [{ path: '', text: `Invalid JSON: ${(e as Error).message}` }] };
+    return { ok: false, problems: [{ path: '', text: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}` }] };
   }
   return draftFromJson(raw);
 }
@@ -682,6 +682,30 @@ function mapValues<T>(o: Record<string, T>, f: (v: T) => unknown): Record<string
 
 export function isPlanWall(w: DraftWall): boolean {
   return w.start !== undefined || w.end !== undefined;
+}
+
+/** Comprimento da parede: `length` da solta, distância entre as pontas da de planta; `undefined` sem os dados. */
+export function wallLength(w: DraftWall): number | undefined {
+  if (!isPlanWall(w)) return w.length;
+  if (w.start === undefined || w.end === undefined) return undefined;
+  return Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+}
+
+/** Chave da marca de revisão no `extra` da parede (M5; sobrevive à serialização; o CLI ignora chaves com `$`). */
+export const REVIEWED_KEY = '$reviewed';
+
+export function isReviewed(w: Pick<DraftWall, 'extra'>): boolean {
+  return w.extra?.[REVIEWED_KEY] === true;
+}
+
+/** A parede sem a marca de revisão (S30: parede criada ou mudada por duplicar/dividir/juntar volta a pedir revisão). */
+export function withoutReviewed(w: DraftWall): DraftWall {
+  if (w.extra?.[REVIEWED_KEY] === undefined) return w;
+  const extra = { ...w.extra };
+  delete extra[REVIEWED_KEY];
+  const out: DraftWall = { ...w, extra };
+  if (Object.keys(extra).length === 0) delete out.extra;
+  return out;
 }
 
 export function draftFormat(d: ProjectDraft): DraftFormat {

@@ -10,6 +10,7 @@
  * "edited elsewhere" em vez de sobrescrever (decisão de 2026-10-22).
  */
 
+import { errorMessage } from '@/lib/errors';
 import 'server-only';
 import { drawingsOfProjectData, withProjectDrawings } from '@/lib/drawings';
 import { copyName, NAME_MAX, nameFromData, projectName, wallCountOf, withProjectName } from '@/lib/projects';
@@ -82,14 +83,10 @@ export function parseProjectData(text: string): { ok: true; data: Json } | { ok:
   try {
     parsed = JSON.parse(text);
   } catch (e) {
-    return { ok: false, message: `The project is not valid JSON: ${(e as Error).message}` };
+    return { ok: false, message: `The project is not valid JSON: ${errorMessage(e)}` };
   }
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, message: 'The project must be a JSON object.' };
   return { ok: true, data: parsed as Json };
-}
-
-function failure(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 export async function createProject(input: { name: string | undefined; text: string }, user: SessionUser | undefined, deps: ProjectsDeps = defaultDeps): Promise<CreateResult> {
@@ -103,7 +100,7 @@ export async function createProject(input: { name: string | undefined; text: str
     const row = await table.insert({ name: projectName(input.name ?? nameFromData(data.data)), data: data.data, owner_id: user.id, owner_email: user.email });
     return { ok: true, id: row.id, revision: row.revision, savedAt: row.updated_at };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not save the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not save the project: ${errorMessage(e)}` };
   }
 }
 
@@ -118,7 +115,7 @@ export async function loadProject(id: string, deps: ProjectsDeps = defaultDeps):
       project: { id: row.id, name: row.name, revision: row.revision, text: JSON.stringify(row.data, null, 2), updatedAt: row.updated_at, ownerEmail: row.owner_email },
     };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not load the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not load the project: ${errorMessage(e)}` };
   }
 }
 
@@ -142,7 +139,7 @@ export async function saveProject(input: { id: string; revision: number; name: s
       message: `This project was edited elsewhere (revision ${current.revision}). Your changes here are not saved: save them as a copy, overwrite the other version, or reload to drop them.`,
     };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not save the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not save the project: ${errorMessage(e)}` };
   }
 }
 
@@ -157,7 +154,7 @@ export async function listProjects(deps: ProjectsDeps = defaultDeps): Promise<Li
       projects: rows.map((r) => ({ id: r.id, name: r.name, walls: wallCountOf(r.walls), revision: r.revision, createdAt: r.created_at, updatedAt: r.updated_at, ownerEmail: r.owner_email })),
     };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not list the projects: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not list the projects: ${errorMessage(e)}` };
   }
 }
 
@@ -185,7 +182,7 @@ export async function renameProject(input: { id: string; name: string }, deps: P
     }
     return { ok: false, reason: 'failed', message: 'The project is being edited right now. Try again in a moment.' };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not rename the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not rename the project: ${errorMessage(e)}` };
   }
 }
 
@@ -204,7 +201,7 @@ export async function duplicateProject(id: string, user: SessionUser | undefined
     const copy = await table.insert({ name, data: withProjectName(data, name), owner_id: user.id, owner_email: user.email });
     return { ok: true, id: copy.id, name };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not duplicate the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not duplicate the project: ${errorMessage(e)}` };
   }
 }
 
@@ -220,6 +217,6 @@ export async function deleteProject(id: string, deps: ProjectsDeps = defaultDeps
     if (row !== undefined) await removeDrawings(drawingsOfProjectData(row.data), deps.drawings);
     return { ok: true };
   } catch (e) {
-    return { ok: false, reason: 'failed', message: `Could not delete the project: ${failure(e)}` };
+    return { ok: false, reason: 'failed', message: `Could not delete the project: ${errorMessage(e)}` };
   }
 }
