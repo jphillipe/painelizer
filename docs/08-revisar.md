@@ -1,12 +1,12 @@
 # 08 — Revisar com a fábrica
 
-Gerado por `pnpm hipoteses` em 2026-10-16. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
+Gerado por `pnpm hipoteses` em 2026-11-04. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
 
-**30 hipóteses em vigor**, 11 pendências respondidas.
+**36 hipóteses em vigor**, 11 pendências respondidas.
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
-| P1 | Painéis reais | fixtures sintéticos | `packages/cli/examples/casa-exemplo.json:2`, `packages/cli/src/build.ts:128`, `packages/cli/src/build.ts:14`, `packages/cli/test/main.test.ts:202`, `packages/core/src/panelize/splitWall.ts:21` (+13) |
+| P1 | Painéis reais | fixtures sintéticos | `packages/cli/examples/casa-exemplo.json:2`, `packages/cli/src/build.ts:14`, `packages/cli/src/build.ts:144`, `packages/cli/test/main.test.ts:202`, `packages/core/src/panelize/splitWall.ts:21` (+14) |
 | P8 | Peso por peça | tabela fixa em `src/data/lumber.json` | `packages/cli/src/csv.ts:95`, `packages/core/src/data/lumber.json:2`, `packages/core/src/output/svg.ts:27`, `packages/core/src/panelize/splitWall.ts:17`, `packages/core/src/rules/split.ts:4` (+7) |
 | P10 | Tabela IRC em vigor | IRC 2021 sem emenda local em R602.7 | `packages/core/src/data/lumber.json:2`, `packages/core/src/rules/headers.ts:3`, `packages/core/src/rules/openingHeader.ts:5`, `packages/core/src/types.ts:109` |
 | P15 | Peso máximo do painel | sem limite de peso até a resposta; só comprimento (240") | `packages/core/src/rules/split.ts:4`, `packages/core/src/rules/weight.ts:8`, `packages/core/src/types.ts:438`, `packages/core/src/types.ts:444` |
@@ -36,6 +36,12 @@ Gerado por `pnpm hipoteses` em 2026-10-16. Não edite à mão: a fonte é `05-pe
 | P39 | Par de janelas A2 e porta 1 com 4 1/2" entre os RO (parede S2 do Ringgold) | 1 king compartilhado (aviso `HEADER_KINGS_BELOW_TABLE`, "… hipótese P39"), automático em `mergeOpeningZones` com `fit`. Com a folga HM antiga (+4 1/2", RO 40 1/2") sobravam 3 1/4" e nem isso cabia; a P34 revista dá os 38" da P29 | `packages/core/src/panelize/panelizeWall.ts:86`, `packages/core/src/rules/zones.ts:12`, `packages/core/src/rules/zones.ts:42`, `packages/core/src/rules/zones.ts:99` |
 | P40 | Tolerância de leitura para abertura em conflito | o motor desloca o mínimo, até 1 1/2", com aviso `OPENING_NUDGED`; acima disso é erro (`rules/nudge.ts`) | `packages/core/src/panelize/panelizeWall.ts:115`, `packages/core/src/panelize/splitWall.ts:61`, `packages/core/src/rules/nudge.ts:2` |
 | P41 | Orçamento de folhas por leitura | 40 folhas e 22 MB por leitura (`select.ts`), o resto vira aviso `FOLHAS_FORA`; o humano pode escolher as páginas | — |
+| P44 | Alturas padrão de blocking | um bloco por uso, de 1.5" de altura, **centro** na cota (faixa → valor único: 36, 54, 84; 15, 39, 42, 48, 79), seção da parede, entre todos os studs do trecho; `config.blockingPresets` | — |
+| P45 | Posts: seções, peso e conectores | seções 4x4, 4x6 e 6x6 (reais 3.5×3.5, 3.5×5.5, 5.5×5.5) a 35 pcf (≈ 3.0, 4.7, 7.3 lb/pé); o post ocupa o lugar do stud que sobrepõe; conectores são texto do projeto na folha, não peça da lista | — |
+| P46 | Cruzamento em + (T dos dois lados no mesmo ponto) | um corte da double top na faixa; com `config.tee = 'backer'` dois studs contínuos servem os dois lados; com `'ladder'`, blocos dos dois lados | — |
+| P47 | Sheathing: chapa, avanços e linha de piso | avança `t_outra` no canto pela parede que atravessa, presa ao painel; na junta painel-painel não avança; na linha de piso só quando o projeto pede (`config.sheathing.overhang.floorTop`, default 0); lado = face externa (`facing`) | — |
+| P48 | Pregação (texto da folha) | esses valores como `config.nailing` default, impressos na folha com "validar com engenheiro"; nunca geometria | — |
+| P49 | Encaixe painel-painel na mesma parede | stud duplo na junta (S15) e chapa terminando no painel; lap só na double top (P23) | — |
 
 ## Respondidas
 

@@ -169,7 +169,7 @@ A Fase 3 muda o que é "x=0" de uma parede (canto, origem do layout, painel no m
 precisam ficar prontas antes, nesta ordem: o checkpoint com a fábrica (uma visita responde P19–P24 de uma vez),
 depois S11 e S12, que não dependem uma da outra.
 
-- [ ] **Checkpoint 2 — validação com a fábrica (sem Claude)**
+- [ ] **Checkpoint 2 — validação com a fábrica (sem Claude)** — reescrito na Fase 6 (2026-11-04): com o app publicado, depois da S23.
   Substitui o checkpoint da Fase 1: a fábrica não tem painel real (P1, 2026-10-05), então o critério de sucesso
   passa a ser folha revisada + painel de teste. (a) Gerar com o CLI as folhas de 3 ou 4 paredes de um projeto de
   `06-referencias-projetos.md` (26 Ringgold é o menor) e levar para a equipe de framing anotar cada divergência.
@@ -669,7 +669,7 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     abertura sem posição (`addOpening` com `preset` no reducer); `issue-callout.tsx` mostra o "como resolver".
     Conferido no browser: "Add I9-U2-1" cria a porta U2 no centro de I9, seleciona e abre o inspetor, e o aviso
     some; vento 130 na lista tira os 19 `WIND_SPEED_MISSING`. Testes do web: 128.
-- [ ] **Revisão do app (2026-10-20)** — diagnóstico completo e plano em `docs/11-revisao-app.md` (aprovado pelo
+- [x] **Revisão do app (2026-10-20)** — diagnóstico completo e plano em `docs/11-revisao-app.md` (aprovado pelo
   humano). Dez itens, cada um uma sessão; a ordem em relação à S22 é decisão do humano. Nenhum toca regra de framing.
   - [x] **M1 — Tokens, contraste e semântica de cor.** Feita em 2026-10-20 na sessão da revisão. Seleção = navy-600
     (halo na planta, fundo + borda nas listas); aviso = gold-700/gold-100; ink-3 escurecido; gold-700 e ok-700 novos;
@@ -808,7 +808,7 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
     o projeto ao motor (`$reviewed` ficava no texto; `engineText` agora tira toda chave `$…`, `withoutEditorKeys`).
     Conferido no browser: Esc volta ao valor e não cria undo; Reviewed sem POST. Testes: web 234 (eram 209).
     Playwright fica para depois da S22.
-- [ ] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage** — abordagem aprovada em 2026-10-22, em
+- [x] **S22 — Supabase: auth + tabela `projects` (jsonb) + storage** — abordagem aprovada em 2026-10-22, em
   quatro subsessões (nenhuma toca regra de framing). Setup do projeto no Supabase em `supabase/README.md`.
   - [x] **S22.0 — Esquema, auth e login.** Feita em 2026-10-22. `@supabase/supabase-js` + `@supabase/ssr` no
     web (sessão em cookie; ky não serve: teria de reimplementar o refresh do token). `supabase/migrations/
@@ -967,3 +967,179 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
   `makeLabeledPdf` com os dois carimbos. A prévia do passo 01 usa o mesmo `buildRequest` do dry-run; não foi conferida no browser porque a sessão do pane expirou (precisa do login do humano).
   Fica (fábrica): o Matilda é IBC (3 pavimentos, 50' de largura — headers fora das tabelas do IRC, vêm do estrutural) e
   tem paredes entre unidades com studs alternados, que o motor não modela.
+
+## Fase 6 — Piloto: parar de perder trabalho e dar base ao piloto
+
+Planejada em 2026-11-04 na revisão do projeto (`docs/13-revisao-2026-11.md`, aprovada pelo humano). Cada item é uma
+sessão. "SRF" = sem regra de framing (não precisa submeter abordagem antes de escrever código). Ordem decidida em
+`04-decisoes.md` (2026-11-04): fechar os defeitos que perdem leitura paga antes de qualquer fatoração.
+Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S39) → S24 em diante**.
+
+- [ ] **S23 — Não perder a leitura nem a edição (web, SRF).** Defeitos A1–A6 e A9 do doc 13. (a) `SavedJob` ganha
+  `jobId` de verdade em `lib/editor/persist.ts` (`loadJob` descarta o campo hoje; o `if` de retomada em
+  `use-saved-session.ts:56` nunca é verdadeiro) + teste de ida e volta e teste dom de F5 durante leitura retomando a
+  espera; (b) base do `useProjectSync` = o texto enviado no `create`, não o texto atual; (c) token de geração
+  invalida o `.then` da criação depois de "Start over"; (d) conflito "Edited elsewhere" oferece "Save as copy" e
+  "Overwrite" em vez de só "Reload"; (e) vista do underlay (opacidade/visível) sai do arquivo e vira estado de UI
+  (não grava nem sobe revisão); (f) sample não cria linha no banco até a primeira edição; (g) chave de sessão local
+  por id de projeto, com limpeza por idade; (h) `app/app/error.tsx` ("Reload — your work is saved"); (i)
+  `finishResponse` com guarda de `devTools` no servidor e limite de tamanho em `saveProjectSchema`. Também no extract:
+  o teste real passa a exigir `EXTRACT_LIVE=1` (hoje chama a API paga se a chave estiver no ambiente) e
+  `extract/vitest.config.ts` com `testTimeout: 30_000` (dois testes estouram 5 s na rodada fria e derrubam o
+  deploy). Saída: um teste dom por defeito; conferido no browser com a leitura gravada do Ringgold.
+- [ ] **S24 — Jobs de leitura no banco e lixo do bucket (web + supabase, SRF).** Tabela `extraction_jobs` (id,
+  owner, status, fase, tokens, resultado jsonb, criado/atualizado; RLS por dono) em migração nova; `services/
+  extract-jobs.ts` vira adaptador injetável como `ProjectsTable` (teste com `Map`); actions `cancelExtraction`/
+  `extractionProgress`/`extractionResult` checam o dono; resultado sobrevive a deploy e restart; `--max-instances`
+  deixa de ser 1 (atualizar `docs/12`). Limpeza de `drawings`: função SQL agendada (pg_cron) que apaga pastas
+  sem referência em `projects.data` com mais de 24 h, registrada em 05-pendencias "Storage". Saída: leitura real
+  com deploy no meio → resultado recolhido; teste do adaptador com bucket falso.
+- [ ] **S25 — Extração: seleção de folhas e custo honesto (extract + web, SRF).** (a) `classifySheet` usa o nome
+  do arquivo só em PDF de 1 página ou página sem título (hoje "Bath"/"Schedule" no nome classifica todas as
+  páginas); duplicata descartada vira aviso; fallback de 20 páginas não recebe recortes; (b) estimador de custo
+  com termo por densidade (caracteres do texto posicionado que a prévia já lê) e saída proporcional a folhas +
+  recortes — fecha P43 como hipótese medida; `actualCost` com cache; (c) mensagem de truncamento certa ("menos
+  folhas ou effort"; `max_tokens` já é o máximo) e todos os `stop_reason` tratados; (d) `signal` dentro de
+  `prepareSources`/`renderTiles`; `timeout` e `maxRetries` explícitos; (e) hash do `FULL_SYSTEM_PROMPT` + modelo,
+  effort e opções de recorte gravados no resultado e em `$panelizer.reading`; `EXTRACT_MODEL`/`EXTRACT_EFFORT` por
+  env; (f) PDF aberto uma vez por fonte; `pageKey()`; fontes casadas por índice, não por nome. Saída: Matilda,
+  Horace e Ringgold escolhem as mesmas folhas de hoje (testes de classificação); prévia do Horace completo estima
+  > 500 k tokens.
+- [ ] **S26 — Mensagens com código (core + extract + web; toca o core, mas não regra de framing).** `WarningCode`
+  tipado com os 13 códigos; `EngineError { code, wallId?, openingId?, params }` no lugar de `Error`/`RangeError` de
+  texto livre no core; `Warning.hypothesis?: 'P30' | …` fora do texto (o "hipótese P30" não vai mais para a serra);
+  códigos do extract em inglês; `web/lib/editor/problems.ts` deixa de localizar por regex em português;
+  `messages.en.ts` cobre todo código do core, do extract e dos adaptadores do Supabase; texto original só em
+  "Details". Fixtures com `warnings` conferidos por código; members e snapshots inalterados. Saída: nenhuma frase em
+  português na UI com a 28x40, o Ringgold solto e a leitura gravada.
+- [ ] **S27 — Base de qualidade: lint, tsconfig, CI de PR, docs (SRF).** ESLint (`react-hooks`, `@next/next`) +
+  Prettier + `.editorconfig` (revisar os 7 `eslint-disable` que hoje não fazem nada); `tsconfig.base.json` sem
+  `jsx` no core e com `noUnused*`/`noImplicitReturns`; `ci.yml` em `pull_request` e push com lint + typecheck +
+  test + `pnpm --filter web build`; `deploy.yml` com rollback para a revisão anterior quando o health falhar;
+  `.dockerignore` com `scripts/`, `.github/`, `test/`; `scripts/hipoteses.mjs` lendo `- **Pnn` e `packages/web`,
+  `08-revisar.md` regenerado (P42 e P43 entram); README reescrito (o que é, como rodar test/web/CLI/extract, env,
+  deploy → `docs/12`, mapa dos docs); CLAUDE.md (regra de commit retirada em 2026-11-03, comandos `pnpm web`/
+  `extract`/`hipoteses`); `01-escopo` (leitura por IA e Supabase estão dentro), `02-framing` (P40, avisos novos),
+  `06-referencias` (propostas já implementadas), cabeçalhos "arquivado"/"executado" em `07` e `11`, `10-design`
+  linha do localStorage; comentários velhos (`panelizeWall.ts:4-6`, `maxDuration`/Vercel, "até a S22",
+  `next.config.ts`). Saída: `pnpm lint` verde; CI de PR verde num PR de teste.
+
+- [ ] **Checkpoint 2 — validação com a fábrica (sem Claude; depois da S23).** Substitui o roteiro de 2026-10-06:
+  levar o **app publicado** (não o CLI) com o Ringgold e a 28x40 — folhas, planta e BOM na tela e em PDF. Perguntas
+  de `08-revisar.md`, na frente as que mudam a folha (P19, P21, P23, P24, P35), mais duas novas: **cruzamento em +**
+  (duas divisórias em T no mesmo ponto pelos dois lados: ladder único na faixa ou dois? hoje o motor recusa) e
+  **idioma da folha** (português ou inglês — decide a S34). Cada resposta vira linha em 04/05 e, se preciso, uma
+  S-fix com fixture.
+
+## Fase 7 — Código sustentável e escopo v1 pendente
+
+- [ ] **S28.1 — Fatoração do core (SRF; saída byte-idêntica).** `output/sheet/{primitives,members,dims,pieceList,
+  header,strings}.ts` com `panelSvg` só orquestrando; `planSvg` importa os primitivos do módulo comum, não da
+  folha; `types.ts` → `sections.ts` (runtime) + `opening.ts`/`wall.ts`/`panel.ts`/`config.ts`; `geom.ts`
+  (`overlaps`, `span`), `eps.ts` (`EPS`, `LENGTH_EPS`), `studLengthFor(wall, config)`, `PLATE_ROLES` e
+  `piecesOf(panel)` únicos (hoje `EPS` em 16 arquivos, `overlaps` em 5, stud length em 5); `pieceCount` fora de
+  `output/`; `rules/split.ts` → `breaks.ts`/`laps.ts`/`splice.ts`; `framingForOpening` em 3 funções;
+  `splitWall` sem resolver headers duas vezes; `Member` como união por `role`, `Panel` sem opcionais que o motor
+  sempre preenche, `HeaderChoice`/`KingChoice`/`BomLine` discriminados, `HeaderSource` tipado; `studSpacing: 16 | 24`.
+  Critério: os 10 snapshots e os 12 fixtures não mudam um byte; `pnpm test` verde.
+- [ ] **S28.2 — Schema zod único do projeto (cli + web, SRF).** `cli/src/schema.ts` (strict — chave desconhecida é
+  erro; coerção pés-pol; `loose | plan` como união; `stockLengths` num lugar só; defaults num lugar; `studSpacing`
+  sem aceitar pés) substitui a validação à mão de `project.ts`; `web/lib/editor/draft.ts` lê pelo mesmo schema em
+  modo tolerante (`safeParse` + preservação de chaves `$…`); fixtures de teste do core validados pelo schema (some o
+  `as Wall`). Critério: os 3 exemplos e a leitura gravada dão o mesmo `buildProject`; `draft.test.ts` de ida e volta
+  continua verde.
+- [ ] **S29 — Editor: quebra manual de painel e catálogo editável (web + core; regra de framing: submeter antes).**
+  `wall.panelBreaks?: number[]` no formato do CLI (quebras forçadas respeitam as mesmas restrições de
+  `breakCandidates`: fora de zona de abertura, longe de canto e de T; fora delas = erro com código); `check` devolve as
+  quebras e a planta do editor as desenha, com arrastar/adicionar/remover (resolve P37 pelo revisor); CRUD de
+  `openingTypes`/`headerSchedule` no dialog de configurações com renomeação em cascata nas aberturas; `extraStuds` no
+  inspetor da parede. Fixture `wall-480-split` ganha caso com quebra forçada (confirmar valores antes).
+- [ ] **S30 — Editor: produtividade (web, SRF).** Seleção múltipla com ações em lote (mover, apagar, campos
+  comuns); duplicar parede; dividir/juntar parede redistribuindo aberturas; arrastar o corpo move a parede
+  selecionada (pan só no fundo); "Draw wall" por dois cliques com snap ortogonal e a pontas/eixos vizinhos;
+  `EditorContext` + `ProjectIOContext` no lugar das 28 props do `workspace.tsx`; `plan-canvas.tsx` em
+  `usePlanGestures`/`useViewportAnimation`/`useCanvasKeys` + `plan-canvas-shapes.tsx`; `new-project-view.tsx` em
+  `useServerProject`/`useExtractionJob` + passos; ramos e exports mortos apagados (doc 13 §D).
+- [ ] **S31 — Motor: o que falta do escopo v1 (regra de framing: submeter; P novas).** (a) Blocking horizontal como
+  `role: 'block'` entre studs quando `height > config.fireBlockAt` (default 120", P11) — hoje só avisa; (b)
+  cruzamento em + (hipótese a registrar: ladder único na faixa e cortes da double top fundidos; hoje `layoutPlates`
+  lança); (c) orçamento = BOM × `config.prices` opcional (seção × comprimento → preço) com `cost.csv` e coluna na aba
+  Materials; (d) XLSX fica fora até a fábrica pedir. Fixtures novos confirmados antes; `pnpm hipoteses` depois.
+- [ ] **S32 — Time e contas (web + supabase, SRF).** `teams`/`team_members` com papéis admin/editor e RLS por time
+  (hoje `using (true)`), `updated_by`; convite por e-mail por um admin (service role isolada numa action); reset e
+  troca de senha, `/app/account`; lixeira (`deleted_at`) e `project_revisions` (snapshot a cada N gravações);
+  lista com busca, filtro "mine" e paginação por `updated_at`; "Save as new project" em conflito/apagado; "Add
+  drawings" em projeto de arquivo ou sample; `/api/health?deep=1` autenticado. Tipos do banco gerados.
+- [ ] **S33 — Playwright (SRF).** Login, sample, editar, F5 com retomada, gerar, baixar PDF, lista de projetos;
+  roda no CI de PR contra `supabase start` local (`supabase/config.toml` + seed); testes de integração dos
+  adaptadores reais (`projects-table`, `drawings-store`) e das RLS; testes das server actions com services mockados.
+- [ ] **S34 — Folha em inglês (depende da resposta da fábrica no Checkpoint 2).** `locale: 'pt' | 'en'` em
+  `PanelSvgOptions`/`PlanSvgOptions` com `strings.ts`; asserções de texto de `svg.test.ts` separadas das de
+  estrutura; snapshots por locale; CLI e web com a opção. Se a fábrica ficar com português, o item some.
+
+Backlog sem sessão: DXF (P12: exceção), paredes entre unidades com studs alternados (Matilda, IBC), PDF vetorial
+e capa com BOM, `getClaims()` no proxy (duas consultas de auth por action), underlay no bucket em vez de data URL,
+`count_tokens` como gate da prévia, verdades de eval do Horace/Matilda (exigem leitura paga), property tests em
+`layoutStuds`/`chooseBreaks`/`splicePlates`/`parseFeetInches`, acessibilidade da planta (`role`, alvos de 24 px,
+`aria-live`).
+
+## Fase 8 — Pedidos da fábrica (prancha de 2026-10-28)
+
+Planejada em 2026-11-04 a partir da prancha e das mensagens do Nicolas Hernandez (`docs/14-prancha-fabrica.md`,
+plano aprovado pelo humano). **Ordem decidida: S23 → Fase 8 → S24 em diante** (`04-decisoes.md`, 2026-11-04): é o
+primeiro pedido direto da fábrica com conteúdo de framing e muda o que a folha mostra, logo o que o Checkpoint 2
+valida. Toda sessão desta fase toca regra de framing: abordagem em até 5 linhas e confirmação antes de código;
+fixtures confirmados antes de editar. Hipóteses em P44–P49.
+
+- [ ] **S35 — Wall types e numeração na planta (core + cli + extract + web).** `config.wallTypes?: Record<tag,
+  { section, exterior, bearing, description?, sheathing?: boolean | SheathingSpec, blocking?: BlockingPresetId[] }>`;
+  `wall.wallType?` resolve `section`/`exterior`/`bearing` ausentes (presentes e diferentes → aviso
+  `WALL_TYPE_MISMATCH`); o CLI aceita e valida (hoje ignora a chave); extract: `convert.ts` monta `config.wallTypes`
+  a partir de `out.wallTypes` (hoje só vai ao relatório); planta: rótulo `W01 · WT-1S` e legenda (externa/interna/
+  portante); folha: wall type no cabeçalho; web: o campo "Wall type" vira select do catálogo e o catálogo aparece no
+  dialog de configurações (leitura; edição na S29). Fixtures: `house-28x40` ganha `wallTypes` com members
+  inalterados; `casa-exemplo.json` e Ringgold com tags. Sem P nova: é dado do projeto, não hipótese de framing.
+- [ ] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | BlockingPresetId)[]`
+  com `BlockingRow = { y, from?, to?, kind, label? }` (y = centro do bloco, hipótese P44) e `config.blockingPresets`
+  com os usos da prancha (kitchen: base 34½–36, counter 54, upper 84; bath: toilet 12–18, grab/paper 36–42,
+  shower-valve 42, towel 48, shower-head 78–80 — um valor por uso); wall type pode trazer presets (S35).
+  `rules/blocking.ts`: fileira de `role: 'block'` (seção da parede, deitado) entre verticais consecutivas no
+  trecho `[from, to]`, reusando os spans de `ladderBlocks` generalizados em `blocksBetween`; vão dentro de RO ou
+  cruzando header/sill é pulado com aviso `BLOCKING_SKIPPED`; fire blocking automático quando a cavidade passa de
+  `config.fireBlockAt` (default 120", P11): fileira em `height/2`, substitui o aviso `FIRE_BLOCKING_REQUIRED` e
+  fecha o item do escopo v1. Folha: letra B, cota da altura ao subfloor, rótulo do uso. Cutlist e BOM já contam
+  `block`. Fixtures novos: `wall-144-kitchen` (3 fileiras com janela no meio); `house-tee` inalterado.
+- [ ] **S37 — Posts e cruzamento em + (regra de framing; P45, P46).** (a) `wall.posts?: [{ x, section: '4x4' |
+  '4x6' | '6x6', label?, base?: string, top?: string }]` → `role: 'post'` de altura inteira com largura real em x
+  (3.5/5.5); stud de layout que sobrepõe sai; `LumberSection` ganha 4x4/4x6/6x6 só para post; `lumber.json`
+  (4x4 ≈ 3.0, 4x6 ≈ 4.7, 6x6 ≈ 7.3 lb/pé a 35 pcf — P45) e estoque; BOM lista; folha desenha com rótulo e nota
+  "base: post base · topo: LUS" (texto do projeto). `extraStuds` continua para (2)/(3) 2x; P26 revista. (b) X:
+  `connections.ts` funde tees com o mesmo x nos dois lados numa `TeeJoint` com `sides: 2`; `corners.ts` gera um
+  corte da double top e um núcleo para a faixa (hipótese P46 = prancha: 2 studs contínuos = `backer`; com
+  `ladder`, blocos dos dois lados). Fixture `house-cross.json` (corredor cruzando); `perf.test.ts` do web deixa
+  de evitar o caso.
+- [ ] **S38 — Sheathing (regra de framing; P47, P48; entra no escopo v1).** `config.sheathing?: { thickness:
+  0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?: { corner?:
+  'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail: '8d', edge: 6, field: 12 } }`;
+  wall type ou parede liga/desliga (`sheathing: true | false | spec`). `rules/sheathing.ts`: chapas verticais a
+  partir da marca 0 do prédio (`layoutOrigin`), cortadas nas pontas do painel; emenda horizontal (parede mais alta
+  que a chapa) exige fileira de blocking (S36), gerada automaticamente; canto: a chapa da parede que **atravessa**
+  cobre o stud de ponta da que encosta (`+t_outra`, "plywood passando pelo canto"); T e X: chapa contínua na
+  parede atravessada; junta painel-painel: a chapa acaba no painel (P49 pergunta se a fábrica quer chapa
+  avançada); linha de piso: `floorTop` acima da double top (default 0; Matilda 12–24") e `floorBottom` abaixo da
+  bottom plate. `Panel.sheathing: { side, sheets: [{ x, y, w, h, cut? }], areaSqFt }`; BOM: "OSB/plywood 7/16
+  4×8 × N" (chapas inteiras, sem otimização de corte — backlog); peso com sheathing (P8 revista: ≈ 1.4 lb/pé²
+  para 7/16"); folha: contorno tracejado das chapas sobre o framing (a vista é de fora), nota de pregação (P48),
+  "validar com engenheiro" quando houver avanço na linha de piso. Fixtures: `wall-144-plain` e `house-corner-L`
+  com `sheathing` ligado (members inalterados; campo `sheathing` novo), confirmados antes.
+- [ ] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF).** Folha: bloco
+  "Conteúdo" abaixo do cabeçalho (`TITLE_HEIGHT` cresce) com wall type, pavimento, dimensões, aberturas, blocking
+  (fileiras e alturas), sheathing (lado, chapas, avanços), posts e conectores, ligação por ponta ("início: canto
+  com W02 — esta atravessa, plywood avança 5½""; "T com W05 em 72" — ladder"), pregação (`config.nailing`: junção
+  3× 3" @ 12" OC, chapa 8d @ 6"/12" — hipótese P48) e "▲ validar com engenheiro" nos itens com P. Planta:
+  símbolo L/T/X em cada ligação com a parede que atravessa marcada, legenda, wall type por parede. Web: Materials
+  com chapas. 3D fica no backlog. Snapshots regenerados; conferir visualmente `house-corner-L` e um painel com
+  blocking.
+
+Backlog da Fase 8 (sem sessão): `tee: 'u-block'` e espaçadores no 3-stud (só se a fábrica pedir), aproveitamento
+de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL do piso como item de lista.

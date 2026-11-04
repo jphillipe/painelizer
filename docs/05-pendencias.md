@@ -272,3 +272,37 @@ Resumo da revisão de escopo feita antes da S1, para não se perder:
   pasta `<uploadId>/` sem projeto apontando para ela. Não há limpeza automática. Hipótese: volume baixo numa
   ferramenta interna; se crescer, uma rotina lista as pastas sem referência em `projects.data` e apaga as com mais
   de 7 dias.
+
+## Novas (abertas em 2026-11-04, prancha da fábrica de 2026-10-28 — `docs/14-prancha-fabrica.md`)
+A prancha avisa que dimensões e fixações são exemplos conceituais; aqui elas viram hipótese em vigor até a fábrica
+ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na folha com "validar com engenheiro".
+
+- [ ] **P44 — Alturas padrão de blocking.** A prancha dá faixas (bancada 34½–36", topo do balcão 54", armários
+  superiores 84"; vaso 12–18", papeleira/ganchos 36–42", válvula do chuveiro 42", toalha 48", ducha 78–80" A.F.F.).
+  A cota é do centro, da base ou do topo do bloco? Um bloco por uso ou faixa dupla? Mesma seção da parede? —
+  hipótese: um bloco por uso, de 1.5" de altura, **centro** na cota (faixa → valor único: 36, 54, 84; 15, 39, 42,
+  48, 79), seção da parede, entre todos os studs do trecho; `config.blockingPresets` — S36.
+- [ ] **P45 — Posts: seções, peso e conectores.** Posts 4x4/4x6/6x6 nos cantos da escada e sob LVL. O post
+  substitui o stud de layout ou soma a ele? Conector de base e de topo é peça da fábrica ou da obra? — hipótese:
+  seções 4x4, 4x6 e 6x6 (reais 3.5×3.5, 3.5×5.5, 5.5×5.5) a 35 pcf (≈ 3.0, 4.7, 7.3 lb/pé); o post ocupa o lugar
+  do stud que sobrepõe; conectores são texto do projeto na folha, não peça da lista — S37. Revê P26 (4x/6x deixam
+  de ficar só com o engenheiro).
+- [ ] **P46 — Cruzamento em + (T dos dois lados no mesmo ponto).** A prancha mostra "amarração com studs contínuos
+  (mín. 2x) no núcleo" e plywood contínuo numa direção. Um núcleo de 2 studs contínuos (backer) serve os dois
+  lados, ou ladder dos dois lados? A double top da parede atravessada leva um corte só? — hipótese: um corte da
+  double top na faixa; com `config.tee = 'backer'` dois studs contínuos servem os dois lados; com `'ladder'`,
+  blocos dos dois lados — S37.
+- [ ] **P47 — Sheathing: chapa, avanços e linha de piso.** Chapa 4×8 (ou 4×9) vertical a partir da marca 0 do
+  prédio; no canto a chapa da parede que atravessa avança sobre a ponta da que encosta; na divisão de piso a
+  Matilda pediu 1–2' acima da emenda. Quanto avança no canto (`t` da outra parede?), a chapa vai presa ao painel
+  ou solta, e o avanço na linha de piso é regra da fábrica ou só do projeto? — hipótese: avança `t_outra` no canto
+  pela parede que atravessa, presa ao painel; na junta painel-painel não avança; na linha de piso só quando o
+  projeto pede (`config.sheathing.overhang.floorTop`, default 0); lado = face externa (`facing`) — S38.
+- [ ] **P48 — Pregação (texto da folha).** Junção entre paredes 3× 3" nails ou screws @ 12" OC; chapa 8d @ 6" nas
+  bordas e 12" no campo (prancha 12). — hipótese: esses valores como `config.nailing` default, impressos na folha
+  com "validar com engenheiro"; nunca geometria — S38, S39.
+- [ ] **P49 — Encaixe painel-painel na mesma parede.** A conclusão da prancha pede studs avançados/recuados para
+  uma parede entrar na outra. No canto e no T o motor já faz (quem atravessa/encosta, P21). E na junta de dois
+  painéis da mesma parede: stud duplo encostado (como hoje), stud recuado num lado, ou chapa avançada pregando no
+  stud do vizinho? — hipótese: stud duplo na junta (S15) e chapa terminando no painel; lap só na double top
+  (P23) — S38, S39.

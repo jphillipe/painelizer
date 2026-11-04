@@ -23,7 +23,10 @@ equipe usando só o desenho gerado.
 - Aberturas: king, jack, header, sill, cripples acima e abaixo.
 - Headers por tabela prescritiva IRC R602.7 (JSON). Fora da tabela → `requiresEngineer: true`.
 - Cantos L (California / 3-stud) e interseções T (ladder / stud de encosto), configuráveis.
-- Blocking horizontal quando altura exceder limite configurável.
+- Blocking horizontal quando altura exceder limite configurável; blocking por altura para armários e acessórios
+  (presets por uso e por wall type) — pedido da fábrica em 2026-10-28, S36.
+- Sheathing (OSB/plywood) por painel: chapas, avanço no canto e na linha de piso, pregação como nota —
+  pedido da fábrica em 2026-10-28 (era backlog v2), S38. Sem otimização de corte.
 - Divisão em painéis por comprimento/peso máximo; nunca dentro de abertura; preferir quebra em stud de layout
   múltiplo de 48" (módulo do OSB), depois qualquer stud de layout.
 - Aberturas vizinhas com zonas sobrepostas compartilham king stud.
@@ -50,6 +53,6 @@ equipe usando só o desenho gerado.
 - Importação/exportação DXF. Se os arquitetos entregarem DXF, a importação sobe para a Fase 4 no lugar da visão
   sobre PDF (ver P12 em `05-pendencias.md`): cotas vetoriais são mais confiáveis que leitura de imagem.
 - Rake walls.
-- Sheathing (OSB) com aproveitamento.
+- Aproveitamento de chapa de sheathing (corte otimizado); o sheathing em si entrou na v1 em 2026-11-04.
 - Visualizador 3D no navegador.
 - Backend multiusuário (Supabase: auth, tabela `projects` com coluna `data jsonb`, storage para PDFs).
