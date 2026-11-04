@@ -11,9 +11,9 @@
  *   face interna. Qual atravessa: `ends` declarado > a mais longa > a primeira do arquivo.
  */
 
-import type { Point, Wall } from '../types';
+import type { Point, Wall } from '../wall';
 
-/** `Point` mora em `types.ts` desde a S16 (`Panel.plan`); re-exportado aqui para os módulos da casa. */
+/** `Point` mora em `wall.ts` (`Panel.plan` o usa desde a S16); re-exportado aqui para os módulos da casa. */
 export type { Point };
 
 /** Papel de uma ponta num canto: `through` leva a plate até a face externa da outra; `butt` encosta nela. */

@@ -9,8 +9,8 @@
  * - `panelWeight` arredonda a 0.1 lb; `memberWeightLb` não arredonda.
  */
 
-import { isLumberSection, parseEngineeredSection, type LumberSection, type Member, type Panel } from '../types';
-import { pieceCount } from '../output/cutlist';
+import { pieceCount, type Panel } from '../panel';
+import { isLumberSection, parseEngineeredSection, type LumberSection, type Section } from '../sections';
 import lumber from '../data/lumber.json';
 
 /** lb por pé linear de cada seção serrada (P8). */
@@ -20,7 +20,7 @@ export const POUNDS_PER_FOOT: Readonly<Record<LumberSection, number>> = lumber.p
 export const ENGINEERED_PCF: number = lumber.engineeredPcf;
 
 /** lb por pé linear de uma peça da seção (serrada pela tabela; engenheirada pela seção real). */
-export function poundsPerFoot(section: Member['section']): number {
+export function poundsPerFoot(section: Section): number {
   if (isLumberSection(section)) return POUNDS_PER_FOOT[section];
   const e = parseEngineeredSection(section);
   if (e === undefined) throw new RangeError(`peso: seção desconhecida (${String(section)})`);
@@ -28,7 +28,7 @@ export function poundsPerFoot(section: Member['section']): number {
 }
 
 /** Peso de um member, lb (plies contam). */
-export function memberWeightLb(m: Pick<Member, 'section' | 'length' | 'plies'>): number {
+export function memberWeightLb(m: { section: Section; length: number; plies?: number }): number {
   if (!Number.isFinite(m.length) || m.length < 0) throw new RangeError(`peso: comprimento inválido (${m.length})`);
   return (m.length / 12) * poundsPerFoot(m.section) * pieceCount(m);
 }

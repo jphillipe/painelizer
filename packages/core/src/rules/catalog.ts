@@ -19,7 +19,8 @@
  *   Porta ignora `sillHeight` (o RO já é medido do subfloor).
  */
 
-import type { Config, DoorFrame, Opening, OpeningHeader, OpeningSpec, OpeningType } from '../types';
+import type { Config } from '../config';
+import type { DoorFrame, Opening, OpeningHeader, OpeningSpec, OpeningType } from '../opening';
 import { EngineError } from '../messages';
 
 /** Folga do RO sobre o tamanho nominal, em polegadas: `[largura, altura]`. */

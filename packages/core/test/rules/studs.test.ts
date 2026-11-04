@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutStuds } from '../../src/rules/studs';
+import { layoutMarks, layoutStuds } from '../../src/rules/studs';
 
 describe('layoutStuds', () => {
   it('parede 144" a 16" OC: primeiro em 0, studs centrados nas marcas 16..128, fechamento 142.5', () => {
@@ -103,5 +103,12 @@ describe('layoutStuds', () => {
     [144, 16, 1.5, Number.NaN],
   ])('rejeita length=%s spacing=%s t=%s origin=%s', (length, spacing, t, origin) => {
     expect(() => layoutStuds(length, spacing, t, origin)).toThrow(RangeError);
+  });
+});
+
+describe('layoutMarks', () => {
+  it('marcas de 0 a length, a partir da origem', () => {
+    expect(layoutMarks(64, 16, 0)).toEqual([0, 16, 32, 48, 64]);
+    expect(layoutMarks(117.25, 16, -5.5)).toEqual([10.5, 26.5, 42.5, 58.5, 74.5, 90.5, 106.5]);
   });
 });

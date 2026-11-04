@@ -18,10 +18,12 @@
  * - Saída determinística: mesma entrada → mesma string.
  */
 
-import { sectionDepth, type Panel, type Point } from '../types';
+import type { Panel } from '../panel';
+import { sectionDepth } from '../sections';
+import type { Point } from '../wall';
 import type { House, HouseWall } from '../house/types';
 import { formatFeetInches, formatInches } from '../units';
-import { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './svg';
+import { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
 
 export interface PlanSvgOptions {
   /** Pixels por polegada. Padrão 2. */
@@ -207,7 +209,7 @@ function wallGeoms(house: House, panels: readonly Panel[]): WallGeom[] {
     byWall.set(p.wallId, list);
   }
   return house.walls.map((wall) => {
-    const own = [...(byWall.get(wall.id) ?? [])].sort((a, b) => (a.wallOffset ?? 0) - (b.wallOffset ?? 0));
+    const own = [...(byWall.get(wall.id) ?? [])].sort((a, b) => a.wallOffset - b.wallOffset);
     if (own.length === 0) throw new RangeError(`housePlanSvg: parede ${wall.id} sem painéis`);
     const dx = wall.end.x - wall.start.x;
     const dy = wall.end.y - wall.start.y;

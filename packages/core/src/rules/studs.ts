@@ -21,7 +21,23 @@
  *   O layout não é deslocado; a sobreposição é responsabilidade da validação (`STUDS_OVERLAP`).
  */
 
-import { NOMINAL_2X_THICKNESS } from '../types';
+import { EPS } from '../eps';
+import { NOMINAL_2X_THICKNESS } from '../sections';
+
+/**
+ * Marcas de layout `origin + k·spacing` dentro de `[0, length]`, crescentes. O stud de layout é centrado em
+ * cada uma (salvo o de ponta e o de fechamento); a junta entre painéis e o fim do lap caem nelas (S15), e a
+ * folha as desenha no rodapé.
+ */
+export function layoutMarks(length: number, spacing: number, origin: number): number[] {
+  const out: number[] = [];
+  for (let k = Math.ceil((0 - origin) / spacing - EPS); ; k++) {
+    const x = origin + k * spacing;
+    if (x > length + EPS) break;
+    out.push(x);
+  }
+  return out;
+}
 
 /**
  * Posições x (borda esquerda) dos studs de layout, em polegadas, em ordem crescente.

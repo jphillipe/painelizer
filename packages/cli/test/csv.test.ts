@@ -76,10 +76,10 @@ describe('panelsCsv (S15)', () => {
     );
   });
 
-  it('painel direto do panelizeWall: pavimento 1 e offset 0 por default; avisos separados por ;', () => {
+  it('painel direto do panelizeWall: pavimento 1, offset 0 e peso preenchidos pelo motor; avisos separados por ;', () => {
     const warned = { ...panel, warnings: [{ code: 'STUDS_OVERLAP' as const, message: '' }, { code: 'PANEL_OVERWEIGHT' as const, message: '' }] };
     const line = panelsCsv([warned]).split('\n')[1]!;
-    expect(line).toBe(`W-plain,W-plain,1,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,,STUDS_OVERLAP;PANEL_OVERWEIGHT`);
+    expect(line).toBe(`W-plain,W-plain,1,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,226.4,STUDS_OVERLAP;PANEL_OVERWEIGHT`);
     expect(panelsCsv([{ ...panel, level: 2 }]).split('\n')[1]).toMatch(/^W-plain,W-plain,2,0,/);
   });
 });

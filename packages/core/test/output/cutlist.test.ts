@@ -85,6 +85,7 @@ describe('cutList', () => {
       y: 0,
       orientation: 'horizontal',
       plies: 0,
+      headerSource: 'project',
     };
     expect(() => cutList({ members: [bad] })).toThrow(RangeError);
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Opening, Wall } from '../../src/types';
+import type { Config, HeaderTableId, Member, Opening, Wall } from '../../src/types';
 import { framingForOpening, openingKingXs, openingStudCounts, openingZone } from '../../src/rules/openings';
 import { expectSameMembers } from '../helpers/members';
 import window from '../fixtures/wall-144-window.json';
@@ -210,7 +210,7 @@ describe('framingForOpening — janela', () => {
     const { header: _h, ...noHeader } = win;
     const warning = { code: 'HEADER_JACKS_BELOW_TABLE' as const, message: 'x' };
     const { members, warnings } = framingForOpening(noHeader, wall, config, {
-      header: { section: '2x6', plies: 2, jackStuds: 2, kingStuds: 1, source: 'R602.7(1)', flat: false, warnings: [warning] },
+      header: { section: '2x6', plies: 2, jackStuds: 2, kingStuds: 1, source: 'R602.7(1)' as HeaderTableId, flat: false, warnings: [warning] },
     });
     expect(xs(byRole(members, 'kingStud'))).toEqual([43.5, 87]);
     expect(xs(byRole(members, 'jackStud'))).toEqual([45, 46.5, 84, 85.5]);

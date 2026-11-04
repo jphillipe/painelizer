@@ -18,12 +18,10 @@
  * caem antes dos kings; se ainda faltar espaço, o `fit` reduz os kings.
  */
 
-import type { Opening } from '../types';
+import { EPS } from '../eps';
+import type { Opening } from '../opening';
 import { EngineError } from '../messages';
 import { openingKingXs, openingStudCounts, openingZone, type OpeningZone } from './openings';
-
-/** Folga numérica para comparações de geometria. */
-const EPS = 1e-9;
 
 /** Zona de uma ou mais aberturas fundidas. */
 export interface MergedZone extends OpeningZone {

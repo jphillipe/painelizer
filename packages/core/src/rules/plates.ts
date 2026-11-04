@@ -14,10 +14,9 @@
  *   cai no lap do painel vizinho, S15); corte que sai parcialmente da peça é erro.
  */
 
-import type { Member, WallSection } from '../types';
-import { NOMINAL_2X_THICKNESS } from '../types';
-
-const EPS = 1e-9;
+import { EPS } from '../eps';
+import type { PlateMember } from '../panel';
+import { NOMINAL_2X_THICKNESS, type WallSection } from '../sections';
 
 /** Ajuste de uma ponta da double top plate (polegadas, ≥ 0). Os dois ao mesmo tempo é erro. */
 export interface PlateEndLap {
@@ -57,7 +56,7 @@ export function layoutPlates(
   section: WallSection,
   plateThickness: number = NOMINAL_2X_THICKNESS,
   opts: PlateOptions = {},
-): Member[] {
+): PlateMember[] {
   if (!Number.isFinite(length) || !Number.isFinite(height) || !Number.isFinite(plateThickness)) {
     throw new RangeError('layoutPlates: argumentos devem ser números finitos');
   }
@@ -75,7 +74,7 @@ export function layoutPlates(
 
   const base = { section, orientation: 'horizontal' as const };
   const doubleTopY = height - plateThickness;
-  const doubleTops: Member[] = doubleTopPieces(length, opts).map(({ x, length: l }) => ({
+  const doubleTops: PlateMember[] = doubleTopPieces(length, opts).map(({ x, length: l }) => ({
     role: 'doubleTopPlate',
     y: doubleTopY,
     length: l,

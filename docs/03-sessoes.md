@@ -1158,7 +1158,7 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
 
 ## Fase 7 — Código sustentável e escopo v1 pendente
 
-- [ ] **S28.1 — Fatoração do core (SRF; saída byte-idêntica).** `output/sheet/{primitives,members,dims,pieceList,
+- [x] **S28.1 — Fatoração do core (SRF; saída byte-idêntica).** `output/sheet/{primitives,members,dims,pieceList,
   header,strings}.ts` com `panelSvg` só orquestrando; `planSvg` importa os primitivos do módulo comum, não da
   folha; `types.ts` → `sections.ts` (runtime) + `opening.ts`/`wall.ts`/`panel.ts`/`config.ts`; `geom.ts`
   (`overlaps`, `span`), `eps.ts` (`EPS`, `LENGTH_EPS`), `studLengthFor(wall, config)`, `PLATE_ROLES` e
@@ -1167,6 +1167,30 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   `splitWall` sem resolver headers duas vezes; `Member` como união por `role`, `Panel` sem opcionais que o motor
   sempre preenche, `HeaderChoice`/`KingChoice`/`BomLine` discriminados, `HeaderSource` tipado; `studSpacing: 16 | 24`.
   Critério: os 10 snapshots e os 12 fixtures não mudam um byte; `pnpm test` verde.
+  Feita em 2026-11-04 (sessão encadeada; commit, sem push). **Tipos**: `types.ts` virou só reexportação de
+  `sections.ts` (seções e dimensões, com o runtime), `opening.ts`, `wall.ts`, `panel.ts` e `config.ts`; o motor
+  importa do módulo do grupo, os testes seguem em `src/types`. `Member` é união por `role` (`PlateMember`,
+  `StudMember` com `flat`/`label`, `OpeningStudMember`, `HeaderMember` com `plies`/`headerSource` obrigatórios,
+  `FlatMember`; `labelOf`). `Panel` com `level`, `openings`, `exterior`, `bearing`, `layoutOrigin`, `wallOffset` e
+  `weightLb` obrigatórios — `panelizeWall` já os preenche (1, 0 e o peso) e `splitWall` sobrescreve; só `facing` e
+  `plan` ficam opcionais. `HeaderChoice`/`KingChoice` discriminados por `requiresEngineer`/`nonBearing` (os objetos
+  não mudaram); `BomLine.kind` (`commercial | precut | engineered | oversize`) no lugar dos 3 booleanos;
+  `HeaderSource` = `'project' | 'R602.7.4' | HeaderTableId` (marca criada só em `loadHeaderTables`);
+  `Config.studSpacing: 16 | 24` (`StudSpacing`). **Comuns**: `eps.ts` (`EPS`, `LENGTH_EPS`, `isCount`; `EPS` agora
+  em 1 arquivo), `geom.ts` (`overlaps`, `span`), `studLengthFor`, `PLATE_ROLES`/`isPlateRole` e
+  `pieceCount`/`piecesOf` em `panel.ts`, `withStudCounts`, `layoutMarks` em `rules/studs.ts` (a folha usa a mesma),
+  leitor das tabelas IRC em `rules/tableJson.ts`. **Regras**: `rules/split.ts` → `breaks.ts`/`laps.ts`/`splice.ts`
+  (testes idem; `memberSpan` virou `span`, testado em `test/geom.test.ts`); `framingForOpening` =
+  `openingGeometry` + `openingFrame` + `openingCripples`; `splitWall` resolve os headers uma vez (`resolveHeaders`)
+  e os passa ao deslocamento (P40), à parede inteira e a cada trecho (`framePanel` devolve painel e plano).
+  **Folha**: `output/sheet/{primitives,members,dims,pieceList,header,strings}.ts`, com `panelSvg` só montando a
+  página; a planta importa de `sheet/primitives`. **Fora do core**: cli e web usam `BomLine.kind` e `piecesOf`;
+  `config.studSpacing` fora de 16/24 é `ProjectError` no parser do CLI; o resumo do CLI ("N peças") passou a
+  contar plies, como a folha e o `panels.csv` (casa-exemplo 130 → 134). Verde na raiz: `pnpm check` (core 620,
+  cli 114, extract 210 + 1 pulado, web 379) e `pnpm --filter web build`. Snapshots e fixtures sem um byte
+  mudado (`git diff --stat` vazio); folhas, planta e CSVs do CLI nos 3 exemplos idênticos byte a byte aos de
+  antes. Não feito (fora do item): largura da folha com avisos/legenda, `font-size` em constantes, `Wall` separando
+  entrada de derivado, leitor de JSON das tabelas fora de `headers.ts`.
 - [ ] **S28.2 — Schema zod único do projeto (cli + web, SRF).** `cli/src/schema.ts` (strict — chave desconhecida é
   erro; coerção pés-pol; `loose | plan` como união; `stockLengths` num lugar só; defaults num lugar; `studSpacing`
   sem aceitar pés) substitui a validação à mão de `project.ts`; `web/lib/editor/draft.ts` lê pelo mesmo schema em

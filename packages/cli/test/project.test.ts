@@ -143,6 +143,14 @@ describe('parseProject', () => {
     expect(p.config).toEqual({ studSpacing: 24, studThickness: 1.5, plateThickness: 1.5, studLength: [92.625] });
   });
 
+  it('studSpacing só 16 ou 24 (escopo v1; `Config.studSpacing: 16 | 24`)', () => {
+    expect(projectFrom(valid({ config: { studSpacing: `2'-0"`, studLength: 92.625 } })).config.studSpacing).toBe(24);
+    expect(() => projectFrom(valid({ config: { studSpacing: 12, studLength: 92.625 } }), 'projeto')).toThrow(
+      /projeto\.config\.studSpacing: esperado 16 ou 24 \(polegadas\), recebido 12/,
+    );
+    expect(() => projectFrom(valid({ config: { studSpacing: `16'`, studLength: 92.625 } }), 'projeto')).toThrow(/esperado 16 ou 24/);
+  });
+
   it('config opcional: headerHeight; defaultHeader* foi removido e é rejeitado com explicação', () => {
     const p = projectFrom(valid({ config: { studSpacing: 16, studLength: 92.625, headerHeight: `6'-10 1/2"` } }));
     expect(p.config.headerHeight).toBe(82.5);

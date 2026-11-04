@@ -14,13 +14,14 @@
  *   (`panelizeWall`).
  */
 
-import type { EndJoint, ExtraStud, Opening, TeeJoint, Wall, WallJoints } from '../types';
+import { EPS } from '../eps';
+import type { Opening } from '../opening';
+import type { EndJoint, ExtraStud, TeeJoint, Wall, WallJoints } from '../wall';
 import { along, axisOf, pointAt, type Axis } from './axis';
 import { DEFAULT_TOLERANCE, findConnections, type Connection, type WallConnections } from './connections';
 import type { House, Point } from './types';
 import { EngineError } from '../messages';
 
-const EPS = 1e-9;
 
 /** Parede que encosta em T nesta, em x do painel (`TeeJoint` com `wallId` obrigatório). */
 export interface TeeAt extends TeeJoint {

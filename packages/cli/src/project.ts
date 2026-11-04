@@ -62,6 +62,7 @@ import {
   resolveOpenings,
   type Config,
   type PanelConfig,
+  type StudSpacing,
   type DoorFrame,
   type EndRule,
   type CornerStyle,
@@ -191,7 +192,7 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
 function configFrom(raw: unknown, path: string): Config {
   const c = obj(raw, path);
   const config: Config = {
-    studSpacing: positive(c['studSpacing'], `${path}.studSpacing`),
+    studSpacing: studSpacing(c['studSpacing'], `${path}.studSpacing`),
     studThickness: positive(c['studThickness'] ?? 1.5, `${path}.studThickness`),
     plateThickness: positive(c['plateThickness'] ?? 1.5, `${path}.plateThickness`),
     studLength: precuts(c['studLength'], `${path}.studLength`),
@@ -510,6 +511,13 @@ function signed(v: unknown, path: string): number {
 function positive(v: unknown, path: string): number {
   const n = measure(v, path);
   if (n <= 0) throw new ProjectError(path, `esperado medida > 0, recebido ${show(v)}`);
+  return n;
+}
+
+/** Espaçamento OC do escopo v1: 16" ou 24". */
+function studSpacing(v: unknown, path: string): StudSpacing {
+  const n = positive(v, path);
+  if (n !== 16 && n !== 24) throw new ProjectError(path, `esperado 16 ou 24 (polegadas), recebido ${show(v)}`);
   return n;
 }
 

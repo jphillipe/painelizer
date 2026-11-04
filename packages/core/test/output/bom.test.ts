@@ -40,8 +40,8 @@ describe('stockLengthFor', () => {
 describe('bom', () => {
   it('fixture wall-144-plain: 10 studs no pré-corte 92 5/8" (sem sobra) e 3 plates em 12\'', () => {
     expect(bom([plainPanel])).toEqual([
-      { section: '2x6', stockLength: 92.625, precut: true, engineered: false, oversize: false, qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
-      { section: '2x6', stockLength: 144, precut: false, engineered: false, oversize: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 92.625, kind: 'precut', qty: 10, cutTotal: 926.25, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 144, kind: 'commercial', qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 
@@ -56,7 +56,7 @@ describe('bom', () => {
   it("members do fixture da janela: header 2x10 de 2 plies vira 2 peças de 8'; seções em ordem 2x6, 2x10", () => {
     const lines = bom([{ members: window.expected.members as Member[] }]);
     // pré-corte: 7 studs + 2 kings = 9; 8': 2 jacks + 1 sill + 2 cripples = 5
-    expect(lines.map((l) => [l.section, l.stockLength, l.precut, l.qty])).toEqual([
+    expect(lines.map((l) => [l.section, l.stockLength, l.kind === 'precut', l.qty])).toEqual([
       ['2x6', 92.625, true, 9],
       ['2x6', 96, false, 5],
       ['2x6', 144, false, 3],
@@ -83,22 +83,20 @@ describe('bom', () => {
     expect(last).toEqual({
       section: 'LVL 1.75x9.25',
       stockLength: 39,
-      precut: false,
-      engineered: true,
-      oversize: false,
+      kind: 'engineered',
       qty: 2,
       cutTotal: 78,
       waste: 0,
       wastePercent: 0,
     });
-    expect(lines.slice(0, -1).every((l) => l.engineered === false)).toBe(true);
+    expect(lines.slice(0, -1).every((l) => l.kind !== 'engineered')).toBe(true);
   });
 
   it('fixture wall-144-window-82.5: jacks de 81 e cripples curtos vão para o 8\', não para o pré-corte', () => {
     const panel = panelizeWall(low.wall as Wall, low.config as Config);
     const lines = bom([panel], DEFAULT_STOCK_LENGTHS, low.config.studLength);
     // pré-corte: 7 studs + 2 kings; 8': 2 jacks + 1 sill + 4 cripples
-    expect(lines.map((l) => [l.section, l.stockLength, l.precut, l.qty])).toEqual([
+    expect(lines.map((l) => [l.section, l.stockLength, l.kind === 'precut', l.qty])).toEqual([
       ['2x6', 92.625, true, 9],
       ['2x6', 96, false, 7],
       ['2x6', 144, false, 3],
@@ -108,7 +106,7 @@ describe('bom', () => {
 
   it("parede de 9': studs no pré-corte de 104 5/8\"", () => {
     const nine = panelizeWall({ ...(plain.wall as Wall), height: 109.125 }, plain.config as Config);
-    expect(bom([nine]).map((l) => [l.stockLength, l.precut, l.qty, l.waste])).toEqual([
+    expect(bom([nine]).map((l) => [l.stockLength, l.kind === 'precut', l.qty, l.waste])).toEqual([
       [104.625, true, 10, 0],
       [144, false, 3, 0],
     ]);
@@ -116,15 +114,15 @@ describe('bom', () => {
 
   it('pré-corte só atende 2x4/2x6 (P7): peça 2x10 de 92 5/8" vai para o comercial', () => {
     const lines = bom([
-      { members: [{ role: 'header', section: '2x10', length: 92.625, x: 0, y: 0, orientation: 'horizontal' }] },
+      { members: [{ role: 'header', section: '2x10', length: 92.625, x: 0, y: 0, orientation: 'horizontal', plies: 1, headerSource: 'project' }] },
     ]);
-    expect(lines).toMatchObject([{ section: '2x10', stockLength: 96, precut: false, qty: 1 }]);
+    expect(lines).toMatchObject([{ section: '2x10', stockLength: 96, kind: 'commercial', qty: 1 }]);
   });
 
   it('sem pré-cortes ([]) os studs voltam ao 8\' comercial, com sobra', () => {
     expect(bom([plainPanel], DEFAULT_STOCK_LENGTHS, [])).toEqual([
-      { section: '2x6', stockLength: 96, precut: false, engineered: false, oversize: false, qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
-      { section: '2x6', stockLength: 144, precut: false, engineered: false, oversize: false, qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
+      { section: '2x6', stockLength: 96, kind: 'commercial', qty: 10, cutTotal: 926.25, waste: 33.75, wastePercent: 3.5 },
+      { section: '2x6', stockLength: 144, kind: 'commercial', qty: 3, cutTotal: 432, waste: 0, wastePercent: 0 },
     ]);
   });
 
@@ -144,17 +142,15 @@ describe('bom', () => {
     // panelizeWall sem splitWall: as plates de 240" não foram emendadas.
     const long = panelizeWall({ ...(plain.wall as Wall), id: 'W-20ft', length: 240 }, plain.config as Config);
     const lines = bom([long]);
-    expect(lines.find((l) => l.oversize)).toEqual({
+    expect(lines.find((l) => l.kind === 'oversize')).toEqual({
       section: '2x6',
       stockLength: 240,
-      precut: false,
-      engineered: false,
-      oversize: true,
+      kind: 'oversize',
       qty: 3,
       cutTotal: 720,
       waste: 0,
       wastePercent: 0,
     });
-    expect(lines.filter((l) => !l.oversize).map((l) => [l.stockLength, l.qty])).toEqual([[92.625, 16]]);
+    expect(lines.filter((l) => l.kind !== 'oversize').map((l) => [l.stockLength, l.qty])).toEqual([[92.625, 16]]);
   });
 });

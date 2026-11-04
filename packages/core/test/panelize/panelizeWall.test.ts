@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Opening, Panel, Wall } from '../../src/types';
+import { labelOf, type Config, type Member, type Opening, type Panel, type Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { expectSameMembers } from '../helpers/members';
 import plain from '../fixtures/wall-144-plain.json';
@@ -368,12 +368,12 @@ describe('panelizeWall — studs extras do projeto (S12)', () => {
   const studs = (w: Wall, c: Config = config) =>
     panelizeWall(w, c)
       .members.filter((m) => m.role === 'stud')
-      .map((m) => [m.x, m.label ?? ''] as const)
+      .map((m) => [m.x, labelOf(m) ?? ''] as const)
       .sort((a, b) => a[0] - b[0]);
 
   it('um extra em 40: entra como stud de altura inteira com o label; nenhum stud de layout o sobrepõe', () => {
     const panel = panelizeWall({ ...wall, extraStuds: [{ x: 40, label: 'HDU2 post' }] }, config);
-    const extra = panel.members.find((m) => m.label === 'HDU2 post')!;
+    const extra = panel.members.find((m) => labelOf(m) === 'HDU2 post')!;
     expect(extra).toMatchObject({ role: 'stud', section: '2x6', length: 92.625, x: 40, y: 1.5, orientation: 'vertical' });
     expect(panel.members).toHaveLength(14);
     expect(panel.warnings).toEqual([]);

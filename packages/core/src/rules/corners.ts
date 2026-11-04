@@ -21,22 +21,16 @@
  *   `layoutPlates`.
  */
 
-import {
-  sectionDepth,
-  verticalWidth,
-  type Config,
-  type Member,
-  type Opening,
-  type TeeJoint,
-  type Wall,
-  type WallJoints,
-  type Warning,
-} from '../types';
+import type { Config } from '../config';
+import { EPS } from '../eps';
+import { overlaps, span } from '../geom';
+import type { Opening } from '../opening';
+import type { FlatMember, Member } from '../panel';
+import { sectionDepth } from '../sections';
+import type { TeeJoint, Wall, WallJoints } from '../wall';
 import type { PlateOptions } from './plates';
-import { EngineError, warning } from '../messages';
+import { EngineError, warning, type Warning } from '../messages';
 import type { MergedZone } from './zones';
-
-const EPS = 1e-9;
 
 /** Espaçamento vertical entre centros dos blocos do ladder (hipótese P22). */
 export const LADDER_BLOCK_SPACING = 24;
@@ -143,7 +137,7 @@ export function teeConflicts(
     const x = (s.lo + s.hi) / 2;
     const who = s.wallId ?? '?';
     for (const o of openings) {
-      if (s.lo < o.offset + o.roughWidth - EPS && s.hi > o.offset + EPS) {
+      if (overlaps(s.lo, s.hi, o.offset, o.offset + o.roughWidth)) {
         throw new EngineError(
           'TEE_IN_OPENING',
           { wallId: wall.id, openingId: o.id, ...(s.wallId === undefined ? {} : { alsoWalls: [s.wallId] }) },
@@ -153,7 +147,7 @@ export function teeConflicts(
     }
     let conflict = false;
     for (const z of zones) {
-      if (s.lo < z.end - EPS && s.hi > z.start + EPS) {
+      if (overlaps(s.lo, s.hi, z.start, z.end)) {
         conflict = true;
         warnings.push(
           warning(
@@ -186,15 +180,13 @@ export function ladderBlockCenters(height: number, plateThickness: number, block
  * @param verticals peças de altura inteira já definidas (studs de layout, extras, kings, studs de canto):
  *                  delimitam os blocos e, dentro da faixa, os dividem
  */
-export function ladderBlocks(wall: Wall, strips: readonly TeeStrip[], verticals: readonly Member[], config: Config): Member[] {
+export function ladderBlocks(wall: Wall, strips: readonly TeeStrip[], verticals: readonly Member[], config: Config): FlatMember[] {
   if ((config.tee ?? 'ladder') !== 'ladder' || strips.length === 0) return [];
   const t = config.studThickness;
   const centers = ladderBlockCenters(wall.height, config.plateThickness, t);
-  const spans = verticals
-    .map((m) => ({ lo: m.x, hi: m.x + verticalWidth(m) }))
-    .sort((a, b) => a.lo - b.lo);
+  const spans = verticals.map(span).sort((a, b) => a.lo - b.lo);
 
-  const out: Member[] = [];
+  const out: FlatMember[] = [];
   for (const s of strips) {
     const left = spans.filter((v) => v.hi <= s.lo + EPS).at(-1);
     const right = spans.find((v) => v.lo >= s.hi - EPS);
@@ -202,7 +194,7 @@ export function ladderBlocks(wall: Wall, strips: readonly TeeStrip[], verticals:
       throw new EngineError('TEE_WITHOUT_STUD', { wallId: wall.id }, { lo: s.lo, hi: s.hi });
     }
     // Studs dentro da faixa (ou sobre as faces) dividem o bloco.
-    const splitters = spans.filter((v) => v.lo < s.hi - EPS && v.hi > s.lo + EPS && v.lo > left.lo + EPS && v.lo < right.lo - EPS);
+    const splitters = spans.filter((v) => overlaps(v.lo, v.hi, s.lo, s.hi) && v.lo > left.lo + EPS && v.lo < right.lo - EPS);
     let cursor = left.hi;
     const gaps: { x: number; length: number }[] = [];
     for (const v of splitters) {

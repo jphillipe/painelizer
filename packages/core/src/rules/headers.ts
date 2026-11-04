@@ -16,14 +16,14 @@
  * Entrada inválida lança `RangeError`. Tabela digitada com erro de estrutura também (`loadHeaderTables`).
  */
 
-import type { FloorSpan, LumberSection, WallSection } from '../types';
-import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
+import { EPS } from '../eps';
+import type { HeaderTableId } from '../opening';
+import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth, type LumberSection, type WallSection } from '../sections';
+import type { FloorSpan } from '../wall';
 import { parseFeetInches } from '../units';
 import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
+import { tableErrors } from './tableJson';
 import rawIrcHeaders from '../data/irc-headers.json';
-
-/** Folga numérica para comparar vão pedido com vão de tabela. */
-const EPS = 1e-9;
 
 /** Header escolhido pela tabela tem ao menos 2 plies (padrão de fabricação, P17). */
 const MIN_PLIES = 2;
@@ -57,7 +57,7 @@ export interface HeaderGroup {
 }
 
 export interface HeaderTable {
-  id: string;
+  id: HeaderTableId;
   exterior: boolean;
   columns: HeaderColumn[];
   groups: HeaderGroup[];
@@ -87,11 +87,24 @@ export interface HeaderSpec {
   /** Vão máximo da tabela para o header escolhido, em polegadas. */
   maxSpan: number;
   /** Tabela de origem (ex.: "R602.7(1)"). */
-  table: string;
+  table: HeaderTableId;
 }
 
-/** `reason`: a frase em português; `detail`: o motivo estruturado (S26). */
-export type HeaderChoice = HeaderSpec | { requiresEngineer: true; reason: string; detail: EngineerReason } | { nonBearing: true };
+/** Fora da tabela (nunca extrapola): `reason` é a frase em português; `detail`, o motivo estruturado (S26). */
+export interface RequiresEngineer {
+  requiresEngineer: true;
+  reason: string;
+  detail: EngineerReason;
+}
+
+/**
+ * Resultado de `headerFor`, discriminado por `requiresEngineer` e `nonBearing` (ausentes no header escolhido):
+ * o header da tabela, fora da tabela, ou parede não portante (não consulta tabela, P17).
+ */
+export type HeaderChoice =
+  | (HeaderSpec & { requiresEngineer?: never; nonBearing?: never })
+  | (RequiresEngineer & { nonBearing?: never })
+  | { nonBearing: true; requiresEngineer?: never };
 
 /** Escolhe o header pela tabela. Ver regras no topo do arquivo. */
 export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = ircHeaders()): HeaderChoice {
@@ -190,14 +203,7 @@ const FLOOR_SPANS: readonly unknown[] = ['center', 'clear'];
  * Lista vazia = estrutura válida. Coerência dos valores (vão cresce com a seção etc.) é conferida nos testes.
  */
 export function validateHeaderTables(json: unknown): string[] {
-  const errors: string[] = [];
-  const err = (path: string, msg: string): void => {
-    errors.push(`${path}: ${msg}`);
-  };
-  const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-  const keys = (path: string, o: Record<string, unknown>, allowed: string[]) => {
-    for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `campo desconhecido "${k}"`);
-  };
+  const { errors, err, isObj, keys } = tableErrors();
   const posInt = (v: unknown) => Number.isInteger(v) && (v as number) >= 1;
 
   if (!isObj(json) || !Array.isArray(json.tables)) return ['raiz: esperado { tables: [...] }'];
@@ -299,7 +305,8 @@ export function loadHeaderTables(json: unknown): HeaderTable[] {
     }[];
   };
   return (json as { tables: Raw[] }).tables.map((t) => ({
-    id: t.id,
+    // Único lugar que cria um id de tabela: o JSON acabou de ser validado.
+    id: t.id as HeaderTableId,
     exterior: t.exterior,
     columns: t.columns.map((c) => ({
       ...(c.groundSnowLoad === undefined ? {} : { groundSnowLoad: c.groundSnowLoad }),

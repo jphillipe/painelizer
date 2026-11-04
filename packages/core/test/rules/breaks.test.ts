@@ -1,19 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PANEL_CONFIG, type Config, type Panel, type PanelConfig, type Wall } from '../../src/types';
-import { panelizeWall, planOpenings } from '../../src/panelize/panelizeWall';
+import { framePanel } from '../../src/panelize/panelizeWall';
 import { teeStrips } from '../../src/rules/corners';
-import {
-  breakCandidates,
-  chooseBreaks,
-  lapEnd,
-  layoutMarks,
-  memberSpan,
-  splicePlates,
-  validatePanelConfig,
-} from '../../src/rules/split';
-import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
+import { breakCandidates, chooseBreaks, validatePanelConfig } from '../../src/rules/breaks';
 import split480 from '../fixtures/wall-480-split.json';
-import spliced240 from '../fixtures/wall-240-spliced.json';
 
 const config = split480.config as Config;
 const cfg: PanelConfig = { ...DEFAULT_PANEL_CONFIG };
@@ -23,8 +13,7 @@ const every16 = (upTo: number) => Array.from({ length: Math.floor(upTo / 16) }, 
 
 function candidatesOf(wall: Wall, cfgOverride: Partial<Config> = {}): number[] {
   const c = { ...config, ...cfgOverride };
-  const panel = panelizeWall(wall, c);
-  const { plan } = planOpenings(wall, c);
+  const { panel, plan } = framePanel(wall, c);
   return breakCandidates(panel, c, { zones: plan.zones, strips: teeStrips(wall.joints) });
 }
 
@@ -35,14 +24,6 @@ describe('validatePanelConfig', () => {
     expect(() => validatePanelConfig({ ...cfg, module: Number.NaN })).toThrow(RangeError);
     expect(() => validatePanelConfig({ ...cfg, maxWeight: 0 })).toThrow(RangeError);
     expect(() => validatePanelConfig({ ...cfg, minLap: 60 })).toThrow(/minLap/);
-  });
-});
-
-describe('memberSpan', () => {
-  it('vertical em pé ocupa 1.5; flat ocupa a profundidade; horizontal ocupa o comprimento', () => {
-    expect(memberSpan({ role: 'stud', section: '2x6', length: 92.625, x: 10, y: 1.5, orientation: 'vertical' })).toEqual({ lo: 10, hi: 11.5 });
-    expect(memberSpan({ role: 'stud', section: '2x6', length: 92.625, x: 1.5, y: 1.5, orientation: 'vertical', flat: true })).toEqual({ lo: 1.5, hi: 7 });
-    expect(memberSpan({ role: 'header', section: '2x10', length: 41, x: 165, y: 82.5, orientation: 'horizontal' })).toEqual({ lo: 165, hi: 206 });
   });
 });
 
@@ -76,8 +57,9 @@ describe('breakCandidates', () => {
   });
 
   it('marca a menos de 2t da ponta não é candidata', () => {
-    const panel: Panel = {
-      id: 'x', wallId: 'x', length: 20, height: 97.125, section: '2x6', fieldCuts: [], warnings: [], layoutOrigin: 0,
+    const panel: Pick<Panel, 'members' | 'length' | 'layoutOrigin'> = {
+      length: 20,
+      layoutOrigin: 0,
       members: [
         { role: 'stud', section: '2x6', length: 92.625, x: 0, y: 1.5, orientation: 'vertical' },
         // stud da marca 16: faixa [14.5, 17.5] passa de 20 − 3 = 17 → fora.
@@ -125,87 +107,5 @@ describe('chooseBreaks (hipótese P35: equilibrado, módulo de 48 preferido)', (
   it('sem candidato ao alcance: RangeError com a parede e o trecho', () => {
     expect(() => choose(480, [])).toThrow(/parede W: não há como dividir 480" em painéis de até 240".*entre x=0 e x=240/);
     expect(() => choose(600, [100, 200])).toThrow(/entre x=200 e x=440/);
-  });
-});
-
-describe('layoutMarks', () => {
-  it('marcas de 0 a length, a partir da origem', () => {
-    expect(layoutMarks(64, 16, 0)).toEqual([0, 16, 32, 48, 64]);
-    expect(layoutMarks(117.25, 16, -5.5)).toEqual([10.5, 26.5, 42.5, 58.5, 74.5, 90.5, 106.5]);
-  });
-});
-
-describe('lapEnd (hipótese P23)', () => {
-  const marks = layoutMarks(480, 16, 0);
-
-  it('sem obstáculo: b + 48; se não cabe até o limite, b + 24; se nem isso, erro', () => {
-    expect(lapEnd(240, 480, cfg, [], marks)).toBe(288);
-    expect(lapEnd(100, 130, cfg, [], marks)).toBe(124);
-    expect(() => lapEnd(100, 120, cfg, [], marks)).toThrow(/x=120.*24"/);
-  });
-
-  it('fim dentro de um header: encurta para 24; se ainda cai, vai à primeira marca depois do obstáculo', () => {
-    const header = { lo: 140, hi: 160, kind: 'header' as const, x: 140 };
-    expect(lapEnd(100, 480, cfg, [header], marks)).toBe(124);
-    const wide = { lo: 120, hi: 150, kind: 'header' as const, x: 120 };
-    expect(lapEnd(100, 480, cfg, [wide], marks)).toBe(160);
-    // Encostar no obstáculo não é estar dentro.
-    expect(lapEnd(100, 480, cfg, [{ lo: 148, hi: 170, kind: 'header' as const, x: 148 }], marks)).toBe(148);
-  });
-
-  it('apoio que não é marca (centro de king) logo depois do obstáculo serve; não pula o header seguinte (P37)', () => {
-    // S1 do Ringgold em escala: quebra 144, header da porta 152–193, king em 193.75, header do par 198.25–259.75
-    const headers = [
-      { lo: 152, hi: 193, kind: 'header' as const, x: 152 },
-      { lo: 198.25, hi: 259.75, kind: 'header' as const, x: 198.25 },
-    ];
-    expect(lapEnd(144, 336, cfg, headers, marks)).toBe(272);
-    const withKings = [...marks, 151.25, 193.75, 196, 260.5].sort((a, b) => a - b);
-    expect(lapEnd(144, 336, cfg, headers, withKings)).toBe(193.75);
-  });
-
-  it('obstáculo até o limite: erro nomeando o obstáculo', () => {
-    expect(() => lapEnd(100, 155, cfg, [{ lo: 120, hi: 150, kind: 'tee' as const }], marks)).toThrow(/a faixa do T ocupa 120–150/);
-  });
-});
-
-describe('splicePlates (P14)', () => {
-  const wall240 = spliced240.wall as Wall;
-  const whole = panelizeWall(wall240, config);
-
-  it('wall-240: top 192 + 48, double top 144 + 96 (≥ 48 da emenda da top e das pontas), bottom 192 + 48', () => {
-    const spliced = splicePlates(whole, [96, 120, 144, 168, 192], cfg);
-    expectSameMembers(spliced.members, spliced240.expected.panels[0]!.members as MemberKeyFields[]);
-    expect(spliced.members).toHaveLength(22);
-  });
-
-  it('nada acima do estoque: devolve o mesmo painel', () => {
-    expect(splicePlates(whole, [240], cfg)).toBe(whole);
-  });
-
-  it('cada corte fica sobre o centro de um stud', () => {
-    const spliced = splicePlates(whole, [96, 120, 144, 168, 192], cfg);
-    const centers = spliced.members.filter((m) => m.role === 'stud').map((m) => m.x + 0.75);
-    const joints = spliced.members
-      .filter((m) => m.role === 'bottomPlate' || m.role === 'topPlate' || m.role === 'doubleTopPlate')
-      .filter((m) => m.x > 0)
-      .map((m) => m.x);
-    expect(joints).toEqual([192, 192, 144]);
-    for (const j of joints) expect(centers).toContain(j);
-  });
-
-  it("estoque maior (ex.: 20') dispensa a emenda; estoque vazio ou inválido é RangeError", () => {
-    expect(splicePlates(whole, [240], cfg).members).toHaveLength(19);
-    expect(() => splicePlates(whole, [], cfg)).toThrow(RangeError);
-    expect(() => splicePlates(whole, [0], cfg)).toThrow(RangeError);
-  });
-
-  it('sem stud onde emendar com a defasagem mínima: RangeError nomeando a plate', () => {
-    // Painel sem studs no meio: só o de ponta e o de fechamento.
-    const bare: Panel = {
-      ...whole,
-      members: whole.members.filter((m) => m.role !== 'stud' || m.x === 0 || m.x === 238.5),
-    };
-    expect(() => splicePlates(bare, [192], cfg)).toThrow(/topPlate de 240".*não há stud/);
   });
 });

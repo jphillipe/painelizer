@@ -9,7 +9,9 @@
  * `plateStart` para `plateEnd` pelo `wallOffset` e pelo comprimento do painel.
  */
 
-import type { Config, Panel, PanelFacing, Point, Warning } from '../types';
+import type { Config } from '../config';
+import type { Panel, PanelFacing, Warning } from '../panel';
+import type { Point } from '../wall';
 import { splitWall } from '../panelize/splitWall';
 import type { HeaderTables } from '../rules/openingHeader';
 import type { HeaderTable } from '../rules/headers';
@@ -59,7 +61,7 @@ export function panelizeFrame(
   const facing: { facing: PanelFacing } | Record<string, never> =
     frame.outside === undefined ? {} : { facing: frame.outside === 'right' ? 'exterior' : 'interior' };
   return splitWall(frame.wall, config, tables).map((p) => {
-    const a = p.wallOffset ?? 0;
+    const a = p.wallOffset;
     return { ...p, plan: { start: at(a), end: at(a + p.length) }, ...facing };
   });
 }

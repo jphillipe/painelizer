@@ -22,8 +22,13 @@
  * lança `Error` (docs/04-decisoes.md, 2026-10-05).
  */
 
-import { verticalWidth, type Config, type Panel, type Wall, type WallSection, type Warning } from '../types';
-import { warning } from '../messages';
+import { studLengthFor, type Config } from '../config';
+import { EPS } from '../eps';
+import { span } from '../geom';
+import type { Panel } from '../panel';
+import type { WallSection } from '../sections';
+import type { Wall } from '../wall';
+import { warning, type Warning } from '../messages';
 import { openingZone } from '../rules/openings';
 
 /** Folga mínima entre a zona da abertura e a ponta da parede para caber o stud de ponta. */
@@ -41,9 +46,6 @@ const MAX_STUD_LENGTH_NONBEARING: Readonly<Record<WallSection, number>> = {
 /** Cavidade contínua acima disto exige fire blocking horizontal (R302.11; P11). */
 const MAX_CAVITY_WITHOUT_FIRE_BLOCKING = 120;
 
-/** Folga numérica para comparações de geometria. */
-const EPS = 1e-9;
-
 /**
  * Avisos de validação do painel. `wall.openings` deve vir com `jackStuds` já resolvido (como em
  * `panelizeWall`), porque a largura da zona depende dele.
@@ -51,7 +53,7 @@ const EPS = 1e-9;
 export function validatePanel(panel: Panel, wall: Wall, config: Config): Warning[] {
   return [
     ...openingsNearCorner(wall, config),
-    ...overlappingStuds(panel, wall, config),
+    ...overlappingStuds(panel, wall),
     ...studHeight(wall, config),
     ...fireBlocking(wall, config),
   ];
@@ -74,7 +76,7 @@ function openingsNearCorner(wall: Wall, config: Config): Warning[] {
   return warnings;
 }
 
-function overlappingStuds(panel: Panel, wall: Wall, _config: Config): Warning[] {
+function overlappingStuds(panel: Panel, wall: Wall): Warning[] {
   const vertical = panel.members.filter((m) => m.orientation === 'vertical');
   const warnings: Warning[] = [];
   for (let i = 0; i < vertical.length; i++) {
@@ -82,7 +84,9 @@ function overlappingStuds(panel: Panel, wall: Wall, _config: Config): Warning[] 
       const a = vertical[i]!;
       const b = vertical[j]!;
       // Largura real de cada peça: o stud flat do canto California ocupa a profundidade da seção (S14).
-      const xOverlap = Math.min(a.x + verticalWidth(a), b.x + verticalWidth(b)) - Math.max(a.x, b.x);
+      const sa = span(a);
+      const sb = span(b);
+      const xOverlap = Math.min(sa.hi, sb.hi) - Math.max(sa.lo, sb.lo);
       const yOverlap = Math.min(a.y + a.length, b.y + b.length) - Math.max(a.y, b.y);
       if (xOverlap > EPS && yOverlap > EPS) {
         warnings.push(
@@ -95,14 +99,14 @@ function overlappingStuds(panel: Panel, wall: Wall, _config: Config): Warning[] 
 }
 
 function studHeight(wall: Wall, config: Config): Warning[] {
-  const studLength = wall.height - 3 * config.plateThickness;
+  const studLength = studLengthFor(wall, config);
   const limit = wall.bearing ? MAX_STUD_LENGTH_BEARING : MAX_STUD_LENGTH_NONBEARING[wall.section];
   if (studLength <= limit + EPS) return [];
   return [warning('STUD_HEIGHT_ABOVE_LIMIT', { wallId: wall.id }, { studLength, limit, bearing: wall.bearing, section: wall.section })];
 }
 
 function fireBlocking(wall: Wall, config: Config): Warning[] {
-  const cavity = wall.height - 3 * config.plateThickness;
+  const cavity = studLengthFor(wall, config);
   if (cavity <= MAX_CAVITY_WITHOUT_FIRE_BLOCKING + EPS) return [];
   return [warning('FIRE_BLOCKING_REQUIRED', { wallId: wall.id }, { cavity, limit: MAX_CAVITY_WITHOUT_FIRE_BLOCKING })];
 }

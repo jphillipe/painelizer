@@ -27,14 +27,14 @@
  * `requiresEngineer` ou dado faltando lança `Error` com parede, abertura e motivo.
  */
 
-import type { Config, HeaderSource, Opening, Section, Wall, Warning } from '../types';
-import { EngineError, engineerParams, warning } from '../messages';
-import { sectionDepth, sectionThickness } from '../types';
+import type { Config } from '../config';
+import { EPS, isCount } from '../eps';
+import { FLAT_HEADER_SOURCE, PROJECT_HEADER_SOURCE, type HeaderSource, type Opening } from '../opening';
+import { sectionDepth, sectionThickness, type Section } from '../sections';
+import type { Wall } from '../wall';
+import { EngineError, engineerParams, warning, type Warning } from '../messages';
 import { headerFor, type HeaderQuery, type HeaderTable } from './headers';
 import { kingsFor, type KingTable } from './kings';
-
-/** Folga numérica para comparar espessura do header com a da parede. */
-const EPS = 1e-9;
 
 export interface ResolvedHeader {
   section: Section;
@@ -112,7 +112,7 @@ function resolveKings(
   } catch (e) {
     throw rewrap(e, where);
   }
-  if ('requiresEngineer' in choice) {
+  if (choice.requiresEngineer === true) {
     if (explicit !== undefined) return { kingStuds: explicit, warnings: [] };
     throw new EngineError('KINGS_OUT_OF_TABLE', where, engineerParams(choice.detail));
   }
@@ -169,7 +169,7 @@ function resolveHeaderSpec(
       section: project.section,
       plies: project.plies,
       jackStuds: explicitJacks ?? project.jackStuds ?? 1,
-      source: 'project',
+      source: PROJECT_HEADER_SOURCE,
       flat: false,
       warnings: [],
     };
@@ -183,7 +183,7 @@ function resolveHeaderSpec(
       section: wall.section,
       plies: 1,
       jackStuds: explicitJacks ?? 1,
-      source: 'R602.7.4',
+      source: FLAT_HEADER_SOURCE,
       flat: true,
       warnings: [],
     };
@@ -210,8 +210,8 @@ function resolveHeaderSpec(
   } catch (e) {
     throw rewrap(e, where);
   }
-  if ('requiresEngineer' in choice) throw new EngineError('HEADER_OUT_OF_TABLE', where, engineerParams(choice.detail));
-  if ('nonBearing' in choice) throw new EngineError('HEADER_TABLE_NOT_APPLICABLE', where);
+  if (choice.requiresEngineer === true) throw new EngineError('HEADER_OUT_OF_TABLE', where, engineerParams(choice.detail));
+  if (choice.nonBearing === true) throw new EngineError('HEADER_TABLE_NOT_APPLICABLE', where);
 
   const warnings: Warning[] = [];
   const species = building.species;
@@ -246,7 +246,7 @@ function isList(t: readonly HeaderTable[] | HeaderTables | undefined): t is read
 }
 
 function count(n: number, field: string, where: { wallId: string; openingId: string }): void {
-  if (!Number.isInteger(n) || n < 1) throw new EngineError('VALUE_NOT_COUNT', where, { field, value: n });
+  if (!isCount(n)) throw new EngineError('VALUE_NOT_COUNT', where, { field, value: n });
 }
 
 /** Erro das tabelas (número inválido, neve faltando) com a parede e a abertura de quem perguntou. */

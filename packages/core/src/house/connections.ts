@@ -18,11 +18,11 @@
 import type { EndRule, HouseWall, Point, WallEnd } from './types';
 import { across, along, axisOf, crossing, type Axis } from './axis';
 import { EngineError } from '../messages';
+import { EPS } from '../eps';
 
 /** Folga, em polegadas, para a ponta digitada "estar" no cruzamento dos eixos. */
 export const DEFAULT_TOLERANCE = 0.5;
 
-const EPS = 1e-9;
 
 export type Connection =
   | { kind: 'free' }

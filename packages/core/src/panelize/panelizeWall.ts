@@ -25,17 +25,14 @@
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
-import {
-  verticalWidth,
-  type Config,
-  type Member,
-  type Opening,
-  type Panel,
-  type PanelOpening,
-  type Wall,
-  type Warning,
-} from '../types';
-import { EngineError, warning } from '../messages';
+import { studLengthFor, type Config } from '../config';
+import { EPS, isCount } from '../eps';
+import { overlaps } from '../geom';
+import { withStudCounts, type Opening } from '../opening';
+import type { Member, Panel, PanelOpening, StudMember } from '../panel';
+import { verticalWidth } from '../sections';
+import type { Wall } from '../wall';
+import { EngineError, warning, type Warning } from '../messages';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
@@ -52,10 +49,8 @@ import {
   teeConflicts,
   teeStrips,
 } from '../rules/corners';
+import { panelWeight } from '../rules/weight';
 import { validatePanel } from './validate';
-
-/** Folga numérica para comparações de geometria. */
-const EPS = 1e-9;
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
 export interface OpeningPlan {
@@ -66,19 +61,34 @@ export interface OpeningPlan {
 }
 
 /**
+ * Header de cada abertura da parede, na ordem de `wall.openings`. Não depende do `offset` nem do comprimento da
+ * parede: `splitWall` resolve uma vez e reaproveita no deslocamento (P40), na parede inteira e em cada trecho.
+ *
+ * @throws RangeError os de `resolveOpeningHeader`
+ */
+export function resolveHeaders(
+  wall: Wall,
+  config: Config,
+  tables?: readonly HeaderTable[] | HeaderTables,
+): ResolvedHeader[] {
+  return wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
+}
+
+/**
  * O header vem antes da geometria: os jacks (NJ) e os kings dele definem a largura de cada zona.
  * Usado por `panelizeWall` e por `panelizeHouse` (tee na zona de abertura, S13).
  *
+ * @param resolved headers já resolvidos (`resolveHeaders`), na ordem de `wall.openings`; ausente = resolve aqui
  * @throws RangeError os de `resolveOpeningHeader` e `mergeOpeningZones`
  */
 export function planOpenings(
   wall: Wall,
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
+  resolved: readonly ResolvedHeader[] = resolveHeaders(wall, config, tables),
 ): OpeningPlan {
-  const resolved = wall.openings.map((o) => resolveOpeningHeader(o, wall, config, tables));
   const fit = fitNeighborJacks(
-    wall.openings.map((o, i) => ({ ...o, jackStuds: resolved[i]!.jackStuds, kingStuds: resolved[i]!.kingStuds })),
+    wall.openings.map((o, i) => withStudCounts(o, resolved[i]!)),
     config.studThickness,
   );
   const openings = fit.openings;
@@ -121,18 +131,19 @@ export function planOpenings(
 /**
  * Hipótese P40: aberturas que conflitam por até 1 1/2" com a ponta da parede ou com um T saem deslocadas
  * (`rules/nudge.ts`), com aviso `OPENING_NUDGED`. Roda antes de tudo em `splitWall`.
+ *
+ * @param resolved headers já resolvidos (`resolveHeaders`), na ordem de `wall.openings`; ausente = resolve aqui
  */
 export function nudgeWall(
   wall: Wall,
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
+  resolved?: readonly ResolvedHeader[],
 ): { wall: Wall; warnings: { offset: number; warning: Warning }[] } {
   if (wall.openings.length === 0) return { wall, warnings: [] };
-  const resolved = wall.openings.map((o) => {
-    const h = resolveOpeningHeader(o, wall, config, tables);
-    return { ...o, jackStuds: h.jackStuds, kingStuds: h.kingStuds };
-  });
-  const { nudges } = nudgeOpenings(resolved, wall.length, teeStrips(wall.joints), config.studThickness);
+  const headers = resolved ?? resolveHeaders(wall, config, tables);
+  const counted = wall.openings.map((o, i) => withStudCounts(o, headers[i]!));
+  const { nudges } = nudgeOpenings(counted, wall.length, teeStrips(wall.joints), config.studThickness);
   if (nudges.length === 0) return { wall, warnings: [] };
   const to = new Map(nudges.map((n) => [n.openingId, n.to]));
   const warnings = nudges.map((n) => {
@@ -170,12 +181,26 @@ export function panelizeWall(
   config: Config,
   tables?: readonly HeaderTable[] | HeaderTables,
 ): Panel {
+  return framePanel(wall, config, tables).panel;
+}
+
+/**
+ * O painel da parede e o plano de aberturas usado para montá-lo (`splitWall` precisa das zonas).
+ *
+ * @param resolved headers já resolvidos (`resolveHeaders`), na ordem de `wall.openings`; ausente = resolve aqui
+ */
+export function framePanel(
+  wall: Wall,
+  config: Config,
+  tables?: readonly HeaderTable[] | HeaderTables,
+  resolved?: readonly ResolvedHeader[],
+): { panel: Panel; plan: ZonePlan } {
   const { plateThickness, studThickness, studSpacing } = config;
   const warnings: Warning[] = [];
 
   const plates = layoutPlates(wall.length, wall.height, wall.section, plateThickness, plateOptionsFor(wall.joints));
 
-  const studLength = wall.height - 3 * plateThickness;
+  const studLength = studLengthFor(wall, config);
   if (config.studLength.length === 0) {
     throw new EngineError('PRECUTS_EMPTY');
   }
@@ -189,7 +214,7 @@ export function panelizeWall(
     );
   }
 
-  const { headers, openings, plan } = planOpenings(wall, config, tables);
+  const { headers, openings, plan } = planOpenings(wall, config, tables, resolved);
   const fullHeight = {
     section: wall.section,
     length: studLength,
@@ -198,7 +223,7 @@ export function panelizeWall(
   };
 
   // Studs extras do projeto (S12): cada um ocupa [x, x + t]; stud de layout que os sobrepõe sai.
-  const extras: Member[] = extraStuds(wall, studThickness, plan.zones).map(({ x, label }) => ({
+  const extras: StudMember[] = extraStuds(wall, studThickness, plan.zones).map(({ x, label }) => ({
     role: 'stud',
     ...fullHeight,
     x,
@@ -207,7 +232,7 @@ export function panelizeWall(
 
   // Ligações (S14): faixas de T sem conflito com abertura; studs de canto e de encosto.
   const { clear: strips, warnings: teeWarnings } = teeConflicts(wall, teeStrips(wall.joints), openings, plan.zones);
-  const jointStuds: Member[] = [...cornerStuds(wall, config), ...backerStuds(strips, config)].map(({ x, flat }) => ({
+  const jointStuds: StudMember[] = [...cornerStuds(wall, config), ...backerStuds(strips, config)].map(({ x, flat }) => ({
     role: 'stud',
     ...fullHeight,
     x,
@@ -217,8 +242,8 @@ export function panelizeWall(
 
   const layoutOrigin = wall.layoutOrigin ?? 0;
   const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness, layoutOrigin)
-    .filter((x) => !plan.zones.some((z) => overlaps(x, x + studThickness, z)))
-    .filter((x) => !occupied.some((o) => overlaps(x, x + studThickness, o)))
+    .filter((x) => !plan.zones.some((z) => overlaps(x, x + studThickness, z.start, z.end)))
+    .filter((x) => !occupied.some((o) => overlaps(x, x + studThickness, o.start, o.end)))
     .map((x) => ({ role: 'stud', ...fullHeight, x }));
 
   const kings: Member[] = plan.kings.map((x) => ({ role: 'kingStud', ...fullHeight, x }));
@@ -239,29 +264,29 @@ export function panelizeWall(
     return { id: o.id, type: o.type, x: o.offset, width: o.roughWidth, top: header.y, height: o.roughHeight };
   });
 
+  const members = [...plates, ...verticals, ...blocks, ...framings.flatMap((f) => f.members)];
   const panel: Panel = {
     id: wall.id,
     wallId: wall.id,
     length: wall.length,
     height: wall.height,
     section: wall.section,
-    members: [...plates, ...verticals, ...blocks, ...framings.flatMap((f) => f.members)],
+    members,
     fieldCuts: framings.flatMap((f) => f.fieldCuts),
     warnings,
     layoutOrigin,
     openings: panelOpenings,
     exterior: wall.exterior,
     bearing: wall.bearing,
+    // Parede de um painel só; `splitWall` dá o id, o offset e o peso de cada trecho (S15, S16).
+    level: wall.level ?? 1,
+    wallOffset: 0,
+    weightLb: panelWeight({ members }),
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.
   warnings.push(...validatePanel(panel, { ...wall, openings }, config));
-  return panel;
-}
-
-/** Sobreposição com área (encostar não conta). */
-function overlaps(start: number, end: number, zone: OpeningZone): boolean {
-  return start < zone.end - EPS && end > zone.start + EPS;
+  return { panel, plan };
 }
 
 /**
@@ -276,13 +301,13 @@ function extraStuds(wall: Wall, t: number, zones: readonly OpeningZone[]): { x: 
     const where = { wallId: wall.id };
     const n = e.count ?? 1;
     if (!Number.isFinite(e.x)) throw new EngineError('EXTRA_STUD_INVALID', where, { index: i, field: 'x', value: e.x });
-    if (!Number.isInteger(n) || n < 1) throw new EngineError('EXTRA_STUD_INVALID', where, { index: i, field: 'count', value: n });
+    if (!isCount(n)) throw new EngineError('EXTRA_STUD_INVALID', where, { index: i, field: 'count', value: n });
     if (e.x < -EPS || e.x + n * t > wall.length + EPS) {
       throw new EngineError('EXTRA_STUD_OUT_OF_WALL', where, { index: i, count: n, x: e.x, length: wall.length });
     }
     for (let k = 0; k < n; k++) {
       const x = e.x + k * t;
-      const zone = zones.find((z) => overlaps(x, x + t, z));
+      const zone = zones.find((z) => overlaps(x, x + t, z.start, z.end));
       if (zone !== undefined) {
         throw new EngineError('EXTRA_STUD_IN_OPENING', where, { index: i, x, start: zone.start, end: zone.end });
       }

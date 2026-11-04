@@ -12,10 +12,11 @@
  *   dentro do papel, comprimento decrescente; empate desfeito pela seção.
  */
 
-import { sectionDepth, type Member, type MemberRole, type Panel, type Section } from '../types';
+import { isPlateRole, pieceCount, type MemberRole, type Panel, type PlateRole } from '../panel';
+import { sectionDepth, type Section } from '../sections';
 
 /** Papel na lista de corte. `plates` reúne bottom, top e double top plate. */
-export type CutRole = 'plates' | Exclude<MemberRole, 'bottomPlate' | 'topPlate' | 'doubleTopPlate'>;
+export type CutRole = 'plates' | Exclude<MemberRole, PlateRole>;
 
 export interface CutLine {
   role: CutRole;
@@ -51,28 +52,12 @@ export function sectionRank(section: Section): number {
 const LENGTH_RESOLUTION = 64;
 
 export function cutRoleOf(role: MemberRole): CutRole {
-  switch (role) {
-    case 'bottomPlate':
-    case 'topPlate':
-    case 'doubleTopPlate':
-      return 'plates';
-    default:
-      return role;
-  }
+  return isPlateRole(role) ? 'plates' : role;
 }
 
 /** Arredonda ao 1/64" mais próximo. */
 export function roundLength(length: number): number {
   return Math.round(length * LENGTH_RESOLUTION) / LENGTH_RESOLUTION;
-}
-
-/** Número de peças físicas que um member representa (plies; ausente = 1). */
-export function pieceCount(member: Pick<Member, 'plies'>): number {
-  const plies = member.plies ?? 1;
-  if (!Number.isInteger(plies) || plies < 1) {
-    throw new RangeError(`cutList: plies inválido (${plies}); esperado inteiro ≥ 1`);
-  }
-  return plies;
 }
 
 /**

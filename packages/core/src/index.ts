@@ -5,6 +5,8 @@
 
 export * from './types';
 export * from './units';
+export { EPS, LENGTH_EPS, isCount } from './eps';
+export { overlaps, span, type Span } from './geom';
 export {
   ENGINE_ERROR_CODES,
   EngineError,
@@ -23,7 +25,7 @@ export {
   type ParamValue,
   type WarningCode,
 } from './messages';
-export { layoutStuds } from './rules/studs';
+export { layoutMarks, layoutStuds } from './rules/studs';
 export { layoutPlates, type PlateCut, type PlateEndLap, type PlateOptions } from './rules/plates';
 export {
   LADDER_BLOCK_SPACING,
@@ -61,6 +63,7 @@ export {
   type HeaderRow,
   type HeaderSpec,
   type HeaderTable,
+  type RequiresEngineer,
 } from './rules/headers';
 export {
   ircKings,
@@ -84,20 +87,17 @@ export {
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
-export { panelizeWall, planOpenings, type OpeningPlan } from './panelize/panelizeWall';
+export { panelizeWall, planOpenings, resolveHeaders, type OpeningPlan } from './panelize/panelizeWall';
 export { panelId, splitWall } from './panelize/splitWall';
 export {
   breakCandidates,
   chooseBreaks,
-  lapEnd,
-  layoutMarks,
-  memberSpan,
-  splicePlates,
   validatePanelConfig,
   type BreakContext,
   type BreakOptions,
-  type LapObstacle,
-} from './rules/split';
+} from './rules/breaks';
+export { lapEnd, type LapObstacle } from './rules/laps';
+export { splicePlates, supportCenters } from './rules/splice';
 export { ENGINEERED_PCF, POUNDS_PER_FOOT, memberWeightLb, panelWeight, poundsPerFoot } from './rules/weight';
 export * from './house/types';
 export {

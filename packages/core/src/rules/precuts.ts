@@ -7,11 +7,13 @@
  * Pré-corte nunca é recortado: peça mais curta (cripple, jack) não sai de pré-corte (P9).
  */
 
+import { LENGTH_EPS } from '../eps';
+
 /** Pré-cortes da fábrica (P7, respondida em 2026-10-01). */
 export const DEFAULT_PRECUTS: readonly number[] = [92.625, 104.625];
 
-/** Diferença a partir da qual dois comprimentos são considerados distintos (1/64"). */
-export const LENGTH_TOLERANCE = 1 / 64;
+/** Diferença a partir da qual dois comprimentos são considerados distintos (1/64", `LENGTH_EPS`). */
+export const LENGTH_TOLERANCE = LENGTH_EPS;
 
 /**
  * Pré-corte da lista que coincide com `length`, ou `undefined` se nenhum coincidir.

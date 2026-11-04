@@ -3,7 +3,8 @@
  * Usado por `src/house` e exportado em `index.ts` (o web desenha a planta com ele); nada aqui sabe de studs.
  */
 
-import { sectionDepth } from '../types';
+import { EPS } from '../eps';
+import { sectionDepth } from '../sections';
 import { EngineError } from '../messages';
 import type { HouseWall, Point } from './types';
 
@@ -23,7 +24,6 @@ export interface Axis {
   thickness: number;
 }
 
-const EPS = 1e-9;
 
 /**
  * @throws RangeError coordenada não finita, parede de comprimento zero ou fora dos eixos (diagonal)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Wall } from '../../src/types';
+import type { Config, StudMember, Wall } from '../../src/types';
 import {
   LADDER_BLOCK_SPACING,
   backerStuds,
@@ -31,7 +31,7 @@ const base: Omit<Wall, 'id' | 'length'> = {
   openings: [],
 };
 
-const stud = (x: number, extra: Partial<Member> = {}): Member => ({
+const stud = (x: number, extra: Partial<StudMember> = {}): StudMember => ({
   role: 'stud',
   section: '2x6',
   length: 92.625,
@@ -295,7 +295,7 @@ describe('panelizeWall com joints', () => {
 
   it('parede sem joints: painel idêntico ao de antes da S14 (fixtures wall-* inalterados)', () => {
     const panel = panelizeWall({ ...base, id: 'W', length: 144 }, config);
-    expect(panel.members.filter((m) => m.role === 'block' || m.flat === true)).toEqual([]);
+    expect(panel.members.filter((m) => m.role === 'block' || (m.role === 'stud' && m.flat === true))).toEqual([]);
     expect(panel.members.filter((m) => m.role === 'doubleTopPlate')).toEqual([
       { role: 'doubleTopPlate', section: '2x6', length: 144, x: 0, y: 95.625, orientation: 'horizontal' },
     ]);

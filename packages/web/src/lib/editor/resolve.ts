@@ -13,7 +13,8 @@ import { compact, type DraftConfig, type DraftOpening, type HeaderSectionDraft, 
 export function configFromDraft(d: ProjectDraft): Config {
   const c = d.config;
   const config: Config = {
-    studSpacing: c.studSpacing ?? 16,
+    // `resolveOpening` não usa o espaçamento; fora de 16/24 o parser do projeto acusa, não aqui.
+    studSpacing: c.studSpacing === 24 ? 24 : 16,
     studThickness: c.studThickness ?? 1.5,
     plateThickness: c.plateThickness ?? 1.5,
     studLength: c.studLength ?? [],

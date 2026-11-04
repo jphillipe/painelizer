@@ -9,6 +9,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { piecesOf } from 'core';
 import { buildProject, BuildError, problemText, type BuildResult } from './build';
 import { parseProject, ProjectError } from './project';
 
@@ -159,7 +160,8 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
   for (const { panelId, warning } of result.warnings) {
     io.stderr(`aviso ${panelId} ${warning.code}: ${warning.message}${warning.hypothesis === undefined ? '' : ` (hipótese ${warning.hypothesis})`}`);
   }
-  const pieces = result.panels.reduce((n, p) => n + p.members.length, 0);
+  // Peças a cortar, como na folha e em panels.csv: header de n plies conta n (`piecesOf`).
+  const pieces = result.panels.reduce((n, p) => n + piecesOf(p), 0);
   io.stdout(`${result.panels.length} painel(is), ${pieces} peças → ${outDir}`);
   for (const f of result.files) io.stdout(`  ${f.path}`);
   return 0;

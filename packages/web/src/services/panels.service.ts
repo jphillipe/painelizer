@@ -9,7 +9,7 @@ import ringgoldReading from '@/samples/ringgold-st-multifamily-reading.json' wit
 import { buildProject, BuildError, panelizeProject, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError, type Project } from 'cli/project';
-import { EngineError, noticeOf, type Panel } from 'core';
+import { EngineError, noticeOf, piecesOf, type Panel } from 'core';
 import type { CheckResult, Example, GenerateResult, Notice, PanelSummary } from '@/types/panels';
 
 export type { CheckResult, Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
@@ -50,7 +50,7 @@ function summarize(panels: readonly Panel[]): { panels: PanelSummary[]; warnings
       id: p.id,
       wallId: p.wallId,
       length: p.length,
-      pieces: p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
+      pieces: piecesOf(p),
       weightLb: p.weightLb,
     })),
     warnings: panels.flatMap((p) => p.warnings.map((w): Notice => ({ source: 'engine', panelId: p.id, ...w }))),
@@ -69,7 +69,7 @@ export function generate(projectText: string): GenerateResult {
     bom: r.built.bom.map((l) => ({
       section: l.section,
       stockLength: l.stockLength,
-      kind: l.engineered ? 'engineered' : l.oversize ? 'oversize' : l.precut ? 'precut' : 'commercial',
+      kind: l.kind,
       qty: l.qty,
       cutTotal: l.cutTotal,
       waste: l.waste,

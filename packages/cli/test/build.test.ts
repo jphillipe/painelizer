@@ -216,7 +216,7 @@ describe('buildProject', () => {
     expect(csv).toContain('1-W40-P2,W40,1,240,"20\'-0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
     const p1 = csv.split('\n').find((l) => l.startsWith('1-W40-P1,'))!.split(',');
     // peças (plies contam) e peso em lb
-    expect(Number(p1[10])).toBe(result.panels[7]!.members.reduce((n, m) => n + (m.plies ?? 1), 0));
+    expect(Number(p1[10])).toBe(result.panels[7]!.members.reduce((n, m) => n + (m.role === 'header' ? m.plies : 1), 0));
     expect(Number(p1[11])).toBe(result.panels[7]!.weightLb);
     expect(p1[12]).toBe('');
     // config.panel do projeto: máximo de 12' divide a W40 em quatro, com quebras em múltiplos de 48 (módulo).

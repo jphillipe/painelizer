@@ -11,11 +11,11 @@
  * - Aberturas em ordem de offset; cada uma vê as vizinhas já deslocadas.
  */
 
-import type { Opening } from '../types';
+import { EPS } from '../eps';
+import { overlaps } from '../geom';
+import type { Opening } from '../opening';
 import type { TeeStrip } from './corners';
 import { openingZone } from './openings';
-
-const EPS = 1e-9;
 
 /** Um stud: o maior deslocamento aceito. */
 export const MAX_NUDGE = 1.5;
@@ -41,7 +41,7 @@ function conflictOf(o: Opening, length: number, strips: readonly TeeStrip[], t: 
   if (zone.end > length + EPS) return { shift: length - zone.end, touched: { kind: 'end' } };
   const end = o.offset + o.roughWidth;
   for (const s of strips) {
-    if (s.lo < end - EPS && s.hi > o.offset + EPS) {
+    if (overlaps(s.lo, s.hi, o.offset, end)) {
       const left = s.lo - end;
       const right = s.hi - o.offset;
       return { shift: Math.abs(left) <= Math.abs(right) ? left : right, touched: s.wallId === undefined ? { kind: 'tee' } : { kind: 'tee', wallId: s.wallId } };

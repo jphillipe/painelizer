@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import raw from '../../src/data/irc-headers.json';
-import { headerFor, ircHeaders, validateHeaderTables, type HeaderChoice, type HeaderQuery } from '../../src/rules/headers';
+import { headerFor, ircHeaders, validateHeaderTables, type HeaderQuery } from '../../src/rules/headers';
 import { headerTableIssues } from '../helpers/headerConsistency';
 
 /**
@@ -17,7 +17,8 @@ import { headerTableIssues } from '../helpers/headerConsistency';
  *     buildingWidth: 288, groundSnowLoad: 30, floorsSupported: 0 },
  *     expected: { section: '2x8', plies: 2, jackStuds: 1, maxSpan: 50, table: 'R602.7(1)' } },
  */
-const KNOWN: { note: string; query: HeaderQuery; expected: HeaderChoice }[] = [
+/** `expected` como sai de `headerFor` (o id da tabela vem do JSON, por isso não é tipado aqui). */
+const KNOWN: { note: string; query: HeaderQuery; expected: object }[] = [
   {
     note: "R602.7(2), 1 pavimento, 12', vão 3'-0 → 2-2x4 (4-1, NJ 1)",
     query: { span: 36, exterior: false, bearing: true, buildingWidth: 144, floorsSupported: 1 },

@@ -12,14 +12,17 @@
  * Peça mais curta (jack, cripple) não sai de pré-corte: vai para o comercial.
  *
  * Comprimentos comerciais default: 8', 10', 12', 14', 16' (P9, confirmado em
- * 2026-10-01; `DEFAULT_STOCK_LENGTHS` em `types.ts`). Peça serrada mais longa que
- * o maior comercial sai numa linha `oversize: true` (estoque = o próprio corte, sem
+ * 2026-10-01; `DEFAULT_STOCK_LENGTHS` em `config.ts`). Peça serrada mais longa que
+ * o maior comercial sai numa linha `kind: 'oversize'` (estoque = o próprio corte, sem
  * sobra) em vez de lançar erro: desde a S15 as plates acima do estoque são
  * emendadas pelo motor, e o que ainda passar é algo para a folha mostrar, não
  * para derrubar a lista inteira. `stockLengthFor` continua lançando.
  */
 
-import { DEFAULT_STOCK_LENGTHS, isLumberSection, type Panel, type Section } from '../types';
+import { DEFAULT_STOCK_LENGTHS } from '../config';
+import { EPS } from '../eps';
+import type { Panel } from '../panel';
+import { isLumberSection, type Section } from '../sections';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, sectionRank } from './cutlist';
 import { EngineError } from '../messages';
@@ -27,18 +30,20 @@ import { EngineError } from '../messages';
 /** Seções em que existe pré-corte de stud (P7: iguais para 2x4 e 2x6). */
 const PRECUT_SECTIONS: readonly Section[] = ['2x4', '2x6'];
 
-const EPS = 1e-9;
+/**
+ * De onde sai a peça comprada:
+ * - `commercial`: comprimento comercial (`stockLengths`);
+ * - `precut`: pré-corte de stud;
+ * - `engineered`: LVL/PSL, comprado no comprimento da peça (`stockLength` = corte), sem sobra;
+ * - `oversize`: peça serrada acima do maior comprimento comercial (S15), `stockLength` = corte, sem sobra.
+ */
+export type BomKind = 'commercial' | 'precut' | 'engineered' | 'oversize';
 
 export interface BomLine {
   section: Section;
   /** Comprimento comercial ou do pré-corte (polegadas). */
   stockLength: number;
-  /** `true` quando a linha é de pré-corte de stud, não de comprimento comercial. */
-  precut: boolean;
-  /** `true` para LVL/PSL: comprado no comprimento da peça (`stockLength` = corte), sem sobra. */
-  engineered: boolean;
-  /** `true` para peça serrada acima do maior comprimento comercial (S15): `stockLength` = corte, sem sobra. */
-  oversize: boolean;
+  kind: BomKind;
   /** Peças comerciais a comprar. */
   qty: number;
   /** Soma dos comprimentos de corte atendidos por estas peças. */
@@ -88,18 +93,16 @@ export function bom(
       const precutLength = PRECUT_SECTIONS.includes(cut.section)
         ? matchPrecut(cut.length, precuts)
         : undefined;
-      const precut = precutLength !== undefined;
       // LVL/PSL (S12.5) é comprado no comprimento da peça: não há estoque comercial nem sobra.
       const oversize = !engineered && precutLength === undefined && cut.length > Math.max(...stockLengths) + EPS;
       const stockLength =
         engineered || oversize ? cut.length : (precutLength ?? stockLengthFor(cut.length, stockLengths));
-      const key = `${cut.section}|${stockLength}|${precut}|${oversize}`;
+      const kind: BomKind = engineered ? 'engineered' : oversize ? 'oversize' : precutLength !== undefined ? 'precut' : 'commercial';
+      const key = `${cut.section}|${stockLength}|${kind}`;
       const line = lines.get(key) ?? {
         section: cut.section,
         stockLength,
-        precut,
-        engineered,
-        oversize,
+        kind,
         qty: 0,
         cutTotal: 0,
         waste: 0,

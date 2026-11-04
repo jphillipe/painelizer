@@ -371,9 +371,8 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(sheet).toContain('>door1 · porta</text>');
     // Linha da largura 9" abaixo do topo do RO (82.5 → 73.5): y = Y0 + (97.125 − 73.5) × 4.
     expect(sheet).toContain(`<line x1="${px(X0 + 24 * 4)}" y1="${px(Y0 + (97.125 - 73.5) * 4)}" x2="${px(X0 + 60 * 4)}"`);
-    // Painel montado à mão (sem openings) não tem cotas de RO.
-    const { openings, ...handMade } = windowDoorPanel;
-    expect(panelSvg(handMade)).not.toContain('peitoril');
+    // Painel sem aberturas não tem cotas de RO.
+    expect(panelSvg({ ...windowDoorPanel, openings: [] })).not.toContain('peitoril');
     expect(() => panelSvg({ ...windowDoorPanel, openings: [{ id: 'x', type: 'window', x: 0, width: 0, top: 80, height: 10 }] })).toThrow(RangeError);
   });
 

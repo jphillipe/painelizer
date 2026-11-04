@@ -189,8 +189,9 @@ describe('splitWall — ligações da parede e T no lap', () => {
     const [p1, p2] = splitWall(wall, config);
     // Quebra equilibrada em 192 (múltipla de 48; 208 seria mais equilibrada, mas não é múltipla).
     expect([p1!.length, p2!.length]).toEqual([192, 208]);
-    expect(p1!.members.filter((m) => m.flat).map((m) => m.x)).toEqual([1.5]);
-    expect(p2!.members.filter((m) => m.flat)).toEqual([]);
+    const flat = (ms: Member[]) => ms.filter((m) => m.role === 'stud' && m.flat === true);
+    expect(flat(p1!.members).map((m) => m.x)).toEqual([1.5]);
+    expect(flat(p2!.members)).toEqual([]);
     const dt = (ms: Member[]) => ms.filter((m) => m.role === 'doubleTopPlate').map((m) => [m.x, m.x + m.length]);
     // P1: recua 5.5 no canto e avança 48 sobre o P2 (a double top de 234.5 > 192 é emendada em 144).
     expect(dt(p1!.members)).toEqual([[5.5, 144], [144, 240]]);

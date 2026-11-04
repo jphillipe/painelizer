@@ -3,7 +3,7 @@
  * acima do estoque e estima o peso.
  *
  * Como funciona:
- * 1. `panelizeWall` monta a parede inteira; dela saem os candidatos a quebra (`rules/split.ts`), as zonas de
+ * 1. `panelizeWall` monta a parede inteira; dela saem os candidatos a quebra (`rules/breaks.ts`), as zonas de
  *    abertura e as faixas de T.
  * 2. `chooseBreaks` escolhe as quebras (hipótese P35: menor número de painéis, depois o mais equilibrado,
  *    preferindo marcas múltiplas de `config.panel.module`). Sem quebra, o painel da parede inteira é o painel.
@@ -21,63 +21,55 @@
  * para end, sempre com `-P1`, mesmo em parede de um painel só (`1-W01-P1`). `Panel.wallOffset` = `a`.
  */
 
-import {
-  DEFAULT_PANEL_CONFIG,
-  DEFAULT_STOCK_LENGTHS,
-  type Config,
-  type EndJoint,
-  type Member,
-  type Panel,
-  type PanelConfig,
-  type Wall,
-  type WallJoints,
-} from '../types';
+import { DEFAULT_PANEL_CONFIG, DEFAULT_STOCK_LENGTHS, studLengthFor, type Config, type PanelConfig } from '../config';
+import { EPS, isCount } from '../eps';
+import { span } from '../geom';
+import { isPlateRole, type Panel } from '../panel';
+import type { EndJoint, Wall, WallJoints } from '../wall';
 import type { HeaderTable } from '../rules/headers';
-import type { HeaderTables } from '../rules/openingHeader';
+import type { HeaderTables, ResolvedHeader } from '../rules/openingHeader';
 import { teeStrips, type TeeStrip } from '../rules/corners';
-import {
-  breakCandidates,
-  chooseBreaks,
-  lapEnd,
-  layoutMarks,
-  memberSpan,
-  splicePlates,
-  supportCenters,
-  validatePanelConfig,
-  type LapObstacle,
-} from '../rules/split';
+import { breakCandidates, chooseBreaks, validatePanelConfig } from '../rules/breaks';
+import { lapEnd, type LapObstacle } from '../rules/laps';
+import { splicePlates, supportCenters } from '../rules/splice';
+import { layoutMarks } from '../rules/studs';
 import { memberWeightLb, panelWeight } from '../rules/weight';
 import { EngineError, warning } from '../messages';
-import { nudgeWall, panelizeWall, planOpenings } from './panelizeWall';
-
-const EPS = 1e-9;
+import { framePanel, nudgeWall, resolveHeaders } from './panelizeWall';
 
 /**
  * @param tables tabelas injetadas (testes), como em `panelizeWall`
  * @throws RangeError os de `panelizeWall`; sem divisão possível; lap sem lugar; plate sem stud para emendar
  */
 export function splitWall(given: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
-  const nudged = nudgeWall(given, config, tables);
-  const panels = splitNudged(nudged.wall, config, tables);
+  // O header não depende da posição da abertura: resolvido uma vez, vale no deslocamento, na parede inteira e
+  // em cada trecho (na ordem de `wall.openings`, que nenhum passo reordena).
+  const headers = resolveHeaders(given, config, tables);
+  const nudged = nudgeWall(given, config, tables, headers);
+  const panels = splitNudged(nudged.wall, config, tables, headers);
   // Aviso do deslocamento (P40) no painel que ficou com a abertura.
   for (const { offset, warning } of nudged.warnings) {
-    const p = panels.find((q) => offset >= (q.wallOffset ?? 0) - EPS && offset < (q.wallOffset ?? 0) + q.length - EPS) ?? panels[0]!;
+    const p = panels.find((q) => offset >= q.wallOffset - EPS && offset < q.wallOffset + q.length - EPS) ?? panels[0]!;
     p.warnings.unshift(warning);
   }
   return panels;
 }
 
-function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): Panel[] {
+function splitNudged(
+  wall: Wall,
+  config: Config,
+  tables: readonly HeaderTable[] | HeaderTables | undefined,
+  headers: readonly ResolvedHeader[],
+): Panel[] {
   const cfg = config.panel ?? DEFAULT_PANEL_CONFIG;
   validatePanelConfig(cfg);
   const stock = config.stockLengths ?? DEFAULT_STOCK_LENGTHS;
   const level = wall.level ?? 1;
-  if (!Number.isInteger(level) || level < 1) {
+  if (!isCount(level)) {
     throw new EngineError('VALUE_NOT_COUNT', { wallId: wall.id }, { field: 'level', value: level });
   }
 
-  const whole = panelizeWall(wall, config, tables);
-  const { plan } = planOpenings(wall, config, tables);
+  const { panel: whole, plan } = framePanel(wall, config, tables, headers);
   const strips = teeStrips(wall.joints);
   const origin = wall.layoutOrigin ?? 0;
   const candidates = breakCandidates(whole, config, { zones: plan.zones, strips });
@@ -104,7 +96,7 @@ function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[]
   const obstacles: LapObstacle[] = [
     ...whole.members
       .filter((m) => m.role === 'header')
-      .map((m) => ({ ...memberSpan(m), kind: 'header' as const, x: m.x })),
+      .map((m) => ({ ...span(m), kind: 'header' as const, x: m.x })),
     ...strips.map((s) => ({ lo: s.lo, hi: s.hi, kind: 'tee' as const, ...(s.wallId === undefined ? {} : { wallId: s.wallId }) })),
   ];
   const doubleTopEnd = Math.max(...whole.members.filter((m) => m.role === 'doubleTopPlate').map((m) => m.x + m.length));
@@ -115,7 +107,7 @@ function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[]
   const ids = bounds.slice(1).map((_, i) => panelId(level, wall.id, i + 1));
   return bounds.slice(1).map((b, i) => {
     const a = bounds[i]!;
-    const segment = segmentWall(wall, a, b, {
+    const segment = segmentWall(wall, headers, a, b, {
       first: i === 0,
       last: i === n - 1,
       lapIn: i === 0 ? undefined : lapEnds[i - 1]! - a,
@@ -124,7 +116,7 @@ function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[]
       nextId: ids[i + 1],
       strips,
     });
-    const panel = panelizeWall(segment, config, tables);
+    const { panel } = framePanel(segment.wall, config, tables, segment.headers);
     return finish({ ...panel, id: ids[i]!, wallId: wall.id, level }, wall.id, a, stock, cfg);
   });
 }
@@ -146,10 +138,17 @@ interface SegmentOptions {
   strips: readonly TeeStrip[];
 }
 
-/** A `Wall` do trecho `[a, b]` da parede. */
-function segmentWall(wall: Wall, a: number, b: number, o: SegmentOptions): Wall {
+/** A `Wall` do trecho `[a, b]` da parede, com os headers das aberturas que ficaram nele (mesma ordem). */
+function segmentWall(
+  wall: Wall,
+  headers: readonly ResolvedHeader[],
+  a: number,
+  b: number,
+  o: SegmentOptions,
+): { wall: Wall; headers: ResolvedHeader[] } {
   const inside = (x: number): boolean => x >= a - EPS && x < b - EPS;
-  const openings = wall.openings.filter((op) => inside(op.offset)).map((op) => ({ ...op, offset: op.offset - a }));
+  const kept = wall.openings.flatMap((op, i) => (inside(op.offset) ? [i] : []));
+  const openings = kept.map((i) => ({ ...wall.openings[i]!, offset: wall.openings[i]!.offset - a }));
   const segment: Wall = {
     ...wall,
     length: b - a,
@@ -184,7 +183,7 @@ function segmentWall(wall: Wall, a: number, b: number, o: SegmentOptions): Wall 
   if (tees.length > 0) joints.tees = tees;
   if (Object.keys(joints).length > 0) segment.joints = joints;
   else delete segment.joints;
-  return segment;
+  return { wall: segment, headers: kept.map((i) => headers[i]!) };
 }
 
 /** Emendas, peso, offset e aviso de peso. */
@@ -207,8 +206,8 @@ function finish(panel: Panel, wallId: string, wallOffset: number, stock: readonl
 function estimateWeight(whole: Panel, a: number, b: number, config: Config, cfg: PanelConfig): number {
   let total = 0;
   for (const m of whole.members) {
-    const { lo, hi } = memberSpan(m);
-    if (isPlate(m)) {
+    const { lo, hi } = span(m);
+    if (isPlateRole(m.role)) {
       const inside = Math.min(hi, b) - Math.max(lo, a);
       if (inside > EPS) total += memberWeightLb(m) * (inside / (hi - lo));
     } else {
@@ -217,12 +216,8 @@ function estimateWeight(whole: Panel, a: number, b: number, config: Config, cfg:
     }
   }
   const lapWeight = memberWeightLb({ section: whole.section, length: cfg.lap });
-  const studWeight = memberWeightLb({ section: whole.section, length: whole.height - 3 * config.plateThickness });
+  const studWeight = memberWeightLb({ section: whole.section, length: studLengthFor(whole, config) });
   if (b < whole.length - EPS) total += studWeight + lapWeight;
   if (a > EPS) total -= lapWeight;
   return total;
-}
-
-function isPlate(m: Member): boolean {
-  return m.role === 'bottomPlate' || m.role === 'topPlate' || m.role === 'doubleTopPlate';
 }

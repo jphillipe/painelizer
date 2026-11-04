@@ -13,13 +13,13 @@
  * Entrada inválida lança `RangeError`. Tabela digitada com erro de estrutura também (`loadKingTable`).
  */
 
-import type { Exposure } from '../types';
+import type { Exposure } from '../config';
+import { EPS } from '../eps';
 import { parseFeetInches } from '../units';
 import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
+import type { RequiresEngineer } from './headers';
+import { tableErrors } from './tableJson';
 import rawIrcKings from '../data/irc-kings.json';
-
-/** Folga numérica para comparar vão pedido com vão de tabela. */
-const EPS = 1e-9;
 
 /** Condição de vento que uma coluna atende: `windSpeed < below` ou `windSpeed ≤ upTo`, na exposição dada. */
 export interface WindCondition {
@@ -62,8 +62,8 @@ export interface KingSpec {
   table: string;
 }
 
-/** `reason`: a frase em português; `detail`: o motivo estruturado (S26). */
-export type KingChoice = KingSpec | { requiresEngineer: true; reason: string; detail: EngineerReason };
+/** Resultado de `kingsFor`, discriminado por `requiresEngineer` (ausente na linha escolhida). */
+export type KingChoice = (KingSpec & { requiresEngineer?: never }) | RequiresEngineer;
 
 /** Escolhe o número de kings pela tabela. Ver regras no topo do arquivo. */
 export function kingsFor(query: KingQuery, table: KingTable = ircKings()): KingChoice {
@@ -109,14 +109,7 @@ const EXPOSURES: readonly unknown[] = ['B', 'C', 'D'];
  * Coerência dos valores (kings não caem com o vão etc.) é conferida nos testes.
  */
 export function validateKingTable(json: unknown): string[] {
-  const errors: string[] = [];
-  const err = (path: string, msg: string): void => {
-    errors.push(`${path}: ${msg}`);
-  };
-  const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-  const keys = (path: string, o: Record<string, unknown>, allowed: string[]) => {
-    for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `campo desconhecido "${k}"`);
-  };
+  const { errors, err, isObj, keys } = tableErrors();
 
   if (!isObj(json) || !isObj(json.table)) return ['raiz: esperado { table: {...} }'];
   const t = json.table;

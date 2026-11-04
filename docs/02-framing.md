@@ -56,7 +56,7 @@
   - Fixtures: `house-corner-L` (W1 atravessa: flat em 1.5, double top 141.25 em x=5.5; W2 encosta: double top
     122.75 em x=−5.5) e `house-tee` (T em 72: 3 blocos 2x6 × 14.5 em y = 23.25, 47.25, 71.25; double top de W1 em
     duas peças, 70.25 e 118.25; a de W2 avança 5.5).
-- Divisão em painéis, lap entre painéis, emendas e peso (S15, `panelize/splitWall.ts` + `rules/split.ts`;
+- Divisão em painéis, lap entre painéis, emendas e peso (S15, `panelize/splitWall.ts` + `rules/breaks.ts`, `laps.ts`, `splice.ts`;
   `config.panel = { maxLength 240, maxWeight?, module 48, lap 48, minLap 24 }`, `config.stockLengths`):
   - **Quebra** só no centro de um stud de layout comum cuja faixa de 2t (os dois studs da junta) não toca
     king, jack, header, sill, cripple, bloco, stud extra ou de canto, zona de abertura ou faixa de T, a ≥ 2t das

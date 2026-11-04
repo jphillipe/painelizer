@@ -13,6 +13,7 @@ import {
   DEFAULT_STOCK_LENGTHS,
   formatFeetInches,
   formatInches,
+  piecesOf,
   type BomLine,
   type Panel,
 } from 'core';
@@ -59,12 +60,11 @@ export const BOM_HEADER = [
 export function bomCsv(lines: readonly BomLine[]): string {
   const rows: (string | number)[][] = [[...BOM_HEADER]];
   for (const l of lines) {
-    const commercial = !l.precut && !l.engineered && !l.oversize;
     rows.push([
       l.section,
-      l.engineered ? 'engineered' : l.oversize ? 'oversize' : l.precut ? 'precut' : 'commercial',
+      l.kind,
       l.stockLength,
-      commercial ? formatFeetInches(l.stockLength) : formatInches(l.stockLength),
+      l.kind === 'commercial' ? formatFeetInches(l.stockLength) : formatInches(l.stockLength),
       l.qty,
       l.cutTotal,
       l.waste,
@@ -97,20 +97,19 @@ export const PANELS_HEADER = [
 export function panelsCsv(panels: readonly Panel[]): string {
   const rows: (string | number)[][] = [[...PANELS_HEADER]];
   for (const p of panels) {
-    const offset = p.wallOffset ?? 0;
     rows.push([
       p.id,
       p.wallId,
-      p.level ?? 1,
-      offset,
-      formatFeetInches(offset),
+      p.level,
+      p.wallOffset,
+      formatFeetInches(p.wallOffset),
       p.length,
       formatFeetInches(p.length),
       p.height,
       formatFeetInches(p.height),
       p.section,
-      p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
-      p.weightLb ?? '',
+      piecesOf(p),
+      p.weightLb,
       p.warnings.map((w) => w.code).join(';'),
     ]);
   }

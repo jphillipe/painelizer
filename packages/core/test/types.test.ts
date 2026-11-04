@@ -45,6 +45,13 @@ describe('types', () => {
         members: fx.expected.members as Panel['members'],
         fieldCuts: [],
         warnings: fx.expected.warnings,
+        level: 1,
+        openings: [],
+        exterior: wall.exterior,
+        bearing: wall.bearing,
+        layoutOrigin: 0,
+        wallOffset: 0,
+        weightLb: 0,
       };
       expect(config.studSpacing).toBe(16);
       expect(panel.members.length).toBeGreaterThan(0);
