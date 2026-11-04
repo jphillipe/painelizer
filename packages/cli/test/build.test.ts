@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BuildError, buildProject, svgFileName } from '../src/build';
+import { BuildError, buildProject, problemText, svgFileName } from '../src/build';
 import { parseProject, type Project } from '../src/project';
 
 const EXAMPLE = new URL('../examples/casa-exemplo.json', import.meta.url);
@@ -135,8 +135,10 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(2);
-    expect(error!.problems[0]).toMatch(/^parede W05, abertura J1: .*config\.building/);
-    expect(error!.problems[1]).toMatch(/^parede W06, abertura J2: /);
+    expect(error!.problems[0]!.message).toMatch(/^parede W05, abertura J1: .*config\.building/);
+    // S26: código e ids estruturados, sem ler o português.
+    expect(error!.problems[0]).toMatchObject({ code: 'HEADER_DATA_MISSING', wallId: 'W05', openingId: 'J1', params: { missing: 'building' }, stage: 'wall' });
+    expect(error!.problems[1]!.message).toMatch(/^parede W06, abertura J2: /);
   });
 
   it('parede interna portante sem pavimento acima não está na R602.7(2): pede engenheiro ou header do projeto', () => {
@@ -176,7 +178,8 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(1);
-    expect(error!.problems[0]).toMatch(/^parede W01: aberturas J8 e J9: 4" entre os RO/);
+    expect(error!.problems[0]!.message).toMatch(/^parede W01: aberturas J8 e J9: 4" entre os RO/);
+    expect(error!.problems[0]).toMatchObject({ code: 'OPENINGS_TOO_CLOSE', wallId: 'W01', openingId: 'J9', params: { prevId: 'J8', gap: 4 } });
 
     // Sem a abertura o projeto gera: a W99 (240") cabe num painel e as plates são emendadas sobre stud (P14),
     // então a BOM não vê peça acima do estoque de 16'.
@@ -278,7 +281,8 @@ describe('buildProject', () => {
       } catch (e) {
         error = e as BuildError;
       }
-      expect(error!.problems).toEqual([expect.stringMatching(/^planta: paredes W02 e X se cruzam em \(0, 50\)/)]);
+      expect(error!.problems.map(problemText)).toEqual([expect.stringMatching(/^planta: paredes W02 e X se cruzam em \(0, 50\)/)]);
+      expect(error!.problems[0]).toMatchObject({ code: 'WALLS_CROSS', wallId: 'W02', alsoWalls: ['X'], params: { otherWallId: 'X', x: 0, y: 50 }, stage: 'plan' });
     });
 
     it('T dentro do RO é problema da parede atravessada; na zona é aviso OPENING_AT_TEE', () => {

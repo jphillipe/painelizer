@@ -15,6 +15,7 @@
 
 import type { Exposure } from '../types';
 import { parseFeetInches } from '../units';
+import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
 import rawIrcKings from '../data/irc-kings.json';
 
 /** Folga numérica para comparar vão pedido com vão de tabela. */
@@ -61,28 +62,29 @@ export interface KingSpec {
   table: string;
 }
 
-export type KingChoice = KingSpec | { requiresEngineer: true; reason: string };
+/** `reason`: a frase em português; `detail`: o motivo estruturado (S26). */
+export type KingChoice = KingSpec | { requiresEngineer: true; reason: string; detail: EngineerReason };
 
 /** Escolhe o número de kings pela tabela. Ver regras no topo do arquivo. */
 export function kingsFor(query: KingQuery, table: KingTable = ircKings()): KingChoice {
   const { span, windSpeed } = query;
   const exposure = query.exposure ?? 'B';
-  if (!Number.isFinite(span) || span <= 0) throw new RangeError(`span inválido (${span})`);
-  if (!Number.isFinite(windSpeed) || windSpeed <= 0) throw new RangeError(`windSpeed inválido (${windSpeed})`);
-  if (!['B', 'C', 'D'].includes(exposure)) throw new RangeError(`exposure inválida (${String(exposure)})`);
+  if (!Number.isFinite(span) || span <= 0) throw new EngineError('VALUE_INVALID', {}, { field: 'span', value: span });
+  if (!Number.isFinite(windSpeed) || windSpeed <= 0) throw new EngineError('VALUE_INVALID', {}, { field: 'windSpeed', value: windSpeed });
+  if (!['B', 'C', 'D'].includes(exposure)) throw new EngineError('VALUE_INVALID', {}, { field: 'exposure', value: String(exposure) });
 
-  const engineer = (reason: string): KingChoice => ({ requiresEngineer: true, reason });
+  const engineer = (detail: EngineerReason): KingChoice => ({ requiresEngineer: true, reason: engineerReasonPt(detail), detail });
 
   const cols = table.columns
-    .map((c, i) => i)
+    .map((_c, i) => i)
     .filter((i) => table.columns[i]!.covers.some((w) => windCovers(w, windSpeed, exposure)));
   if (cols.length === 0) {
-    return engineer(`vento ${windSpeed} mph, exposição ${exposure}, fora da tabela ${table.id}`);
+    return engineer({ why: 'wind', windSpeed, exposure, table: table.id });
   }
 
   const row = table.rows.find((r) => span <= r.maxSpan + EPS);
   if (row === undefined) {
-    return engineer(`vão ${span}" acima da última linha da tabela ${table.id}`);
+    return engineer({ why: 'kingSpan', span, table: table.id });
   }
 
   const kings = Math.min(...cols.map((i) => row.kings[i]!));
@@ -108,7 +110,9 @@ const EXPOSURES: readonly unknown[] = ['B', 'C', 'D'];
  */
 export function validateKingTable(json: unknown): string[] {
   const errors: string[] = [];
-  const err = (path: string, msg: string) => errors.push(`${path}: ${msg}`);
+  const err = (path: string, msg: string): void => {
+    errors.push(`${path}: ${msg}`);
+  };
   const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
   const keys = (path: string, o: Record<string, unknown>, allowed: string[]) => {
     for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `campo desconhecido "${k}"`);

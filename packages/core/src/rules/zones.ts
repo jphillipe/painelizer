@@ -19,6 +19,7 @@
  */
 
 import type { Opening } from '../types';
+import { EngineError } from '../messages';
 import { openingKingXs, openingStudCounts, openingZone, type OpeningZone } from './openings';
 
 /** Folga numérica para comparações de geometria. */
@@ -136,13 +137,7 @@ export function mergeOpeningZones(
       }
       const needed = (a.jacks + shared + b.jacks) * t;
       if (gap < needed - EPS) {
-        throw new RangeError(
-          `aberturas ${prev.id} e ${cur.id}: ${gap}" entre os RO não comportam jacks e king ` +
-            `compartilhado (mínimo ${needed}")` +
-            (opts.fit === true
-              ? `; nem 1 jack + 1 king + 1 jack (${3 * t}") cabe — confira a posição e o RO das duas`
-              : ''),
-        );
+        throw new EngineError('OPENINGS_TOO_CLOSE', { openingId: cur.id }, { prevId: prev.id, gap, needed, fit: opts.fit === true, min3: 3 * t });
       }
       const first = prevEnd + a.jacks * t;
       for (let i = 0; i < shared; i++) kings.push(first + i * t);

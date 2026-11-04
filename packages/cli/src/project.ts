@@ -55,6 +55,7 @@
 
 import {
   DEFAULT_PANEL_CONFIG,
+  EngineError,
   engineeredSection,
   parseEngineeredSection,
   parseFeetInches,
@@ -96,10 +97,23 @@ export interface Project {
   stockLengths?: number[];
 }
 
+/**
+ * Arquivo de projeto inválido. `path`: o campo (`projeto.walls[2].openings[0].center`); `detail`: o que está errado,
+ * em português. Quando o motivo vem do core (catálogo de aberturas), `engine` é o erro com código (S26).
+ */
 export class ProjectError extends Error {
-  constructor(message: string) {
-    super(message);
+  readonly path: string;
+  readonly detail: string;
+  readonly engine: EngineError | undefined;
+  /** `json`: o texto não é JSON; `value`: um campo inválido (o resto). */
+  readonly kind: 'json' | 'value';
+  constructor(path: string, detail: string, engine?: EngineError, kind: 'json' | 'value' = 'value') {
+    super(`${path}: ${detail}`);
     this.name = 'ProjectError';
+    this.path = path;
+    this.detail = detail;
+    this.engine = engine;
+    this.kind = kind;
   }
 }
 
@@ -120,7 +134,7 @@ export function parseProject(text: string, source = 'projeto'): Project {
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    throw new ProjectError(`${source}: JSON inválido — ${(e as Error).message}`);
+    throw new ProjectError(source, `JSON inválido — ${(e as Error).message}`, undefined, 'json');
   }
   return projectFrom(raw, source);
 }
@@ -131,8 +145,8 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   const config = configFrom(root['config'], `${source}.config`);
 
   const wallsRaw = root['walls'];
-  if (!Array.isArray(wallsRaw)) throw new ProjectError(`${source}.walls: esperado array de paredes`);
-  if (wallsRaw.length === 0) throw new ProjectError(`${source}.walls: nenhuma parede`);
+  if (!Array.isArray(wallsRaw)) throw new ProjectError(`${source}.walls`, `esperado array de paredes`);
+  if (wallsRaw.length === 0) throw new ProjectError(`${source}.walls`, `nenhuma parede`);
 
   // Formato: planta (toda parede com `start`/`end`) ou paredes soltas (toda parede com `length`).
   const inPlan = wallsRaw.map((w) => typeof w === 'object' && w !== null && ('start' in w || 'end' in w));
@@ -140,7 +154,7 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   if (planCount > 0 && planCount < wallsRaw.length) {
     const first = inPlan.indexOf(planCount * 2 > wallsRaw.length ? false : true);
     throw new ProjectError(
-      `${source}.walls[${first}]: paredes em planta (start/end) e soltas (length) no mesmo arquivo — ` +
+      `${source}.walls[${first}]`, `paredes em planta (start/end) e soltas (length) no mesmo arquivo — ` +
         'use um formato só',
     );
   }
@@ -150,7 +164,7 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
 
   const ids = new Set<string>();
   for (const w of house ? houseWalls : walls) {
-    if (ids.has(w.id)) throw new ProjectError(`${source}.walls: id duplicado "${w.id}"`);
+    if (ids.has(w.id)) throw new ProjectError(`${source}.walls`, `id duplicado "${w.id}"`);
     ids.add(w.id);
   }
 
@@ -159,14 +173,14 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   if (root['revision'] !== undefined) project.revision = str(root['revision'], `${source}.revision`);
   if (house) project.house = { walls: houseWalls };
   if (root['northAngle'] !== undefined) {
-    if (!house) throw new ProjectError(`${source}.northAngle: só vale em projeto em planta (paredes com start/end)`);
+    if (!house) throw new ProjectError(`${source}.northAngle`, `só vale em projeto em planta (paredes com start/end)`);
     project.house!.northAngle = degrees(root['northAngle'], `${source}.northAngle`);
   }
   // Estoque: `config.stockLengths` (S15) ou, como antes, `stockLengths` na raiz — o mesmo valor nos dois lugares,
   // porque o core emenda plates por ele e a BOM compra por ele.
   if (root['stockLengths'] !== undefined) {
     if (config.stockLengths !== undefined) {
-      throw new ProjectError(`${source}.stockLengths: informe o estoque só uma vez (aqui ou em config.stockLengths)`);
+      throw new ProjectError(`${source}.stockLengths`, `informe o estoque só uma vez (aqui ou em config.stockLengths)`);
     }
     config.stockLengths = stockList(root['stockLengths'], `${source}.stockLengths`);
   }
@@ -188,7 +202,7 @@ function configFrom(raw: unknown, path: string): Config {
   for (const removed of ['defaultHeaderSection', 'defaultHeaderPlies']) {
     if (c[removed] !== undefined) {
       throw new ProjectError(
-        `${path}.${removed}: campo removido na S9.3 — parede não portante leva peça deitada (R602.7.4); ` +
+        `${path}.${removed}`, `campo removido na S9.3 — parede não portante leva peça deitada (R602.7.4); ` +
           'header específico vai em openings[].header',
       );
     }
@@ -237,19 +251,19 @@ function panelConfigFrom(raw: unknown, path: string): PanelConfig {
   if (p['maxWeight'] !== undefined) {
     const w = p['maxWeight'];
     if (typeof w !== 'number' || !Number.isFinite(w) || w <= 0) {
-      throw new ProjectError(`${path}.maxWeight: esperado peso em lb (número > 0), recebido ${show(w)}`);
+      throw new ProjectError(`${path}.maxWeight`, `esperado peso em lb (número > 0), recebido ${show(w)}`);
     }
     panel.maxWeight = w;
   }
   if (panel.minLap > panel.lap) {
-    throw new ProjectError(`${path}.minLap: ${panel.minLap} maior que lap (${panel.lap})`);
+    throw new ProjectError(`${path}.minLap`, `${panel.minLap} maior que lap (${panel.lap})`);
   }
   return panel;
 }
 
 /** Comprimentos comerciais: array não vazio de medidas > 0. */
 function stockList(raw: unknown, path: string): number[] {
-  if (!Array.isArray(raw) || raw.length === 0) throw new ProjectError(`${path}: esperado array não vazio de medidas`);
+  if (!Array.isArray(raw) || raw.length === 0) throw new ProjectError(path, `esperado array não vazio de medidas`);
   return raw.map((v, i) => positive(v, `${path}[${i}]`));
 }
 
@@ -258,7 +272,7 @@ function record<T>(raw: unknown, path: string, item: (v: unknown, p: string) => 
   const o = obj(raw, path);
   const out: Record<string, T> = {};
   for (const [key, value] of Object.entries(o)) {
-    if (key.trim() === '') throw new ProjectError(`${path}: chave vazia`);
+    if (key.trim() === '') throw new ProjectError(path, `chave vazia`);
     out[key] = item(value, `${path}.${key}`);
   }
   return out;
@@ -306,7 +320,7 @@ function headerSectionFrom(v: unknown, path: string): Section {
   }
   if (typeof v === 'string' && (SECTIONS as readonly string[]).includes(v)) return v as Section;
   throw new ProjectError(
-    `${path}: esperado um de ${SECTIONS.join(', ')}, "LVL <esp>x<prof>", "PSL <esp>x<prof>" ou ` +
+    path, `esperado um de ${SECTIONS.join(', ')}, "LVL <esp>x<prof>", "PSL <esp>x<prof>" ou ` +
       `{ material, width, depth }, recebido ${show(v)}`,
   );
 }
@@ -328,7 +342,7 @@ function houseWallFrom(raw: unknown, path: string, config: Config): HouseWall {
   for (const derived of ['length', 'layoutOrigin']) {
     if (w[derived] !== undefined) {
       throw new ProjectError(
-        `${path}.${derived}: parede em planta não leva ${derived} — o core deriva da planta (start/end)`,
+        `${path}.${derived}`, `parede em planta não leva ${derived} — o core deriva da planta (start/end)`,
       );
     }
   }
@@ -356,15 +370,15 @@ function point(v: unknown, path: string): Point {
 /** Campos comuns aos dois formatos de parede: tudo de `Wall` menos `length` e `layoutOrigin`. */
 function wallCommon(w: Record<string, unknown>, path: string, config: Config): Omit<Wall, 'length' | 'layoutOrigin'> {
   const openingsRaw = w['openings'] ?? [];
-  if (!Array.isArray(openingsRaw)) throw new ProjectError(`${path}.openings: esperado array`);
+  if (!Array.isArray(openingsRaw)) throw new ProjectError(`${path}.openings`, `esperado array`);
   const id = str(w['id'], `${path}.id`);
   const specs = openingsRaw.map((o, i) => openingSpecFrom(o, `${path}.openings[${i}]`));
   let openings;
   try {
-    openings = resolveOpenings(specs, config, `parede ${id}`);
+    openings = resolveOpenings(specs, config, id);
   } catch (e) {
     // Erros do catálogo (tag ou marca inexistente, RO ou posição sem como resolver) viram erro de projeto.
-    throw new ProjectError(`${path}.openings: ${(e as Error).message}`);
+    throw new ProjectError(`${path}.openings`, (e as Error).message, e instanceof EngineError ? e : undefined);
   }
   const wall: Omit<Wall, 'length' | 'layoutOrigin'> = {
     id,
@@ -380,7 +394,7 @@ function wallCommon(w: Record<string, unknown>, path: string, config: Config): O
   if (w['floorsSupported'] !== undefined) {
     const n = w['floorsSupported'];
     if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
-      throw new ProjectError(`${path}.floorsSupported: esperado inteiro ≥ 0, recebido ${show(n)}`);
+      throw new ProjectError(`${path}.floorsSupported`, `esperado inteiro ≥ 0, recebido ${show(n)}`);
     }
     wall.floorsSupported = n;
   }
@@ -388,7 +402,7 @@ function wallCommon(w: Record<string, unknown>, path: string, config: Config): O
   if (w['level'] !== undefined) wall.level = count(w['level'], `${path}.level`);
   if (w['extraStuds'] !== undefined) {
     const list = w['extraStuds'];
-    if (!Array.isArray(list)) throw new ProjectError(`${path}.extraStuds: esperado array`);
+    if (!Array.isArray(list)) throw new ProjectError(`${path}.extraStuds`, `esperado array`);
     wall.extraStuds = list.map((e, i) => extraStudFrom(e, `${path}.extraStuds[${i}]`));
   }
   return wall;
@@ -436,7 +450,7 @@ function openingSpecFrom(raw: unknown, path: string): OpeningSpec {
 /** Pré-cortes de stud: lista não vazia de medidas, ou uma medida só (vira lista de um). */
 function precuts(v: unknown, path: string): number[] {
   if (!Array.isArray(v)) return [positive(v, path)];
-  if (v.length === 0) throw new ProjectError(`${path}: esperado ao menos um pré-corte`);
+  if (v.length === 0) throw new ProjectError(path, `esperado ao menos um pré-corte`);
   return v.map((p, i) => positive(p, `${path}[${i}]`));
 }
 
@@ -444,26 +458,26 @@ function precuts(v: unknown, path: string): number[] {
 
 function obj(v: unknown, path: string): Record<string, unknown> {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) {
-    throw new ProjectError(`${path}: esperado objeto, recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado objeto, recebido ${show(v)}`);
   }
   return v as Record<string, unknown>;
 }
 
 function str(v: unknown, path: string): string {
   if (typeof v !== 'string' || v.trim() === '') {
-    throw new ProjectError(`${path}: esperado texto não vazio, recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado texto não vazio, recebido ${show(v)}`);
   }
   return v;
 }
 
 function bool(v: unknown, path: string): boolean {
-  if (typeof v !== 'boolean') throw new ProjectError(`${path}: esperado true/false, recebido ${show(v)}`);
+  if (typeof v !== 'boolean') throw new ProjectError(path, `esperado true/false, recebido ${show(v)}`);
   return v;
 }
 
 function oneOf<T extends string>(v: unknown, allowed: readonly T[], path: string): T {
   if (typeof v !== 'string' || !(allowed as readonly string[]).includes(v)) {
-    throw new ProjectError(`${path}: esperado um de ${allowed.join(', ')}, recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado um de ${allowed.join(', ')}, recebido ${show(v)}`);
   }
   return v as T;
 }
@@ -471,17 +485,17 @@ function oneOf<T extends string>(v: unknown, allowed: readonly T[], path: string
 /** Medida ≥ 0 em polegadas: número decimal ou string pés-pol-fração. */
 export function measure(v: unknown, path: string): number {
   if (typeof v === 'number') {
-    if (!Number.isFinite(v) || v < 0) throw new ProjectError(`${path}: medida inválida ${show(v)}`);
+    if (!Number.isFinite(v) || v < 0) throw new ProjectError(path, `medida inválida ${show(v)}`);
     return v;
   }
   if (typeof v === 'string') {
     try {
       return parseFeetInches(v);
     } catch {
-      throw new ProjectError(`${path}: medida inválida ${show(v)} (use polegadas ou pés-pol, ex.: 12'-0")`);
+      throw new ProjectError(path, `medida inválida ${show(v)} (use polegadas ou pés-pol, ex.: 12'-0")`);
     }
   }
-  throw new ProjectError(`${path}: esperado medida (número ou texto), recebido ${show(v)}`);
+  throw new ProjectError(path, `esperado medida (número ou texto), recebido ${show(v)}`);
 }
 
 /** Medida com sinal (ex.: `layoutOrigin`): número ou texto pés-pol, com `-` opcional na frente. */
@@ -495,14 +509,14 @@ function signed(v: unknown, path: string): number {
 
 function positive(v: unknown, path: string): number {
   const n = measure(v, path);
-  if (n <= 0) throw new ProjectError(`${path}: esperado medida > 0, recebido ${show(v)}`);
+  if (n <= 0) throw new ProjectError(path, `esperado medida > 0, recebido ${show(v)}`);
   return n;
 }
 
 /** Carga em psf: número ≥ 0, sem conversão de unidade. */
 function psf(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
-    throw new ProjectError(`${path}: esperado carga em psf (número ≥ 0), recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado carga em psf (número ≥ 0), recebido ${show(v)}`);
   }
   return v;
 }
@@ -510,7 +524,7 @@ function psf(v: unknown, path: string): number {
 /** Velocidade de vento em mph: número > 0, sem conversão de unidade. */
 function mph(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
-    throw new ProjectError(`${path}: esperado velocidade de vento em mph (número > 0), recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado velocidade de vento em mph (número > 0), recebido ${show(v)}`);
   }
   return v;
 }
@@ -519,14 +533,14 @@ function mph(v: unknown, path: string): number {
 /** Ângulo em graus, finito (seta do norte). */
 function degrees(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) {
-    throw new ProjectError(`${path}: esperado ângulo em graus, recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado ângulo em graus, recebido ${show(v)}`);
   }
   return v;
 }
 
 function count(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) {
-    throw new ProjectError(`${path}: esperado inteiro ≥ 1, recebido ${show(v)}`);
+    throw new ProjectError(path, `esperado inteiro ≥ 1, recebido ${show(v)}`);
   }
   return v;
 }

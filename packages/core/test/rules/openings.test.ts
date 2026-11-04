@@ -208,7 +208,7 @@ describe('framingForOpening — janela', () => {
 
   it('options.header: usa o header recebido — jacks dele definem zona, kings e comprimento; avisos repassados', () => {
     const { header: _h, ...noHeader } = win;
-    const warning = { code: 'HEADER_JACKS_BELOW_TABLE', message: 'x' };
+    const warning = { code: 'HEADER_JACKS_BELOW_TABLE' as const, message: 'x' };
     const { members, warnings } = framingForOpening(noHeader, wall, config, {
       header: { section: '2x6', plies: 2, jackStuds: 2, kingStuds: 1, source: 'R602.7(1)', flat: false, warnings: [warning] },
     });

@@ -28,6 +28,7 @@
  */
 
 import type { Config, HeaderSource, Opening, Section, Wall, Warning } from '../types';
+import { EngineError, engineerParams, warning } from '../messages';
 import { sectionDepth, sectionThickness } from '../types';
 import { headerFor, type HeaderQuery, type HeaderTable } from './headers';
 import { kingsFor, type KingTable } from './kings';
@@ -86,9 +87,9 @@ function resolveKings(
   config: Config,
   table?: KingTable,
 ): { kingStuds: number; warnings: Warning[] } {
-  const where = `parede ${wall.id}, abertura ${opening.id}`;
+  const where = { wallId: wall.id, openingId: opening.id };
   const explicit = opening.kingStuds;
-  if (explicit !== undefined) count(explicit, `${where}: kingStuds`);
+  if (explicit !== undefined) count(explicit, 'kingStuds', where);
   if (!wall.exterior) return { kingStuds: explicit ?? 1, warnings: [] };
 
   const windSpeed = config.building?.windSpeed;
@@ -96,14 +97,7 @@ function resolveKings(
     if (explicit !== undefined) return { kingStuds: explicit, warnings: [] };
     return {
       kingStuds: 1,
-      warnings: [
-        {
-          code: 'WIND_SPEED_MISSING',
-          message:
-            `${where}: parede externa sem config.building.windSpeed — kings pela Tabela R602.7.5 não ` +
-            'conferidos; o painel sai com 1 king por lado',
-        },
-      ],
+      warnings: [warning('WIND_SPEED_MISSING', where, {})],
     };
   }
 
@@ -116,26 +110,25 @@ function resolveKings(
   try {
     choice = table === undefined ? kingsFor(query) : kingsFor(query, table);
   } catch (e) {
-    if (e instanceof RangeError) throw new RangeError(`${where}: ${e.message}`);
-    throw e;
+    throw rewrap(e, where);
   }
   if ('requiresEngineer' in choice) {
     if (explicit !== undefined) return { kingStuds: explicit, warnings: [] };
-    throw new Error(
-      `${where}: kings fora da tabela (${choice.reason}) — exige engenheiro; informe kingStuds na abertura`,
-    );
+    throw new EngineError('KINGS_OUT_OF_TABLE', where, engineerParams(choice.detail));
   }
   if (explicit !== undefined && explicit < choice.kings) {
     return {
       kingStuds: explicit,
       warnings: [
-        {
-          code: 'HEADER_KINGS_BELOW_TABLE',
-          message:
-            `${where}: ${explicit} king(s) por lado, mas a tabela ${choice.table} pede ${choice.kings} ` +
-            `para vão de ${opening.roughWidth}" com vento de ${windSpeed} mph, exposição ` +
-            `${config.building?.exposure ?? 'B'}`,
-        },
+        warning('HEADER_KINGS_BELOW_TABLE', where, {
+          reason: 'table',
+          kings: explicit,
+          table: choice.table,
+          tableKings: choice.kings,
+          span: opening.roughWidth,
+          windSpeed,
+          exposure: config.building?.exposure ?? 'B',
+        }),
       ],
     };
   }
@@ -148,9 +141,9 @@ function resolveHeaderSpec(
   config: Config,
   tables?: readonly HeaderTable[],
 ): Omit<ResolvedHeader, 'kingStuds'> {
-  const where = `parede ${wall.id}, abertura ${opening.id}`;
+  const where = { wallId: wall.id, openingId: opening.id };
   const explicitJacks = opening.jackStuds;
-  if (explicitJacks !== undefined) count(explicitJacks, `${where}: jackStuds`);
+  if (explicitJacks !== undefined) count(explicitJacks, 'jackStuds', where);
 
   const project = opening.header;
   if (project !== undefined) {
@@ -158,16 +151,19 @@ function resolveHeaderSpec(
     try {
       plyThickness = sectionThickness(project.section);
     } catch {
-      throw new RangeError(`${where}: header.section desconhecida (${String(project.section)})`);
+      throw new EngineError('HEADER_SECTION_UNKNOWN', where, { section: String(project.section) });
     }
-    count(project.plies, `${where}: header.plies`);
-    if (project.jackStuds !== undefined) count(project.jackStuds, `${where}: header.jackStuds`);
+    count(project.plies, 'header.plies', where);
+    if (project.jackStuds !== undefined) count(project.jackStuds, 'header.jackStuds', where);
     const thickness = project.plies * plyThickness;
     if (thickness > sectionDepth(wall.section) + EPS) {
-      throw new Error(
-        `${where}: header do projeto com ${project.plies} plies de ${project.section} (${thickness}") ` +
-          `não cabe em parede ${wall.section} (${sectionDepth(wall.section)}")`,
-      );
+      throw new EngineError('HEADER_TOO_THICK', where, {
+        plies: project.plies,
+        section: String(project.section),
+        thickness,
+        wallSection: wall.section,
+        depth: sectionDepth(wall.section),
+      });
     }
     return {
       section: project.section,
@@ -181,10 +177,7 @@ function resolveHeaderSpec(
 
   if (!wall.bearing) {
     if (opening.roughWidth > FLAT_HEADER_MAX_SPAN + EPS) {
-      throw new Error(
-        `${where}: parede não portante com RO de ${opening.roughWidth}" — a peça deitada (R602.7.4) vale até ` +
-          `${FLAT_HEADER_MAX_SPAN}"; informe o header da abertura`,
-      );
+      throw new EngineError('FLAT_HEADER_SPAN', where, { span: opening.roughWidth, max: FLAT_HEADER_MAX_SPAN });
     }
     return {
       section: wall.section,
@@ -196,14 +189,10 @@ function resolveHeaderSpec(
     };
   }
 
-  const missing = (what: string) =>
-    new Error(
-      `${where}: parede portante sem header no projeto e sem ${what} — ` +
-        'não dá para escolher o header pela tabela; informe o dado ou o header da abertura',
-    );
+  const missing = (what: 'building' | 'floorsSupported') => new EngineError('HEADER_DATA_MISSING', where, { missing: what });
   const building = config.building;
-  if (building === undefined) throw missing('config.building (neve e largura da edificação)');
-  if (wall.floorsSupported === undefined) throw missing('wall.floorsSupported (pavimentos acima da parede)');
+  if (building === undefined) throw missing('building');
+  if (wall.floorsSupported === undefined) throw missing('floorsSupported');
 
   const query: HeaderQuery = {
     span: opening.roughWidth,
@@ -219,33 +208,28 @@ function resolveHeaderSpec(
   try {
     choice = tables === undefined ? headerFor(query) : headerFor(query, tables);
   } catch (e) {
-    if (e instanceof RangeError) throw new RangeError(`${where}: ${e.message}`);
-    throw e;
+    throw rewrap(e, where);
   }
-  if ('requiresEngineer' in choice) {
-    throw new Error(
-      `${where}: header fora da tabela (${choice.reason}) — exige engenheiro; informe o header da abertura`,
-    );
-  }
-  if ('nonBearing' in choice) throw new Error(`${where}: tabela de headers não se aplica`);
+  if ('requiresEngineer' in choice) throw new EngineError('HEADER_OUT_OF_TABLE', where, engineerParams(choice.detail));
+  if ('nonBearing' in choice) throw new EngineError('HEADER_TABLE_NOT_APPLICABLE', where);
 
   const warnings: Warning[] = [];
   const species = building.species;
   if (species !== undefined && species !== 'SPF') {
-    warnings.push({
-      code: 'SPECIES_NOT_IN_TABLE',
-      message:
-        `${where}: header pela tabela ${choice.table}, que é de SPF No. 2; o projeto especifica ${species} — ` +
-        'conferir o vão com a tabela da espécie ou usar o header schedule do projeto',
-    });
+    warnings.push(warning('SPECIES_NOT_IN_TABLE', where, { table: choice.table, species }));
   }
   if (explicitJacks !== undefined && explicitJacks < choice.jackStuds) {
-    warnings.push({
-      code: 'HEADER_JACKS_BELOW_TABLE',
-      message:
-        `${where}: ${explicitJacks} jack(s) por lado, mas a tabela ${choice.table} pede ${choice.jackStuds} ` +
-        `para o header ${choice.plies}-${choice.section} com vão de ${opening.roughWidth}"`,
-    });
+    warnings.push(
+      warning('HEADER_JACKS_BELOW_TABLE', where, {
+        reason: 'table',
+        jacks: explicitJacks,
+        table: choice.table,
+        tableJacks: choice.jackStuds,
+        plies: choice.plies,
+        section: choice.section,
+        span: opening.roughWidth,
+      }),
+    );
   }
   return {
     section: choice.section,
@@ -261,6 +245,13 @@ function isList(t: readonly HeaderTable[] | HeaderTables | undefined): t is read
   return Array.isArray(t);
 }
 
-function count(n: number, what: string): void {
-  if (!Number.isInteger(n) || n < 1) throw new RangeError(`${what} deve ser inteiro ≥ 1 (recebido ${n})`);
+function count(n: number, field: string, where: { wallId: string; openingId: string }): void {
+  if (!Number.isInteger(n) || n < 1) throw new EngineError('VALUE_NOT_COUNT', where, { field, value: n });
+}
+
+/** Erro das tabelas (número inválido, neve faltando) com a parede e a abertura de quem perguntou. */
+function rewrap(e: unknown, where: { wallId: string; openingId: string }): unknown {
+  if (e instanceof EngineError) return e.at(where);
+  if (e instanceof RangeError) return new RangeError(`parede ${where.wallId}, abertura ${where.openingId}: ${e.message}`);
+  return e;
 }

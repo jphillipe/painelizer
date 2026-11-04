@@ -47,6 +47,7 @@ import {
   type LapObstacle,
 } from '../rules/split';
 import { memberWeightLb, panelWeight } from '../rules/weight';
+import { EngineError, warning } from '../messages';
 import { nudgeWall, panelizeWall, planOpenings } from './panelizeWall';
 
 const EPS = 1e-9;
@@ -72,7 +73,7 @@ function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[]
   const stock = config.stockLengths ?? DEFAULT_STOCK_LENGTHS;
   const level = wall.level ?? 1;
   if (!Number.isInteger(level) || level < 1) {
-    throw new RangeError(`parede ${wall.id}: level deve ser inteiro ≥ 1 (recebido ${level})`);
+    throw new EngineError('VALUE_NOT_COUNT', { wallId: wall.id }, { field: 'level', value: level });
   }
 
   const whole = panelizeWall(wall, config, tables);
@@ -103,8 +104,8 @@ function splitNudged(wall: Wall, config: Config, tables?: readonly HeaderTable[]
   const obstacles: LapObstacle[] = [
     ...whole.members
       .filter((m) => m.role === 'header')
-      .map((m) => ({ ...memberSpan(m), what: `o header em x=${m.x}` })),
-    ...strips.map((s) => ({ lo: s.lo, hi: s.hi, what: `a faixa do T${s.wallId === undefined ? '' : ` da parede ${s.wallId}`}` })),
+      .map((m) => ({ ...memberSpan(m), kind: 'header' as const, x: m.x })),
+    ...strips.map((s) => ({ lo: s.lo, hi: s.hi, kind: 'tee' as const, ...(s.wallId === undefined ? {} : { wallId: s.wallId }) })),
   ];
   const doubleTopEnd = Math.max(...whole.members.filter((m) => m.role === 'doubleTopPlate').map((m) => m.x + m.length));
   const lapEnds = breaks.map((b, i) => lapEnd(b, i + 1 < breaks.length ? breaks[i + 1]! : doubleTopEnd, cfg, obstacles, marks));
@@ -192,12 +193,7 @@ function finish(panel: Panel, wallId: string, wallOffset: number, stock: readonl
   const weightLb = panelWeight(spliced);
   const warnings = [...spliced.warnings];
   if (cfg.maxWeight !== undefined && weightLb > cfg.maxWeight + EPS) {
-    warnings.push({
-      code: 'PANEL_OVERWEIGHT',
-      message:
-        `painel ${panel.id}: peso estimado de ${weightLb} lb passa do máximo de ${cfg.maxWeight} lb ` +
-        '(config.panel.maxWeight) e não há quebra que resolva — confira com a fábrica',
-    });
+    warnings.push(warning('PANEL_OVERWEIGHT', { wallId }, { panelId: panel.id, weight: weightLb, max: cfg.maxWeight }));
   }
   return { ...spliced, warnings, wallOffset, weightLb };
 }

@@ -5,6 +5,24 @@
 
 export * from './types';
 export * from './units';
+export {
+  ENGINE_ERROR_CODES,
+  EngineError,
+  engineErrorMessagePt,
+  engineerReasonPt,
+  locusPt,
+  noticeOf,
+  WARNING_CODES,
+  warningMessagePt,
+  type EngineErrorCode,
+  type EngineerReason,
+  type EngineNotice,
+  type HypothesisId,
+  type MessageParams,
+  type MessageWhere,
+  type ParamValue,
+  type WarningCode,
+} from './messages';
 export { layoutStuds } from './rules/studs';
 export { layoutPlates, type PlateCut, type PlateEndLap, type PlateOptions } from './rules/plates';
 export {

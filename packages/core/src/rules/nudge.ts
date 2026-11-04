@@ -24,25 +24,27 @@ export interface Nudge {
   openingId: string;
   from: number;
   to: number;
-  /** O que a abertura tocava: "o início da parede", "o fim da parede" ou "a parede I13 em T". */
-  reason: string;
+  /** O que a abertura tocava: o início, o fim da parede ou a parede em T. */
+  touched: Touched;
 }
+
+export type Touched = { kind: 'start' } | { kind: 'end' } | { kind: 'tee'; wallId?: string };
 
 interface Conflict {
   shift: number;
-  reason: string;
+  touched: Touched;
 }
 
 function conflictOf(o: Opening, length: number, strips: readonly TeeStrip[], t: number): Conflict | undefined {
   const zone = openingZone(o, t);
-  if (zone.start < -EPS) return { shift: -zone.start, reason: 'o início da parede' };
-  if (zone.end > length + EPS) return { shift: length - zone.end, reason: 'o fim da parede' };
+  if (zone.start < -EPS) return { shift: -zone.start, touched: { kind: 'start' } };
+  if (zone.end > length + EPS) return { shift: length - zone.end, touched: { kind: 'end' } };
   const end = o.offset + o.roughWidth;
   for (const s of strips) {
     if (s.lo < end - EPS && s.hi > o.offset + EPS) {
       const left = s.lo - end;
       const right = s.hi - o.offset;
-      return { shift: Math.abs(left) <= Math.abs(right) ? left : right, reason: `a parede ${s.wallId ?? '?'} em T` };
+      return { shift: Math.abs(left) <= Math.abs(right) ? left : right, touched: s.wallId === undefined ? { kind: 'tee' } : { kind: 'tee', wallId: s.wallId } };
     }
   }
   return undefined;
@@ -75,7 +77,7 @@ export function nudgeOpenings(
         n.offset < moved.offset + moved.roughWidth + 3 * t - EPS,
     );
     if (tooClose) continue;
-    nudges.push({ openingId: o.id, from: o.offset, to: moved.offset, reason: c.reason });
+    nudges.push({ openingId: o.id, from: o.offset, to: moved.offset, touched: c.touched });
     o.offset = moved.offset;
   }
   return { openings: out, nudges };

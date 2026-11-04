@@ -1,9 +1,10 @@
 /**
  * Geometria de uma parede em planta: eixo paralelo a x ou a y, posição ao longo dele e cruzamentos.
- * Interno a `src/house`; nada aqui sabe de studs.
+ * Usado por `src/house` e exportado em `index.ts` (o web desenha a planta com ele); nada aqui sabe de studs.
  */
 
 import { sectionDepth } from '../types';
+import { EngineError } from '../messages';
 import type { HouseWall, Point } from './types';
 
 /** Parede reduzida ao seu eixo: direção, comprimento entre os pontos e espessura real. */
@@ -31,19 +32,16 @@ export function axisOf(wall: HouseWall): Axis {
   const { start, end } = wall;
   for (const [name, p] of [['start', start], ['end', end]] as const) {
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) {
-      throw new RangeError(`parede ${wall.id}: ${name} deve ter x e y finitos (recebido ${p.x}, ${p.y})`);
+      throw new EngineError('WALL_POINT_NOT_FINITE', { wallId: wall.id }, { end: name, x: p.x, y: p.y });
     }
   }
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   if (Math.abs(dx) < EPS && Math.abs(dy) < EPS) {
-    throw new RangeError(`parede ${wall.id}: start e end coincidem (${start.x}, ${start.y})`);
+    throw new EngineError('WALL_ZERO_LENGTH', { wallId: wall.id }, { x: start.x, y: start.y });
   }
   if (Math.abs(dx) >= EPS && Math.abs(dy) >= EPS) {
-    throw new RangeError(
-      `parede ${wall.id}: fora dos eixos da planta (de ${start.x}, ${start.y} a ${end.x}, ${end.y}) — ` +
-        'só paredes paralelas a x ou a y',
-    );
+    throw new EngineError('WALL_OFF_AXIS', { wallId: wall.id }, { x0: start.x, y0: start.y, x1: end.x, y1: end.y });
   }
   const dir = Math.abs(dx) >= EPS ? 'x' : 'y';
   const delta = dir === 'x' ? dx : dy;

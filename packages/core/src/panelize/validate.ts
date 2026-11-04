@@ -22,7 +22,8 @@
  * lança `Error` (docs/04-decisoes.md, 2026-10-05).
  */
 
-import { verticalWidth, type Config, type Member, type Panel, type Wall, type WallSection, type Warning } from '../types';
+import { verticalWidth, type Config, type Panel, type Wall, type WallSection, type Warning } from '../types';
+import { warning } from '../messages';
 import { openingZone } from '../rules/openings';
 
 /** Folga mínima entre a zona da abertura e a ponta da parede para caber o stud de ponta. */
@@ -60,18 +61,13 @@ function openingsNearCorner(wall: Wall, config: Config): Warning[] {
   const warnings: Warning[] = [];
   for (const o of wall.openings) {
     const zone = openingZone(o, config.studThickness);
-    const gaps: Array<[string, number]> = [
-      ['início', zone.start],
-      ['fim', wall.length - zone.end],
+    const gaps: Array<['start' | 'end', number]> = [
+      ['start', zone.start],
+      ['end', wall.length - zone.end],
     ];
     for (const [end, gap] of gaps) {
       if (gap > EPS && gap < MIN_CORNER_GAP - EPS) {
-        warnings.push({
-          code: 'OPENING_NEAR_CORNER',
-          message:
-            `parede ${wall.id}, abertura ${o.id}: king a ${gap}" do ${end} da parede — não cabe o stud de ` +
-            `ponta (mínimo ${MIN_CORNER_GAP}"); encoste a abertura no canto ou afaste-a`,
-        });
+        warnings.push(warning('OPENING_NEAR_CORNER', { wallId: wall.id, openingId: o.id }, { gap, end, min: MIN_CORNER_GAP }));
       }
     }
   }
@@ -89,45 +85,24 @@ function overlappingStuds(panel: Panel, wall: Wall, _config: Config): Warning[] 
       const xOverlap = Math.min(a.x + verticalWidth(a), b.x + verticalWidth(b)) - Math.max(a.x, b.x);
       const yOverlap = Math.min(a.y + a.length, b.y + b.length) - Math.max(a.y, b.y);
       if (xOverlap > EPS && yOverlap > EPS) {
-        warnings.push({
-          code: 'STUDS_OVERLAP',
-          message:
-            `parede ${wall.id}: ${describe(a)} e ${describe(b)} se sobrepõem em ${xOverlap}" — ` +
-            `a fábrica decide se dobra o stud ou omite a marca`,
-        });
+        warnings.push(
+          warning('STUDS_OVERLAP', { wallId: wall.id }, { aRole: a.role, aX: a.x, bRole: b.role, bX: b.x, overlap: xOverlap }),
+        );
       }
     }
   }
   return warnings;
 }
 
-function describe(m: Member): string {
-  return `${m.role} em x=${m.x}`;
-}
-
 function studHeight(wall: Wall, config: Config): Warning[] {
   const studLength = wall.height - 3 * config.plateThickness;
   const limit = wall.bearing ? MAX_STUD_LENGTH_BEARING : MAX_STUD_LENGTH_NONBEARING[wall.section];
   if (studLength <= limit + EPS) return [];
-  return [
-    {
-      code: 'STUD_HEIGHT_ABOVE_LIMIT',
-      message:
-        `parede ${wall.id}: stud de ${studLength}" passa do máximo de ${limit}" para parede ` +
-        `${wall.bearing ? 'portante' : 'não portante'} ${wall.section} (Tabela R602.3(5)) — exige projeto estrutural`,
-    },
-  ];
+  return [warning('STUD_HEIGHT_ABOVE_LIMIT', { wallId: wall.id }, { studLength, limit, bearing: wall.bearing, section: wall.section })];
 }
 
 function fireBlocking(wall: Wall, config: Config): Warning[] {
   const cavity = wall.height - 3 * config.plateThickness;
   if (cavity <= MAX_CAVITY_WITHOUT_FIRE_BLOCKING + EPS) return [];
-  return [
-    {
-      code: 'FIRE_BLOCKING_REQUIRED',
-      message:
-        `parede ${wall.id}: cavidade contínua de ${cavity}" passa de ${MAX_CAVITY_WITHOUT_FIRE_BLOCKING}" — ` +
-        `exige fire blocking horizontal (R302.11), que o painel ainda não desenha`,
-    },
-  ];
+  return [warning('FIRE_BLOCKING_REQUIRED', { wallId: wall.id }, { cavity, limit: MAX_CAVITY_WITHOUT_FIRE_BLOCKING })];
 }

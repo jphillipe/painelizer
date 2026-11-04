@@ -348,7 +348,14 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
       const auto = panelizeWall(fWall(66), fConfig, FAKE);
       expect(auto.members).toEqual(asked.members);
       expect(auto.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
-      expect(auto.warnings[0]!.message).toMatch(/win1: 1 jack por lado em vez de 2 — só 6" até o RO de door1 \(hipótese P30\)/);
+      // S26: a hipótese sai do texto (não vai para a serra) e vira campo.
+      expect(auto.warnings[0]!.message).toMatch(/win1: 1 jack por lado em vez de 2 — só 6" até o RO de door1$/);
+      expect(auto.warnings[0]).toMatchObject({
+        wallId: 'W-window-irc',
+        openingId: 'win1',
+        hypothesis: 'P30',
+        params: { reason: 'neighbor', wanted: 2, gap: 6, neighborId: 'door1' },
+      });
     });
 
     it('RO a 4" (menos que jack + king + jack): RangeError', () => {

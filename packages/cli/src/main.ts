@@ -9,7 +9,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { buildProject, BuildError, type BuildResult } from './build';
+import { buildProject, BuildError, problemText, type BuildResult } from './build';
 import { parseProject, ProjectError } from './project';
 
 export const USAGE = `panelizer — motor de painelização de paredes
@@ -133,7 +133,7 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
   } catch (e) {
     if (e instanceof BuildError) {
       io.stderr(`erro: ${e.problems.length} problema(s) ao gerar os painéis — nenhum arquivo gravado`);
-      for (const p of e.problems) io.stderr(`  - ${p}`);
+      for (const p of e.problems) io.stderr(`  - ${problemText(p)}`);
       return 1;
     }
     if (e instanceof ProjectError) {
@@ -157,7 +157,7 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
   }
 
   for (const { panelId, warning } of result.warnings) {
-    io.stderr(`aviso ${panelId} ${warning.code}: ${warning.message}`);
+    io.stderr(`aviso ${panelId} ${warning.code}: ${warning.message}${warning.hypothesis === undefined ? '' : ` (hipótese ${warning.hypothesis})`}`);
   }
   const pieces = result.panels.reduce((n, p) => n + p.members.length, 0);
   io.stdout(`${result.panels.length} painel(is), ${pieces} peças → ${outDir}`);

@@ -33,6 +33,7 @@ import {
   type PanelConfig,
 } from '../types';
 import type { TeeStrip } from './corners';
+import { EngineError } from '../messages';
 import type { OpeningZone } from './openings';
 
 const EPS = 1e-9;
@@ -46,13 +47,13 @@ const PLATE_ROLES: ReadonlySet<Member['role']> = new Set(['bottomPlate', 'topPla
 export function validatePanelConfig(cfg: PanelConfig): void {
   for (const key of ['maxLength', 'module', 'lap', 'minLap'] as const) {
     const v = cfg[key];
-    if (!Number.isFinite(v) || v <= 0) throw new RangeError(`config.panel.${key} inválido (${v}); esperado medida > 0`);
+    if (!Number.isFinite(v) || v <= 0) throw new EngineError('CONFIG_INVALID', {}, { field: `config.panel.${key}`, value: v, expected: 'measure' });
   }
   if (cfg.maxWeight !== undefined && (!Number.isFinite(cfg.maxWeight) || cfg.maxWeight <= 0)) {
-    throw new RangeError(`config.panel.maxWeight inválido (${cfg.maxWeight}); esperado peso em lb > 0`);
+    throw new EngineError('CONFIG_INVALID', {}, { field: 'config.panel.maxWeight', value: cfg.maxWeight, expected: 'weight' });
   }
   if (cfg.minLap > cfg.lap + EPS) {
-    throw new RangeError(`config.panel.minLap (${cfg.minLap}) maior que lap (${cfg.lap})`);
+    throw new EngineError('PANEL_MIN_LAP_ABOVE_LAP', {}, { minLap: cfg.minLap, lap: cfg.lap });
   }
 }
 
@@ -128,7 +129,6 @@ export interface BreakOptions {
  */
 export function chooseBreaks(opts: BreakOptions, cfg: PanelConfig): number[] {
   const { length, candidates, isModule, weightOf } = opts;
-  const who = opts.wallId === undefined ? 'parede' : `parede ${opts.wallId}`;
   const segmentOk = (a: number, b: number): boolean =>
     b - a <= cfg.maxLength + EPS && (cfg.maxWeight === undefined || weightOf === undefined || weightOf(a, b) <= cfg.maxWeight + EPS);
 
@@ -154,10 +154,10 @@ export function chooseBreaks(opts: BreakOptions, cfg: PanelConfig): number[] {
     a = reach[reach.length - 1]!;
     if (segmentOk(a, length)) break;
   }
-  const limit = cfg.maxWeight === undefined ? `${cfg.maxLength}"` : `${cfg.maxLength}" / ${cfg.maxWeight} lb`;
-  throw new RangeError(
-    `${who}: não há como dividir ${length}" em painéis de até ${limit} — nenhum stud de layout livre ` +
-      `(fora de abertura, T, canto e studs extras) entre x=${a} e x=${Math.min(length, a + cfg.maxLength)}`,
+  throw new EngineError(
+    'CANNOT_SPLIT',
+    { wallId: opts.wallId },
+    { length, maxLength: cfg.maxLength, maxWeight: cfg.maxWeight, from: a, to: Math.min(length, a + cfg.maxLength) },
   );
 }
 
@@ -221,12 +221,8 @@ function bestDivision(
   return breaks;
 }
 
-/** Trecho em x que o fim do lap não pode cortar (header, faixa de T), com um nome para a mensagem. */
-export interface LapObstacle {
-  lo: number;
-  hi: number;
-  what: string;
-}
+/** Trecho em x que o fim do lap não pode cortar: um header (em `x`) ou a faixa de um T (da parede `wallId`). */
+export type LapObstacle = { lo: number; hi: number } & ({ kind: 'header'; x: number } | { kind: 'tee'; wallId?: string });
 
 /** Marcas de layout `origin + k·spacing` dentro de `[0, length]`, crescentes. */
 export function layoutMarks(length: number, spacing: number, origin: number): number[] {
@@ -274,11 +270,21 @@ export function lapEnd(
       if (m >= blocker.hi - EPS && ok(m)) return m;
     }
   }
-  const why =
+  throw new EngineError(
+    'LAP_NO_ROOM',
+    {},
     blocker === undefined
-      ? `o painel seguinte acaba em x=${limit} e nem o mínimo de ${cfg.minLap}" cabe`
-      : `${blocker.what} ocupa ${blocker.lo}–${blocker.hi} e não há marca livre até x=${limit}`;
-  throw new RangeError(`lap da double top após a quebra em x=${b}: ${why}`);
+      ? { at: b, limit, minLap: cfg.minLap }
+      : {
+          at: b,
+          limit,
+          minLap: cfg.minLap,
+          blocker: blocker.kind,
+          lo: blocker.lo,
+          hi: blocker.hi,
+          ...(blocker.kind === 'header' ? { blockerX: blocker.x } : blocker.wallId === undefined ? {} : { teeWallId: blocker.wallId }),
+        },
+  );
 }
 
 /**
@@ -294,9 +300,9 @@ export function splicePlates(
   cfg: PanelConfig,
   wallId: string = panel.wallId,
 ): Panel {
-  if (stockLengths.length === 0) throw new RangeError('stockLengths: lista de comprimentos comerciais vazia');
+  if (stockLengths.length === 0) throw new EngineError('STOCK_EMPTY', {}, { scope: 'stockLengths' });
   for (const s of stockLengths) {
-    if (!Number.isFinite(s) || s <= 0) throw new RangeError(`stockLengths: comprimento comercial inválido (${s})`);
+    if (!Number.isFinite(s) || s <= 0) throw new EngineError('STOCK_INVALID', {}, { scope: 'stockLengths', value: s });
   }
   const maxStock = Math.max(...stockLengths);
   const needs = (m: Member): boolean => PLATE_ROLES.has(m.role) && m.length > maxStock + LENGTH_EPS;
@@ -308,7 +314,7 @@ export function splicePlates(
 
   const pieces = new Map<Member, Member[]>();
   const cutsOf = (m: Member, avoid: readonly number[], prefer: boolean): number[] => {
-    const cuts = pickCuts(m.x, m.x + m.length, maxStock, supports, avoid, prefer ? cfg.lap : 0, prefer ? cfg.minLap : 0, `${wallId}: ${m.role} de ${m.length}"`);
+    const cuts = pickCuts(m.x, m.x + m.length, maxStock, supports, avoid, prefer ? cfg.lap : 0, prefer ? cfg.minLap : 0, { wallId, role: m.role, memberLength: m.length });
     const bounds = [m.x, ...cuts, m.x + m.length];
     pieces.set(
       m,
@@ -341,7 +347,7 @@ function pickCuts(
   avoid: readonly number[],
   prefer: number,
   min: number,
-  what: string,
+  what: { wallId: string; role: string; memberLength: number },
 ): number[] {
   const count = Math.ceil((x1 - x0) / maxStock - EPS) - 1;
   const cuts: number[] = [];
@@ -355,9 +361,10 @@ function pickCuts(
     const farFrom = (gap: number) => feasible.filter((c) => taken.every((a) => Math.abs(c - a) >= gap - EPS));
     const pick = (farFrom(prefer).at(-1) ?? farFrom(min).at(-1));
     if (pick === undefined) {
-      throw new RangeError(
-        `${what}: não há stud entre x=${cursor} e x=${Math.min(x1, cursor + maxStock)} para emendar a plate ` +
-          `com defasagem de ${min}" das outras emendas (estoque máximo ${maxStock}")`,
+      throw new EngineError(
+        'SPLICE_NO_STUD',
+        { wallId: what.wallId },
+        { role: what.role, memberLength: what.memberLength, from: cursor, to: Math.min(x1, cursor + maxStock), min, maxStock },
       );
     }
     cuts.push(pick);

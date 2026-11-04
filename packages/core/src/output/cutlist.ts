@@ -6,8 +6,8 @@
  * - As três plates (bottom, top, double top) aparecem sob um único papel `plates`:
  *   para a serra são a mesma peça. Os demais papéis mantêm o nome do `MemberRole`.
  * - `qty` conta peças cortadas, não members: um header de 2 plies vale 2 peças.
- * - Comprimentos são arredondados ao 1/64" para agrupar (mesma tolerância de
- *   `panelizeWall`), evitando que ruído de ponto flutuante gere linhas duplicadas.
+ * - Comprimentos são arredondados ao 1/64" para agrupar (`LENGTH_RESOLUTION`), evitando que ruído
+ *   de ponto flutuante gere linhas duplicadas.
  * - Ordem: papel na sequência da folha de fabricação (`docs/00-visao.md`) e,
  *   dentro do papel, comprimento decrescente; empate desfeito pela seção.
  */

@@ -46,7 +46,7 @@ describe('kingsFor — escolha', () => {
   });
 
   it('nunca extrapola: vento fora das colunas ou exposição D → requiresEngineer', () => {
-    expect(kingsFor({ span: ft(3), windSpeed: 150 }, FAKE)).toEqual({
+    expect(kingsFor({ span: ft(3), windSpeed: 150 }, FAKE)).toMatchObject({
       requiresEngineer: true,
       reason: expect.stringMatching(/vento 150 mph, exposição B/),
     });
@@ -58,7 +58,7 @@ describe('kingsFor — escolha', () => {
   });
 
   it('nunca extrapola: vão acima da última linha → requiresEngineer', () => {
-    expect(kingsFor({ span: ft(9) + 0.01, windSpeed: 100 }, FAKE)).toEqual({
+    expect(kingsFor({ span: ft(9) + 0.01, windSpeed: 100 }, FAKE)).toMatchObject({
       requiresEngineer: true,
       reason: expect.stringMatching(/vão 108\.01" acima da última linha/),
     });

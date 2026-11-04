@@ -53,7 +53,7 @@ describe('headerFor — escolha', () => {
   });
 
   it('vão acima de todos os headers → requiresEngineer', () => {
-    expect(headerFor(q(ft(14) + 1), FAKE)).toEqual({
+    expect(headerFor(q(ft(14) + 1), FAKE)).toMatchObject({
       requiresEngineer: true,
       reason: expect.stringMatching(/acima de todos os headers/),
     });
@@ -127,7 +127,7 @@ describe('headerFor — coluna', () => {
     ['neve acima da última coluna', { groundSnowLoad: 41 }, /neve 41 psf/],
     ['largura acima da última coluna', { buildingWidth: ft(30) + 1 }, /largura 361"/],
   ])('%s → requiresEngineer', (_, extra, reason) => {
-    expect(headerFor(q(ft(2), extra), FAKE)).toEqual({ requiresEngineer: true, reason: expect.stringMatching(reason) });
+    expect(headerFor(q(ft(2), extra), FAKE)).toMatchObject({ requiresEngineer: true, reason: expect.stringMatching(reason) });
   });
 });
 
@@ -160,7 +160,7 @@ describe('headerFor — pavimentos', () => {
   });
 
   it('número de pavimentos sem grupo na tabela → requiresEngineer', () => {
-    expect(headerFor(q(ft(2), { floorsSupported: 2 }), FAKE)).toEqual({
+    expect(headerFor(q(ft(2), { floorsSupported: 2 }), FAKE)).toMatchObject({
       requiresEngineer: true,
       reason: expect.stringMatching(/2 pavimento/),
     });
@@ -170,7 +170,7 @@ describe('headerFor — pavimentos', () => {
 describe('headerFor — espessura da parede', () => {
   it('2x4 aceita até 2 plies; 2x6 até 3', () => {
     expect(headerFor(q(ft(9), { wallSection: '2x6' }), FAKE)).toMatchObject({ section: '2x10', plies: 3 });
-    expect(headerFor(q(ft(9), { wallSection: '2x4' }), FAKE)).toEqual({
+    expect(headerFor(q(ft(9), { wallSection: '2x4' }), FAKE)).toMatchObject({
       requiresEngineer: true,
       reason: expect.stringMatching(/cabem em parede 2x4/),
     });
@@ -221,7 +221,7 @@ describe('headerFor — parede interna e não portante', () => {
 
   it('sem tabela para o tipo de parede → requiresEngineer', () => {
     const onlyExterior = FAKE.filter((t) => t.exterior);
-    expect(headerFor(int(ft(3)), onlyExterior)).toEqual({
+    expect(headerFor(int(ft(3)), onlyExterior)).toMatchObject({
       requiresEngineer: true,
       reason: 'sem tabela de header para parede interna',
     });

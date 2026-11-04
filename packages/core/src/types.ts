@@ -362,11 +362,9 @@ export interface Member {
   label?: string;
 }
 
-/** Aviso de validação. Nunca interrompe a geração. */
-export interface Warning {
-  code: string;
-  message: string;
-}
+/** Aviso de validação (código, ids e parâmetros; frase em português montada em `messages.ts`). */
+export type { Warning } from './messages';
+import type { Warning } from './messages';
 
 /**
  * Corte a fazer na obra, marcado na folha do painel. Hoje só a bottom plate no vão da porta:

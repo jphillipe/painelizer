@@ -107,7 +107,11 @@ describe('splitWall — abertura deslocada por tolerância (P40)', () => {
       code: 'OPENING_NUDGED',
       message:
         'parede I12, abertura U3: deslocada 0.375" para a esquerda (borda do RO de 245.375 para 245) — tocava o fim ' +
-        'da parede; confira a leitura (hipótese P40)',
+        'da parede; confira a leitura',
+      wallId: 'I12',
+      openingId: 'U3',
+      params: { distance: 0.375, direction: 'left', from: 245.375, to: 245, touched: 'end' },
+      hypothesis: 'P40',
     });
     expect(panels.slice(0, -1).flatMap((p) => p.warnings.map((w) => w.code))).not.toContain('OPENING_NUDGED');
   });

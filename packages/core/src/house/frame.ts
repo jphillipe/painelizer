@@ -17,7 +17,8 @@
 import type { EndJoint, ExtraStud, Opening, TeeJoint, Wall, WallJoints } from '../types';
 import { along, axisOf, pointAt, type Axis } from './axis';
 import { DEFAULT_TOLERANCE, findConnections, type Connection, type WallConnections } from './connections';
-import type { House, HouseWall, Point } from './types';
+import type { House, Point } from './types';
+import { EngineError } from '../messages';
 
 const EPS = 1e-9;
 
@@ -107,18 +108,13 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
   const s1 = plateOffset(axis, conns.end, 'end', otherThickness(conns.end));
   const length = s1 - s0;
   if (length <= EPS) {
-    throw new RangeError(
-      `parede ${wall.id}: plate sem comprimento (${length}") — as paredes das pontas ocupam tudo`,
-    );
+    throw new EngineError('PLATE_NO_LENGTH', { wallId: wall.id }, { length });
   }
 
   const openings: Opening[] = wall.openings.map((o) => {
     const offset = o.offset - s0;
     if (offset < -EPS || offset + o.roughWidth > length + EPS) {
-      throw new RangeError(
-        `parede ${wall.id}, abertura ${o.id}: RO de ${o.offset}" a ${o.offset + o.roughWidth}" do start ` +
-          `não cabe na plate (de ${s0}" a ${s1}" do start)`,
-      );
+      throw new EngineError('OPENING_OFF_PLATE', { wallId: wall.id, openingId: o.id }, { from: o.offset, to: o.offset + o.roughWidth, s0, s1 });
     }
     return { ...o, offset };
   });

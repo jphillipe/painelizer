@@ -1,9 +1,9 @@
 /**
  * Monta o `Panel` de uma parede reta a partir das regras de framing.
  *
- * Escopo atual (S9.2): 3 plates + studs de layout + janelas e portas (`rules/openings.ts`), com
- * zonas vizinhas fundidas e king compartilhado (`rules/zones.ts`) e o header de cada abertura
- * escolhido por `rules/openingHeader.ts` (projeto → tabela IRC → padrão do config; sem header, erro).
+ * 3 plates + studs de layout + janelas e portas (`rules/openings.ts`), com zonas vizinhas fundidas e
+ * king compartilhado (`rules/zones.ts`) e o header de cada abertura escolhido por
+ * `rules/openingHeader.ts` (projeto → tabela IRC na portante → R602.7.4 na não portante; sem header, erro).
  *
  * Geometria (docs/02-framing.md):
  * - Studs em y = plateThickness (sobre a bottom plate), comprimento = height − 3·plateThickness.
@@ -35,6 +35,7 @@ import {
   type Wall,
   type Warning,
 } from '../types';
+import { EngineError, warning } from '../messages';
 import { layoutPlates } from '../rules/plates';
 import { layoutStuds } from '../rules/studs';
 import { framingForOpening, type OpeningZone } from '../rules/openings';
@@ -89,20 +90,26 @@ export function planOpenings(
     extra.set(id, [...(extra.get(id) ?? []), w]);
   };
   for (const r of fit.reduced) {
-    warn(r.openingId, {
-      code: 'HEADER_JACKS_BELOW_TABLE',
-      message:
-        `parede ${wall.id}, abertura ${r.openingId}: 1 jack por lado em vez de ${r.wanted} — só ${r.gap}" até o ` +
-        `RO de ${r.neighborId} (hipótese P30)`,
-    });
+    warn(
+      r.openingId,
+      warning(
+        'HEADER_JACKS_BELOW_TABLE',
+        { wallId: wall.id, openingId: r.openingId },
+        { reason: 'neighbor', jacks: 1, wanted: r.wanted, gap: r.gap, neighborId: r.neighborId },
+        'P30',
+      ),
+    );
   }
   for (const r of plan.reducedKings ?? []) {
-    warn(r.curId, {
-      code: 'HEADER_KINGS_BELOW_TABLE',
-      message:
-        `parede ${wall.id}, aberturas ${r.prevId} e ${r.curId}: ${r.used} king(s) compartilhado(s) em vez de ` +
-        `${r.wanted} — só ${r.gap}" entre os RO (hipótese P39)`,
-    });
+    warn(
+      r.curId,
+      warning(
+        'HEADER_KINGS_BELOW_TABLE',
+        { wallId: wall.id, openingId: r.curId },
+        { reason: 'shared', prevId: r.prevId, used: r.used, wanted: r.wanted, gap: r.gap },
+        'P39',
+      ),
+    );
   }
   const headers = resolved.map((h, i) => {
     const more = extra.get(wall.openings[i]!.id);
@@ -132,12 +139,19 @@ export function nudgeWall(
     const d = n.to - n.from;
     return {
       offset: n.to,
-      warning: {
-        code: 'OPENING_NUDGED',
-        message:
-          `parede ${wall.id}, abertura ${n.openingId}: deslocada ${Math.abs(d)}" para a ${d < 0 ? 'esquerda' : 'direita'} ` +
-          `(borda do RO de ${n.from} para ${n.to}) — tocava ${n.reason}; confira a leitura (hipótese P40)`,
-      },
+      warning: warning(
+        'OPENING_NUDGED',
+        { wallId: wall.id, openingId: n.openingId },
+        {
+          distance: Math.abs(d),
+          direction: d < 0 ? 'left' : 'right',
+          from: n.from,
+          to: n.to,
+          touched: n.touched.kind,
+          ...(n.touched.kind === 'tee' ? { teeWallId: n.touched.wallId ?? '?' } : {}),
+        },
+        'P40',
+      ),
     };
   });
   return {
@@ -163,16 +177,16 @@ export function panelizeWall(
 
   const studLength = wall.height - 3 * plateThickness;
   if (config.studLength.length === 0) {
-    throw new RangeError('config.studLength: lista de pré-cortes vazia');
+    throw new EngineError('PRECUTS_EMPTY');
   }
   if (matchPrecut(studLength, config.studLength) === undefined) {
-    warnings.push({
-      code: 'STUD_LENGTH_MISMATCH',
-      message:
-        `parede ${wall.id}: altura ${wall.height}" menos 3 plates de ${plateThickness}" exige stud de ` +
-        `${studLength}", que não é nenhum dos pré-cortes de config.studLength ` +
-        `(${config.studLength.map((p) => `${p}"`).join(', ')})`,
-    });
+    warnings.push(
+      warning(
+        'STUD_LENGTH_MISMATCH',
+        { wallId: wall.id },
+        { height: wall.height, plateThickness, studLength, precuts: [...config.studLength] },
+      ),
+    );
   }
 
   const { headers, openings, plan } = planOpenings(wall, config, tables);
@@ -259,21 +273,18 @@ function overlaps(start: number, end: number, zone: OpeningZone): boolean {
 function extraStuds(wall: Wall, t: number, zones: readonly OpeningZone[]): { x: number; label?: string }[] {
   const out: { x: number; label?: string }[] = [];
   for (const [i, e] of (wall.extraStuds ?? []).entries()) {
-    const where = `parede ${wall.id}, extraStuds[${i}]`;
+    const where = { wallId: wall.id };
     const n = e.count ?? 1;
-    if (!Number.isFinite(e.x)) throw new RangeError(`${where}: x deve ser número finito (recebido ${e.x})`);
-    if (!Number.isInteger(n) || n < 1) throw new RangeError(`${where}: count deve ser inteiro ≥ 1 (recebido ${n})`);
+    if (!Number.isFinite(e.x)) throw new EngineError('EXTRA_STUD_INVALID', where, { index: i, field: 'x', value: e.x });
+    if (!Number.isInteger(n) || n < 1) throw new EngineError('EXTRA_STUD_INVALID', where, { index: i, field: 'count', value: n });
     if (e.x < -EPS || e.x + n * t > wall.length + EPS) {
-      throw new RangeError(`${where}: ${n} stud(s) a partir de x=${e.x} saem da parede de ${wall.length}"`);
+      throw new EngineError('EXTRA_STUD_OUT_OF_WALL', where, { index: i, count: n, x: e.x, length: wall.length });
     }
     for (let k = 0; k < n; k++) {
       const x = e.x + k * t;
       const zone = zones.find((z) => overlaps(x, x + t, z));
       if (zone !== undefined) {
-        throw new RangeError(
-          `${where}: stud em x=${x} cai na zona de abertura [${zone.start}, ${zone.end}] — ` +
-            'studs extras ficam fora de kings, jacks e RO',
-        );
+        throw new EngineError('EXTRA_STUD_IN_OPENING', where, { index: i, x, start: zone.start, end: zone.end });
       }
       out.push(e.label === undefined ? { x } : { x, label: e.label });
     }

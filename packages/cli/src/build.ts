@@ -15,9 +15,27 @@
  *
  * Erros do core (header fora da tabela, parede sem como dividir…) são recolhidos por parede e devolvidos
  * juntos; um projeto com erro não gera nenhum arquivo — meia saída na fábrica é pior que nenhuma.
+ *
+ * S26: cada problema sai com código, parede/abertura e parâmetros (`BuildProblem`); quem mostra em outro idioma
+ * não lê o português. `problemText` é a linha do CLI (com o prefixo da etapa, como antes).
  */
 
-import { cutList, frameWalls, housePlanSvg, panelizeFrame, panelSvg, splitWall, type BomLine, type CutLine, type Panel, type WallFrame, type Warning } from 'core';
+import {
+  cutList,
+  EngineError,
+  frameWalls,
+  housePlanSvg,
+  noticeOf,
+  panelizeFrame,
+  panelSvg,
+  splitWall,
+  type BomLine,
+  type CutLine,
+  type EngineNotice,
+  type Panel,
+  type WallFrame,
+  type Warning,
+} from 'core';
 import { bomCsv, cutListCsv, panelsCsv, projectBom } from './csv';
 import type { Project } from './project';
 
@@ -38,10 +56,37 @@ export interface BuildResult {
   cutLists: { panelId: string; lines: CutLine[] }[];
 }
 
+/**
+ * Problema que impede o build. `stage`: onde aconteceu — `plan` (a planta inteira: cantos, T, cruzamentos), `wall`
+ * (uma parede virando painéis), `bom` (lista de material) ou `files` (nomes de arquivo). Código `ENGINE_INTERNAL`
+ * = erro do motor sem código (guarda interna); a frase original fica em `message`.
+ */
+export interface BuildProblem extends EngineNotice {
+  stage: 'plan' | 'wall' | 'bom' | 'files';
+}
+
+const STAGE_PREFIX: Record<BuildProblem['stage'], string> = { plan: 'planta: ', wall: '', bom: 'lista de material: ', files: '' };
+
+/** A linha do CLI: prefixo da etapa + a frase em português. */
+export function problemText(p: BuildProblem): string {
+  return `${STAGE_PREFIX[p.stage]}${p.message}`;
+}
+
+/** Erro do core → problema; o que não é `RangeError` (bug) sobe. */
+export function problemOf(e: unknown, stage: BuildProblem['stage'], wallId?: string): BuildProblem {
+  if (e instanceof EngineError) return { ...noticeOf(wallId === undefined ? e : e.at({ wallId })), stage };
+  if (e instanceof RangeError) {
+    const prefix = wallId === undefined ? '' : `parede ${wallId}`;
+    const message = prefix === '' || e.message.startsWith(prefix) ? e.message : `${prefix}: ${e.message}`;
+    return { code: 'ENGINE_INTERNAL', message, ...(wallId === undefined ? {} : { wallId }), stage };
+  }
+  throw e;
+}
+
 export class BuildError extends Error {
-  readonly problems: string[];
-  constructor(problems: string[]) {
-    super(problems.join('\n'));
+  readonly problems: BuildProblem[];
+  constructor(problems: BuildProblem[]) {
+    super(problems.map(problemText).join('\n'));
     this.name = 'BuildError';
     this.problems = problems;
   }
@@ -52,13 +97,21 @@ export class BuildError extends Error {
  * checagem com debounce do editor paga a cada pausa; `buildProject` continua daqui para gerar os arquivos.
  * Inclui o que pode derrubar o `build` sem desenhar nada: nome de arquivo repetido e lista de material inválida.
  */
-export function panelizeProject(project: Project): { panels: Panel[]; problems: string[]; bom: BomLine[] } {
+export function panelizeProject(project: Project): { panels: Panel[]; problems: BuildProblem[]; bom: BomLine[] } {
   const { panels, problems } = panelize(project);
   const usedNames = new Map<string, string>();
   for (const panel of panels) {
     const name = svgFileName(panel.id);
     const clash = usedNames.get(name);
-    if (clash !== undefined) problems.push(`painéis "${clash}" e "${panel.id}" gerariam o mesmo arquivo panels/${name}`);
+    if (clash !== undefined) {
+      problems.push({
+        code: 'PANEL_FILE_CLASH',
+        message: `painéis "${clash}" e "${panel.id}" gerariam o mesmo arquivo panels/${name}`,
+        wallId: panel.wallId,
+        params: { first: clash, second: panel.id, file: `panels/${name}` },
+        stage: 'files',
+      });
+    }
     usedNames.set(name, panel.id);
   }
   let bom: BomLine[] = [];
@@ -66,21 +119,19 @@ export function panelizeProject(project: Project): { panels: Panel[]; problems: 
     try {
       bom = projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths);
     } catch (e) {
-      problems.push(`lista de material: ${(e as Error).message}`);
+      problems.push(problemOf(e, 'bom'));
     }
   }
   return { panels, problems, bom };
 }
 
-function panelize(project: Project): { panels: Panel[]; problems: string[] } {
+function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[] } {
   const panels: Panel[] = [];
-  const problems: string[] = [];
+  const problems: BuildProblem[] = [];
 
-  /** Erros de header já vêm com "parede <id>, abertura <id>: …"; os demais ganham o prefixo. */
+  /** Erro de uma parede: ganha a parede como contexto (`parede W01, abertura J1: …`). */
   const problem = (wallId: string, e: unknown): void => {
-    const message = (e as Error).message;
-    const prefix = `parede ${wallId}`;
-    problems.push(message.startsWith(prefix) ? message : `${prefix}: ${message}`);
+    problems.push(problemOf(e, 'wall', wallId));
   };
 
   if (project.house !== undefined) {
@@ -90,7 +141,7 @@ function panelize(project: Project): { panels: Panel[]; problems: string[] } {
     try {
       frames = frameWalls(project.house);
     } catch (e) {
-      problems.push(`planta: ${(e as Error).message}`);
+      problems.push(problemOf(e, 'plan'));
     }
     for (const frame of frames) {
       try {

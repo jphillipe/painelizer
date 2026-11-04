@@ -22,6 +22,7 @@
 import { DEFAULT_STOCK_LENGTHS, isLumberSection, type Panel, type Section } from '../types';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, sectionRank } from './cutlist';
+import { EngineError } from '../messages';
 
 /** Seções em que existe pré-corte de stud (P7: iguais para 2x4 e 2x6). */
 const PRECUT_SECTIONS: readonly Section[] = ['2x4', '2x6'];
@@ -56,16 +57,14 @@ export function stockLengthFor(
   length: number,
   stockLengths: readonly number[] = DEFAULT_STOCK_LENGTHS,
 ): number {
-  if (stockLengths.length === 0) throw new RangeError('bom: lista de comprimentos comerciais vazia');
+  if (stockLengths.length === 0) throw new EngineError('STOCK_EMPTY', {}, { scope: 'bom' });
   let best: number | undefined;
   for (const s of stockLengths) {
-    if (!Number.isFinite(s) || s <= 0) throw new RangeError(`bom: comprimento comercial inválido (${s})`);
+    if (!Number.isFinite(s) || s <= 0) throw new EngineError('STOCK_INVALID', {}, { scope: 'bom', value: s });
     if (s >= length && (best === undefined || s < best)) best = s;
   }
   if (best === undefined) {
-    throw new RangeError(
-      `bom: peça de ${length}" não cabe em nenhum comprimento comercial (máx. ${Math.max(...stockLengths)}")`,
-    );
+    throw new EngineError('PIECE_OVER_STOCK', {}, { length, max: Math.max(...stockLengths) });
   }
   return best;
 }

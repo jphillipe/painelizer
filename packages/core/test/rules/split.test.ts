@@ -145,19 +145,19 @@ describe('lapEnd (hipótese P23)', () => {
   });
 
   it('fim dentro de um header: encurta para 24; se ainda cai, vai à primeira marca depois do obstáculo', () => {
-    const header = { lo: 140, hi: 160, what: 'o header' };
+    const header = { lo: 140, hi: 160, kind: 'header' as const, x: 140 };
     expect(lapEnd(100, 480, cfg, [header], marks)).toBe(124);
-    const wide = { lo: 120, hi: 150, what: 'o header' };
+    const wide = { lo: 120, hi: 150, kind: 'header' as const, x: 120 };
     expect(lapEnd(100, 480, cfg, [wide], marks)).toBe(160);
     // Encostar no obstáculo não é estar dentro.
-    expect(lapEnd(100, 480, cfg, [{ lo: 148, hi: 170, what: 'o header' }], marks)).toBe(148);
+    expect(lapEnd(100, 480, cfg, [{ lo: 148, hi: 170, kind: 'header' as const, x: 148 }], marks)).toBe(148);
   });
 
   it('apoio que não é marca (centro de king) logo depois do obstáculo serve; não pula o header seguinte (P37)', () => {
     // S1 do Ringgold em escala: quebra 144, header da porta 152–193, king em 193.75, header do par 198.25–259.75
     const headers = [
-      { lo: 152, hi: 193, what: 'o header da porta' },
-      { lo: 198.25, hi: 259.75, what: 'o header do par' },
+      { lo: 152, hi: 193, kind: 'header' as const, x: 152 },
+      { lo: 198.25, hi: 259.75, kind: 'header' as const, x: 198.25 },
     ];
     expect(lapEnd(144, 336, cfg, headers, marks)).toBe(272);
     const withKings = [...marks, 151.25, 193.75, 196, 260.5].sort((a, b) => a - b);
@@ -165,7 +165,7 @@ describe('lapEnd (hipótese P23)', () => {
   });
 
   it('obstáculo até o limite: erro nomeando o obstáculo', () => {
-    expect(() => lapEnd(100, 155, cfg, [{ lo: 120, hi: 150, what: 'a faixa do T' }], marks)).toThrow(/a faixa do T ocupa 120–150/);
+    expect(() => lapEnd(100, 155, cfg, [{ lo: 120, hi: 150, kind: 'tee' as const }], marks)).toThrow(/a faixa do T ocupa 120–150/);
   });
 });
 

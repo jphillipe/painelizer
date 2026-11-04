@@ -108,8 +108,8 @@ describe('resolveOpening — catálogo', () => {
     [{ id: 'x', type: 'window' as const, offset: 10 }, /sem roughWidth\/roughHeight e sem tag/],
     [{ id: 'x', tag: 'W1' }, /sem offset nem center/],
   ])('erro com parede no prefixo: %j', (spec, re) => {
-    expect(() => resolveOpening(spec, catalog, 'parede W1')).toThrow(re);
-    expect(() => resolveOpening(spec, catalog, 'parede W1')).toThrow(/^parede W1, /);
+    expect(() => resolveOpening(spec, catalog, 'W1')).toThrow(re);
+    expect(() => resolveOpening(spec, catalog, 'W1')).toThrow(/^parede W1, /);
   });
 
   it('medida não positiva lança RangeError', () => {

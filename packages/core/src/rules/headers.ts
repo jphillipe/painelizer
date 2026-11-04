@@ -19,6 +19,7 @@
 import type { FloorSpan, LumberSection, WallSection } from '../types';
 import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth } from '../types';
 import { parseFeetInches } from '../units';
+import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
 import rawIrcHeaders from '../data/irc-headers.json';
 
 /** Folga numérica para comparar vão pedido com vão de tabela. */
@@ -89,38 +90,38 @@ export interface HeaderSpec {
   table: string;
 }
 
-export type HeaderChoice = HeaderSpec | { requiresEngineer: true; reason: string } | { nonBearing: true };
+/** `reason`: a frase em português; `detail`: o motivo estruturado (S26). */
+export type HeaderChoice = HeaderSpec | { requiresEngineer: true; reason: string; detail: EngineerReason } | { nonBearing: true };
 
 /** Escolhe o header pela tabela. Ver regras no topo do arquivo. */
 export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = ircHeaders()): HeaderChoice {
   const { span, exterior, bearing, buildingWidth, groundSnowLoad, floorsSupported, floorSpan, wallSection } =
     query;
-  if (!Number.isFinite(span) || span <= 0) throw new RangeError(`span inválido (${span})`);
+  if (!Number.isFinite(span) || span <= 0) throw new EngineError('VALUE_INVALID', {}, { field: 'span', value: span });
   if (!Number.isFinite(buildingWidth) || buildingWidth <= 0) {
-    throw new RangeError(`buildingWidth inválido (${buildingWidth})`);
+    throw new EngineError('VALUE_INVALID', {}, { field: 'buildingWidth', value: buildingWidth });
   }
   if (!Number.isInteger(floorsSupported) || floorsSupported < 0) {
-    throw new RangeError(`floorsSupported inválido (${floorsSupported})`);
+    throw new EngineError('VALUE_INVALID', {}, { field: 'floorsSupported', value: floorsSupported });
   }
   if (!bearing) return { nonBearing: true };
-  if (exterior && groundSnowLoad === undefined) {
-    throw new RangeError('groundSnowLoad é obrigatório em parede externa portante');
-  }
+  if (exterior && groundSnowLoad === undefined) throw new EngineError('SNOW_LOAD_REQUIRED');
   if (groundSnowLoad !== undefined && (!Number.isFinite(groundSnowLoad) || groundSnowLoad < 0)) {
-    throw new RangeError(`groundSnowLoad inválido (${groundSnowLoad})`);
+    throw new EngineError('VALUE_INVALID', {}, { field: 'groundSnowLoad', value: groundSnowLoad });
   }
 
-  const engineer = (reason: string): HeaderChoice => ({ requiresEngineer: true, reason });
+  const engineer = (detail: EngineerReason): HeaderChoice => ({ requiresEngineer: true, reason: engineerReasonPt(detail), detail });
   const table = tables.find((t) => t.exterior === exterior);
-  if (!table) return engineer(`sem tabela de header para parede ${exterior ? 'externa' : 'interna'}`);
+  if (!table) return engineer({ why: 'noTable', exterior });
 
   const col = pickColumn(table, buildingWidth, exterior ? groundSnowLoad : undefined);
   if (col === undefined) {
-    return engineer(
-      `largura ${buildingWidth}"` +
-        (exterior ? ` com neve ${groundSnowLoad} psf` : '') +
-        ` fora da tabela ${table.id}`,
-    );
+    return engineer({
+      why: 'width',
+      width: buildingWidth,
+      ...(exterior && groundSnowLoad !== undefined ? { snow: groundSnowLoad } : {}),
+      table: table.id,
+    });
   }
 
   const groups = table.groups.filter(
@@ -129,9 +130,7 @@ export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = i
       (floorSpan === undefined || g.floorSpan === undefined || g.floorSpan === floorSpan),
   );
   if (groups.length === 0) {
-    return engineer(
-      `${floorsSupported} pavimento(s)${floorSpan ? ` (${floorSpan})` : ''} sem grupo na tabela ${table.id}`,
-    );
+    return engineer({ why: 'floors', floors: floorsSupported, ...(floorSpan ? { floorSpan } : {}), table: table.id });
   }
 
   const maxPlies =
@@ -157,10 +156,7 @@ export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = i
   candidates.sort((a, b) => a.plies - b.plies || SECTION_DEPTH[a.section] - SECTION_DEPTH[b.section]);
   const best = candidates[0];
   if (!best) {
-    return engineer(
-      `vão ${span}" acima de todos os headers da tabela ${table.id}` +
-        (wallSection === undefined ? '' : ` que cabem em parede ${wallSection}`),
-    );
+    return engineer({ why: 'span', span, table: table.id, ...(wallSection === undefined ? {} : { wallSection }) });
   }
   return best;
 }
@@ -195,7 +191,9 @@ const FLOOR_SPANS: readonly unknown[] = ['center', 'clear'];
  */
 export function validateHeaderTables(json: unknown): string[] {
   const errors: string[] = [];
-  const err = (path: string, msg: string) => errors.push(`${path}: ${msg}`);
+  const err = (path: string, msg: string): void => {
+    errors.push(`${path}: ${msg}`);
+  };
   const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
   const keys = (path: string, o: Record<string, unknown>, allowed: string[]) => {
     for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `campo desconhecido "${k}"`);

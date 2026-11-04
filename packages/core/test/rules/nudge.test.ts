@@ -24,19 +24,19 @@ describe('nudgeOpenings (hipótese P40)', () => {
   it('zona 3/8" além do fim da parede (I12-U3-1 do Ringgold): volta 3/8"', () => {
     // RO [245.375, 277.375] → zona até 280.375 numa parede de 280
     const r = nudgeOpenings([w('U3', 245.375)], 280, [], 1.5);
-    expect(r.nudges).toEqual([{ openingId: 'U3', from: 245.375, to: 245, reason: 'o fim da parede' }]);
+    expect(r.nudges).toEqual([{ openingId: 'U3', from: 245.375, to: 245, touched: { kind: 'end' } }]);
     expect(r.openings[0]!.offset).toBe(245);
   });
 
   it('zona antes do início da parede: avança o que falta', () => {
     const r = nudgeOpenings([w('a', 2)], 120, [], 1.5);
-    expect(r.nudges).toEqual([{ openingId: 'a', from: 2, to: 3, reason: 'o início da parede' }]);
+    expect(r.nudges).toEqual([{ openingId: 'a', from: 2, to: 3, touched: { kind: 'start' } }]);
   });
 
   it('T dentro do RO por 1 1/4" (S2-1-2 do Ringgold): o RO termina no início da faixa', () => {
     // RO [171.75, 209.75], faixa do T 208.5–212 → RO passa a [170.5, 208.5]
     const r = nudgeOpenings([w('S2-1-2', 171.75, 38)], 500, [tee(208.5, 212)], 1.5);
-    expect(r.nudges).toEqual([{ openingId: 'S2-1-2', from: 171.75, to: 170.5, reason: 'a parede I13 em T' }]);
+    expect(r.nudges).toEqual([{ openingId: 'S2-1-2', from: 171.75, to: 170.5, touched: { kind: 'tee', wallId: 'I13' } }]);
   });
 
   it('T dentro do RO pelo lado esquerdo: o RO começa no fim da faixa', () => {

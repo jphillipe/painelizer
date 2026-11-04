@@ -17,6 +17,7 @@
 
 import type { EndRule, HouseWall, Point, WallEnd } from './types';
 import { across, along, axisOf, crossing, type Axis } from './axis';
+import { EngineError } from '../messages';
 
 /** Folga, em polegadas, para a ponta digitada "estar" no cruzamento dos eixos. */
 export const DEFAULT_TOLERANCE = 0.5;
@@ -86,7 +87,7 @@ export function findConnections(
   const axes = walls.map(axisOf);
   const seen = new Set<string>();
   for (const a of axes) {
-    if (seen.has(a.id)) throw new RangeError(`parede ${a.id}: id duplicado`);
+    if (seen.has(a.id)) throw new EngineError('WALL_DUPLICATE_ID', { wallId: a.id });
     seen.add(a.id);
   }
 
@@ -102,9 +103,10 @@ export function findConnections(
     if (cur.kind !== 'free') {
       const other = conn.kind === 'free' ? '?' : conn.wallId;
       const prev = cur.wallId;
-      throw new RangeError(
-        `parede ${axes[i]!.id}: ponta ${end} ligada a duas paredes (${prev} e ${other}) — ` +
-          'três pontas no mesmo ponto ou canto e T no mesmo lugar',
+      throw new EngineError(
+        'WALL_END_TWO_JOINTS',
+        { wallId: axes[i]!.id, alsoWalls: [prev, other].filter((w) => w !== '?') },
+        { end, first: prev, second: other },
       );
     }
     out[i]![end] = conn;
@@ -137,9 +139,7 @@ export function findConnections(
         attach(j, hb as WallEnd, { kind: 'tee', wallId: a.id, at: x });
         out[i]!.tees.push({ wallId: b.id, at: x });
       } else if (ha === 'inside' && hb === 'inside') {
-        throw new RangeError(
-          `paredes ${a.id} e ${b.id} se cruzam em (${x.x}, ${x.y}) — divida uma delas no cruzamento`,
-        );
+        throw new EngineError('WALLS_CROSS', { wallId: a.id, alsoWalls: [b.id] }, { otherWallId: b.id, x: x.x, y: x.y });
       }
       // Demais combinações: os eixos se cruzam fora de uma das paredes; não há ligação.
     }
@@ -158,7 +158,7 @@ function checkParallel(a: Axis, b: Axis, tolerance: number): void {
   const b1 = Math.max(along(a, b.start), along(a, b.end));
   const overlap = Math.min(a1, b1) - Math.max(a0, b0);
   if (overlap > tolerance + EPS) {
-    throw new RangeError(`paredes ${a.id} e ${b.id} se sobrepõem em ${overlap}" — é a mesma parede duas vezes?`);
+    throw new EngineError('WALLS_OVERLAP', { wallId: a.id, alsoWalls: [b.id] }, { otherWallId: b.id, overlap });
   }
 }
 
@@ -167,9 +167,7 @@ function throughAt(a: Axis, aEnd: WallEnd, b: Axis, bEnd: WallEnd): boolean {
   const ra: EndRule | undefined = a.wall.ends?.[aEnd];
   const rb: EndRule | undefined = b.wall.ends?.[bEnd];
   if (ra !== undefined && rb !== undefined && ra === rb) {
-    throw new RangeError(
-      `paredes ${a.id} (${aEnd}) e ${b.id} (${bEnd}): as duas declaram ends "${ra}" no mesmo canto`,
-    );
+    throw new EngineError('CORNER_ENDS_CONFLICT', { wallId: a.id, alsoWalls: [b.id] }, { end: aEnd, otherWallId: b.id, otherEnd: bEnd, rule: ra });
   }
   if (ra !== undefined) return ra === 'through';
   if (rb !== undefined) return rb === 'butt';

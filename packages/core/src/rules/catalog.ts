@@ -20,6 +20,7 @@
  */
 
 import type { Config, DoorFrame, Opening, OpeningHeader, OpeningSpec, OpeningType } from '../types';
+import { EngineError } from '../messages';
 
 /** Folga do RO sobre o tamanho nominal, em polegadas: `[largura, altura]`. */
 export const DEFAULT_ROUGH_OFFSET: Readonly<Record<'window' | DoorFrame, readonly [number, number]>> = {
@@ -41,29 +42,29 @@ export const DEFAULT_ROUGH_OFFSET: Readonly<Record<'window' | DoorFrame, readonl
  * @throws Error      tag ou marca inexistente no catálogo; tipo, RO ou posição sem como resolver
  * @throws RangeError medida não positiva
  */
-export function resolveOpening(spec: OpeningSpec, config: Config, where = ''): Opening {
-  const at = `${where ? `${where}, ` : ''}abertura ${spec.id}`;
+export function resolveOpening(spec: OpeningSpec, config: Config, wallId?: string): Opening {
+  const at = { wallId, openingId: spec.id };
 
   const entry = spec.tag === undefined ? undefined : config.openingTypes?.[spec.tag];
   if (spec.tag !== undefined && entry === undefined) {
-    throw new Error(`${at}: tag "${spec.tag}" não está em config.openingTypes`);
+    throw new EngineError('OPENING_TAG_UNKNOWN', at, { tag: spec.tag });
   }
 
   const type: OpeningType | undefined = spec.type ?? entry?.kind;
-  if (type === undefined) throw new Error(`${at}: sem type nem tag no catálogo`);
+  if (type === undefined) throw new EngineError('OPENING_TYPE_MISSING', at);
 
   const frame: DoorFrame = entry?.frame ?? 'wood';
   const offsets = type === 'window' ? DEFAULT_ROUGH_OFFSET.window : DEFAULT_ROUGH_OFFSET[frame];
   const roughWidth = spec.roughWidth ?? entry?.roughWidth ?? (entry ? entry.width + offsets[0] : undefined);
   const roughHeight = spec.roughHeight ?? entry?.roughHeight ?? (entry ? entry.height + offsets[1] : undefined);
   if (roughWidth === undefined || roughHeight === undefined) {
-    throw new Error(`${at}: sem roughWidth/roughHeight e sem tag no catálogo`);
+    throw new EngineError('OPENING_SIZE_MISSING', at);
   }
-  positive(roughWidth, `${at}: roughWidth`);
-  positive(roughHeight, `${at}: roughHeight`);
+  positive(roughWidth, 'roughWidth', at);
+  positive(roughHeight, 'roughHeight', at);
 
   const offset = spec.offset ?? (spec.center === undefined ? undefined : spec.center - roughWidth / 2);
-  if (offset === undefined) throw new Error(`${at}: sem offset nem center`);
+  if (offset === undefined) throw new EngineError('OPENING_POSITION_MISSING', at);
 
   const opening: Opening = { id: spec.id, type, offset, roughWidth, roughHeight };
 
@@ -72,7 +73,7 @@ export function resolveOpening(spec: OpeningSpec, config: Config, where = ''): O
   if (header === undefined && spec.headerMark !== undefined) {
     const mark = config.headerSchedule?.[spec.headerMark];
     if (mark === undefined) {
-      throw new Error(`${at}: marca "${spec.headerMark}" não está em config.headerSchedule`);
+      throw new EngineError('HEADER_MARK_UNKNOWN', at, { mark: spec.headerMark });
     }
     header = { section: mark.section, plies: mark.plies, jackStuds: mark.jackStuds };
     kingStuds ??= mark.kingStuds;
@@ -83,7 +84,7 @@ export function resolveOpening(spec: OpeningSpec, config: Config, where = ''): O
 
   const headerHeight = spec.headerHeight ?? windowHeaderHeight(spec, entry?.sillHeight, roughHeight, type);
   if (headerHeight !== undefined) {
-    positive(headerHeight, `${at}: headerHeight`);
+    positive(headerHeight, 'headerHeight', at);
     opening.headerHeight = headerHeight;
   }
   return opening;
@@ -98,15 +99,15 @@ function windowHeaderHeight(
   if (type !== 'window') return undefined;
   const sill = spec.sillHeight ?? catalogSill;
   if (sill === undefined) return undefined;
-  if (!(sill >= 0)) throw new RangeError(`abertura ${spec.id}: sillHeight inválido (${sill})`);
+  if (!(sill >= 0)) throw new EngineError('VALUE_INVALID', { openingId: spec.id }, { field: 'sillHeight', value: sill });
   return sill + roughHeight;
 }
 
 /** Resolve todas as aberturas de uma parede. */
-export function resolveOpenings(specs: readonly OpeningSpec[], config: Config, where = ''): Opening[] {
-  return specs.map((s) => resolveOpening(s, config, where));
+export function resolveOpenings(specs: readonly OpeningSpec[], config: Config, wallId?: string): Opening[] {
+  return specs.map((s) => resolveOpening(s, config, wallId));
 }
 
-function positive(n: number, what: string): void {
-  if (!(n > 0) || !Number.isFinite(n)) throw new RangeError(`${what} deve ser > 0 (recebido ${n})`);
+function positive(n: number, field: string, at: { wallId: string | undefined; openingId: string }): void {
+  if (!(n > 0) || !Number.isFinite(n)) throw new EngineError('VALUE_NOT_POSITIVE', at, { field, value: n });
 }

@@ -25,12 +25,13 @@
  * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
  *   é chamada com `{ kings: false }`.
  *
- * Seção, plies e jacks do header vêm de `rules/openingHeader.ts` (projeto → tabela → padrão do config);
+ * Seção, plies e jacks do header vêm de `rules/openingHeader.ts` (projeto → tabela IRC → R602.7.4);
  * sem header possível lança `Error`. Geometria impossível lança `RangeError`.
  */
 
 import type { Config, FieldCut, Member, Opening, Wall, Warning } from '../types';
 import { sectionDepth } from '../types';
+import { EngineError, warning } from '../messages';
 import { FLAT_HEADER_MAX_GAP, resolveOpeningHeader, type ResolvedHeader } from './openingHeader';
 import { LENGTH_TOLERANCE } from './precuts';
 import { layoutStuds } from './studs';
@@ -77,7 +78,7 @@ export function openingStudCounts(opening: Opening): { kings: number; jacks: num
     ['jackStuds', jacks],
   ] as const) {
     if (!Number.isInteger(n) || n < 1) {
-      throw new RangeError(`abertura ${opening.id}: ${name} deve ser inteiro ≥ 1 (recebido ${n})`);
+      throw new EngineError('VALUE_NOT_COUNT', { openingId: opening.id }, { field: name, value: n });
     }
   }
   return { kings, jacks };
@@ -91,10 +92,10 @@ export function openingStudCounts(opening: Opening): { kings: number; jacks: num
 export function openingZone(opening: Opening, studThickness: number): OpeningZone {
   const { offset, roughWidth, roughHeight } = opening;
   if (![offset, roughWidth, roughHeight, studThickness].every(Number.isFinite)) {
-    throw new RangeError(`abertura ${opening.id}: medidas devem ser números finitos`);
+    throw new EngineError('OPENING_NOT_FINITE', { openingId: opening.id });
   }
   if (roughWidth <= 0 || roughHeight <= 0) {
-    throw new RangeError(`abertura ${opening.id}: RO deve ter largura e altura > 0`);
+    throw new EngineError('OPENING_SIZE_INVALID', { openingId: opening.id });
   }
   const { kings, jacks } = openingStudCounts(opening);
   const side = (kings + jacks) * studThickness;
@@ -146,10 +147,7 @@ export function framingForOpening(
   const zone = openingZone(opening, t);
 
   if (zone.start < -EPS || zone.end > wall.length + EPS) {
-    throw new RangeError(
-      `abertura ${opening.id}: zona [${zone.start}, ${zone.end}] (RO com kings e jacks) ` +
-        `sai da parede de ${wall.length}"`,
-    );
+    throw new EngineError('OPENING_OUT_OF_WALL', { openingId: opening.id }, { start: zone.start, end: zone.end, length: wall.length });
   }
 
   const topPlateY = wall.height - 2 * p;
@@ -157,23 +155,21 @@ export function framingForOpening(
   const headerBase = opening.headerHeight ?? config.headerHeight ?? topPlateY - headerDepth;
   const headerTop = headerBase + headerDepth;
   if (headerTop > topPlateY + EPS) {
-    throw new RangeError(
-      `abertura ${opening.id}: header ${headerSection} com base em ${headerBase}" vai até ` +
-        `${headerTop}", acima da top plate (${topPlateY}")`,
+    throw new EngineError(
+      'HEADER_ABOVE_TOP_PLATE',
+      { openingId: opening.id },
+      { section: String(headerSection), base: headerBase, top: headerTop, topPlate: topPlateY },
     );
   }
   if (header.flat && topPlateY - headerTop > FLAT_HEADER_MAX_GAP + EPS) {
-    throw new Error(
-      `parede ${wall.id}, abertura ${opening.id}: peça deitada (R602.7.4) com topo em ${headerTop}" fica a ` +
-        `${topPlateY - headerTop}" da top plate (${topPlateY}"), acima do limite de ${FLAT_HEADER_MAX_GAP}"; ` +
-        'informe o header da abertura',
+    throw new EngineError(
+      'FLAT_HEADER_GAP',
+      { wallId: wall.id, openingId: opening.id },
+      { top: headerTop, gap: topPlateY - headerTop, topPlate: topPlateY, max: FLAT_HEADER_MAX_GAP },
     );
   }
   if (headerBase <= p + EPS) {
-    throw new RangeError(
-      `abertura ${opening.id}: base do header em ${headerBase}" não deixa espaço para jack ` +
-        `sobre a bottom plate (topo em ${p}")`,
-    );
+    throw new EngineError('HEADER_NO_ROOM_FOR_JACK', { openingId: opening.id }, { base: headerBase, plateTop: p });
   }
 
   // Janela: sill logo abaixo da base do RO. Porta: RO desce até o subfloor, sem sill.
@@ -181,15 +177,12 @@ export function framingForOpening(
   const sillY = isDoor ? undefined : headerBase - roughHeight - p;
   const doubleOver = config.doubleSillOver;
   if (doubleOver !== undefined && (!Number.isFinite(doubleOver) || doubleOver <= 0)) {
-    throw new RangeError(`config.doubleSillOver inválido (${doubleOver}); esperado medida > 0`);
+    throw new EngineError('CONFIG_INVALID', {}, { field: 'config.doubleSillOver', value: doubleOver, expected: 'measure' });
   }
   const doubleSill = sillY !== undefined && doubleOver !== undefined && roughWidth > doubleOver + EPS;
   const sillBottom = sillY === undefined ? undefined : doubleSill ? sillY - p : sillY;
   if (sillBottom !== undefined && sillBottom < p - EPS) {
-    throw new RangeError(
-      `abertura ${opening.id}: base do RO em ${headerBase - roughHeight}" não deixa espaço para o sill` +
-        `${doubleSill ? ' duplo' : ''} sobre a bottom plate (topo em ${p}")`,
-    );
+    throw new EngineError('SILL_NO_ROOM', { openingId: opening.id }, { roBase: headerBase - roughHeight, double: doubleSill, plateTop: p });
   }
 
   const vertical = { section: wall.section, orientation: 'vertical' as const };
@@ -252,12 +245,7 @@ export function framingForOpening(
   if (isDoor) {
     fieldCuts.push({ role: 'bottomPlate', openingId: opening.id, x: offset, length: roughWidth });
     if (Math.abs(roughHeight - headerBase) >= LENGTH_TOLERANCE) {
-      warnings.push({
-        code: 'DOOR_RO_HEIGHT_MISMATCH',
-        message:
-          `abertura ${opening.id}: RO da porta com ${roughHeight}" de altura (medido do subfloor) ` +
-          `não bate com a base do header em ${headerBase}"`,
-      });
+      warnings.push(warning('DOOR_RO_HEIGHT_MISMATCH', { wallId: wall.id, openingId: opening.id }, { roughHeight, headerBase }));
     }
   }
 

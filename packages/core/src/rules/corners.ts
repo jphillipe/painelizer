@@ -33,6 +33,7 @@ import {
   type Warning,
 } from '../types';
 import type { PlateOptions } from './plates';
+import { EngineError, warning } from '../messages';
 import type { MergedZone } from './zones';
 
 const EPS = 1e-9;
@@ -104,7 +105,7 @@ export function cornerStuds(wall: Wall, config: Config): JointStud[] {
   if (joints.end?.kind === 'corner' && joints.end.through) out.push({ x: wall.length - t - width, flat });
   for (const s of out) {
     if (s.x < -EPS || s.x + width > wall.length + EPS) {
-      throw new RangeError(`parede ${wall.id}: stud de canto em x=${s.x} não cabe na plate de ${wall.length}"`);
+      throw new EngineError('CORNER_STUD_OFF_PLATE', { wallId: wall.id }, { x: s.x, length: wall.length });
     }
   }
   return out;
@@ -143,9 +144,10 @@ export function teeConflicts(
     const who = s.wallId ?? '?';
     for (const o of openings) {
       if (s.lo < o.offset + o.roughWidth - EPS && s.hi > o.offset + EPS) {
-        throw new RangeError(
-          `parede ${wall.id}, abertura ${o.id}: a parede ${who} encosta em T em x=${x} ` +
-            `(faixa ${s.lo}–${s.hi}), dentro do RO [${o.offset}, ${o.offset + o.roughWidth}]`,
+        throw new EngineError(
+          'TEE_IN_OPENING',
+          { wallId: wall.id, openingId: o.id, ...(s.wallId === undefined ? {} : { alsoWalls: [s.wallId] }) },
+          { teeWallId: who, x, lo: s.lo, hi: s.hi, from: o.offset, to: o.offset + o.roughWidth },
         );
       }
     }
@@ -153,13 +155,13 @@ export function teeConflicts(
     for (const z of zones) {
       if (s.lo < z.end - EPS && s.hi > z.start + EPS) {
         conflict = true;
-        warnings.push({
-          code: 'OPENING_AT_TEE',
-          message:
-            `parede ${wall.id}: a parede ${who} encosta em T em x=${x} (faixa ${s.lo}–${s.hi}), ` +
-            `na zona da(s) abertura(s) ${z.openingIds.join(', ')} [${z.start}, ${z.end}] — ` +
-            'kings/jacks e o ladder blocking disputam o lugar; afaste a abertura ou a parede',
-        });
+        warnings.push(
+          warning(
+            'OPENING_AT_TEE',
+            { wallId: wall.id, openingId: z.openingIds[0] },
+            { teeWallId: who, x, lo: s.lo, hi: s.hi, openingIds: [...z.openingIds], start: z.start, end: z.end },
+          ),
+        );
       }
     }
     if (!conflict) clear.push(s);
@@ -197,9 +199,7 @@ export function ladderBlocks(wall: Wall, strips: readonly TeeStrip[], verticals:
     const left = spans.filter((v) => v.hi <= s.lo + EPS).at(-1);
     const right = spans.find((v) => v.lo >= s.hi - EPS);
     if (left === undefined || right === undefined) {
-      throw new RangeError(
-        `parede ${wall.id}: faixa do T ${s.lo}–${s.hi} sem stud vizinho de um dos lados — não há onde apoiar o ladder`,
-      );
+      throw new EngineError('TEE_WITHOUT_STUD', { wallId: wall.id }, { lo: s.lo, hi: s.hi });
     }
     // Studs dentro da faixa (ou sobre as faces) dividem o bloco.
     const splitters = spans.filter((v) => v.lo < s.hi - EPS && v.hi > s.lo + EPS && v.lo > left.lo + EPS && v.lo < right.lo - EPS);
