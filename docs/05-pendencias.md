@@ -66,7 +66,8 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
   Se mudar, basta trocar o JSON e rodar `headers-data.test.ts`. — hipótese: IRC 2021 sem emenda local em R602.7 — S9.
 - [x] **P11 — Fire blocking.** — **Resposta (2026-10-01):** paredes de 8' e 9' não levam fire blocking horizontal
   só pela altura; quando a cavidade contínua passa de **~10'**, colocam conforme o código, além dos locais que o
-  projeto e o código exigirem. — Impacto: hipótese IRC confirmada; limite 120" — S10.
+  projeto e o código exigirem. — Impacto: hipótese IRC confirmada; limite 120" — S10. Na S31 o aviso virou peça
+  (`config.fireBlockAt`, fileiras de bloco; altura e forma na P50).
 
 ## Entrada de dados (Fase 4)
 - [x] **P12 — DXF disponível?** — **Resposta (2026-10-01):** na maioria das vezes chega só PDF; DWG/DXF às vezes.
@@ -313,6 +314,12 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   lados, ou ladder dos dois lados? A double top da parede atravessada leva um corte só? — hipótese: um corte da
   double top na faixa; com `config.tee = 'backer'` dois studs contínuos servem os dois lados; com `'ladder'`,
   blocos dos dois lados — S37.
+  **Em vigor desde a S31 (2026-11-04, confirmado pelo humano):** os dois T viram uma faixa só (união); com `ladder`,
+  **um** ladder na faixa — o bloco do modelo é deitado e ocupa a espessura inteira da parede (P22), então a mesma
+  fileira já apresenta bloco às duas faces; nas duas que encostam, a double top avança só `t_outra/2` (encontram-se
+  no eixo da atravessada; avançando `t_outra` as duas se sobreporiam no corte). Perguntas que ficam para a fábrica:
+  o ladder vai rente a uma face (aí seriam 2 blocos por altura, um por face)? Nas que encostam, meia espessura para
+  cada uma, ou uma atravessa a faixa inteira e a outra só encosta? — S31.
 - [ ] **P47 — Sheathing: chapa, avanços e linha de piso.** Chapa 4×8 (ou 4×9) vertical a partir da marca 0 do
   prédio; no canto a chapa da parede que atravessa avança sobre a ponta da que encosta; na divisão de piso a
   Matilda pediu 1–2' acima da emenda. Quanto avança no canto (`t` da outra parede?), a chapa vai presa ao painel
@@ -327,3 +334,12 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   painéis da mesma parede: stud duplo encostado (como hoje), stud recuado num lado, ou chapa avançada pregando no
   stud do vizinho? — hipótese: stud duplo na junta (S15) e chapa terminando no painel; lap só na double top
   (P23) — S38, S39.
+
+## Novas (abertas em 2026-11-04, S31 — escopo v1 que faltava)
+- [ ] **P50 — Altura e forma do fire blocking.** A P11 diz que a fábrica coloca o bloqueio quando a cavidade passa de
+  ~10'. Em que altura vai a fileira (meio da cavidade? altura fixa, ex. 8' ou 10' do subfloor? alinhada à emenda da
+  chapa?), é bloco deitado (1.5" de altura, espessura inteira) ou em pé, e o vão estreito entre o king e o stud
+  vizinho (2–3") também leva bloco? — hipótese: `config.fireBlockAt` = 120" sobre a cavidade `height − 3·plates`; o
+  menor número de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma no meio da cavidade até
+  241.5"); bloco deitado da seção da parede em todo vão ≥ 1.5" entre peças de altura inteira, fora das zonas de
+  abertura e do vão do ladder do T — S31 (a S36 revê junto com as fileiras por altura, P44).

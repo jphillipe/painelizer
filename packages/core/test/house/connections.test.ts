@@ -114,16 +114,38 @@ describe('findConnections — T e livre', () => {
     expect(r[1]!.start).toEqual({ kind: 'tee', wallId: 'W1', at: { x: 96, y: 0 } });
   });
 
-  it('duas paredes encostando no mesmo ponto por lados opostos (cruz) são dois tees', () => {
+  it('cruzamento em + (S31, P46): dois T de lados opostos viram um T de dois lados; as pontas ganham cross', () => {
     const r = findConnections([
       wall('W1', [0, 0], [192, 0]),
       wall('N', [96, 0], [96, 120], { section: '2x4' }),
       wall('S', [96, 0], [96, -120], { section: '2x4' }),
     ]);
+    expect(r[0]!.tees).toEqual([{ wallId: 'N', at: { x: 96, y: 0 }, sides: 2, otherWallId: 'S', width: 3.5 }]);
+    expect(r[1]!.start).toEqual({ kind: 'tee', wallId: 'W1', at: { x: 96, y: 0 }, cross: true });
+    expect(r[2]!.start).toEqual({ kind: 'tee', wallId: 'W1', at: { x: 96, y: 0 }, cross: true });
+  });
+
+  it('+ com faixas deslocadas ou de larguras diferentes: a faixa é a união', () => {
+    const r = findConnections([
+      wall('W1', [0, 0], [192, 0]),
+      wall('N', [96, 0], [96, 120], { section: '2x4' }),
+      wall('S', [98, 0], [98, -120], { section: '2x6' }),
+    ]);
+    // N: 94.25–97.75; S: 95.25–100.75 → 94.25–100.75, centro 97.5.
+    expect(r[0]!.tees).toEqual([{ wallId: 'N', at: { x: 97.5, y: 0 }, sides: 2, otherWallId: 'S', width: 6.5 }]);
+  });
+
+  it('T de lados opostos que não se sobrepõem continuam dois T, sem cross', () => {
+    const r = findConnections([
+      wall('W1', [0, 0], [192, 0]),
+      wall('N', [60, 0], [60, 120], { section: '2x4' }),
+      wall('S', [96, 0], [96, -120], { section: '2x4' }),
+    ]);
     expect(r[0]!.tees).toEqual([
-      { wallId: 'N', at: { x: 96, y: 0 } },
+      { wallId: 'N', at: { x: 60, y: 0 } },
       { wallId: 'S', at: { x: 96, y: 0 } },
     ]);
+    expect(r[1]!.start).toEqual({ kind: 'tee', wallId: 'W1', at: { x: 60, y: 0 } });
   });
 
   it('parede solta ou eixos que se cruzam fora das paredes: tudo livre', () => {

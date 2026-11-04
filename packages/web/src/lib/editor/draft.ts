@@ -28,6 +28,7 @@ import {
   type LumberSpecies,
   type OpeningType,
   type Point,
+  type PriceEntry,
   type TeeStyle,
   type WallSection,
 } from 'core';
@@ -165,6 +166,10 @@ export interface DraftConfig {
   stockLengths?: number[];
   openingTypes?: Record<string, DraftOpeningType>;
   headerSchedule?: Record<string, DraftHeaderEntry>;
+  /** Fire blocking acima desta cavidade (S31). */
+  fireBlockAt?: number;
+  /** Tabela de preços do orçamento (S31), como o schema a lê; o editor não a edita, só preserva. */
+  prices?: PriceEntry[];
   extra?: Extra;
 }
 
@@ -262,6 +267,8 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
     stockLengths: r.field(C.stockLengths, c['stockLengths'], `${path}.stockLengths`),
     openingTypes: r.record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom),
     headerSchedule: r.record(c['headerSchedule'], `${path}.headerSchedule`, headerEntryFrom),
+    fireBlockAt: r.field(C.fireBlockAt, c['fireBlockAt'], `${path}.fireBlockAt`),
+    prices: r.field(C.prices, c['prices'], `${path}.prices`),
     extra: rest(c, CONFIG_KEYS),
   });
 }
@@ -621,6 +628,8 @@ function configJson(c: DraftConfig): Record<string, unknown> {
     openingTypes: c.openingTypes === undefined ? undefined : mapValues(c.openingTypes, (t) => compact({ ...t })),
     headerSchedule:
       c.headerSchedule === undefined ? undefined : mapValues(c.headerSchedule, (h) => compact({ ...h, section: sectionJson(h.section) })),
+    fireBlockAt: c.fireBlockAt,
+    prices: c.prices?.map((p) => ({ ...p })),
     ...(c.extra ?? {}),
   });
 }

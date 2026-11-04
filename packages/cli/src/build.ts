@@ -5,6 +5,7 @@
  * Saídas:
  * - `cutlist.csv` — lista de corte de todos os painéis (uma seção por painel);
  * - `bom.csv` — lista de material consolidada;
+ * - `cost.csv` — orçamento: BOM × `config.prices` (S31; só quando o projeto tem preços);
  * - `panels.csv` — um painel por linha, com parede, pavimento, posição, dimensões, peças, peso e avisos (S15/S16);
  * - `plan.svg` — planta de painéis (só na casa em planta, S16);
  * - `panels/<id>.svg` — folha de fabricação de cada painel (S17): cabeçalho com `name`, `date` e `revision` do
@@ -21,6 +22,7 @@
  */
 
 import {
+  costOf,
   cutList,
   EngineError,
   frameWalls,
@@ -31,6 +33,7 @@ import {
   splitWallWithCandidates,
   wallBreakCandidates,
   type BomLine,
+  type Cost,
   type CutLine,
   type EngineNotice,
   type HouseWall,
@@ -39,7 +42,7 @@ import {
   type WallFrame,
   type Warning,
 } from 'core';
-import { bomCsv, cutListCsv, panelsCsv, projectBom } from './csv';
+import { bomCsv, costCsv, cutListCsv, panelsCsv, projectBom } from './csv';
 import type { Project } from './project';
 
 export interface OutputFile {
@@ -57,6 +60,8 @@ export interface BuildResult {
   bom: BomLine[];
   /** Lista de corte por painel, na ordem dos painéis (a mesma de `cutlist.csv`). */
   cutLists: { panelId: string; lines: CutLine[] }[];
+  /** Orçamento (a mesma conta de `cost.csv`), só quando o projeto tem `config.prices` (S31). */
+  cost?: Cost;
 }
 
 /**
@@ -100,7 +105,13 @@ export class BuildError extends Error {
  * checagem com debounce do editor paga a cada pausa; `buildProject` continua daqui para gerar os arquivos.
  * Inclui o que pode derrubar o `build` sem desenhar nada: nome de arquivo repetido e lista de material inválida.
  */
-export function panelizeProject(project: Project): { panels: Panel[]; problems: BuildProblem[]; bom: BomLine[]; walls: WallBreaks[] } {
+export function panelizeProject(project: Project): {
+  panels: Panel[];
+  problems: BuildProblem[];
+  bom: BomLine[];
+  cost?: Cost;
+  walls: WallBreaks[];
+} {
   const { panels, problems, walls } = panelize(project);
   const usedNames = new Map<string, string>();
   for (const panel of panels) {
@@ -118,14 +129,16 @@ export function panelizeProject(project: Project): { panels: Panel[]; problems: 
     usedNames.set(name, panel.id);
   }
   let bom: BomLine[] = [];
+  let cost: Cost | undefined;
   if (problems.length === 0) {
     try {
       bom = projectBom(panels, project.config.studLength, project.config.stockLengths);
+      if (project.config.prices !== undefined) cost = costOf(bom, project.config.prices);
     } catch (e) {
       problems.push(problemOf(e, 'bom'));
     }
   }
-  return { panels, problems, bom, walls };
+  return { panels, problems, bom, ...(cost === undefined ? {} : { cost }), walls };
 }
 
 function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]; walls: WallBreaks[] } {
@@ -223,7 +236,7 @@ function tidy(x: number): number {
 }
 
 export function buildProject(project: Project): BuildResult {
-  const { panels, problems, bom } = panelizeProject(project);
+  const { panels, problems, bom, cost } = panelizeProject(project);
   if (problems.length > 0) throw new BuildError(problems);
 
   const files: OutputFile[] = [];
@@ -243,13 +256,14 @@ export function buildProject(project: Project): BuildResult {
   files.unshift(
     { path: 'cutlist.csv', content: cutListCsv(panels) },
     { path: 'bom.csv', content: bomCsv(bom) },
+    ...(cost === undefined ? [] : [{ path: 'cost.csv', content: costCsv(cost) }]),
     { path: 'panels.csv', content: panelsCsv(panels) },
     ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
   );
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));
   const cutLists = panels.map((p) => ({ panelId: p.id, lines: cutList(p) }));
-  return { panels, files, warnings, bom, cutLists };
+  return { panels, files, warnings, bom, cutLists, ...(cost === undefined ? {} : { cost }) };
 }
 
 /** `W01-P1` → `W01-P1.svg`; qualquer caractere fora de [A-Za-z0-9._-] vira `_`. */

@@ -22,6 +22,8 @@
  *   `flat` ou em pé), blocos do ladder ou studs de encosto no T, laps e cortes da double top plate. Stud de
  *   layout que sobrepõe stud de canto ou de encosto sai, como com os extras. Faixa do T dentro de um RO é
  *   `RangeError`; na zona de abertura, aviso `OPENING_AT_TEE` e nenhuma peça de T.
+ * - Fire blocking (S31, `rules/blocking.ts`): cavidade acima de `config.fireBlockAt` (120") leva fileiras de
+ *   blocos entre as peças de altura inteira, fora das zonas de abertura e do trecho do ladder (P11, P50).
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
@@ -44,12 +46,14 @@ import { matchPrecut } from '../rules/precuts';
 import {
   backerStuds,
   cornerStuds,
+  ladderBays,
   ladderBlocks,
   plateOptionsFor,
   teeConflicts,
   teeStrips,
 } from '../rules/corners';
 import { panelWeight } from '../rules/weight';
+import { fireBlocks } from '../rules/blocking';
 import { validatePanel } from './validate';
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
@@ -255,7 +259,11 @@ export function framePanel(
   warnings.push(...teeWarnings);
 
   const verticals = [...studs, ...extras, ...jointStuds, ...kings];
-  const blocks = ladderBlocks(wall, strips, verticals, config);
+  const ladder = ladderBlocks(wall, strips, verticals, config);
+  // Fire blocking (S31, P11/P50): entre as peças de altura inteira, fora das zonas e do trecho do ladder.
+  const ladderSkip = (config.tee ?? 'ladder') === 'ladder' ? ladderBays(wall, strips, verticals) : [];
+  const zoneSkip = plan.zones.map((z) => ({ lo: z.start, hi: z.end }));
+  const blocks = [...ladder, ...fireBlocks(wall, verticals, [...zoneSkip, ...ladderSkip], config)];
 
   // Aberturas como ficam no painel (S17): o topo do RO é a base do header montado.
   const panelOpenings: PanelOpening[] = openings.map((o, i) => {

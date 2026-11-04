@@ -13,17 +13,22 @@
  *   topo do bloco não passar da base da top plate (3 blocos em 8', 4 em 9' — hipótese P22). Stud de altura
  *   inteira que cai dentro da faixa fica e divide o bloco; pedaço menor que 1.5" sai. `'backer'`: dois studs
  *   de altura inteira colados às faces da faixa (x = lo − t e x = hi).
+ * - **Cruzamento em +** (S31, hipótese P46): os dois T de lados opostos chegam fundidos numa faixa só (`sides: 2`,
+ *   `house/connections.ts`): um corte da double top, um ladder (o bloco deitado ocupa a espessura inteira, então
+ *   a mesma fileira serve os dois lados) ou um par de backers. Faixas distintas no mesmo vão entre studs dividem o
+ *   mesmo ladder: o vão leva uma fileira só.
  * - Faixa do T dentro do RO de uma abertura é erro (não há onde pregar a parede); na zona (kings/jacks) gera
  *   o aviso `OPENING_AT_TEE` e **nenhuma** peça de T — kings/jacks e blocos disputam o lugar.
  * - **Laps da double top plate** (R602.3.2): no canto, a double top de quem **encosta** avança `t_outra` sobre
  *   a top plate da outra (x negativo no início) e a de quem **atravessa** recua `t_outra`; no T, a de quem
- *   encosta avança `t_outra` e a da atravessada é cortada na faixa. Fica como `PlateOptions` para
+ *   encosta avança `t_outra` e a da atravessada é cortada na faixa; no +, cada uma das que encostam avança
+ *   `t_outra/2` (P46). Fica como `PlateOptions` para
  *   `layoutPlates`.
  */
 
 import type { Config } from '../config';
 import { EPS } from '../eps';
-import { overlaps, span } from '../geom';
+import { overlaps, span, type Span } from '../geom';
 import type { Opening } from '../opening';
 import type { FlatMember, Member } from '../panel';
 import { sectionDepth } from '../sections';
@@ -31,12 +36,10 @@ import type { TeeJoint, Wall, WallJoints } from '../wall';
 import type { PlateOptions } from './plates';
 import { EngineError, warning, type Warning } from '../messages';
 import type { MergedZone } from './zones';
+import { blocksBetween } from './blocking';
 
 /** Espaçamento vertical entre centros dos blocos do ladder (hipótese P22). */
 export const LADDER_BLOCK_SPACING = 24;
-
-/** Pedaço de bloco mais curto que isto não é cortado. */
-export const MIN_BLOCK_LENGTH = 1.5;
 
 /** Stud de canto ou de encosto a acrescentar: borda esquerda e se vai deitado. */
 export interface JointStud {
@@ -49,6 +52,8 @@ export interface TeeStrip {
   lo: number;
   hi: number;
   wallId?: string;
+  /** No cruzamento em + (S31), a parede do outro lado. */
+  otherWallId?: string;
 }
 
 export function teeStrips(joints: WallJoints | undefined): TeeStrip[] {
@@ -56,6 +61,7 @@ export function teeStrips(joints: WallJoints | undefined): TeeStrip[] {
     lo: t.x - t.width / 2,
     hi: t.x + t.width / 2,
     ...(t.wallId === undefined ? {} : { wallId: t.wallId }),
+    ...(t.otherWallId === undefined ? {} : { otherWallId: t.otherWallId }),
   }));
 }
 
@@ -72,7 +78,9 @@ export function plateOptionsFor(joints: WallJoints | undefined): PlateOptions {
       continue;
     }
     // Quem atravessa o canto recua; quem encosta (canto ou T) avança sobre a top plate da outra.
-    opts[end] = j.kind === 'corner' && j.through ? { recess: j.otherThickness } : { extend: j.otherThickness };
+    // No cruzamento em + (S31, P46) as duas que encostam avançam meia espessura e se encontram no eixo.
+    if (j.kind === 'corner' && j.through) opts[end] = { recess: j.otherThickness };
+    else opts[end] = { extend: j.kind === 'tee' && j.cross === true ? j.otherThickness / 2 : j.otherThickness };
   }
   const cuts = [
     ...(joints.tees ?? []).map((t) => ({ x: t.x - t.width / 2, width: t.width })),
@@ -140,7 +148,7 @@ export function teeConflicts(
       if (overlaps(s.lo, s.hi, o.offset, o.offset + o.roughWidth)) {
         throw new EngineError(
           'TEE_IN_OPENING',
-          { wallId: wall.id, openingId: o.id, ...(s.wallId === undefined ? {} : { alsoWalls: [s.wallId] }) },
+          { wallId: wall.id, openingId: o.id, ...(s.wallId === undefined ? {} : { alsoWalls: [s.wallId, ...(s.otherWallId === undefined ? [] : [s.otherWallId])] }) },
           { teeWallId: who, x, lo: s.lo, hi: s.hi, from: o.offset, to: o.offset + o.roughWidth },
         );
       }
@@ -175,7 +183,27 @@ export function ladderBlockCenters(height: number, plateThickness: number, block
 }
 
 /**
- * Blocos do ladder blocking (`config.tee: 'ladder'`) de uma parede, para as faixas de T sem conflito.
+ * Trecho de cada faixa de T entre o stud vizinho à esquerda e o vizinho à direita (`[face direita, face
+ * esquerda]`): onde vão os blocos do ladder. O fire blocking (`rules/blocking.ts`) não entra nele.
+ *
+ * @param verticals peças de altura inteira já definidas
+ * @throws EngineError `TEE_WITHOUT_STUD` faixa sem stud vizinho de um dos lados
+ */
+export function ladderBays(wall: Pick<Wall, 'id'>, strips: readonly TeeStrip[], verticals: readonly Member[]): Span[] {
+  const spans = verticals.map(span);
+  return strips.map((s) => {
+    const left = spans.filter((v) => v.hi <= s.lo + EPS).sort((a, b) => a.hi - b.hi).at(-1);
+    const right = spans.filter((v) => v.lo >= s.hi - EPS).sort((a, b) => a.lo - b.lo)[0];
+    if (left === undefined || right === undefined) {
+      throw new EngineError('TEE_WITHOUT_STUD', { wallId: wall.id }, { lo: s.lo, hi: s.hi });
+    }
+    return { lo: left.hi, hi: right.lo };
+  });
+}
+
+/**
+ * Blocos do ladder blocking (`config.tee: 'ladder'`) de uma parede, para as faixas de T sem conflito: uma fileira
+ * de `blocksBetween` (`rules/blocking.ts`) em cada altura de `ladderBlockCenters`, no trecho de `ladderBays`.
  *
  * @param verticals peças de altura inteira já definidas (studs de layout, extras, kings, studs de canto):
  *                  delimitam os blocos e, dentro da faixa, os dividem
@@ -184,37 +212,10 @@ export function ladderBlocks(wall: Wall, strips: readonly TeeStrip[], verticals:
   if ((config.tee ?? 'ladder') !== 'ladder' || strips.length === 0) return [];
   const t = config.studThickness;
   const centers = ladderBlockCenters(wall.height, config.plateThickness, t);
-  const spans = verticals.map(span).sort((a, b) => a.lo - b.lo);
-
-  const out: FlatMember[] = [];
-  for (const s of strips) {
-    const left = spans.filter((v) => v.hi <= s.lo + EPS).at(-1);
-    const right = spans.find((v) => v.lo >= s.hi - EPS);
-    if (left === undefined || right === undefined) {
-      throw new EngineError('TEE_WITHOUT_STUD', { wallId: wall.id }, { lo: s.lo, hi: s.hi });
-    }
-    // Studs dentro da faixa (ou sobre as faces) dividem o bloco.
-    const splitters = spans.filter((v) => overlaps(v.lo, v.hi, s.lo, s.hi) && v.lo > left.lo + EPS && v.lo < right.lo - EPS);
-    let cursor = left.hi;
-    const gaps: { x: number; length: number }[] = [];
-    for (const v of splitters) {
-      if (v.lo - cursor >= MIN_BLOCK_LENGTH - EPS) gaps.push({ x: cursor, length: v.lo - cursor });
-      cursor = Math.max(cursor, v.hi);
-    }
-    if (right.lo - cursor >= MIN_BLOCK_LENGTH - EPS) gaps.push({ x: cursor, length: right.lo - cursor });
-
-    for (const c of centers) {
-      for (const g of gaps) {
-        out.push({
-          role: 'block',
-          section: wall.section,
-          length: g.length,
-          x: g.x,
-          y: c - t / 2,
-          orientation: 'horizontal',
-        });
-      }
-    }
-  }
-  return out;
+  const bays = ladderBays(wall, strips, verticals).filter(
+    (b, i, all) => all.findIndex((o) => Math.abs(o.lo - b.lo) < EPS && Math.abs(o.hi - b.hi) < EPS) === i,
+  );
+  return bays.flatMap((bay) =>
+    centers.flatMap((c) => blocksBetween(verticals, { y: c - t / 2, section: wall.section, from: bay.lo, to: bay.hi })),
+  );
 }

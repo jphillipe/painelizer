@@ -15,6 +15,7 @@ import {
   formatInches,
   piecesOf,
   type BomLine,
+  type Cost,
   type Panel,
 } from 'core';
 
@@ -71,6 +72,40 @@ export function bomCsv(lines: readonly BomLine[]): string {
       l.wastePercent,
     ]);
   }
+  return toCsv(rows);
+}
+
+export const COST_HEADER = [
+  'section',
+  'stock_type',
+  'stock_length_in',
+  'stock_length',
+  'qty',
+  'unit_price',
+  'cost',
+  'price_source',
+] as const;
+
+/**
+ * Orçamento (S31): as linhas da BOM com preço unitário, custo e de onde veio o preço (`each` = por peça do
+ * comprimento, `perFoot` = por pé linear, `none` = sem preço na tabela, células vazias e fora do total). A última
+ * linha é `TOTAL`, com a soma na coluna `cost` e, em `price_source`, quantas linhas ficaram sem preço.
+ */
+export function costCsv(cost: Cost): string {
+  const rows: (string | number)[][] = [[...COST_HEADER]];
+  for (const l of cost.lines) {
+    rows.push([
+      l.section,
+      l.kind,
+      l.stockLength,
+      l.kind === 'commercial' ? formatFeetInches(l.stockLength) : formatInches(l.stockLength),
+      l.qty,
+      l.unitPrice === undefined ? '' : l.unitPrice.toFixed(2),
+      l.cost === undefined ? '' : l.cost.toFixed(2),
+      l.source ?? 'none',
+    ]);
+  }
+  rows.push(['TOTAL', '', '', '', '', '', cost.total.toFixed(2), `${cost.unpriced} unpriced`]);
   return toCsv(rows);
 }
 

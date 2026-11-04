@@ -82,6 +82,11 @@ export type EndJoint =
       kind: 'tee';
       otherThickness: number;
       wallId?: string;
+      /**
+       * Cruzamento em + (S31, hipótese P46): outra parede encosta no mesmo ponto pelo lado oposto. A double top
+       * avança só `otherThickness/2` (as duas se encontram no eixo da atravessada).
+       */
+      cross?: boolean;
     }
   | {
       /**
@@ -99,9 +104,16 @@ export type EndJoint =
 export interface TeeJoint {
   /** x do eixo da parede que encosta. */
   x: number;
-  /** Espessura real da parede que encosta. */
+  /** Espessura real da parede que encosta (no +, a largura da faixa unida). */
   width: number;
   wallId?: string;
+  /**
+   * Cruzamento em + (S31, hipótese P46): duas paredes encostam na mesma faixa, uma de cada lado — um corte da double
+   * top, um ladder (bloco deitado na espessura inteira, P22) ou um par de backers servindo os dois lados.
+   */
+  sides?: 2;
+  /** No +, a parede do outro lado. */
+  otherWallId?: string;
 }
 
 export interface WallJoints {

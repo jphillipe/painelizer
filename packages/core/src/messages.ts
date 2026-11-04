@@ -21,7 +21,6 @@ export const WARNING_CODES = [
   'OPENING_NEAR_CORNER',
   'STUDS_OVERLAP',
   'STUD_HEIGHT_ABOVE_LIMIT',
-  'FIRE_BLOCKING_REQUIRED',
   'PANEL_OVERWEIGHT',
 ] as const;
 export type WarningCode = (typeof WARNING_CODES)[number];
@@ -79,6 +78,7 @@ export const ENGINE_ERROR_CODES = [
   'PRECUTS_EMPTY',
   'STOCK_EMPTY',
   'STOCK_INVALID',
+  'PRICE_INVALID',
   'PIECE_OVER_STOCK',
   // números genéricos (campo + valor)
   'VALUE_NOT_POSITIVE',
@@ -205,8 +205,6 @@ const WARNING_PT: Record<WarningCode, Template> = {
       { wallId: w.wallId },
       `stud de ${inch(p.studLength)} passa do máximo de ${inch(p.limit)} para parede ${p.bearing ? 'portante' : 'não portante'} ${p.section} (Tabela R602.3(5)) — exige projeto estrutural`,
     ),
-  FIRE_BLOCKING_REQUIRED: (p, w) =>
-    at({ wallId: w.wallId }, `cavidade contínua de ${inch(p.cavity)} passa de ${inch(p.limit)} — exige fire blocking horizontal (R302.11), que o painel ainda não desenha`),
   PANEL_OVERWEIGHT: (p) =>
     `painel ${p.panelId}: peso estimado de ${p.weight} lb passa do máximo de ${p.max} lb (config.panel.maxWeight) e não há quebra que resolva — confira com a fábrica`,
 };
@@ -314,6 +312,8 @@ const ERROR_PT: Record<EngineErrorCode, Template> = {
   PRECUTS_EMPTY: () => 'config.studLength: lista de pré-cortes vazia',
   STOCK_EMPTY: (p) => `${p.scope}: lista de comprimentos comerciais vazia`,
   STOCK_INVALID: (p) => `${p.scope}: comprimento comercial inválido (${p.value})`,
+  PRICE_INVALID: (p) =>
+    `config.prices[${p.index}] (${p.section}): ${p.reason === 'duplicate' ? 'preço repetido para a mesma seção e comprimento' : p.reason === 'length' ? `comprimento inválido (${p.value})` : `preço inválido (${p.value}); esperado número ≥ 0`}`,
   PIECE_OVER_STOCK: (p) => `bom: peça de ${inch(p.length)} não cabe em nenhum comprimento comercial (máx. ${inch(p.max)})`,
 
   VALUE_NOT_POSITIVE: (p, w) => at(w, `${p.field} deve ser > 0 (recebido ${p.value})`),

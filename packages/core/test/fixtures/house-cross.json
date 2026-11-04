@@ -1,0 +1,140 @@
+{
+  "$comment": "S31 (2026-11-04, confirmado pelo humano; hipótese P46): cruzamento em + — corredor W1 2x4 interno não portante de (0,0) a (192,0), livre nas pontas; W2 2x4 de (72,−120) a (72,0) e W3 2x4 de (72,0) a (72,120) encostam em T em W1 no mesmo ponto, por lados opostos. Antes da S31 o motor recusava W1 (\"layoutPlates: cuts sobrepõe\"). Agora `findConnections` funde os dois T num só com `sides: 2` (faixa 70.25–73.75, a união das duas) e marca `cross` nas pontas de W2 e W3. W1: 13 studs de layout (0, 15.25 … 175.25 e 190.5), double top cortada uma vez na faixa (70.25\" em x=0 e 118.25\" em x=73.75), um ladder só — 3 blocos 2x4 de 14.5\" do stud 63.25 (face 64.75) ao 79.25, y = 23.25, 47.25, 71.25 (o bloco deitado ocupa a espessura inteira da parede e serve os dois lados, P22/P46) = 20 peças. W2 e W3: plate parando na face de W1 (±1.75) → 118.25\", studs 0, 15.25 … 111.25 e 116.75 (9), double top avançando só t_W1/2 = 1.75 (as duas se encontram no eixo de W1) → 120\" (W2 em x=0; W3 em x=−1.75) = 12 peças cada. `expectedMembers` compara (role, section, length, x, y) sem ordem.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5
+  },
+  "house": {
+    "walls": [
+      { "id": "W1", "start": { "x": 0, "y": 0 }, "end": { "x": 192, "y": 0 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] },
+      { "id": "W2", "start": { "x": 72, "y": -120 }, "end": { "x": 72, "y": 0 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] },
+      { "id": "W3", "start": { "x": 72, "y": 0 }, "end": { "x": 72, "y": 120 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+    ]
+  },
+  "expected": {
+    "frames": [
+      {
+        "wallId": "W1",
+        "plateStart": { "x": 0, "y": 0 },
+        "plateEnd": { "x": 192, "y": 0 },
+        "length": 192,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "free" },
+          "end": { "kind": "free" },
+          "tees": [{ "x": 72, "wallId": "W2", "width": 3.5, "sides": 2, "otherWallId": "W3" }]
+        },
+        "openingOffsets": {}
+      },
+      {
+        "wallId": "W2",
+        "plateStart": { "x": 72, "y": -120 },
+        "plateEnd": { "x": 72, "y": -1.75 },
+        "length": 118.25,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "free" },
+          "end": { "kind": "tee", "wallId": "W1", "at": { "x": 72, "y": 0 }, "cross": true },
+          "tees": []
+        },
+        "openingOffsets": {}
+      },
+      {
+        "wallId": "W3",
+        "plateStart": { "x": 72, "y": 1.75 },
+        "plateEnd": { "x": 72, "y": 120 },
+        "length": 118.25,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "tee", "wallId": "W1", "at": { "x": 72, "y": 0 }, "cross": true },
+          "end": { "kind": "free" },
+          "tees": []
+        },
+        "openingOffsets": {}
+      }
+    ],
+    "panelIds": ["1-W1-P1", "1-W2-P1", "1-W3-P1"],
+    "panels": {
+      "1-W1-P1": {
+        "wallId": "W1",
+        "level": 1,
+        "plan": { "start": { "x": 0, "y": 0 }, "end": { "x": 192, "y": 0 } },
+        "members": 20,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 127.25, 143.25, 159.25, 175.25, 190.5],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x4", "length": 192, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x4", "length": 192, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 70.25, "x": 0, "y": 95.625 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 118.25, "x": 73.75, "y": 95.625 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 127.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 143.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 159.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 175.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 190.5, "y": 1.5 },
+          { "role": "block", "section": "2x4", "length": 14.5, "x": 64.75, "y": 23.25 },
+          { "role": "block", "section": "2x4", "length": 14.5, "x": 64.75, "y": 47.25 },
+          { "role": "block", "section": "2x4", "length": 14.5, "x": 64.75, "y": 71.25 }
+        ]
+      },
+      "1-W2-P1": {
+        "wallId": "W2",
+        "level": 1,
+        "plan": { "start": { "x": 72, "y": -120 }, "end": { "x": 72, "y": -1.75 } },
+        "members": 12,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 116.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x4", "length": 118.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x4", "length": 118.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 120, "x": 0, "y": 95.625 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 116.75, "y": 1.5 }
+        ]
+      },
+      "1-W3-P1": {
+        "wallId": "W3",
+        "level": 1,
+        "plan": { "start": { "x": 72, "y": 1.75 }, "end": { "x": 72, "y": 120 } },
+        "members": 12,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 116.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x4", "length": 118.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x4", "length": 118.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 120, "x": -1.75, "y": 95.625 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 116.75, "y": 1.5 }
+        ]
+      }
+    }
+  }
+}

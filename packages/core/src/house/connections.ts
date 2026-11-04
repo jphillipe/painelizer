@@ -11,12 +11,16 @@
  * - Paredes paralelas cujos corpos se sobrepõem (eixos a menos de `(t_a + t_b)/2` e trechos que se
  *   sobrepõem) são erro: é a mesma parede escrita duas vezes. Colineares ponta a ponta são duas paredes livres.
  * - Uma ponta com duas ligações (três pontas num ponto, canto e T no mesmo lugar) é erro.
+ * - **Cruzamento em +** (S31, hipótese P46): dois T na mesma parede, chegando por lados opostos com faixas que se
+ *   sobrepõem (do mesmo lado seriam corpos sobrepostos, `WALLS_OVERLAP`), viram um T só com `sides: 2`, faixa =
+ *   união das duas (`at` no centro, `width`), e as duas pontas que encostam ganham `cross: true`. Uma parede que
+ *   atravessa outra pelo interior das duas continua `WALLS_CROSS`: o + exige partir uma delas no cruzamento.
  * - No canto, quem atravessa: `ends` declarado em qualquer das duas (as duas iguais é erro) > a mais longa
  *   (entre os pontos) > a primeira do arquivo.
  */
 
 import type { EndRule, HouseWall, Point, WallEnd } from './types';
-import { across, along, axisOf, crossing, type Axis } from './axis';
+import { across, along, axisOf, crossing, pointAt, type Axis } from './axis';
 import { EngineError } from '../messages';
 import { EPS } from '../eps';
 
@@ -40,13 +44,21 @@ export type Connection =
       /** Parede em cujo interior esta ponta encosta. */
       wallId: string;
       at: Point;
+      /** Outra parede encosta no mesmo ponto pelo lado oposto (cruzamento em +, S31). */
+      cross?: true;
     };
 
 /** Parede que encosta em T no interior desta. */
 export interface TeeOn {
   wallId: string;
-  /** Cruzamento dos eixos, em planta. */
+  /** Cruzamento dos eixos, em planta (no + , o centro da faixa unida). */
   at: Point;
+  /** Cruzamento em + (S31, P46): duas paredes encostam aqui, uma de cada lado. */
+  sides?: 2;
+  /** No +, a parede do outro lado. */
+  otherWallId?: string;
+  /** No +, largura da faixa unida (sem o +, é a espessura de `wallId`). */
+  width?: number;
 }
 
 export interface WallConnections {
@@ -144,7 +156,60 @@ export function findConnections(
       // Demais combinações: os eixos se cruzam fora de uma das paredes; não há ligação.
     }
   }
+  const byId = new Map(axes.map((a, i) => [a.id, i]));
+  for (const [i, c] of out.entries()) c.tees = mergeCrossTees(axes[i]!, c.tees, axes, byId, out);
   return out;
+}
+
+/**
+ * Funde os T de lados opostos cujas faixas se sobrepõem num T de dois lados (S31, P46) e marca `cross` nas pontas
+ * que encostam. Ordem: a do arquivo, com o T fundido no lugar do primeiro.
+ */
+function mergeCrossTees(
+  a: Axis,
+  tees: TeeOn[],
+  axes: readonly Axis[],
+  byId: ReadonlyMap<string, number>,
+  out: WallConnections[],
+): TeeOn[] {
+  if (tees.length < 2) return tees;
+  const stripOf = (t: TeeOn): { lo: number; hi: number } => {
+    const s = along(a, t.at);
+    const half = axes[byId.get(t.wallId)!]!.thickness / 2;
+    return { lo: s - half, hi: s + half };
+  };
+  const merged: TeeOn[] = [];
+  const used = new Set<number>();
+  for (let i = 0; i < tees.length; i++) {
+    if (used.has(i)) continue;
+    const ti = tees[i]!;
+    const si = stripOf(ti);
+    const j = tees.findIndex((tj, k) => k > i && !used.has(k) && overlapsStrip(si, stripOf(tj)));
+    if (j < 0) {
+      merged.push(ti);
+      continue;
+    }
+    used.add(j);
+    const tj = tees[j]!;
+    const sj = stripOf(tj);
+    const lo = Math.min(si.lo, sj.lo);
+    const hi = Math.max(si.hi, sj.hi);
+    merged.push({ wallId: ti.wallId, at: pointAt(a, (lo + hi) / 2), sides: 2, otherWallId: tj.wallId, width: hi - lo });
+    for (const w of [ti.wallId, tj.wallId]) markCross(out[byId.get(w)!]!, a.id);
+  }
+  return merged;
+}
+
+function overlapsStrip(p: { lo: number; hi: number }, q: { lo: number; hi: number }): boolean {
+  return p.lo < q.hi - EPS && p.hi > q.lo + EPS;
+}
+
+/** Marca `cross` na ponta desta parede que encosta em T em `throughId`. */
+function markCross(c: WallConnections, throughId: string): void {
+  for (const end of ['start', 'end'] as const) {
+    const e = c[end];
+    if (e.kind === 'tee' && e.wallId === throughId) c[end] = { ...e, cross: true };
+  }
 }
 
 /** Paredes paralelas: erro se os corpos se sobrepõem. Colineares que só se encostam ponta a ponta são

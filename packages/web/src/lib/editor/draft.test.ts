@@ -37,6 +37,23 @@ describe('ida e volta pelo parser do CLI', () => {
     });
   }
 
+  it('S31: fireBlockAt e prices passam pelo draft e voltam iguais', () => {
+    const raw = JSON.parse(EXAMPLES[0]!.text) as { config: Record<string, unknown> };
+    raw.config['fireBlockAt'] = "10'";
+    raw.config['prices'] = [
+      { section: '2x6', length: '92 5/8"', price: 5.1 },
+      { section: { material: 'LVL', width: 1.75, depth: 9.25 }, perFoot: 9.5 },
+    ];
+    const text = JSON.stringify(raw);
+    const draft = load(text);
+    expect(draft.config.fireBlockAt).toBe(120);
+    expect(draft.config.prices).toEqual([
+      { section: '2x6', length: 92.625, price: 5.1 },
+      { section: 'LVL 1.75x9.25', perFoot: 9.5 },
+    ]);
+    expect(parseProject(textFromDraft(draft), 'p')).toEqual(parseProject(text, 'p'));
+  });
+
   it('leitura real do Ringgold (toProject do extract) abre sem problems e volta igual', () => {
     const project = toProject(ringgoldOutput, { wallHeight: `9'-1 1/8"`, floorsSupported: 2, building: { groundSnowLoad: 30, buildingWidth: `29'` } });
     const text = JSON.stringify(project, null, 2);

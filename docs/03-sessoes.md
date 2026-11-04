@@ -1279,11 +1279,36 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   W02 (18′, plate 17′-7 1/2", motor sem issue). Não feito (fora do item): seleção por caixa e marcar revisão em lote.
   Achado anterior à S30 (reproduzido no HEAD `044f85f`): `/app?new=1` e logo depois abrir um exemplo derruba o editor
   com "Maximum update depth exceeded" (Tabs do Radix desmontando enquanto o `router.replace` termina).
-- [ ] **S31 — Motor: o que falta do escopo v1 (regra de framing: submeter; P novas).** (a) Blocking horizontal como
+- [x] **S31 — Motor: o que falta do escopo v1 (regra de framing: submeter; P novas).** (a) Blocking horizontal como
   `role: 'block'` entre studs quando `height > config.fireBlockAt` (default 120", P11) — hoje só avisa; (b)
   cruzamento em + (hipótese a registrar: ladder único na faixa e cortes da double top fundidos; hoje `layoutPlates`
   lança); (c) orçamento = BOM × `config.prices` opcional (seção × comprimento → preço) com `cost.csv` e coluna na aba
   Materials; (d) XLSX fica fora até a fábrica pedir. Fixtures novos confirmados antes; `pnpm hipoteses` depois.
+  Feita em 2026-11-04 (sessão encadeada; abordagem e valores dos fixtures confirmados pelo humano; commit, sem push).
+  **(a) Fire blocking** (`rules/blocking.ts`, P11 + P50 nova): `config.fireBlockAt` (default 120") sobre a cavidade
+  `height − 3·plates` (como o aviso de antes, não `height`); o menor nº de fileiras que deixa cada trecho ≤ limite,
+  igualmente espaçadas (uma no meio da cavidade até 241.5"); `blocksBetween` (fileira genérica entre verticais
+  vizinhas, pulando faixas de `skip` e vãos < 1.5") — o `ladderBlocks` passou a usá-la, com a mesma saída, e é a que
+  a S36 vai estender; blocos `blocking: 'fire'` (campo novo em `FlatMember`) entre as peças de altura inteira, fora das
+  zonas de abertura e do vão do ladder (`ladderBays`); `whyNotBreak` ignora bloco de fogo (cada painel gera a sua
+  fileira). O aviso `FIRE_BLOCKING_REQUIRED` saiu (core, frases do web): 12 avisos. **(b) +** (P46, em vigor):
+  `findConnections` funde T de lados opostos com faixas sobrepostas num `TeeOn`/`TeeJoint` com `sides: 2`,
+  `otherWallId` e faixa = união; as pontas que encostam ganham `cross` e a double top delas avança `t_outra/2`; um
+  corte só, um ladder só (bloco deitado na espessura inteira serve os dois lados) ou um par de backers; faixas
+  distintas no mesmo vão dividem um ladder; `WALLS_CROSS` (parede contínua atravessando outra) continua erro. A
+  divergência entre o "ladder único" deste item e o "blocos dos dois lados" da P46 foi resolvida assim e virou
+  pergunta na P46. **(c) Orçamento**: `config.prices` = `[{ section, length, price } | { section, perFoot }]` (schema
+  do cli; repetição é erro), `output/cost.ts` (`costOf`: por peça do comprimento, senão por pé, senão sem preço e fora
+  do total; centavos), `cost.csv` logo depois do `bom.csv` só com preços (linha `TOTAL` com as sem preço), código
+  `PRICE_INVALID`; web: `GenerateResult.cost`, colunas "Unit price"/"Cost", subtotal por seção e total na aba
+  Materials, badge de linhas sem preço; o editor preserva `prices` e `fireBlockAt` (não os edita). **Fixtures
+  novos**: `wall-144-fireblock` (29 peças, 8 blocos em y = 71.0625) e `house-cross` (W1 20 peças, W2/W3 12, double top
+  de 120"). **Fixtures e snapshots existentes sem um byte mudado**; testes ajustados: `validate.test.ts` (o aviso
+  virou peça), `messages.test.ts` (12 avisos), `connections.test.ts` (o caso "cruz são dois T" virou o +), `schema`
+  do cli (14 fixtures) e `perf.test.ts` do web (a casa sintética tem divisórias em todas as colunas, com +). Verde
+  na raiz: `pnpm check` duas vezes (core 677, cli 157, extract 210 + 1 pulado, web 431) e `pnpm --filter web build`.
+  Não feito (fora do item): XLSX; editar preços e `fireBlockAt` no dialog de configurações; rótulo do bloco de fogo
+  na folha (a S36 traz rótulo e cota de fileira).
 - [ ] **S32 — Time e contas (web + supabase, SRF).** `teams`/`team_members` com papéis admin/editor e RLS por time
   (hoje `using (true)`), `updated_by`; convite por e-mail por um admin (service role isolada numa action); reset e
   troca de senha, `/app/account`; lixeira (`deleted_at`) e `project_revisions` (snapshot a cada N gravações);
@@ -1328,6 +1353,9 @@ fixtures confirmados antes de editar. Hipóteses em P44–P49.
   `config.fireBlockAt` (default 120", P11): fileira em `height/2`, substitui o aviso `FIRE_BLOCKING_REQUIRED` e
   fecha o item do escopo v1. Folha: letra B, cota da altura ao subfloor, rótulo do uso. Cutlist e BOM já contam
   `block`. Fixtures novos: `wall-144-kitchen` (3 fileiras com janela no meio); `house-tee` inalterado.
+  **Já feito na S31:** `rules/blocking.ts` com `blocksBetween` (o ladder já a usa), `ladderBays`, o fire blocking
+  automático (no meio da cavidade, P50 — não em `height/2`) e a saída do aviso; falta aqui o resto (fileiras por
+  altura, presets, `BLOCKING_SKIPPED`, folha). `FlatMember.blocking` é o campo a ampliar além de `'fire'`.
 - [ ] **S37 — Posts e cruzamento em + (regra de framing; P45, P46).** (a) `wall.posts?: [{ x, section: '4x4' |
   '4x6' | '6x6', label?, base?: string, top?: string }]` → `role: 'post'` de altura inteira com largura real em x
   (3.5/5.5); stud de layout que sobrepõe sai; `LumberSection` ganha 4x4/4x6/6x6 só para post; `lumber.json`
@@ -1336,7 +1364,8 @@ fixtures confirmados antes de editar. Hipóteses em P44–P49.
   `connections.ts` funde tees com o mesmo x nos dois lados numa `TeeJoint` com `sides: 2`; `corners.ts` gera um
   corte da double top e um núcleo para a faixa (hipótese P46 = prancha: 2 studs contínuos = `backer`; com
   `ladder`, blocos dos dois lados). Fixture `house-cross.json` (corredor cruzando); `perf.test.ts` do web deixa
-  de evitar o caso.
+  de evitar o caso. **(b) já feito na S31** (fusão `sides: 2`, `house-cross`, `perf.test.ts`; ver P46 em vigor);
+  aqui fica só (a) e o que a fábrica responder na P46.
 - [ ] **S38 — Sheathing (regra de framing; P47, P48; entra no escopo v1).** `config.sheathing?: { thickness:
   0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?: { corner?:
   'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail: '8d', edge: 6, field: 12 } }`;

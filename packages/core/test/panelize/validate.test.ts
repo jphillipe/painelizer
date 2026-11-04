@@ -129,19 +129,18 @@ describe('STUD_HEIGHT_ABOVE_LIMIT', () => {
   });
 });
 
-describe('FIRE_BLOCKING_REQUIRED', () => {
-  it('cavidade de 120" passa; 120.5" avisa (P11)', () => {
+describe('fire blocking (S31): vira peça, não aviso', () => {
+  const fire = (w: Wall) => panelizeWall(w, config).members.filter((m) => m.role === 'block');
+
+  it('cavidade de 120" não leva bloco; 120.5" leva uma fileira e nenhum aviso de fire blocking (P11)', () => {
     const nb = { ...wall, bearing: false };
-    expect(codes({ ...nb, height: 124.5 })).not.toContain('FIRE_BLOCKING_REQUIRED');
-    expect(codes({ ...nb, height: 125 })).toContain('FIRE_BLOCKING_REQUIRED');
+    expect(fire({ ...nb, height: 124.5 })).toEqual([]);
+    expect(fire({ ...nb, height: 125 }).length).toBeGreaterThan(0);
+    expect(codes({ ...nb, height: 125 })).toEqual(['STUD_LENGTH_MISMATCH']);
   });
 
-  it('parede portante alta dispara altura e fire blocking', () => {
-    expect(codes({ ...wall, height: 125 })).toEqual([
-      'STUD_LENGTH_MISMATCH',
-      'STUD_HEIGHT_ABOVE_LIMIT',
-      'FIRE_BLOCKING_REQUIRED',
-    ]);
+  it('parede portante alta: só os avisos de pré-corte e de altura', () => {
+    expect(codes({ ...wall, height: 125 })).toEqual(['STUD_LENGTH_MISMATCH', 'STUD_HEIGHT_ABOVE_LIMIT']);
   });
 });
 

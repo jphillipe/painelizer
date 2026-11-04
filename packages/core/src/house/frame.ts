@@ -126,7 +126,9 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
   const tees: TeeAt[] = conns.tees.map((t) => ({
     x: along(axis, t.at) - s0,
     wallId: t.wallId,
-    width: axes.get(t.wallId)!.thickness,
+    width: t.width ?? axes.get(t.wallId)!.thickness,
+    // Cruzamento em + (S31, P46): uma faixa só, servindo as duas paredes.
+    ...(t.sides === 2 ? { sides: 2 as const, otherWallId: t.otherWallId! } : {}),
   }));
 
   // `start`, `end` e `ends` são da planta; o resto (inclusive `level`) é `Wall`. As ligações (S14) vão em
@@ -160,7 +162,7 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
 function endJoint(c: Connection, tOther: number): EndJoint | undefined {
   if (c.kind === 'free') return undefined;
   if (c.kind === 'corner') return { kind: 'corner', through: c.through, otherThickness: tOther, wallId: c.wallId };
-  return { kind: 'tee', otherThickness: tOther, wallId: c.wallId };
+  return { kind: 'tee', otherThickness: tOther, wallId: c.wallId, ...(c.cross === true ? { cross: true } : {}) };
 }
 
 /** Posição, ao longo do eixo a partir de `start`, onde a plate começa (`start`) ou termina (`end`). */

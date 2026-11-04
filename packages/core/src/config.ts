@@ -4,6 +4,7 @@
  */
 
 import type { HeaderScheduleEntry, OpeningCatalogEntry } from './opening';
+import type { Section } from './sections';
 import type { Wall } from './wall';
 
 /** Espaçamento OC entre studs admitido no escopo v1 (docs/01-escopo-v1.md). */
@@ -61,6 +62,14 @@ export interface PanelConfig {
   minLap: number;
 }
 
+/**
+ * Preço de compra de uma peça (S31, orçamento): por peça de um comprimento de estoque (comercial ou pré-corte) ou por
+ * pé linear da seção (o que vale para LVL/PSL, comprados no comprimento da peça). Moeda do projeto (sem conversão).
+ */
+export type PriceEntry =
+  | { section: Section; /** Comprimento de estoque, polegadas. */ length: number; /** Preço por peça. */ price: number }
+  | { section: Section; /** Preço por pé linear. */ perFoot: number };
+
 export const DEFAULT_PANEL_CONFIG: Readonly<PanelConfig> = { maxLength: 240, module: 48, lap: 48, minLap: 24 };
 
 export interface Config {
@@ -103,6 +112,13 @@ export interface Config {
    * emendada sobre stud (S15, P14). Ausente = 8', 10', 12', 14', 16'. A BOM usa a mesma lista.
    */
   stockLengths?: number[];
+  /**
+   * Cavidade contínua (`height − 3·plateThickness`) acima disto leva fire blocking (R302.11; S31). Ausente = 120"
+   * (P11); fileiras no meio dos trechos (P50).
+   */
+  fireBlockAt?: number;
+  /** Tabela de preços para o orçamento (S31, `output/cost.ts`). Ausente = sem orçamento. */
+  prices?: PriceEntry[];
 }
 
 /**

@@ -1,0 +1,55 @@
+{
+  "$comment": "S31 (2026-11-04, confirmado pelo humano; P11 respondida, P50 hipótese): parede interna 2x6 não portante de 12' de comprimento e 145.125\" de altura (stud 140.625\", pré-corte de 12' incluído no config), janela RO 36x48 em offset 54 com header 2-2x10 do projeto a 82.5. Cavidade 140.625\" > 120\" (`fireBlockAt` default) → uma fileira de fire blocking no meio da cavidade: trechos iguais de (140.625 − 1.5)/2 = 69.5625\", base do bloco em y = 1.5 + 69.5625 = 71.0625. Blocos 2x6 deitados (1.5\" de altura) em cada vão entre peças de altura inteira (studs 0, 15.25, 31.25, 47.25, 95.25, 111.25, 127.25, 142.5; kings 51 e 91.5), pulando a zona da janela [51, 93] (header, sill e cripples já fecham a cavidade ali): 13.75 em 1.5, 14.5 em 16.75 e 32.75, 2.25 em 48.75 (stud 47.25 → king 51) e em 93 (king 91.5 → stud 95.25), 14.5 em 96.75 e 112.75, 13.75 em 128.75. 21 peças de antes + 8 blocos = 29; sem avisos (o FIRE_BLOCKING_REQUIRED de antes da S31 virou peça). `blocking: 'fire'` em todos os blocos.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625, 140.625],
+    "headerHeight": 82.5
+  },
+  "wall": {
+    "id": "W-fire",
+    "length": 144,
+    "height": 145.125,
+    "section": "2x6",
+    "exterior": false,
+    "bearing": false,
+    "openings": [
+      { "id": "win1", "type": "window", "offset": 54, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+    ]
+  },
+  "expected": {
+    "members": [
+      { "role": "bottomPlate", "section": "2x6", "length": 144, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x6", "length": 144, "x": 0, "y": 142.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 144, "x": 0, "y": 143.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 47.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 95.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 127.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 140.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 140.625, "x": 51, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 140.625, "x": 91.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81, "x": 52.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 81, "x": 90, "y": 1.5, "orientation": "vertical" },
+      { "role": "header", "section": "2x10", "length": 39, "x": 52.5, "y": 82.5, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill", "section": "2x6", "length": 36, "x": 54, "y": 33, "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6", "length": 31.5, "x": 63.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 31.5, "x": 79.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 50.375, "x": 63.25, "y": 91.75, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 50.375, "x": 79.25, "y": 91.75, "orientation": "vertical" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 1.5, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 16.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 32.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 2.25, "x": 48.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 2.25, "x": 93, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 96.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 112.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 128.75, "y": 71.0625, "orientation": "horizontal", "blocking": "fire" }
+    ],
+    "warnings": []
+  }
+}

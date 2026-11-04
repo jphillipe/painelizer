@@ -114,8 +114,6 @@ const ENGINE_WARNINGS: Record<string, Template> = {
   STUDS_OVERLAP: (p, t) => at(wallOnly(t), `${String(p['aRole'])} at x=${String(p['aX'])} and ${String(p['bRole'])} at x=${String(p['bX'])} overlap by ${inch(p['overlap'])}.`),
   STUD_HEIGHT_ABOVE_LIMIT: (p, t) =>
     at(wallOnly(t), `${inch(p['studLength'])} studs exceed the ${inch(p['limit'])} limit for a ${p['bearing'] === true ? 'bearing' : 'non-bearing'} ${String(p['section'])} wall (table R602.3(5)) — needs a structural design.`),
-  FIRE_BLOCKING_REQUIRED: (p, t) =>
-    at(wallOnly(t), `a continuous ${inch(p['cavity'])} cavity exceeds ${inch(p['limit'])} — horizontal fire blocking is required (R302.11); the panel does not draw it yet.`),
   PANEL_OVERWEIGHT: (p) => `Panel ${String(p['panelId'])}: estimated ${String(p['weight'])} lb is over the ${String(p['max'])} lb limit, and no break fixes it.`,
 };
 
@@ -208,6 +206,8 @@ const ENGINE_ERRORS: Record<string, Template> = {
   PRECUTS_EMPTY: () => 'Project settings: the precut stud list is empty.',
   STOCK_EMPTY: () => 'Project settings: the stock length list is empty.',
   STOCK_INVALID: (p) => `Project settings: invalid stock length (${String(p['value'])}).`,
+  PRICE_INVALID: (p) =>
+    `Project settings: prices[${String(p['index'])}] (${String(p['section'])}): ${p['reason'] === 'duplicate' ? 'the same section and length is priced twice' : p['reason'] === 'length' ? `invalid length (${String(p['value'])})` : `invalid price (${String(p['value'])}); expected a number ≥ 0`}.`,
   PIECE_OVER_STOCK: (p) => `Material list: a ${inch(p['length'])} piece is longer than any stock length (longest ${inch(p['max'])}).`,
   VALUE_NOT_POSITIVE: (p, t) => at(t, `${String(p['field'])} must be greater than 0 (got ${String(p['value'])}).`),
   VALUE_NOT_COUNT: (p, t) => at(t, `${String(p['field'])} must be a whole number ≥ 1 (got ${String(p['value'])}).`),

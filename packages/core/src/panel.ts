@@ -79,10 +79,18 @@ export interface HeaderMember extends MemberBase {
   flat?: boolean;
 }
 
-/** Sill e bloco do ladder: deitados, da seção da parede. */
+/**
+ * Uso de uma fileira de blocos (S31): `'fire'` = fire blocking (R302.11, P11/P50). Ausente = ladder do T. A S36
+ * acrescenta as fileiras por altura (P44).
+ */
+export type BlockingKind = 'fire';
+
+/** Sill e bloco (ladder do T, fire blocking): deitados, da seção da parede. */
 export interface FlatMember extends MemberBase {
   role: 'sill' | 'block';
   orientation: 'horizontal';
+  /** Só no bloco: uso da fileira. Ausente = ladder do T. */
+  blocking?: BlockingKind;
 }
 
 /** Uma peça do painel. O papel decide os campos: `plies`/`headerSource` só no header, `label` só no stud. */

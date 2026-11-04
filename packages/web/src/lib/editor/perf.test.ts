@@ -13,8 +13,8 @@ import { draftIssues, idIndex } from './problems';
 
 /**
  * Casa de `cols × rows` cômodos: perímetro externo 2x6 + divisórias internas 2x4, com uma abertura por parede. As
- * divisórias horizontais ficam só nas colunas pares: duas encostando em T na mesma vertical pelos dois lados, no
- * mesmo ponto (cruzamento em +), fazem o motor recusar ("layoutPlates: cuts sobrepõe") — caso para a fábrica.
+ * divisórias horizontais vão em todas as colunas: nas verticais internas, duas encostam pelos dois lados no mesmo
+ * ponto (cruzamento em +, S31) e o motor as funde num T de dois lados.
  */
 export function syntheticHouse(cols: number, rows: number, room = 144): ProjectDraft {
   const base = draftFromText(EXAMPLES[1]!.text);
@@ -37,7 +37,7 @@ export function syntheticHouse(cols: number, rows: number, room = 144): ProjectD
   walls.push(wall('S', { x: 0, y: 0 }, { x: W, y: 0 }, true), wall('E', { x: W, y: 0 }, { x: W, y: H }, true), wall('N', { x: W, y: H }, { x: 0, y: H }, true), wall('Wst', { x: 0, y: H }, { x: 0, y: 0 }, true));
   for (let c = 1; c < cols; c += 1) walls.push(wall(`V${c}`, { x: c * room, y: 0 }, { x: c * room, y: H }, false));
   for (let r = 1; r < rows; r += 1) {
-    for (let c = 0; c < cols; c += 2) walls.push(wall(`H${r}-${c}`, { x: c * room, y: r * room }, { x: (c + 1) * room, y: r * room }, false));
+    for (let c = 0; c < cols; c += 1) walls.push(wall(`H${r}-${c}`, { x: c * room, y: r * room }, { x: (c + 1) * room, y: r * room }, false));
   }
   return { ...base.draft, name: 'Synthetic', walls };
 }

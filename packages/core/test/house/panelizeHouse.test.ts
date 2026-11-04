@@ -8,11 +8,13 @@ import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import teeJson from '../fixtures/house-tee.json';
+import crossJson from '../fixtures/house-cross.json';
 import house28x40Json from '../fixtures/house-28x40.json';
 import { houseFixture } from '../helpers/fixtures';
 
 const cornerL = houseFixture(cornerLJson);
 const tee = houseFixture(teeJson);
+const cross = houseFixture(crossJson);
 const house28x40 = houseFixture(house28x40Json);
 
 /** Studs em pé (o stud flat do canto California é listado à parte em `expected.flat`). */
@@ -41,6 +43,7 @@ describe('panelizeHouse — fixtures', () => {
   it.each([
     ['house-corner-L', cornerL],
     ['house-tee', tee],
+    ['house-cross', cross],
     ['house-28x40', house28x40],
   ])('%s: painéis por parede, peças, studs e avisos como no fixture', (_name, fx) => {
     const { panels, frames, warnings } = panelizeHouse(fx.house, fx.config);

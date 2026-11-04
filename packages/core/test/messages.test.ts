@@ -12,8 +12,8 @@ import {
 } from '../src';
 
 describe('catálogo de mensagens (S26)', () => {
-  it('13 avisos; todo código de aviso e de erro tem frase em português', () => {
-    expect(WARNING_CODES).toHaveLength(13);
+  it('12 avisos (S31: FIRE_BLOCKING_REQUIRED virou peça); todo código de aviso e de erro tem frase em português', () => {
+    expect(WARNING_CODES).toHaveLength(12);
     for (const c of WARNING_CODES) expect(typeof warningMessagePt(c, {}, { wallId: 'W1', openingId: 'J1' })).toBe('string');
     for (const c of ENGINE_ERROR_CODES) expect(typeof engineErrorMessagePt(c, {}, { wallId: 'W1' })).toBe('string');
     expect(new Set([...WARNING_CODES, ...ENGINE_ERROR_CODES]).size).toBe(WARNING_CODES.length + ENGINE_ERROR_CODES.length);

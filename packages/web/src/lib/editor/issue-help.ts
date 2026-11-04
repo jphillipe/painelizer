@@ -62,7 +62,6 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   STUD_LENGTH_MISMATCH: { what: 'The stud this wall needs is not one of the precut lengths.', fix: 'Add the length to the precut list in Project settings, or change the wall height.' },
   STUD_HEIGHT_ABOVE_LIMIT: { what: 'The studs are taller than the IRC limit for this section and spacing.', fix: 'Use 2x6 or a tighter spacing, or get an engineer to sign off.' },
   DOOR_RO_HEIGHT_MISMATCH: { what: 'The door rough opening does not match the header height.', fix: 'Check the door height and the header height in Project settings.' },
-  FIRE_BLOCKING_REQUIRED: { what: 'A stud cavity is taller than the code allows without fire blocking.', fix: 'The shop adds blocking; nothing to change in the plan.' },
   SPECIES_NOT_IN_TABLE: { what: 'The IRC header table is for SPF No. 2; the project specifies another species.', fix: 'Fine to leave if the engineer accepts the SPF sizes, else set the species in Project settings.' },
   // motor — erros
   HEADER_OUT_OF_TABLE: {

@@ -7,7 +7,8 @@
  *   stud comum (não flat, não extra) centrado numa marca `origin + k·spacing`, que não é o de ponta nem o de
  *   fechamento — cuja faixa de 2t (`[c − t, c + t]`, o par de studs que a junta vai receber) não toca nenhuma
  *   outra peça além das plates (king, jack, header, sill, cripple, bloco, stud extra ou de canto), nem zona de
- *   abertura, nem faixa de T, e fica a ≥ 2t das pontas da parede. Na junta o stud da marca vira dois: o de
+ *   abertura, nem faixa de T, e fica a ≥ 2t das pontas da parede. Bloco de fire blocking (S31) não conta: a
+ *   fileira é refeita em cada painel. Na junta o stud da marca vira dois: o de
  *   fechamento do painel i em `b − t` e o primeiro do painel i+1 em `b`.
  * - **Escolha das quebras** (`chooseBreaks`, hipótese P35 — equilibrado): o menor número de painéis em que a
  *   parede cabe (todos ≤ `maxLength` e, se houver, ≤ `maxWeight`); entre as divisões com esse número, a que
@@ -85,7 +86,8 @@ export function whyNotBreak(
   if (Math.abs(k - Math.round(k)) > 1e-6) return { reason: 'mark', spacing: config.studSpacing };
   const own = panel.members.find((m) => isLayoutStud(m) && Math.abs(m.x + t / 2 - x) < EPS);
   const blocker = panel.members.find((m) => {
-    if (m === own || isPlateRole(m.role)) return false;
+    // Bloco de fogo (S31) não segura a quebra: cada painel gera a sua fileira entre os próprios studs.
+    if (m === own || isPlateRole(m.role) || (m.role === 'block' && m.blocking === 'fire')) return false;
     const sp = span(m);
     return overlaps(lo, hi, sp.lo, sp.hi);
   });

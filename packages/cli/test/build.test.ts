@@ -327,6 +327,39 @@ describe('buildProject', () => {
   });
 });
 
+describe('orçamento (S31)', () => {
+  it('sem config.prices: nem cost.csv nem cost', () => {
+    const r = buildProject(example());
+    expect(r.files.some((f) => f.path === 'cost.csv')).toBe(false);
+    expect(r.cost).toBeUndefined();
+  });
+
+  it('com config.prices: cost.csv logo depois do bom.csv, linhas da BOM com preço e TOTAL', () => {
+    const p = example();
+    p.config = { ...p.config, prices: [{ section: '2x6', length: 92.625, price: 5 }, { section: '2x4', perFoot: 0.5 }] };
+    const r = buildProject(p);
+    expect(r.files.map((f) => f.path).slice(0, 3)).toEqual(['cutlist.csv', 'bom.csv', 'cost.csv']);
+    expect(r.cost!.lines.map((l) => [l.section, l.stockLength, l.kind])).toEqual(r.bom.map((l) => [l.section, l.stockLength, l.kind]));
+    const csv = r.files.find((f) => f.path === 'cost.csv')!.content.trim().split('\n');
+    expect(csv[0]).toBe('section,stock_type,stock_length_in,stock_length,qty,unit_price,cost,price_source');
+    const precut = r.cost!.lines.find((l) => l.section === '2x6' && l.stockLength === 92.625)!;
+    expect(precut).toMatchObject({ unitPrice: 5, cost: precut.qty * 5, source: 'each' });
+    expect(csv).toContain(`2x6,precut,92.625,"92 5/8""",${precut.qty},5.00,${(precut.qty * 5).toFixed(2)},each`);
+    expect(csv.at(-1)).toBe(`TOTAL,,,,,,${r.cost!.total.toFixed(2)},${r.cost!.unpriced} unpriced`);
+    const sum = r.cost!.lines.reduce((s, l) => s + (l.cost ?? 0), 0);
+    expect(r.cost!.total).toBeCloseTo(sum, 9);
+    expect(r.cost!.unpriced).toBe(r.cost!.lines.filter((l) => l.cost === undefined).length);
+    expect(r.cost!.unpriced).toBeGreaterThan(0);
+  });
+
+  it('preço inválido vindo do código (sem schema) vira problema da lista de material', () => {
+    const p = example();
+    p.config = { ...p.config, prices: [{ section: '2x6', perFoot: -1 }] };
+    const { problems } = panelizeProject(p);
+    expect(problems.map((x) => [x.code, x.stage])).toEqual([['PRICE_INVALID', 'bom']]);
+  });
+});
+
 describe('svgFileName', () => {
   it('mantém letras, dígitos, ponto, hífen e sublinhado; o resto vira _', () => {
     expect(svgFileName('W01-P1')).toBe('W01-P1.svg');

@@ -51,6 +51,9 @@ export interface BomRow {
   cutTotal: number;
   waste: number;
   wastePercent: number;
+  /** Orçamento (S31, `config.prices`): preço por peça e custo da linha; ausentes = sem preço na tabela. */
+  unitPrice?: number;
+  cost?: number;
 }
 
 /** Linha da lista de corte de um painel (`cutlist.csv`). */
@@ -69,6 +72,8 @@ export type GenerateResult =
       files: GeneratedFile[];
       warnings: Notice[];
       bom: BomRow[];
+      /** Orçamento (S31): só quando o projeto tem `config.prices`; o preço de cada linha vai no `bom`. */
+      cost?: { total: number; unpriced: number };
       /** Por painel, na ordem dos painéis. */
       cutLists: { panelId: string; lines: CutRow[] }[];
     }

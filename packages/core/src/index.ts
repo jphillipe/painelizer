@@ -29,9 +29,9 @@ export { layoutMarks, layoutStuds } from './rules/studs';
 export { layoutPlates, type PlateCut, type PlateEndLap, type PlateOptions } from './rules/plates';
 export {
   LADDER_BLOCK_SPACING,
-  MIN_BLOCK_LENGTH,
   backerStuds,
   cornerStuds,
+  ladderBays,
   ladderBlockCenters,
   ladderBlocks,
   plateOptionsFor,
@@ -40,6 +40,16 @@ export {
   type JointStud,
   type TeeStrip,
 } from './rules/corners';
+export {
+  DEFAULT_FIRE_BLOCK_AT,
+  MIN_BLOCK_LENGTH,
+  blocksBetween,
+  fireBlockRows,
+  fireBlocks,
+  gapsBetween,
+  type BlockGap,
+  type BlockRowOptions,
+} from './rules/blocking';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
 export {
   framingForOpening,
@@ -118,5 +128,6 @@ export { panelizeFrame, panelizeFrameWithCandidates, panelizeHouse, type HouseRe
 export { validatePanel } from './panelize/validate';
 export * from './output/cutlist';
 export * from './output/bom';
+export * from './output/cost';
 export * from './output/svg';
 export * from './output/planSvg';

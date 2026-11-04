@@ -11,6 +11,8 @@ import type { BomRow, CutRow, PanelSummary } from '@/types/panels';
 
 export interface ResultMaterialsProps {
   bom: readonly BomRow[];
+  /** Orçamento (S31): presente quando o projeto tem `config.prices`; liga as colunas de preço. */
+  cost?: { total: number; unpriced: number } | undefined;
   cutLists: readonly { panelId: string; lines: CutRow[] }[];
   panels: readonly PanelSummary[];
   onOpenSheet: (panelId: string) => void;
@@ -40,6 +42,8 @@ interface SectionGroup {
   qty: number;
   /** Pés lineares comprados. */
   feet: number;
+  /** Soma dos custos das linhas com preço. */
+  cost: number;
 }
 
 export function groupBySection(bom: readonly BomRow[]): SectionGroup[] {
@@ -47,24 +51,29 @@ export function groupBySection(bom: readonly BomRow[]): SectionGroup[] {
   for (const row of bom) {
     let g = groups.find((x) => x.section === row.section);
     if (g === undefined) {
-      g = { section: row.section, rows: [], qty: 0, feet: 0 };
+      g = { section: row.section, rows: [], qty: 0, feet: 0, cost: 0 };
       groups.push(g);
     }
     g.rows.push(row);
     g.qty += row.qty;
     g.feet += (row.qty * row.stockLength) / 12;
+    g.cost = Math.round((g.cost + (row.cost ?? 0)) * 100) / 100;
   }
   return groups;
 }
 
 const fmtFeet = (feet: number): string => `${Math.round(feet).toLocaleString('en-US')} ft`;
 
+/** Preço com duas casas (US$, a moeda das fábricas atendidas; o motor não converte). */
+export const fmtMoney = (v: number): string => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
 /**
  * Aba Materials (M3): a lista de material consolidada na tela — por seção, com subtotal de peças e pés lineares —
  * e, abaixo, a lista de corte de cada painel. São os mesmos números de `bom.csv` e `cutlist.csv`; a sobra é um
- * teto (sem otimização de corte, docs do core).
+ * teto (sem otimização de corte, docs do core). Com `config.prices` (S31), colunas de preço unitário e custo, como o
+ * `cost.csv`; linha sem preço na tabela mostra "—" e fica fora do total.
  */
-export function ResultMaterials({ bom, cutLists, panels, onOpenSheet }: ResultMaterialsProps) {
+export function ResultMaterials({ bom, cost, cutLists, panels, onOpenSheet }: ResultMaterialsProps) {
   const groups = useMemo(() => groupBySection(bom), [bom]);
   const totalQty = groups.reduce((n, g) => n + g.qty, 0);
   const totalFeet = groups.reduce((n, g) => n + g.feet, 0);
@@ -89,6 +98,12 @@ export function ResultMaterials({ bom, cutLists, panels, onOpenSheet }: ResultMa
           <Badge variant="secondary">{fmtFeet(totalFeet)} linear</Badge>
           <Badge variant="secondary">{wastePercent}% waste at most</Badge>
           {totalWeight !== undefined ? <Badge variant="secondary">{Math.round(totalWeight).toLocaleString('en-US')} lb of lumber</Badge> : null}
+          {cost !== undefined ? <Badge variant="secondary">{fmtMoney(cost.total)} lumber cost</Badge> : null}
+          {cost !== undefined && cost.unpriced > 0 ? (
+            <Badge variant="warning">
+              {cost.unpriced} {cost.unpriced === 1 ? 'line' : 'lines'} without price
+            </Badge>
+          ) : null}
         </div>
         <div className="overflow-auto rounded-md border bg-card">
           <Table>
@@ -106,11 +121,21 @@ export function ResultMaterials({ bom, cutLists, panels, onOpenSheet }: ResultMa
                 <TableHead scope="col" className="text-right">
                   Waste
                 </TableHead>
+                {cost !== undefined ? (
+                  <>
+                    <TableHead scope="col" className="text-right">
+                      Unit price
+                    </TableHead>
+                    <TableHead scope="col" className="text-right">
+                      Cost
+                    </TableHead>
+                  </>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {groups.map((g) => (
-                <GroupRows key={g.section} group={g} />
+                <GroupRows key={g.section} group={g} priced={cost !== undefined} />
               ))}
             </TableBody>
             <TableFooter>
@@ -121,6 +146,12 @@ export function ResultMaterials({ bom, cutLists, panels, onOpenSheet }: ResultMa
                 <TableCell className="text-right font-mono text-[13px] font-semibold">{totalQty.toLocaleString('en-US')}</TableCell>
                 <TableCell className="text-right font-mono text-[13px]">{fmtFeet(totalFeet)} bought</TableCell>
                 <TableCell className="text-right font-mono text-[13px]">{wastePercent}%</TableCell>
+                {cost !== undefined ? (
+                  <>
+                    <TableCell />
+                    <TableCell className="text-right font-mono text-[13px] font-semibold">{fmtMoney(cost.total)}</TableCell>
+                  </>
+                ) : null}
               </TableRow>
             </TableFooter>
           </Table>
@@ -191,7 +222,7 @@ export function ResultMaterials({ bom, cutLists, panels, onOpenSheet }: ResultMa
   );
 }
 
-function GroupRows({ group }: { group: SectionGroup }) {
+function GroupRows({ group, priced }: { group: SectionGroup; priced: boolean }) {
   return (
     <>
       {group.rows.map((r, i) => (
@@ -212,6 +243,12 @@ function GroupRows({ group }: { group: SectionGroup }) {
           <TableCell className="text-right font-mono text-[13px]">{r.qty}</TableCell>
           <TableCell className="text-right font-mono text-[13px] text-ink-2">{formatMeasure(r.cutTotal)}</TableCell>
           <TableCell className="text-right font-mono text-[13px] text-ink-2">{r.wastePercent}%</TableCell>
+          {priced ? (
+            <>
+              <TableCell className="text-right font-mono text-[13px] text-ink-2">{r.unitPrice === undefined ? '—' : fmtMoney(r.unitPrice)}</TableCell>
+              <TableCell className="text-right font-mono text-[13px]">{r.cost === undefined ? '—' : fmtMoney(r.cost)}</TableCell>
+            </>
+          ) : null}
         </TableRow>
       ))}
       <TableRow className="bg-paper-2/60 hover:bg-paper-2/60">
@@ -222,6 +259,12 @@ function GroupRows({ group }: { group: SectionGroup }) {
         <TableCell className="text-right font-mono text-[13px] font-semibold">{group.qty}</TableCell>
         <TableCell className="text-right font-mono text-[13px] text-ink-2">{fmtFeet(group.feet)}</TableCell>
         <TableCell />
+        {priced ? (
+          <>
+            <TableCell />
+            <TableCell className="text-right font-mono text-[13px] font-semibold">{fmtMoney(group.cost)}</TableCell>
+          </>
+        ) : null}
       </TableRow>
     </>
   );

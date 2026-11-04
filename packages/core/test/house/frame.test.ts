@@ -4,11 +4,13 @@ import type { House, HouseWall } from '../../src/house/types';
 import { frameWalls, type WallFrame } from '../../src/house/frame';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import teeJson from '../fixtures/house-tee.json';
+import crossJson from '../fixtures/house-cross.json';
 import house28x40Json from '../fixtures/house-28x40.json';
 import { houseFixture } from '../helpers/fixtures';
 
 const cornerL = houseFixture(cornerLJson);
 const tee = houseFixture(teeJson);
+const cross = houseFixture(crossJson);
 const house28x40 = houseFixture(house28x40Json);
 
 /** O que os fixtures registram de cada frame (tudo menos a `Wall` inteira). */
@@ -38,6 +40,7 @@ describe('frameWalls — fixtures', () => {
   it.each([
     ['house-corner-L', cornerL],
     ['house-tee', tee],
+    ['house-cross', cross],
     ['house-28x40', house28x40],
   ])('%s: plates, origem de layout, ligações e offsets convertidos', (_name, fx) => {
     const frames = frameWalls(fx.house);

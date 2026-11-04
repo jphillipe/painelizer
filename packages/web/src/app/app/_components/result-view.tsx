@@ -206,7 +206,7 @@ function Generated({ result, projectFile, stale, canRegenerate, onRegenerate, id
           <ResultSheets sheets={sheets} panels={result.panels} warningsByPanel={perPanel} selected={selected} onSelect={setSelected} showAll={showAll} onShowAll={setShowAll} onPrint={printOne} onPdf={pdfOne} pdfPending={pdfPending && pdfLabel !== undefined && !pdfLabel.endsWith('-sheets.pdf')} />
         </TabsContent>
         <TabsContent value="materials" className="pt-3">
-          <ResultMaterials bom={result.bom} cutLists={result.cutLists} panels={result.panels} onOpenSheet={openSheet} />
+          <ResultMaterials bom={result.bom} cost={result.cost} cutLists={result.cutLists} panels={result.panels} onOpenSheet={openSheet} />
         </TabsContent>
         <TabsContent value="files" className="pt-3">
           <p className="mb-3 text-sm text-ink-2">

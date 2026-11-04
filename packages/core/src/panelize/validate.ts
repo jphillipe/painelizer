@@ -15,8 +15,6 @@
  * - `STUD_HEIGHT_ABOVE_LIMIT`: comprimento do stud acima do máximo da Tabela R602.3(5) (R602.3.1):
  *   10' em parede portante; 14' (2x4) e 20' (2x6) em parede não portante. Acima disso, projeto
  *   estrutural.
- * - `FIRE_BLOCKING_REQUIRED`: cavidade contínua (entre bottom plate e top plate) acima de 120"
- *   (R302.11, P11): a fábrica coloca o bloqueio horizontal; o motor ainda não o desenha.
  *
  * "Header fora da tabela" não é aviso: sem header não há geometria, então `rules/openingHeader.ts`
  * lança `Error` (docs/04-decisoes.md, 2026-10-05).
@@ -43,9 +41,6 @@ const MAX_STUD_LENGTH_NONBEARING: Readonly<Record<WallSection, number>> = {
   '2x6': 240,
 };
 
-/** Cavidade contínua acima disto exige fire blocking horizontal (R302.11; P11). */
-const MAX_CAVITY_WITHOUT_FIRE_BLOCKING = 120;
-
 /**
  * Avisos de validação do painel. `wall.openings` deve vir com `jackStuds` já resolvido (como em
  * `panelizeWall`), porque a largura da zona depende dele.
@@ -55,7 +50,6 @@ export function validatePanel(panel: Panel, wall: Wall, config: Config): Warning
     ...openingsNearCorner(wall, config),
     ...overlappingStuds(panel, wall),
     ...studHeight(wall, config),
-    ...fireBlocking(wall, config),
   ];
 }
 
@@ -103,10 +97,4 @@ function studHeight(wall: Wall, config: Config): Warning[] {
   const limit = wall.bearing ? MAX_STUD_LENGTH_BEARING : MAX_STUD_LENGTH_NONBEARING[wall.section];
   if (studLength <= limit + EPS) return [];
   return [warning('STUD_HEIGHT_ABOVE_LIMIT', { wallId: wall.id }, { studLength, limit, bearing: wall.bearing, section: wall.section })];
-}
-
-function fireBlocking(wall: Wall, config: Config): Warning[] {
-  const cavity = studLengthFor(wall, config);
-  if (cavity <= MAX_CAVITY_WITHOUT_FIRE_BLOCKING + EPS) return [];
-  return [warning('FIRE_BLOCKING_REQUIRED', { wallId: wall.id }, { cavity, limit: MAX_CAVITY_WITHOUT_FIRE_BLOCKING })];
 }

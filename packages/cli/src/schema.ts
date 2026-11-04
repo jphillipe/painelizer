@@ -41,6 +41,7 @@ import {
   type OpeningSpec,
   type OpeningType,
   type PanelConfig,
+  type PriceEntry,
   type Point,
   type Section,
   type StudSpacing,
@@ -283,6 +284,7 @@ const psf = leaf(readNumber('carga em psf (número ≥ 0)', 0));
 const mph = leaf(readNumber('velocidade de vento em mph (número > 0)', 0, true));
 const lb = leaf(readNumber('peso em lb (número > 0)', 0, true));
 const degrees = leaf(readNumber('ângulo em graus'));
+const money = leaf(readNumber('preço (número ≥ 0)', 0));
 
 function oneOf<T extends string>(allowed: readonly T[]) {
   return leaf(readOneOf(allowed));
@@ -463,6 +465,43 @@ export const headerEntryShape = {
   description: text.optional(),
 };
 
+/** Preço por peça de um comprimento de estoque (S31). */
+export const pieceCostShape = { section: headerSection, length: positiveMeasure, price: money };
+/** Preço por pé linear da seção (S31). */
+export const footCostShape = { section: headerSection, perFoot: money };
+const pieceCostNode = node(pieceCostShape);
+const footCostNode = node(footCostShape);
+
+/**
+ * Tabela de preços do orçamento (S31): lista de `{ section, length, price }` ou `{ section, perFoot }`. Quem tem
+ * `perFoot` é por pé; o resto, por peça. Repetição (mesma seção e comprimento; dois `perFoot` da seção) é erro.
+ */
+export const prices = z.unknown().transform((v, ctx): PriceEntry[] => {
+  const items = sub(ctx, list(z.unknown()), v);
+  if (items === undefined) return z.NEVER;
+  const out: PriceEntry[] = [];
+  let ok = true;
+  items.value.forEach((item, i) => {
+    const perFoot = isRecord(item) && Object.hasOwn(item, 'perFoot');
+    const r = sub(ctx, perFoot ? footCostNode : pieceCostNode, item, [i]);
+    if (r === undefined) {
+      ok = false;
+      return;
+    }
+    const p = r.value as PriceEntry;
+    const dup = out.some(
+      (q) => q.section === p.section && ('perFoot' in q ? 'perFoot' in p : !('perFoot' in p) && Math.abs(q.length - p.length) < 1 / 128),
+    );
+    if (dup) {
+      report(ctx, new Fail({ rule: 'project', received: item }, 'preço repetido para a mesma seção e comprimento'), [i]);
+      ok = false;
+      return;
+    }
+    out.push(p);
+  });
+  return ok ? out : z.NEVER;
+});
+
 const REMOVED_CONFIG: Readonly<Record<string, string>> = Object.fromEntries(
   ['defaultHeaderSection', 'defaultHeaderPlies'].map((k) => [
     k,
@@ -484,6 +523,8 @@ export const configShape = {
   stockLengths: stockLengths.optional(),
   openingTypes: record(node(openingTypeShape)).optional(),
   headerSchedule: record(node(headerEntryShape)).optional(),
+  fireBlockAt: positiveMeasure.optional(),
+  prices: prices.optional(),
 };
 
 export const headerShape = {

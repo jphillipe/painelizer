@@ -16,6 +16,18 @@ describe('panels.service.generate', () => {
     expect(r.panels[0]).toMatchObject({ id: '1-W01-P1', wallId: 'W01', length: 146.75 });
   });
 
+  it('S31: com config.prices, cost.csv, preço por linha da BOM e total', () => {
+    const raw = JSON.parse(exampleText('casa-exemplo') as string) as { config: Record<string, unknown> };
+    raw.config['prices'] = [{ section: '2x6', length: '92 5/8"', price: 5 }];
+    const r = generate(JSON.stringify(raw));
+    if (!r.ok) throw new Error(r.problems.map((p) => p.message).join('\n'));
+    expect(r.files.map((f) => f.path).slice(0, 3)).toEqual(['cutlist.csv', 'bom.csv', 'cost.csv']);
+    const precut = r.bom.find((l) => l.section === '2x6' && l.stockLength === 92.625)!;
+    expect(precut).toMatchObject({ unitPrice: 5, cost: precut.qty * 5 });
+    expect(r.bom.filter((l) => l.cost === undefined)).toHaveLength(r.cost!.unpriced);
+    expect(r.cost!.total).toBe(precut.qty * 5);
+  });
+
   it('house-28x40: 12 painéis, 234 peças a cortar, com planta', () => {
     const r = generate(exampleText('house-28x40') as string);
     if (!r.ok) throw new Error(r.problems.join('\n'));

@@ -66,15 +66,21 @@ export function generate(projectText: string): GenerateResult {
     projectName: r.project.name,
     ...summarize(r.built.panels),
     files: r.built.files.map((f) => ({ path: f.path, content: f.content })),
-    bom: r.built.bom.map((l) => ({
-      section: l.section,
-      stockLength: l.stockLength,
-      kind: l.kind,
-      qty: l.qty,
-      cutTotal: l.cutTotal,
-      waste: l.waste,
-      wastePercent: l.wastePercent,
-    })),
+    bom: r.built.bom.map((l, i) => {
+      const priced = r.built.cost?.lines[i];
+      return {
+        section: l.section,
+        stockLength: l.stockLength,
+        kind: l.kind,
+        qty: l.qty,
+        cutTotal: l.cutTotal,
+        waste: l.waste,
+        wastePercent: l.wastePercent,
+        ...(priced?.unitPrice === undefined ? {} : { unitPrice: priced.unitPrice }),
+        ...(priced?.cost === undefined ? {} : { cost: priced.cost }),
+      };
+    }),
+    ...(r.built.cost === undefined ? {} : { cost: { total: r.built.cost.total, unpriced: r.built.cost.unpriced } }),
     cutLists: r.built.cutLists.map((c) => ({ panelId: c.panelId, lines: c.lines.map((x) => ({ role: x.role, section: x.section, length: x.length, qty: x.qty })) })),
   };
 }

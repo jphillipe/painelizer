@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupBySection, stockLabel } from './result-materials';
+import { fmtMoney, groupBySection, stockLabel } from './result-materials';
 import { warningsByPanel } from '@/lib/files';
 import { idsFromPanels } from './result-warnings';
 import type { BomRow } from '@/types/panels';
@@ -21,6 +21,14 @@ describe('aba Materials (M3)', () => {
     // 40 × 92.625 + 10 × 96 + 3 × 144 + 266.5 = 5363.5" = 446.96 ft
     expect(g[0]!.feet).toBeCloseTo(5363.5 / 12, 3);
     expect(g[1]!.qty).toBe(2);
+  });
+
+  it('S31: subtotal de custo por seção só com as linhas que têm preço', () => {
+    const priced: BomRow[] = rows.map((r, i) => (i === 0 ? { ...r, unitPrice: 5, cost: 200 } : i === 1 ? { ...r, unitPrice: 4.1, cost: 41 } : r));
+    const g = groupBySection(priced);
+    expect(g[0]!.cost).toBe(241);
+    expect(g[1]!.cost).toBe(0);
+    expect(fmtMoney(1234.5)).toBe('$1,234.50');
   });
 
   it('estoque comercial em pés, pré-corte e oversize em polegadas', () => {

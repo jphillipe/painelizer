@@ -116,11 +116,54 @@ describe('schema strict (S28.2)', () => {
   });
 });
 
+describe('fireBlockAt e prices (S31)', () => {
+  const cfg = (extra: Record<string, unknown>) => project({ config: { studSpacing: 16, studLength: 92.625, ...extra } });
+
+  it('fireBlockAt: medida > 0, aceita pés-pol', () => {
+    expect(projectFrom(cfg({ fireBlockAt: "10'" }), 'p').config.fireBlockAt).toBe(120);
+    expect(() => projectFrom(cfg({ fireBlockAt: 0 }), 'p')).toThrow(/^p\.config\.fireBlockAt/);
+  });
+
+  it('prices: por peça (comprimento em pés-pol) ou por pé; seção engenheirada em objeto vira texto', () => {
+    const p = projectFrom(
+      cfg({
+        prices: [
+          { section: '2x4', length: "8'", price: 3.98 },
+          { section: '2x4', length: '92 5/8"', price: 3.75 },
+          { section: '2x6', perFoot: 0.85 },
+          { section: { material: 'LVL', width: 1.75, depth: 9.25 }, perFoot: 9.5 },
+        ],
+      }),
+      'p',
+    );
+    expect(p.config.prices).toEqual([
+      { section: '2x4', length: 96, price: 3.98 },
+      { section: '2x4', length: 92.625, price: 3.75 },
+      { section: '2x6', perFoot: 0.85 },
+      { section: 'LVL 1.75x9.25', perFoot: 9.5 },
+    ]);
+  });
+
+  it.each([
+    [{ prices: [{ section: '2x4', length: 96, price: -1 }] }, 'p.config.prices[0].price: esperado preço'],
+    [{ prices: [{ section: '2x4', price: 1 }] }, 'p.config.prices[0].length'],
+    [{ prices: [{ section: '2x4', perFoot: 1, length: 96 }] }, 'p.config.prices[0].length: chave desconhecida'],
+    [{ prices: [{ section: '2x5', perFoot: 1 }] }, 'p.config.prices[0].section'],
+    [
+      { prices: [{ section: '2x4', length: 96, price: 1 }, { section: '2x4', length: "8'", price: 2 }] },
+      'p.config.prices[1]: preço repetido',
+    ],
+    [{ prices: { '2x4': 1 } }, 'p.config.prices: esperado array'],
+  ])('prices inválido aponta o campo (%#)', (extra, message) => {
+    expect(() => projectFrom(cfg(extra), 'p')).toThrow(message);
+  });
+});
+
 describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 12', () => expect(files).toHaveLength(12));
+  it('são 14 (S31: wall-144-fireblock e house-cross)', () => expect(files).toHaveLength(14));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {

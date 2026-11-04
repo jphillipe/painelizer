@@ -48,10 +48,18 @@
     faixa ao vizinho à direita, com centros em 24, 48, 72… do subfloor enquanto o topo do bloco cabe sob a top
     plate (3 blocos em 8', 4 em 9' — hipótese P22). Stud de layout dentro da faixa fica e divide o bloco; pedaço
     < 1.5" sai. `backer`: dois studs de altura inteira colados às faces da faixa. Faixa na zona de abertura:
-    só o aviso `OPENING_AT_TEE`, nenhuma peça de T.
+    só o aviso `OPENING_AT_TEE`, nenhuma peça de T. Os blocos saem de `blocksBetween` (`rules/blocking.ts`, S31),
+    a mesma fileira do fire blocking; duas faixas no mesmo vão entre studs dividem um ladder só.
+  - **Cruzamento em +** (S31, hipótese P46): dois T de lados opostos cujas faixas se sobrepõem viram, em
+    `findConnections`, um T de dois lados (`sides: 2`, `otherWallId`, faixa = união das duas). Na atravessada: um
+    corte da double top, um ladder (o bloco deitado ocupa a espessura inteira e serve os dois lados) ou um par de
+    backers. Nas que encostam (`cross: true`): plate na face, como no T, e double top avançando só `t_outra/2` — as
+    duas se encontram no eixo da atravessada. Parede contínua cruzando outra no interior das duas segue
+    `WALLS_CROSS`: o + exige partir uma delas no cruzamento. Fixture `house-cross`.
   - **Laps** (R602.3.2, só a double top plate; bottom e top não mudam): no canto, a de quem encosta avança
     `t_outra` sobre a top plate da outra (`x = −t_outra`) e a de quem atravessa recua `t_outra`; no T, a de quem
-    encosta avança `t_outra` e a da atravessada é cortada em duas peças na faixa. `layoutPlates` recebe
+    encosta avança `t_outra` e a da atravessada é cortada em duas peças na faixa; no +, cada uma das que
+    encostam avança `t_outra/2`. `layoutPlates` recebe
     `{ start?, end?: { extend?, recess? }, cuts? }`. O SVG abre espaço para `x < 0` / `x > length` e cota o avanço.
   - Fixtures: `house-corner-L` (W1 atravessa: flat em 1.5, double top 141.25 em x=5.5; W2 encosta: double top
     122.75 em x=−5.5) e `house-tee` (T em 72: 3 blocos 2x6 × 14.5 em y = 23.25, 47.25, 71.25; double top de W1 em
@@ -123,7 +131,7 @@
 | Headers internos portantes | Tabela R602.7(2) | Idem sem neve |
 | Headers não portantes | R602.7.4 | Single flat até 8' |
 | King studs | Tabela R602.7.5 | Parede externa: kings por lado pelo vão do header e vento (Vult, exposição B/C); 4' → 1 … 18' → 4; fora da tabela → engenheiro (`src/data/irc-kings.json`, S12) |
-| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11) → aviso `FIRE_BLOCKING_REQUIRED`; o painel ainda não desenha a peça |
+| Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11). S31: cavidade `height − 3·plates` acima de `config.fireBlockAt` (default 120") leva o menor nº de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma, no meio da cavidade, até 241.5" — P50): blocos `role: 'block'`, `blocking: 'fire'`, deitados, da seção da parede, entre as peças de altura inteira, fora das zonas de abertura e do vão do ladder; não impedem quebra de painel (fixture `wall-144-fireblock`) |
 | Cantos e T | Prática da equipe | Default California corner + ladder (P5); 3-stud e stud de encosto configuráveis |
 
 As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em `src/data/irc-headers.json`
@@ -195,9 +203,9 @@ em mais do que o necessário.
   quando a regra é hipótese, `hypothesis` (`'P30'`, `'P39'`, `'P40'`…). A frase em português é montada a partir
   deles em `messages.ts` (CLI e folha); o app monta a sua em inglês com os mesmos parâmetros
   (`packages/web/src/lib/messages.en.ts`) e nunca lê o português. A folha não imprime "hipótese"; o CLI acrescenta.
-  Os 13 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
+  Os 12 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
   `WIND_SPEED_MISSING`, `SPECIES_NOT_IN_TABLE`, `DOOR_RO_HEIGHT_MISMATCH`, `OPENING_AT_TEE`, `OPENING_NEAR_CORNER`,
-  `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `FIRE_BLOCKING_REQUIRED`, `PANEL_OVERWEIGHT`.
+  `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `PANEL_OVERWEIGHT` (`FIRE_BLOCKING_REQUIRED` saiu na S31: virou peça).
 - **Erros que o projeto provoca** (dado do humano ou da leitura) são `EngineError` com código de
   `ENGINE_ERROR_CODES` (planta, catálogo e aberturas, header e kings…) e os mesmos ids e parâmetros; guardas internas
   (estado que nenhuma entrada válida produz) seguem `RangeError`. Fora da tabela continua `requiresEngineer`, nunca

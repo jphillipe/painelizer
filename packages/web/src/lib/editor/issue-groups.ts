@@ -70,7 +70,6 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   STUD_HEIGHT_ABOVE_LIMIT: 'Stud height above the IRC limit',
   STUDS_OVERLAP: 'Studs overlap',
   DOOR_RO_HEIGHT_MISMATCH: 'Door RO height differs from the header height',
-  FIRE_BLOCKING_REQUIRED: 'Fire blocking required',
   SPECIES_NOT_IN_TABLE: 'Species not covered by the IRC table',
   WIND_SPEED_MISSING: 'Wind speed is missing (king stud table)',
   // motor (packages/core) — erros que um projeto provoca; o CLI e o parser

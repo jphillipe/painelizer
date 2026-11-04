@@ -301,3 +301,44 @@ describe('panelizeWall com joints', () => {
     ]);
   });
 });
+
+describe('cruzamento em + (S31, hipótese P46)', () => {
+  const cross = { x: 72, width: 3.5, wallId: 'N', sides: 2 as const, otherWallId: 'S' };
+
+  it('plateOptionsFor: um corte só na atravessada; quem encosta no + avança meia espessura', () => {
+    expect(plateOptionsFor({ tees: [cross] })).toEqual({ cuts: [{ x: 70.25, width: 3.5 }] });
+    expect(plateOptionsFor({ end: { kind: 'tee', otherThickness: 3.5, cross: true } })).toEqual({ end: { extend: 1.75 } });
+    expect(plateOptionsFor({ start: { kind: 'tee', otherThickness: 5.5 } })).toEqual({ start: { extend: 5.5 } });
+  });
+
+  it('backer: dois studs colados às faces da faixa servem os dois lados', () => {
+    const panel = panelizeWall({ ...base, id: 'W', length: 192, joints: { tees: [cross] } }, { ...config, tee: 'backer' });
+    const xs = panel.members.filter((m) => m.role === 'stud').map((m) => m.x);
+    expect(xs.filter((x) => x === 68.75 || x === 73.75)).toEqual([68.75, 73.75]);
+    expect(panel.members.filter((m) => m.role === 'block')).toEqual([]);
+    expect(panel.warnings).toEqual([]);
+  });
+
+  it('dois T no mesmo vão entre studs (lados opostos, sem se sobrepor): um ladder só', () => {
+    const panel = panelizeWall(
+      {
+        ...base,
+        id: 'W',
+        length: 192,
+        joints: {
+          tees: [
+            { x: 67, width: 3.5, wallId: 'N' },
+            { x: 75, width: 3.5, wallId: 'S' },
+          ],
+        },
+      },
+      config,
+    );
+    const blocks = panel.members.filter((m) => m.role === 'block');
+    expect(blocks.map((b) => [b.x, b.length, b.y])).toEqual([
+      [64.75, 14.5, 23.25],
+      [64.75, 14.5, 47.25],
+      [64.75, 14.5, 71.25],
+    ]);
+  });
+});
