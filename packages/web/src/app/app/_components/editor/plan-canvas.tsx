@@ -1,12 +1,13 @@
 'use client';
 
 import { MaximizeIcon, MinusIcon, OctagonXIcon, PlusIcon } from 'lucide-react';
-import { useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, Kbd } from '@/components/ui/tooltip';
 import type { Point } from '@/lib/editor/draft';
-import { alongFromStart, draggedEndpoint, draggedOpeningStart, segmentRect, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
+import { movedBreak, snapBreak, withBreak, withoutBreak, type ShownBreaks } from '@/lib/editor/breaks';
+import { alongFromStart, draggedEndpoint, draggedOpeningStart, pointAlong, segmentRect, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
 import { formatMeasure } from '@/lib/editor/measure';
 import { noticeText } from '@/lib/notices';
 import type { Issue } from '@/lib/editor/problems';
@@ -41,6 +42,13 @@ export interface PlanCanvasProps {
   onOpeningDrag?: ((wallId: string, openingId: string, s0: number, roughWidth: number, txn: string) => void) | undefined;
   /** Nudge pelo teclado (M5): a parede inteira anda `dx`/`dy` polegadas; aberturas usam `onOpeningDrag`. */
   onWallNudge?: ((wallId: string, dx: number, dy: number, txn: string) => void) | undefined;
+  /**
+   * Quebras de painel por parede (S29), em x do arquivo (do `start`): desenhadas em todas as paredes; na
+   * selecionada, os candidatos viram pontos (clique acrescenta) e as quebras se arrastam (duplo clique tira).
+   */
+  breaks?: ReadonlyMap<string, ShownBreaks> | undefined;
+  /** A lista inteira de quebras da parede (`undefined` = automático); `txn` durante um arraste. */
+  onBreaksChange?: ((wallId: string, breaks: number[] | undefined, txn?: string) => void) | undefined;
   onDragEnd?: (() => void) | undefined;
   /** Pavimento mostrado (M5): compartilhado com a lista quando o pai o controla. */
   level?: LevelFilter | undefined;
@@ -74,7 +82,8 @@ const NUDGE = { normal: 1, fine: SNAP_FINE, coarse: 12 } as const;
 type Drag =
   | { kind: 'pan'; x: number; y: number; moved: boolean; target: EventTarget | null }
   | { kind: 'endpoint'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; end: 'start' | 'end'; txn: string }
-  | { kind: 'opening'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; openingId: string; grabOffset: number; txn: string };
+  | { kind: 'opening'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; openingId: string; grabOffset: number; txn: string }
+  | { kind: 'break'; x: number; y: number; moved: boolean; target: EventTarget | null; wallId: string; index: number; txn: string };
 
 /** Dois dedos (M5): distância e centro do último quadro, para zoom + pan. */
 interface Pinch {
@@ -93,7 +102,7 @@ interface Pinch {
  * M5: botões de zoom, barra de escala, grade de 12" a partir de 1 px/pol, legenda, dois dedos (pinch e pan),
  * teclado (setas = nudge da seleção, +/− zoom, F = Fit) com o canvas focável, cota junto ao cursor no arraste.
  */
-export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onWallNudge, onDragEnd, level: levelProp, onLevel, initialSize, className, fill = false, toolbar, underlay, onCalibrationPoint, onCalibrationCancel, overlay, ref }: PlanCanvasProps) {
+export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitKey, onSelect, onEndpointDrag, onOpeningDrag, onWallNudge, breaks, onBreaksChange, onDragEnd, level: levelProp, onLevel, initialSize, className, fill = false, toolbar, underlay, onCalibrationPoint, onCalibrationCancel, overlay, ref }: PlanCanvasProps) {
   const calibrating = onCalibrationPoint !== undefined;
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -112,8 +121,8 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   const pinch = useRef<Pinch | undefined>(undefined);
   const nudgeTxn = useRef<string | undefined>(undefined);
   // Geometria e viewport mais recentes para o handler do rAF (o closure do evento pode estar velho).
-  const latest = useRef({ geometry, viewport });
-  latest.current = { geometry, viewport };
+  const latest = useRef({ geometry, viewport, breaks });
+  latest.current = { geometry, viewport, breaks };
 
   // Tamanho real do container.
   useEffect(() => {
@@ -211,11 +220,14 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
     const el = e.target instanceof Element ? e.target : null;
     const base = { x: e.clientX, y: e.clientY, moved: false, target: e.target };
     const handleEl = el?.closest('[data-handle]');
+    const breakEl = el?.closest('[data-break-index]');
     const openingEl = el?.closest('[data-opening-id]');
     const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
     const txn = `drag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     if (handleEl !== null && handleEl !== undefined && wallId !== undefined && onEndpointDrag !== undefined) {
       drag.current = { ...base, kind: 'endpoint', wallId, end: handleEl.getAttribute('data-handle') === 'start' ? 'start' : 'end', txn };
+    } else if (breakEl !== null && breakEl !== undefined && wallId !== undefined && onBreaksChange !== undefined) {
+      drag.current = { ...base, kind: 'break', wallId, index: Number(breakEl.getAttribute('data-break-index')), txn };
     } else if (openingEl !== null && openingEl !== undefined && wallId !== undefined && onOpeningDrag !== undefined) {
       const openingId = openingEl.getAttribute('data-opening-id') ?? '';
       const wall = geometry.walls.find((w) => w.wallId === wallId);
@@ -253,6 +265,17 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
       const other = d.end === 'start' ? wall.end : wall.start;
       setReadout({ x: at.x, y: at.y, text: `${formatMeasure(Math.hypot(point.x - other.x, point.y - other.y))} axis` });
       onEndpointDrag?.(d.wallId, d.end, point, d.txn);
+    } else if (d.kind === 'break') {
+      const shown = latest.current.breaks?.get(d.wallId);
+      if (shown === undefined) return;
+      // Snap no candidato mais próximo (S29); Shift = 1/8" livre (o motor diz se serve).
+      const along = Math.min(wall.length, Math.max(0, alongFromStart(wall, p)));
+      const to = ev.shift ? snapBreak(along, [], SNAP_FINE) : snapBreak(along, shown.candidates, SNAP_COARSE);
+      setReadout({ x: at.x, y: at.y, text: `break ${formatMeasure(to)}` });
+      if (shown.breaks[d.index] === to) return;
+      const next = movedBreak(shown.breaks, d.index, to);
+      d.index = next.indexOf(to);
+      onBreaksChange?.(d.wallId, next, d.txn);
     } else {
       const opening = wall.openings.find((o) => o.openingId === d.openingId);
       if (opening === undefined) return;
@@ -326,6 +349,13 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
     // Clique sem arraste: seleciona o que estava sob o ponteiro.
     const el = d.target instanceof Element ? d.target : null;
     const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
+    // Ponto candidato da parede selecionada (S29): o clique acrescenta a quebra ali.
+    const candidate = el?.closest('[data-break-candidate]')?.getAttribute('data-break-candidate');
+    if (candidate !== null && candidate !== undefined && wallId !== undefined && onBreaksChange !== undefined) {
+      const shown = latest.current.breaks?.get(wallId);
+      if (shown !== undefined) onBreaksChange(wallId, withBreak(shown.breaks, Number(candidate)));
+      return;
+    }
     const openingId = el?.closest('[data-opening-id]')?.getAttribute('data-opening-id') ?? undefined;
     if (wallId !== undefined && openingId !== undefined) onSelect({ kind: 'opening', wallId, openingId });
     else if (wallId !== undefined) onSelect({ kind: 'wall', wallId });
@@ -403,6 +433,15 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
       if (s0 !== opening.s0) onOpeningDrag(selection.wallId, selection.openingId, s0, width, txn);
     }
   };
+  // Duplo clique numa quebra da parede selecionada (S29): tira a quebra.
+  const onDoubleClick = (e: ReactMouseEvent<SVGSVGElement>): void => {
+    const el = e.target instanceof Element ? e.target : null;
+    const breakEl = el?.closest('[data-break-index]');
+    const wallId = el?.closest('[data-wall-id]')?.getAttribute('data-wall-id') ?? undefined;
+    if (breakEl === null || breakEl === undefined || wallId === undefined || onBreaksChange === undefined) return;
+    const shown = latest.current.breaks?.get(wallId);
+    if (shown !== undefined) onBreaksChange(wallId, withoutBreak(shown.breaks, Number(breakEl.getAttribute('data-break-index'))));
+  };
   const onKeyUp = (e: ReactKeyboardEvent<SVGSVGElement>): void => {
     if (e.key.startsWith('Arrow') && nudgeTxn.current !== undefined) {
       nudgeTxn.current = undefined;
@@ -425,7 +464,10 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   const grid = viewport === undefined ? undefined : gridStep(viewport.scale);
   const bar = viewport === undefined ? undefined : scaleBar(viewport.scale);
 
-  const hint = draggable ? 'Click to select · drag ends and openings (Shift = 1/8") · arrows nudge · drag the background to pan · scroll or pinch to zoom' : 'Click to select · drag to pan · scroll to zoom';
+  const editBreaks = draggable && onBreaksChange !== undefined;
+  const hint = draggable
+    ? `Click to select · drag ends and openings (Shift = 1/8")${editBreaks ? ' · panel breaks: click a dot to add, drag to move, double-click to remove' : ''} · arrows nudge · drag the background to pan · scroll or pinch to zoom`
+    : 'Click to select · drag to pan · scroll to zoom';
 
   return (
     <div className={cn(fill ? 'flex h-full min-h-0 flex-col gap-2' : 'space-y-2', className)}>
@@ -511,6 +553,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
           onPointerCancel={(e) => finishDrag(e, true)}
           onKeyDown={onKeyDown}
           onKeyUp={onKeyUp}
+          onDoubleClick={onDoubleClick}
         >
           {viewport !== undefined && size !== undefined ? (
             <>
@@ -533,6 +576,14 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
                   </g>
                 );
               })}
+              {breaks === undefined
+                ? null
+                : visible.map((w) => {
+                    const shown = breaks.get(w.wallId);
+                    return shown === undefined || (shown.breaks.length === 0 && selectedWall !== w.wallId) ? null : (
+                      <PanelBreaks key={`breaks-${w.wallId}`} wall={w} viewport={viewport} shown={shown} selected={selectedWall === w.wallId} editable={editBreaks} />
+                    );
+                  })}
               {selectedGeom !== undefined && draggable ? <Handles key={selectedGeom.wallId} wall={selectedGeom} viewport={viewport} /> : null}
               {readout !== undefined ? <Readout x={readout.x} y={readout.y} text={readout.text} size={size} /> : null}
               {northAngle !== undefined ? <North x={size.width - 28} y={28} angle={northAngle} /> : null}
@@ -590,6 +641,46 @@ function Wall({ wall, viewport, selected, selectedOpening, severity, draggable }
       ))}
       <Label x={label.x} y={label.y} text={wall.wallId} tone={selected ? 'selected' : 'ink'} vertical={wall.dir === 'y' && labelOffset === 0} />
       {selected ? <Label x={dim.x} y={dim.y} text={`${formatMeasure(wall.plateLength)} plate · ${formatMeasure(wall.length)} axis`} tone="muted" vertical={wall.dir === 'y'} /> : null}
+    </g>
+  );
+}
+
+/**
+ * Quebras de painel de uma parede (S29): um traço através da parede em cada quebra — cheio na cor da seleção
+ * quando é do revisor, tracejado quando é do motor. Na parede selecionada e editável, os candidatos livres são
+ * pontos no eixo e cada traço tem uma área de pega.
+ */
+function PanelBreaks({ wall, viewport, shown, selected, editable }: { wall: WallGeom; viewport: Viewport; shown: ShownBreaks; selected: boolean; editable: boolean }) {
+  const half = (wall.thickness * viewport.scale) / 2 + 5;
+  const across = (s: number): { x1: number; y1: number; x2: number; y2: number } => {
+    const p = planToScreen(viewport, pointAlong(wall, s));
+    return wall.dir === 'x' ? { x1: p.x, y1: p.y - half, x2: p.x, y2: p.y + half } : { x1: p.x - half, y1: p.y, x2: p.x + half, y2: p.y };
+  };
+  const stroke = shown.manual ? 'var(--color-selection)' : 'var(--color-ink-2)';
+  const free = selected && editable ? shown.candidates.filter((c) => !shown.breaks.some((b) => Math.abs(b - c) < 1e-6)) : [];
+  const cursor = wall.dir === 'x' ? 'ew-resize' : 'ns-resize';
+  return (
+    <g data-wall-id={wall.wallId} data-panel-breaks={shown.manual ? 'manual' : 'auto'}>
+      {free.map((c) => {
+        const p = planToScreen(viewport, pointAlong(wall, c));
+        return (
+          <g key={`c-${c}`} data-break-candidate={c} style={{ cursor: 'copy' }}>
+            <title>{`Add a panel break at ${formatMeasure(c)} from start`}</title>
+            <circle cx={p.x} cy={p.y} r={7} fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={2.5} fill="var(--color-card)" stroke="var(--color-selection)" strokeWidth={1.25} />
+          </g>
+        );
+      })}
+      {shown.breaks.map((b, i) => {
+        const l = across(b);
+        return (
+          <g key={`b-${i}`} data-break-index={selected && editable ? i : undefined} style={selected && editable ? { cursor } : undefined}>
+            <title>{`Panel break at ${formatMeasure(b)} from start · ${shown.manual ? 'set by you' : 'automatic'}${selected && editable ? ' · drag to move, double-click to remove' : ''}`}</title>
+            {selected && editable ? <line {...l} stroke="transparent" strokeWidth={12} /> : null}
+            <line {...l} stroke={stroke} strokeWidth={selected ? 2.5 : 1.5} strokeDasharray={shown.manual ? undefined : '4 3'} pointerEvents={selected && editable ? undefined : 'none'} />
+          </g>
+        );
+      })}
     </g>
   );
 }

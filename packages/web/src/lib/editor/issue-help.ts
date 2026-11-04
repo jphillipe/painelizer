@@ -69,6 +69,14 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
     what: 'The IRC table has no header for this span with these loads: an engineer has to size it.',
     fix: 'Select the opening and specify the header (section and plies) the engineer gives you, or check floor span and floors above in Project settings.',
   },
+  PANEL_BREAK_INVALID: {
+    what: 'A panel break you set is on an opening, a tee, a corner or off the stud layout.',
+    fix: 'Select the wall and drag the break to one of the marked spots on the plan, or reset the wall to automatic breaks.',
+  },
+  PANEL_TOO_LONG: {
+    what: 'With the breaks you set, one panel is longer than the max panel length in Project settings.',
+    fix: 'Select the wall and add a break on the plan, or reset the wall to automatic breaks.',
+  },
   OPENING_OFF_PLATE: { what: 'The opening runs past the end of the wall plate.', fix: 'Move the opening or lengthen the wall.' },
   FLAT_HEADER_SPAN: {
     what: 'A non-bearing wall can only use a flat header up to the code limit; this opening is wider.',

@@ -74,10 +74,23 @@ export type GenerateResult =
     }
   | { ok: false; problems: Notice[] };
 
-/** Checagem do editor (S21): o que o motor diria, sem os arquivos. */
+/**
+ * Quebras de painel de uma parede (S29), em x do arquivo (parede solta: x da parede; planta: do `start`). A planta
+ * do editor desenha `breaks` e oferece `candidates` para arrastar/adicionar.
+ */
+export interface WallBreaks {
+  wallId: string;
+  /** Quebras em uso; ausente quando a parede não virou painéis (erro). */
+  breaks?: number[];
+  candidates: number[];
+  /** A parede tem `panelBreaks` (quebras do revisor). */
+  manual: boolean;
+}
+
+/** Checagem do editor (S21): o que o motor diria, sem os arquivos. `walls`: quebras por parede (S29), quando o arquivo abriu. */
 export type CheckResult =
-  | { ok: true; projectName: string; panels: PanelSummary[]; warnings: Notice[] }
-  | { ok: false; problems: Notice[] };
+  | { ok: true; projectName: string; panels: PanelSummary[]; warnings: Notice[]; walls?: WallBreaks[] }
+  | { ok: false; problems: Notice[]; walls?: WallBreaks[] };
 
 export interface Example {
   id: string;

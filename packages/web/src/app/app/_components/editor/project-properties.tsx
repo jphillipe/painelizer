@@ -1,13 +1,12 @@
 'use client';
 
 import type { Dispatch } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DraftConfig, DraftPanelConfig, ProjectDraft } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
-import { formatMeasure } from '@/lib/editor/measure';
 import type { EditorAction } from '@/lib/editor/state';
 import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
+import { CatalogEditor } from './catalog-editor';
 import { EnumSelect, Field, MeasureInput, MeasureListInput, NumberInput, Section, TextInput } from './fields';
 
 export interface ProjectPropertiesProps {
@@ -20,7 +19,7 @@ export interface ProjectPropertiesProps {
   showProjectData: boolean;
 }
 
-/** Propriedades do projeto: carimbo, config de framing, divisão em painéis, dados da casa, catálogo (só leitura). */
+/** Propriedades do projeto: carimbo, config de framing, divisão em painéis, dados da casa, catálogo editável (S29). */
 export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, showProjectData }: ProjectPropertiesProps) {
   const c = draft.config;
   const setProject = (patch: Extract<EditorAction, { type: 'updateProject' }>['patch']): void => dispatch({ type: 'updateProject', patch });
@@ -137,76 +136,7 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome, 
         </details>
       ) : null}
 
-      <Section title={`Opening schedule (${Object.keys(c.openingTypes ?? {}).length})`}>
-        {c.openingTypes === undefined || Object.keys(c.openingTypes).length === 0 ? (
-          <p className="text-[13px] text-ink-3">No schedule: openings carry their own rough opening.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-md border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tag</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>RO</TableHead>
-                  <TableHead>Sill</TableHead>
-                  <TableHead>Frame</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(c.openingTypes).map(([tag, t]) => (
-                  <TableRow key={tag}>
-                    <TableCell className="font-mono font-semibold" title={t.description}>
-                      {tag}
-                    </TableCell>
-                    <TableCell>{t.kind ?? '?'}</TableCell>
-                    <TableCell className="font-mono text-[13px]">
-                      {formatMeasure(t.width)} × {formatMeasure(t.height)}
-                    </TableCell>
-                    <TableCell className="font-mono text-[13px]">{t.roughWidth !== undefined || t.roughHeight !== undefined ? `${formatMeasure(t.roughWidth)} × ${formatMeasure(t.roughHeight)}` : 'default clearance'}</TableCell>
-                    <TableCell className="font-mono text-[13px]">{t.sillHeight === undefined ? '—' : formatMeasure(t.sillHeight)}</TableCell>
-                    <TableCell>{t.frame ?? (t.kind === 'door' ? 'wood' : '—')}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        <p className="text-[12px] text-ink-3">Read-only for now; edit the project file to change the schedule.</p>
-      </Section>
-
-      <Section title={`Header schedule (${Object.keys(c.headerSchedule ?? {}).length})`}>
-        {c.headerSchedule === undefined || Object.keys(c.headerSchedule).length === 0 ? (
-          <p className="text-[13px] text-ink-3">No header schedule: headers come from the opening or the IRC table.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-md border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mark</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead className="text-right">Plies</TableHead>
-                  <TableHead className="text-right">Jacks</TableHead>
-                  <TableHead className="text-right">Kings</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(c.headerSchedule).map(([mark, h]) => (
-                  <TableRow key={mark}>
-                    <TableCell className="font-mono font-semibold" title={h.description}>
-                      {mark}
-                    </TableCell>
-                    <TableCell className="font-mono text-[13px]">{typeof h.section === 'string' ? h.section : h.section === undefined ? '?' : `${h.section.material} ${h.section.width}x${h.section.depth}`}</TableCell>
-                    <TableCell className="text-right font-mono">{h.plies ?? '?'}</TableCell>
-                    <TableCell className="text-right font-mono">{h.jackStuds ?? '?'}</TableCell>
-                    <TableCell className="text-right font-mono">{h.kingStuds ?? '?'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </Section>
+      <CatalogEditor draft={draft} dispatch={dispatch} />
     </div>
   );
 }

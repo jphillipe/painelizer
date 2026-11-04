@@ -71,6 +71,8 @@ export const ENGINE_ERROR_CODES = [
   'EXTRA_STUD_IN_OPENING',
   // divisão em painéis, emendas, estoque
   'CANNOT_SPLIT',
+  'PANEL_BREAK_INVALID',
+  'PANEL_TOO_LONG',
   'LAP_NO_ROOM',
   'SPLICE_NO_STUD',
   'PANEL_MIN_LAP_ABOVE_LAP',
@@ -277,6 +279,27 @@ const ERROR_PT: Record<EngineErrorCode, Template> = {
   CANNOT_SPLIT: (p, w) =>
     `${w.wallId === undefined ? 'parede' : `parede ${w.wallId}`}: não há como dividir ${inch(p.length)} em painéis de até ${inch(p.maxLength)}` +
     `${p.maxWeight === undefined ? '' : ` / ${p.maxWeight} lb`} — nenhum stud de layout livre (fora de abertura, T, canto e studs extras) entre x=${p.from} e x=${p.to}`,
+  PANEL_BREAK_INVALID: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `quebra de painel em x=${p.at} (panelBreaks): ` +
+        (p.reason === 'order'
+          ? 'as quebras devem estar em ordem crescente e sem repetição'
+          : p.reason === 'end'
+            ? `a menos de ${inch(p.min)} da ponta da parede (${inch(p.length)}) — o par de studs da junta não cabe ao lado do stud de ponta ou do canto`
+            : p.reason === 'mark'
+              ? `não é o centro de um stud de layout (marcas a cada ${inch(p.spacing)} da marca 0)`
+              : p.reason === 'opening'
+                ? `cai na zona da(s) abertura(s) ${list(p.openingIds)} [${p.start}, ${p.end}]`
+                : p.reason === 'tee'
+                  ? `cai na faixa do T${p.teeWallId === undefined ? '' : ` da parede ${p.teeWallId}`} (${p.lo}–${p.hi})`
+                  : `o par de studs da junta encosta em ${p.role} em x=${p.memberX}`),
+    ),
+  PANEL_TOO_LONG: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `painel de x=${p.from} a x=${p.to} (${inch(p.length)}) passa do máximo de ${inch(p.maxLength)} (config.panel.maxLength) — acrescente uma quebra em panelBreaks`,
+    ),
   LAP_NO_ROOM: (p, w) =>
     at(
       { wallId: w.wallId },

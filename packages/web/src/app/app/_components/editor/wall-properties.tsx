@@ -1,9 +1,10 @@
 'use client';
 
-import { CheckIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, PlusIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import type { Dispatch } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { movedBreak, suggestBreak, withBreak, withoutBreak, type ShownBreaks } from '@/lib/editor/breaks';
 import { isIdFree, isPlanWall, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
@@ -11,7 +12,7 @@ import type { Issue } from '@/lib/editor/problems';
 import { IssueText } from './issue-text';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
 import { resolveDraftOpening } from '@/lib/editor/resolve';
-import { isReviewed, type EditorAction, type Selection } from '@/lib/editor/state';
+import { isReviewed, type EditorAction, type Patch, type Selection } from '@/lib/editor/state';
 import { cn } from '@/lib/utils';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
 import { IssueCallout } from './issue-callout';
@@ -19,6 +20,8 @@ import { IssueCallout } from './issue-callout';
 export interface WallPropertiesProps {
   draft: ProjectDraft;
   wall: DraftWall;
+  /** Quebras de painel (S29): as mostradas na planta e os candidatos da checagem. */
+  breaks?: ShownBreaks | undefined;
   provenance: WallProvenance | undefined;
   issues: readonly Issue[];
   dispatch: Dispatch<EditorAction>;
@@ -28,7 +31,7 @@ export interface WallPropertiesProps {
 }
 
 /** Painel de propriedades da parede: identidade, geometria (planta ou solta), framing, aberturas, proveniência. */
-export function WallProperties({ draft, wall, provenance, issues, dispatch, onSelect, collapsible = false }: WallPropertiesProps) {
+export function WallProperties({ draft, wall, breaks, provenance, issues, dispatch, onSelect, collapsible = false }: WallPropertiesProps) {
   const id = wall.id;
   const set = (patch: Extract<EditorAction, { type: 'updateWall' }>['patch']): void => dispatch({ type: 'updateWall', wallId: id, patch });
   const plan = isPlanWall(wall);
@@ -148,6 +151,10 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
         </div>
       </Section>
 
+      <PanelBreaksSection id={id} length={length} breaks={breaks} collapsible={collapsible} issue={issues.some((i) => i.code === 'PANEL_BREAK_INVALID' || i.code === 'PANEL_TOO_LONG')} onChange={(list) => dispatch({ type: 'setPanelBreaks', wallId: id, breaks: list })} />
+
+      <ExtraStudsSection id={id} length={length} studs={wall.extraStuds} collapsible={collapsible} onChange={(extraStuds) => set({ extraStuds })} />
+
       <Section
         title={`Openings (${wall.openings.length})`}
         collapsible={collapsible}
@@ -206,6 +213,103 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
         </Section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Quebras de painel da parede (S29), em x do arquivo (do `start` na planta). Automáticas até a primeira edição;
+ * daí a lista inteira vai para `panelBreaks` e o motor usa exatamente ela. "Automatic" apaga o campo.
+ */
+function PanelBreaksSection({ id, length, breaks, collapsible, issue, onChange }: { id: string; length: number | undefined; breaks: ShownBreaks | undefined; collapsible: boolean; issue: boolean; onChange: (list: number[] | undefined) => void }) {
+  const list = breaks?.breaks ?? [];
+  const manual = breaks?.manual === true;
+  const suggestion = length === undefined || breaks === undefined ? undefined : suggestBreak(length, list, breaks.candidates);
+  return (
+    <Section
+      title={`Panels (${list.length + 1})`}
+      collapsible={collapsible}
+      defaultOpen={!collapsible || manual || issue}
+      actions={
+        <span className="flex items-center gap-1">
+          {manual ? (
+            <Button variant="ghost" size="xs" onClick={() => onChange(undefined)}>
+              <RotateCcwIcon /> Automatic
+            </Button>
+          ) : null}
+          <Button variant="outline" size="xs" disabled={suggestion === undefined} onClick={() => suggestion !== undefined && onChange(withBreak(list, suggestion))}>
+            <PlusIcon /> Add break
+          </Button>
+        </span>
+      }
+    >
+      <p className="text-[12px] text-ink-3">
+        {manual
+          ? 'Set by you: the engine uses exactly these breaks. Each one must sit on a layout stud clear of openings, tees and corners.'
+          : 'Automatic: fewest panels under the max length, balanced, preferring 4′ modules. Edit, add or drag one on the plan to take over.'}
+      </p>
+      {list.length === 0 ? null : (
+        <ul className="space-y-2">
+          {list.map((b, i) => (
+            <li key={`${i}-${b}`} className="flex items-center gap-2">
+              <span className="w-24 shrink-0 font-mono text-[12px] text-ink-3">
+                P{i + 1} | P{i + 2}
+              </span>
+              <MeasureInput id={`w-${id}-break-${i}`} value={b} required aria-label={`Break ${i + 1}, from start`} onCommit={(v) => v !== undefined && onChange(movedBreak(list, i, v))} />
+              <Button variant="ghost" size="icon-xs" aria-label={`Remove break ${i + 1}`} onClick={() => onChange(withoutBreak(list, i))}>
+                <Trash2Icon />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+/** Studs de altura inteira pedidos pelo projeto (`extraStuds`): x da borda esquerda do primeiro, quantos, rótulo. */
+function ExtraStudsSection({ id, length, studs, collapsible, onChange }: { id: string; length: number | undefined; studs: DraftWall['extraStuds']; collapsible: boolean; onChange: (studs: DraftWall['extraStuds']) => void }) {
+  const list = studs ?? [];
+  const update = (i: number, patch: Patch<NonNullable<DraftWall['extraStuds']>[number]>): void =>
+    onChange(list.map((s, n) => (n === i ? Object.fromEntries(Object.entries({ ...s, ...patch }).filter(([, v]) => v !== undefined)) : s)));
+  const remove = (i: number): void => {
+    const next = list.filter((_, n) => n !== i);
+    onChange(next.length === 0 ? undefined : next);
+  };
+  const add = (): void => onChange([...list, { x: Math.round(((length ?? 0) / 2) * 16) / 16 }]);
+  return (
+    <Section
+      title={`Extra studs (${list.length})`}
+      collapsible={collapsible}
+      defaultOpen={!collapsible || list.length > 0}
+      actions={
+        <Button variant="outline" size="xs" onClick={add}>
+          <PlusIcon /> Add stud
+        </Button>
+      }
+    >
+      {list.length === 0 ? (
+        <p className="text-[13px] text-ink-3">None. Use for posts and hold-downs the drawings call out (full-height studs beside the layout).</p>
+      ) : (
+        <ul className="space-y-2">
+          {list.map((s, i) => (
+            <li key={i} className="grid grid-cols-[1fr_4rem_1fr_auto] items-end gap-2">
+              <Field id={`w-${id}-xs-${i}-x`} label={i === 0 ? 'Left edge (from start)' : ''}>
+                <MeasureInput id={`w-${id}-xs-${i}-x`} value={s.x} required onCommit={(v) => v !== undefined && update(i, { x: v })} />
+              </Field>
+              <Field id={`w-${id}-xs-${i}-n`} label={i === 0 ? 'Count' : ''}>
+                <NumberInput id={`w-${id}-xs-${i}-n`} value={s.count} integer min={1} placeholder="1" onCommit={(v) => update(i, { count: v })} />
+              </Field>
+              <Field id={`w-${id}-xs-${i}-l`} label={i === 0 ? 'Label' : ''}>
+                <TextInput id={`w-${id}-xs-${i}-l`} value={s.label} placeholder="e.g. HDU2 post" onCommit={(v) => update(i, { label: v })} />
+              </Field>
+              <Button variant="ghost" size="icon-xs" aria-label={`Remove extra stud ${i + 1}`} onClick={() => remove(i)}>
+                <Trash2Icon />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
   );
 }
 

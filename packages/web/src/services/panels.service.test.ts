@@ -70,7 +70,7 @@ describe('panels.service.check', () => {
       const c = check(exampleText(id) as string);
       const g = generate(exampleText(id) as string);
       if (!c.ok || !g.ok) throw new Error('should build');
-      expect(c).toEqual({ ok: true, projectName: g.projectName, panels: g.panels, warnings: g.warnings });
+      expect(c).toEqual({ ok: true, projectName: g.projectName, panels: g.panels, warnings: g.warnings, walls: expect.any(Array) });
       expect('files' in c).toBe(false);
     }
   });
@@ -81,6 +81,21 @@ describe('panels.service.check', () => {
     const r = check(bad);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.problems[0]).toMatchObject({ wallId: 'W1', openingId: 'D' });
+  });
+
+  it('S29: quebras e candidatos por parede, também quando a quebra forçada é recusada', () => {
+    const wall = { id: 'W1', length: 300, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] };
+    const text = (w: object) => JSON.stringify({ name: 'x', config: { studSpacing: 16, studLength: [92.625] }, walls: [{ ...wall, ...w }] });
+    const auto = check(text({}));
+    if (!auto.ok) throw new Error('should check');
+    expect(auto.walls).toEqual([{ wallId: 'W1', breaks: [144], candidates: [16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256, 272, 288], manual: false }]);
+    expect(auto.panels.map((p) => p.length)).toEqual([144, 156]);
+    const bad = check(text({ panelBreaks: [150] }));
+    expect(bad.ok).toBe(false);
+    if (bad.ok) return;
+    expect(bad.problems[0]).toMatchObject({ code: 'PANEL_BREAK_INVALID', wallId: 'W1', params: { at: 150, reason: 'mark' } });
+    expect(bad.walls?.[0]).toMatchObject({ wallId: 'W1', manual: true });
+    expect(bad.walls?.[0]).not.toHaveProperty('breaks');
   });
 });
 

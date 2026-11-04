@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PANEL_CONFIG, type Member, type Wall } from '../../src/types';
+import { EngineError } from '../../src/messages';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
-import { splitWall } from '../../src/panelize/splitWall';
+import { splitWall, wallBreakCandidates } from '../../src/panelize/splitWall';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
 import split480Json from '../fixtures/wall-480-split.json';
 import spliced240Json from '../fixtures/wall-240-spliced.json';
@@ -224,5 +225,66 @@ describe('splitWall — ligações da parede e T no lap', () => {
     const [p1] = splitWall(wall, config);
     expect(p1!.length).not.toBe(192);
     expect(p1!.length).toBe(240);
+  });
+});
+
+describe('splitWall — quebras forçadas (S29, wall.panelBreaks)', () => {
+  const forced = wallFixture({ config: split480Json.config, wall: { ...split480Json.wall, panelBreaks: split480Json.forced.panelBreaks } });
+
+  it('wall-480-split, caso forçado [160, 320]: três painéis de 160 em vez dos dois de 240 do automático', () => {
+    const panels = splitWall(forced.wall, forced.config);
+    const expected = split480Json.forced.expected.panels as ExpectedPanel[];
+    expect(panels.map((p) => p.id)).toEqual(expected.map((e) => e.id));
+    for (const [i, p] of panels.entries()) {
+      const e = expected[i]!;
+      expect(p).toMatchObject({ wallId: e.wallId, level: e.level, wallOffset: e.wallOffset, length: e.length, layoutOrigin: e.layoutOrigin, weightLb: e.weightLb });
+      expect(p.warnings.map((w) => w.code), p.id).toEqual(e.warnings.map((w) => w.code));
+      expect(p.fieldCuts, p.id).toEqual(e.fieldCuts);
+      expectSameMembers(p.members, e.members);
+    }
+    // Sem o campo, o automático segue igual ao fixture.
+    expect(splitWall(split480.wall, config).map((p) => p.wallOffset)).toEqual([0, 240]);
+  });
+
+  it('a lista é completa: a do automático dá o mesmo resultado; [] numa parede que cabe dá um painel', () => {
+    expect(splitWall({ ...split480.wall, panelBreaks: [240] }, config)).toEqual(splitWall(split480.wall, config));
+    expect(splitWall({ ...plain.wall, panelBreaks: [] }, plain.config)).toEqual(splitWall(plain.wall, plain.config));
+    // Parede de 144 que caberia inteira: o revisor pode quebrá-la mesmo assim.
+    expect(splitWall({ ...plain.wall, panelBreaks: [64] }, plain.config).map((p) => [p.wallOffset, p.length])).toEqual([
+      [0, 64],
+      [64, 80],
+    ]);
+  });
+
+  it('erros com código: quebra fora dos candidatos e trecho acima de maxLength', () => {
+    const code = (breaks: number[]): unknown => {
+      try {
+        splitWall({ ...split480.wall, panelBreaks: breaks }, config);
+      } catch (e) {
+        return e instanceof EngineError ? { code: e.code, wallId: e.wallId, ...e.params } : e;
+      }
+      return undefined;
+    };
+    expect(code([192, 320])).toMatchObject({ code: 'PANEL_BREAK_INVALID', wallId: 'W-480', at: 192, reason: 'opening', openingIds: ['P1'] });
+    expect(code([150, 320])).toMatchObject({ code: 'PANEL_BREAK_INVALID', at: 150, reason: 'mark' });
+    expect(code([3, 240])).toMatchObject({ code: 'PANEL_BREAK_INVALID', at: 3, reason: 'end' });
+    expect(code([320, 160])).toMatchObject({ code: 'PANEL_BREAK_INVALID', at: 160, reason: 'order' });
+    expect(code([])).toMatchObject({ code: 'PANEL_TOO_LONG', from: 0, to: 480, maxLength: 240 });
+  });
+
+  it('o campo não vaza para os trechos (cada painel é uma Wall sem panelBreaks)', () => {
+    const panels = splitWall(forced.wall, forced.config);
+    expect(panels).toHaveLength(3);
+    for (const p of panels) expect(p).not.toHaveProperty('panelBreaks');
+  });
+});
+
+describe('wallBreakCandidates (S29: o que o editor oferece)', () => {
+  it('os candidatos de breakCandidates sobre a parede inteira', () => {
+    const excluded = new Set([176, 192, 208, 336, 352, 368]);
+    const every = Array.from({ length: 29 }, (_, i) => (i + 1) * 16);
+    expect(wallBreakCandidates(split480.wall, config)).toEqual(every.filter((c) => !excluded.has(c)));
+    // Não depende de panelBreaks (nem do erro dela).
+    expect(wallBreakCandidates({ ...split480.wall, panelBreaks: [192] }, config)).toEqual(wallBreakCandidates(split480.wall, config));
   });
 });

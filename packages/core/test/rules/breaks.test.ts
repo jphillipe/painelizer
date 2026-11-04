@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PANEL_CONFIG, type Config, type Panel, type PanelConfig, type Wall } from '../../src/types';
 import { framePanel } from '../../src/panelize/panelizeWall';
 import { teeStrips } from '../../src/rules/corners';
-import { breakCandidates, chooseBreaks, validatePanelConfig } from '../../src/rules/breaks';
+import { breakCandidates, chooseBreaks, forcedBreaks, validatePanelConfig, whyNotBreak } from '../../src/rules/breaks';
+import { EngineError } from '../../src/messages';
 import split480Json from '../fixtures/wall-480-split.json';
 import { wallFixture } from '../helpers/fixtures';
 
@@ -110,5 +111,96 @@ describe('chooseBreaks (hipótese P35: equilibrado, módulo de 48 preferido)', (
   it('sem candidato ao alcance: RangeError com a parede e o trecho', () => {
     expect(() => choose(480, [])).toThrow(/parede W: não há como dividir 480" em painéis de até 240".*entre x=0 e x=240/);
     expect(() => choose(600, [100, 200])).toThrow(/entre x=200 e x=440/);
+  });
+});
+
+describe('whyNotBreak (S29: motivo de recusa da quebra forçada)', () => {
+  const why = (x: number, wall: Wall = wall480) => {
+    const { panel, plan } = framePanel(wall, config);
+    return whyNotBreak(x, panel, config, { zones: plan.zones, strips: teeStrips(wall.joints) });
+  };
+
+  it('candidato → undefined; o mesmo critério de breakCandidates', () => {
+    for (const c of candidatesOf(wall480)) expect(why(c), String(c)).toBeUndefined();
+    expect(why(160)).toBeUndefined();
+    expect(why(320)).toBeUndefined();
+  });
+
+  it('ponta: a faixa da junta tem de ficar a ≥ 2t das pontas (fora da parede também)', () => {
+    expect(why(3)).toEqual({ reason: 'end', min: 4.5, length: 480 });
+    expect(why(478)).toMatchObject({ reason: 'end' });
+    expect(why(-16)).toMatchObject({ reason: 'end' });
+    expect(why(600)).toMatchObject({ reason: 'end' });
+  });
+
+  it('abertura: a zona fundida (king a king) com os ids', () => {
+    expect(why(192)).toEqual({ reason: 'opening', openingIds: ['P1'], start: 165, end: 209 });
+    // 208 é marca, mas a faixa [206.5, 209.5] toca a zona da porta.
+    expect(why(208)).toMatchObject({ reason: 'opening', openingIds: ['P1'] });
+    expect(why(352)).toMatchObject({ reason: 'opening', openingIds: ['J1'] });
+  });
+
+  it('T: a faixa da parede que encosta', () => {
+    const tee: Wall = { ...wall480, openings: [], joints: { tees: [{ x: 48, width: 3.5, wallId: 'W9' }] } };
+    expect(why(48, tee)).toEqual({ reason: 'tee', lo: 46.25, hi: 49.75, teeWallId: 'W9' });
+    // Marca vizinha ao T: o bloco do ladder encosta no stud.
+    expect(why(32, tee)).toMatchObject({ reason: 'member', role: 'block' });
+  });
+
+  it('marca: fora de origem + k·16 não é centro de stud de layout', () => {
+    expect(why(150)).toEqual({ reason: 'mark', spacing: 16 });
+    expect(why(240.5)).toMatchObject({ reason: 'mark' });
+  });
+
+  it('peça: stud extra na faixa da junta', () => {
+    const extra: Wall = { ...wall480, openings: [], extraStuds: [{ x: 49 }] };
+    expect(why(48, extra)).toEqual({ reason: 'member', role: 'stud', memberX: 49 });
+  });
+});
+
+describe('forcedBreaks (S29: lista completa do revisor)', () => {
+  const reject = (x: number) => (x === 192 ? ({ reason: 'opening', openingIds: ['P1'], start: 165, end: 209 } as const) : undefined);
+  const forced = (list: number[], length = 480) => forcedBreaks(list, { length, reject, wallId: 'W' }, cfg);
+  const codeOf = (f: () => unknown): unknown => {
+    try {
+      f();
+    } catch (e) {
+      return e instanceof EngineError ? { code: e.code, ...e.params } : e;
+    }
+    return undefined;
+  };
+
+  it('válida: devolve como veio; [] = um painel só quando cabe', () => {
+    expect(forced([160, 320])).toEqual([160, 320]);
+    expect(forced([240])).toEqual([240]);
+    expect(forced([], 200)).toEqual([]);
+  });
+
+  it('ordem: decrescente ou repetida é PANEL_BREAK_INVALID order, antes do resto', () => {
+    expect(codeOf(() => forced([320, 160]))).toEqual({ code: 'PANEL_BREAK_INVALID', at: 160, reason: 'order' });
+    expect(codeOf(() => forced([160, 160]))).toMatchObject({ reason: 'order' });
+    expect(codeOf(() => forced([320, 192]))).toMatchObject({ reason: 'order' });
+  });
+
+  it('recusa: o motivo de whyNotBreak vai nos parâmetros; frase em português com a parede', () => {
+    expect(codeOf(() => forced([192, 320]))).toEqual({
+      code: 'PANEL_BREAK_INVALID',
+      at: 192,
+      reason: 'opening',
+      openingIds: ['P1'],
+      start: 165,
+      end: 209,
+    });
+    expect(() => forced([192, 320])).toThrow(/parede W: quebra de painel em x=192 \(panelBreaks\): cai na zona da\(s\) abertura\(s\) P1 \[165, 209\]/);
+  });
+
+  it('trecho acima de maxLength: PANEL_TOO_LONG com o trecho', () => {
+    expect(codeOf(() => forced([]))).toEqual({ code: 'PANEL_TOO_LONG', from: 0, to: 480, length: 480, maxLength: 240 });
+    expect(codeOf(() => forced([224]))).toMatchObject({ code: 'PANEL_TOO_LONG', from: 224, to: 480, length: 256 });
+    expect(() => forced([224])).toThrow(/painel de x=224 a x=480 \(256"\) passa do máximo de 240"/);
+  });
+
+  it('não finita: VALUE_INVALID', () => {
+    expect(codeOf(() => forced([Number.NaN]))).toMatchObject({ code: 'VALUE_INVALID', field: 'panelBreaks' });
   });
 });

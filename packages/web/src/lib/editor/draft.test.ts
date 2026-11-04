@@ -189,3 +189,24 @@ describe('consultas', () => {
     expect(openingCount(d)).toBe(3);
   });
 });
+
+describe('S29: panelBreaks', () => {
+  const base = { name: 'x', config: { studSpacing: 16, studLength: [92.625] } };
+  const wall = { id: 'W1', length: 480, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] };
+
+  it('lê pés-pol, devolve em polegadas depois de extraStuds; o CLI aceita', () => {
+    const d = load(JSON.stringify({ ...base, walls: [{ ...wall, panelBreaks: ["13'-4\"", 320] }] }));
+    expect(d.walls[0]?.panelBreaks).toEqual([160, 320]);
+    const text = textFromDraft(d);
+    expect(Object.keys(JSON.parse(text).walls[0])).toEqual(['id', 'length', 'height', 'section', 'exterior', 'bearing', 'panelBreaks', 'openings']);
+    expect(parseProject(text).walls[0]?.panelBreaks).toEqual([160, 320]);
+  });
+
+  it('valor ruim é problem no caminho e a lista some do draft', () => {
+    const r = draftFromText(JSON.stringify({ ...base, walls: [{ ...wall, panelBreaks: [160, 'x'] }] }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.draft.walls[0]).not.toHaveProperty('panelBreaks');
+    expect(r.problems.map((p) => p.path)).toContain('walls[0].panelBreaks[1]');
+  });
+});

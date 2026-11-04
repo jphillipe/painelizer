@@ -6,7 +6,7 @@
 
 import 'server-only';
 import ringgoldReading from '@/samples/ringgold-st-multifamily-reading.json' with { type: 'json' };
-import { buildProject, BuildError, panelizeProject, type BuildResult } from 'cli/build';
+import { buildProject, BuildError, panelizeProject, wallBreaks, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError, type Project } from 'cli/project';
 import { EngineError, noticeOf, piecesOf, type Panel } from 'core';
@@ -88,8 +88,10 @@ export function check(projectText: string): CheckResult {
   try {
     const project = parseProject(projectText, 'project');
     const { panels, problems } = panelizeProject(project);
-    if (problems.length > 0) return { ok: false, problems: problems.map((p): Notice => ({ source: 'engine', ...p })) };
-    return { ok: true, projectName: project.name, ...summarize(panels) };
+    // S29: quebras e candidatos por parede, também com erro (a planta deixa o revisor corrigir a quebra).
+    const walls = wallBreaks(project, panels);
+    if (problems.length > 0) return { ok: false, problems: problems.map((p): Notice => ({ source: 'engine', ...p })), walls };
+    return { ok: true, projectName: project.name, ...summarize(panels), walls };
   } catch (e) {
     return { ok: false, problems: problemsOf(e) };
   }

@@ -6,7 +6,8 @@
  * 1. `panelizeWall` monta a parede inteira; dela saem os candidatos a quebra (`rules/breaks.ts`), as zonas de
  *    abertura e as faixas de T.
  * 2. `chooseBreaks` escolhe as quebras (hipótese P35: menor número de painéis, depois o mais equilibrado,
- *    preferindo marcas múltiplas de `config.panel.module`). Sem quebra, o painel da parede inteira é o painel.
+ *    preferindo marcas múltiplas de `config.panel.module`); com `wall.panelBreaks` (S29) valem as do revisor,
+ *    conferidas por `forcedBreaks`. Sem quebra, o painel da parede inteira é o painel.
  * 3. Cada trecho `[a, b]` vira uma `Wall` própria — comprimento `b − a`, aberturas, studs extras e T
  *    deslocados de `−a`, `layoutOrigin = origem − a` — com a junta como ligação `{ kind: 'panel', lap }` nas
  *    pontas internas (o painel i avança o lap, o i+1 recua; `rules/corners.ts`). As ligações da parede com as
@@ -29,7 +30,7 @@ import type { EndJoint, Wall, WallJoints } from '../wall';
 import type { HeaderTable } from '../rules/headers';
 import type { HeaderTables, ResolvedHeader } from '../rules/openingHeader';
 import { teeStrips, type TeeStrip } from '../rules/corners';
-import { breakCandidates, chooseBreaks, validatePanelConfig } from '../rules/breaks';
+import { breakCandidates, chooseBreaks, forcedBreaks, validatePanelConfig, whyNotBreak } from '../rules/breaks';
 import { lapEnd, type LapObstacle } from '../rules/laps';
 import { splicePlates, supportCenters } from '../rules/splice';
 import { layoutMarks } from '../rules/studs';
@@ -72,7 +73,16 @@ function splitNudged(
   const { panel: whole, plan } = framePanel(wall, config, tables, headers);
   const strips = teeStrips(wall.joints);
   const origin = wall.layoutOrigin ?? 0;
-  const candidates = breakCandidates(whole, config, { zones: plan.zones, strips });
+  const ctx = { zones: plan.zones, strips };
+  if (wall.panelBreaks !== undefined) {
+    const forced = forcedBreaks(
+      wall.panelBreaks,
+      { length: wall.length, reject: (x) => whyNotBreak(x, whole, config, ctx), wallId: wall.id },
+      cfg,
+    );
+    return panelsAt(forced, wall, whole, config, tables, headers, strips, stock, level, cfg);
+  }
+  const candidates = breakCandidates(whole, config, ctx);
   const isModule = (c: number): boolean => {
     const k = (c - origin) / cfg.module;
     return Math.abs(k - Math.round(k)) < 1e-6;
@@ -87,7 +97,23 @@ function splitNudged(
     },
     cfg,
   );
+  return panelsAt(breaks, wall, whole, config, tables, headers, strips, stock, level, cfg);
+}
 
+/** Os painéis da parede com as quebras dadas: lap da double top em cada junta, trechos, emendas e peso. */
+function panelsAt(
+  breaks: readonly number[],
+  wall: Wall,
+  whole: Panel,
+  config: Config,
+  tables: readonly HeaderTable[] | HeaderTables | undefined,
+  headers: readonly ResolvedHeader[],
+  strips: readonly TeeStrip[],
+  stock: readonly number[],
+  level: number,
+  cfg: PanelConfig,
+): Panel[] {
+  const origin = wall.layoutOrigin ?? 0;
   if (breaks.length === 0) return [finish({ ...whole, id: panelId(level, wall.id, 1), level }, wall.id, 0, stock, cfg)];
 
   const marks = [...new Set([...layoutMarks(wall.length, config.studSpacing, origin), ...supportCenters(whole.members)])].sort(
@@ -155,6 +181,7 @@ function segmentWall(
     openings,
     layoutOrigin: (wall.layoutOrigin ?? 0) - a,
   };
+  delete segment.panelBreaks;
   if (wall.extraStuds !== undefined) {
     segment.extraStuds = wall.extraStuds.filter((e) => inside(e.x)).map((e) => ({ ...e, x: e.x - a }));
   }
@@ -220,4 +247,17 @@ function estimateWeight(whole: Panel, a: number, b: number, config: Config, cfg:
   if (b < whole.length - EPS) total += studWeight + lapWeight;
   if (a > EPS) total -= lapWeight;
   return total;
+}
+
+/**
+ * Candidatos a quebra da parede (S29), em x da parede, crescentes — o que o editor oferece para arrastar a
+ * quebra. Mesmo cálculo de `splitWall` (deslocamento P40, painel inteiro, zonas e faixas de T).
+ *
+ * @throws RangeError os de `panelizeWall`
+ */
+export function wallBreakCandidates(given: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): number[] {
+  const headers = resolveHeaders(given, config, tables);
+  const { wall } = nudgeWall(given, config, tables, headers);
+  const { panel, plan } = framePanel(wall, config, tables, headers);
+  return breakCandidates(panel, config, { zones: plan.zones, strips: teeStrips(wall.joints) });
 }

@@ -221,7 +221,10 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   "primeira marca livre depois do obstáculo" pulou também o header do par de janelas, indo a 128" de lap (5.5 →
   272). — hipótese nova: o lap bloqueado termina no primeiro apoio livre depois do obstáculo, marca ou centro de
   king/stud de altura inteira (aqui o king em 193 3/4": lap 49 3/4", double top de 188 1/4" sem emenda). A
-  pergunta à fábrica continua: a ponta da double top pode cair sobre um king colado ao header?
+  pergunta à fábrica continua: a ponta da double top pode cair sobre um king colado ao header? S29
+  (2026-11-04): "o revisor move a quebra" agora tem caminho — `wall.panelBreaks` (lista completa de quebras
+  forçadas, cada uma num candidato de `breakCandidates`), editável na planta do editor (arrastar, clicar no
+  ponto, duplo clique para tirar) e no inspetor; o erro do `splicePlates` continua como está.
 - [ ] **P38 — Porta colada ao início da parede (I12-U3-1 a 1'-9 3/8" do eixo, RO de 32").** A zona da
   abertura (king + jack) sai 3/8" antes do início da parede. Pode ser erro de leitura (eixo vs. face) ou a
   porta realmente encostada no canto, caso em que o king vira o stud de canto. — hipótese: erro, como hoje;

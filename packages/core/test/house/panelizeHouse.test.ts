@@ -183,3 +183,27 @@ describe('panelizeHouse — facing (S17)', () => {
     expect(L.map((p) => p.facing)).toEqual(['exterior', 'interior']);
   });
 });
+
+describe('panelizeHouse — quebras forçadas na planta (S29)', () => {
+  // L: W1 (0,0)→(470,0) atravessa o canto (a mais longa) — a plate começa 2.75 antes do start (2x6, t/2).
+  const base = { height: 97.125, section: '2x6' as const, exterior: false, bearing: false, openings: [] };
+  const house = (panelBreaks?: number[]): House => ({
+    walls: [
+      { id: 'W1', start: { x: 0, y: 0 }, end: { x: 470, y: 0 }, ...base, ...(panelBreaks === undefined ? {} : { panelBreaks }) },
+      { id: 'W2', start: { x: 0, y: 0 }, end: { x: 0, y: 240 }, ...base },
+    ] as HouseWall[],
+  });
+  const config = cornerL.config;
+
+  it('medidas do start: a marca 240 do painel (plate em −2.75) fica a 237.25 do start', () => {
+    const panels = panelizeHouse(house([237.25]), config).panels.filter((p) => p.wallId === 'W1');
+    expect(panels.map((p) => [p.wallOffset, p.length])).toEqual([
+      [0, 240],
+      [240, 232.75],
+    ]);
+  });
+
+  it('erro em x do painel quando a medida do start não cai numa marca', () => {
+    expect(() => panelizeHouse(house([240]), config)).toThrow(/parede W1: quebra de painel em x=242\.75 \(panelBreaks\): não é o centro de um stud de layout/);
+  });
+});

@@ -1219,12 +1219,32 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   snapshots sem um byte mudado; sample aberto no editor (dev sem Supabase) com 0 issues e sem erro no console. Não
   feito (fora do item): `DraftConfig.studSpacing` continua `number` (o diálogo de configurações escreve medida
   livre e o problema aparece na checagem); Prettier só nos arquivos novos (o reformat geral é commit à parte).
-- [ ] **S29 — Editor: quebra manual de painel e catálogo editável (web + core; regra de framing: submeter antes).**
+- [x] **S29 — Editor: quebra manual de painel e catálogo editável (web + core; regra de framing: submeter antes).**
   `wall.panelBreaks?: number[]` no formato do CLI (quebras forçadas respeitam as mesmas restrições de
   `breakCandidates`: fora de zona de abertura, longe de canto e de T; fora delas = erro com código); `check` devolve as
   quebras e a planta do editor as desenha, com arrastar/adicionar/remover (resolve P37 pelo revisor); CRUD de
   `openingTypes`/`headerSchedule` no dialog de configurações com renomeação em cascata nas aberturas; `extraStuds` no
   inspetor da parede. Fixture `wall-480-split` ganha caso com quebra forçada (confirmar valores antes).
+  Feita em 2026-11-04 (sessão encadeada; abordagem e valores do fixture confirmados pelo humano; commit, sem push).
+  **Motor**: `Wall.panelBreaks` = lista completa de quebras forçadas (ausente = automático P35; `[]` = um painel; na
+  planta, medidas do `start` e convertidas por `frameWall`). `whyNotBreak` (`rules/breaks.ts`) diz por que um x não é
+  candidato — `breakCandidates` passou a usá-lo, com o mesmo resultado — e `forcedBreaks` confere a lista: erros
+  `PANEL_BREAK_INVALID` (`reason` = order/end/opening/tee/mark/member) e `PANEL_TOO_LONG`; `splitWall` monta os painéis
+  das quebras dadas pelo mesmo caminho do automático (`panelsAt`) e não passa o campo aos trechos;
+  `wallBreakCandidates` expõe os candidatos. Fixture `wall-480-split` ganhou `forced` [160, 320] (3 × 160; pesos
+  257.8/286.2/291.5 lb; lap de 54 1/4" na junta 320). **CLI**: `panelBreaks` na shape do schema; `wallBreaks(project,
+  panels)` devolve quebras em uso e candidatos por parede em x do arquivo. **Web**: `CheckResult.walls` (também com
+  erro); a planta desenha as quebras (tracejado = motor, cheio = revisor) e, na parede selecionada, pontos nos
+  candidatos (clique acrescenta), arraste com snap no candidato (Shift 1/8") e duplo clique para tirar; inspetor com
+  "Panels (n)" (medidas editáveis, Add break no meio do trecho mais longo, Automatic) e "Extra studs"; dialog de
+  configurações com o catálogo editável (`catalog-editor.tsx`: criar/editar/apagar tipos e marcas, renomear em
+  cascata nas aberturas, apagar só sem uso); frases em inglês, títulos e ajuda dos dois códigos novos. P37 ganhou o
+  caminho do revisor (`05-pendencias.md`). Verde na raiz: `pnpm check` (core 638, cli 144, extract 210 + 1 pulado,
+  web 401) e `pnpm --filter web build`; snapshots SVG e os outros fixtures sem um byte mudado. Conferido no app
+  (dev sem Supabase, house-28x40): quebras automáticas de W01–W05 na planta, ponto clicado vira quebra manual aceita
+  pelo motor, quebra fora da marca acusa `PANEL_BREAK_INVALID` com os candidatos ainda na tela, "Automatic" volta ao
+  motor, "Add type"/"Add mark" no dialog. Não feito (fora do item): a mensagem de erro em parede de planta cita x da
+  plate (não do `start`); quebra em parede solta só pelo inspetor (a planta não desenha parede solta).
 - [ ] **S30 — Editor: produtividade (web, SRF).** Seleção múltipla com ações em lote (mover, apagar, campos
   comuns); duplicar parede; dividir/juntar parede redistribuindo aberturas; arrastar o corpo move a parede
   selecionada (pan só no fundo); "Draw wall" por dois cliques com snap ortogonal e a pontas/eixos vizinhos;

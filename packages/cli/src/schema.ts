@@ -529,6 +529,8 @@ export const wallShape = {
   floorSpan: oneOf(FLOOR_SPANS).optional(),
   level: count.optional(),
   extraStuds: list(node(extraStudShape)).optional(),
+  /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); lista completa, crescente. */
+  panelBreaks: list(measure).optional(),
   /** Tipo de parede do arquiteto (a leitura por IA escreve; o motor não lê). */
   wallType: text.optional(),
 };

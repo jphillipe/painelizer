@@ -88,13 +88,17 @@ export {
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
 export { panelizeWall, planOpenings, resolveHeaders, type OpeningPlan } from './panelize/panelizeWall';
-export { panelId, splitWall } from './panelize/splitWall';
+export { panelId, splitWall, wallBreakCandidates } from './panelize/splitWall';
 export {
   breakCandidates,
   chooseBreaks,
+  forcedBreaks,
   validatePanelConfig,
+  whyNotBreak,
   type BreakContext,
   type BreakOptions,
+  type BreakRejection,
+  type ForcedBreakOptions,
 } from './rules/breaks';
 export { lapEnd, type LapObstacle } from './rules/laps';
 export { splicePlates, supportCenters } from './rules/splice';

@@ -9,6 +9,7 @@ import { neighborWall } from './use-editor-shortcuts';
 import type { Issue } from '@/lib/editor/problems';
 import type { WallProvenance } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState, Selection } from '@/lib/editor/state';
+import type { ShownBreaks } from '@/lib/editor/breaks';
 import { cn } from '@/lib/utils';
 import type { ExtractOutcome } from '@/types/extract';
 import { OpeningProperties } from './opening-properties';
@@ -19,6 +20,8 @@ export interface InspectorProps {
   state: EditorState;
   draft: ProjectDraft;
   dispatch: Dispatch<EditorAction>;
+  /** Quebras de painel por parede (S29); ausente fora do workspace. */
+  breaks?: ReadonlyMap<string, ShownBreaks> | undefined;
   provenance: ReadonlyMap<string, WallProvenance>;
   issues: readonly Issue[];
   outcome: Extract<ExtractOutcome, { ok: true }> | undefined;
@@ -32,7 +35,7 @@ export interface InspectorProps {
 }
 
 /** Painel de propriedades: muda com a seleção (projeto, parede, abertura). Remonta por id para zerar campos. */
-export function Inspector({ state, draft, dispatch, provenance, issues, outcome, onOutcome, showProjectData, flat = false }: InspectorProps) {
+export function Inspector({ state, draft, dispatch, breaks, provenance, issues, outcome, onOutcome, showProjectData, flat = false }: InspectorProps) {
   const sel = state.selection;
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
   const currentWall = sel.kind === 'wall' || sel.kind === 'opening' ? sel.wallId : undefined;
@@ -111,6 +114,7 @@ export function Inspector({ state, draft, dispatch, provenance, issues, outcome,
           key={wall.id}
           draft={draft}
           wall={wall}
+          breaks={breaks?.get(wall.id)}
           provenance={provenance.get(wall.id)}
           issues={issues.filter((i) => i.wallId === wall.id && i.openingId === undefined)}
           dispatch={dispatch}

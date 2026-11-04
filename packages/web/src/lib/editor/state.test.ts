@@ -300,3 +300,74 @@ describe('M6: underlay', () => {
     expect(viewedUnderlay(legacy)?.visible).toBe(false);
   });
 });
+
+describe('S29: quebras de painel', () => {
+  it('setPanelBreaks guarda a lista ordenada, a 1/16" e sem repetição; undefined volta ao automático', () => {
+    const s = run(loaded(), { type: 'setPanelBreaks', wallId: 'W01', breaks: [320, 160.01, 160] });
+    expect(wallById(draftOf(s), 'W01')?.panelBreaks).toEqual([160, 320]);
+    expect(JSON.parse(textFromDraft(draftOf(s))).walls[0].panelBreaks).toEqual([160, 320]);
+    const back = run(s, { type: 'setPanelBreaks', wallId: 'W01', breaks: undefined });
+    expect(wallById(draftOf(back), 'W01')).not.toHaveProperty('panelBreaks');
+    // [] é "um painel só", não o automático.
+    expect(wallById(draftOf(run(s, { type: 'setPanelBreaks', wallId: 'W01', breaks: [] })), 'W01')?.panelBreaks).toEqual([]);
+    expect(run(s, { type: 'setPanelBreaks', wallId: 'nope', breaks: [1] })).toBe(s);
+  });
+
+  it('um arraste (mesmo txn) é um undo só', () => {
+    const s = run(
+      loaded(),
+      { type: 'setPanelBreaks', wallId: 'W01', breaks: [144], txn: 't' },
+      { type: 'setPanelBreaks', wallId: 'W01', breaks: [160], txn: 't' },
+      { type: 'setPanelBreaks', wallId: 'W01', breaks: [176], txn: 't' },
+      { type: 'endTransaction' },
+    );
+    expect(wallById(draftOf(s), 'W01')?.panelBreaks).toEqual([176]);
+    expect(wallById(draftOf(run(s, { type: 'undo' })), 'W01')).not.toHaveProperty('panelBreaks');
+  });
+
+  it('mover o start ao longo do eixo desloca as quebras (medidas do start), como as aberturas', () => {
+    const s0 = run(loaded(), { type: 'setPanelBreaks', wallId: 'W01', breaks: [160] });
+    const w = wallById(draftOf(s0), 'W01')!;
+    const dx = Math.sign(w.end!.x - w.start!.x) || 0;
+    const dy = Math.sign(w.end!.y - w.start!.y) || 0;
+    // Start recua 16" no próprio eixo: a quebra fica no mesmo lugar em planta, 16" mais longe do start.
+    const s = run(s0, { type: 'moveEndpoint', wallId: 'W01', end: 'start', point: { x: w.start!.x - 16 * dx, y: w.start!.y - 16 * dy } });
+    expect(wallById(draftOf(s), 'W01')?.panelBreaks).toEqual([176]);
+  });
+});
+
+describe('S29: catálogo editável', () => {
+  const casa = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES.find((e) => e.id === 'casa-exemplo')!.text, source: 'sample' });
+  const tags = (s: EditorState): string[] => draftOf(s).walls.flatMap((w) => w.openings.map((o) => o.tag ?? '-'));
+  const marks = (s: EditorState): string[] => draftOf(s).walls.flatMap((w) => w.openings.map((o) => o.headerMark ?? '-'));
+
+  it('setOpeningType cria, substitui e apaga; catálogo vazio sai do config', () => {
+    const s = run(casa(), { type: 'setOpeningType', tag: 'J24', value: { kind: 'window', width: 24, height: 36 } });
+    expect(Object.keys(draftOf(s).config.openingTypes ?? {})).toEqual(['J36', 'P30', 'J24']);
+    const r = run(s, { type: 'setOpeningType', tag: 'J24', value: { kind: 'window', width: 30, height: 36 } });
+    expect(draftOf(r).config.openingTypes?.['J24']?.width).toBe(30);
+    const empty = run(r, { type: 'setOpeningType', tag: 'J24', value: undefined }, { type: 'setOpeningType', tag: 'J36', value: undefined }, { type: 'setOpeningType', tag: 'P30', value: undefined });
+    expect(draftOf(empty).config).not.toHaveProperty('openingTypes');
+  });
+
+  it('renameOpeningType troca a tag na mesma posição e em todas as aberturas que a usam', () => {
+    const before = tags(casa());
+    const s = run(casa(), { type: 'renameOpeningType', tag: 'P30', newTag: ' D30 ' });
+    expect(Object.keys(draftOf(s).config.openingTypes ?? {})).toEqual(['J36', 'D30']);
+    expect(tags(s)).toEqual(before.map((t) => (t === 'P30' ? 'D30' : t)));
+    expect(before).toContain('P30');
+    // Para uma tag que já existe, para a mesma, vazia ou inexistente: nada muda.
+    expect(run(s, { type: 'renameOpeningType', tag: 'D30', newTag: 'J36' })).toBe(s);
+    expect(run(s, { type: 'renameOpeningType', tag: 'D30', newTag: '  ' })).toBe(s);
+    expect(run(s, { type: 'renameOpeningType', tag: 'nope', newTag: 'X' })).toBe(s);
+  });
+
+  it('header schedule: criar, renomear em cascata (headerMark) e apagar', () => {
+    const before = marks(casa());
+    const s = run(casa(), { type: 'setHeaderEntry', mark: 'HDR2', value: { section: '2x12', plies: 2 } }, { type: 'renameHeaderEntry', mark: 'HDR1', newMark: 'H-A' });
+    expect(Object.keys(draftOf(s).config.headerSchedule ?? {})).toEqual(['H-A', 'HDR2']);
+    expect(marks(s)).toEqual(before.map((m) => (m === 'HDR1' ? 'H-A' : m)));
+    expect(before.filter((m) => m === 'HDR1')).toHaveLength(2);
+    expect(Object.keys(draftOf(run(s, { type: 'setHeaderEntry', mark: 'HDR2', value: undefined })).config.headerSchedule ?? {})).toEqual(['H-A']);
+  });
+});

@@ -15,7 +15,9 @@ import {
   nextWallId,
   type DraftBuilding,
   type DraftConfig,
+  type DraftHeaderEntry,
   type DraftOpening,
+  type DraftOpeningType,
   type DraftProblem,
   type DraftWall,
   type Point,
@@ -92,7 +94,15 @@ export type EditorAction =
   | { type: 'updateOpening'; wallId: string; openingId: string; patch: Patch<Omit<DraftOpening, 'id' | 'extra'>> }
   | { type: 'renameOpening'; wallId: string; openingId: string; newId: string }
   /** Borda esquerda do RO em `s0` (do `start`); escreve `center` ou `offset` conforme a forma da abertura. */
-  | { type: 'moveOpening'; wallId: string; openingId: string; s0: number; roughWidth: number; txn?: string };
+  | { type: 'moveOpening'; wallId: string; openingId: string; s0: number; roughWidth: number; txn?: string }
+  /** Quebras forçadas (S29): a lista inteira; `undefined` volta ao automático. Ordenada, a 1/16", sem repetição. */
+  | { type: 'setPanelBreaks'; wallId: string; breaks: readonly number[] | undefined; txn?: string }
+  /** Catálogo (S29): cria/substitui (`value`) ou apaga (`undefined`) um tipo de abertura ou marca de header. */
+  | { type: 'setOpeningType'; tag: string; value: DraftOpeningType | undefined }
+  | { type: 'setHeaderEntry'; mark: string; value: DraftHeaderEntry | undefined }
+  /** Renomeia a chave do catálogo na mesma posição e troca `tag`/`headerMark` das aberturas que a usavam. */
+  | { type: 'renameOpeningType'; tag: string; newTag: string }
+  | { type: 'renameHeaderEntry'; mark: string; newMark: string };
 
 export const HISTORY_LIMIT = 100;
 /** Chave da marca de revisão no `extra` da parede (sobrevive à serialização; o CLI ignora). */
@@ -312,8 +322,53 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         action.txn,
       );
     }
+    case 'setPanelBreaks': {
+      if (!d.walls.some((w) => w.id === action.wallId)) return state;
+      const breaks = action.breaks === undefined ? undefined : [...new Set(action.breaks.map(round1))].sort((a, b) => a - b);
+      return commit(state, mapWall(d, action.wallId, (w) => (breaks === undefined ? omit(w, 'panelBreaks') : { ...w, panelBreaks: breaks })), action.txn);
+    }
+    case 'setOpeningType':
+      return commit(state, { ...d, config: withEntry(d.config, 'openingTypes', action.tag, action.value) });
+    case 'setHeaderEntry':
+      return commit(state, { ...d, config: withEntry(d.config, 'headerSchedule', action.mark, action.value) });
+    case 'renameOpeningType': {
+      const newTag = action.newTag.trim();
+      const types = d.config.openingTypes;
+      if (newTag === '' || newTag === action.tag || types?.[action.tag] === undefined || types[newTag] !== undefined) return state;
+      const walls = d.walls.map((w) => ({ ...w, openings: w.openings.map((o) => (o.tag === action.tag ? { ...o, tag: newTag } : o)) }));
+      return commit(state, { ...d, walls, config: { ...d.config, openingTypes: renameKey(types, action.tag, newTag) } });
+    }
+    case 'renameHeaderEntry': {
+      const newMark = action.newMark.trim();
+      const schedule = d.config.headerSchedule;
+      if (newMark === '' || newMark === action.mark || schedule?.[action.mark] === undefined || schedule[newMark] !== undefined) return state;
+      const walls = d.walls.map((w) => ({ ...w, openings: w.openings.map((o) => (o.headerMark === action.mark ? { ...o, headerMark: newMark } : o)) }));
+      return commit(state, { ...d, walls, config: { ...d.config, headerSchedule: renameKey(schedule, action.mark, newMark) } });
+    }
   }
   return state;
+}
+
+/** Catálogo com a entrada trocada ou apagada; catálogo vazio sai do config. */
+function withEntry<K extends 'openingTypes' | 'headerSchedule'>(
+  config: DraftConfig,
+  key: K,
+  name: string,
+  value: NonNullable<DraftConfig[K]>[string] | undefined,
+): DraftConfig {
+  const name0 = name.trim();
+  if (name0 === '') return config;
+  const next = { ...(config[key] ?? {}) } as Record<string, unknown>;
+  if (value === undefined) delete next[name0];
+  else next[name0] = value;
+  return Object.keys(next).length === 0 ? omit(config, key) : { ...config, [key]: next };
+}
+
+/** A chave `from` vira `to` na mesma posição (a ordem do catálogo é a do arquivo). */
+function renameKey<T>(o: Record<string, T>, from: string, to: string): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [k, v] of Object.entries(o)) out[k === from ? to : k] = v;
+  return out;
 }
 
 /**
@@ -354,7 +409,7 @@ function mapOpening(d: ProjectDraft, wallId: string, openingId: string, f: (o: D
   return mapWall(d, wallId, (w) => ({ ...w, openings: w.openings.map((o) => (o.id === openingId ? f(o) : o)) }));
 }
 
-/** Desloca offsets, centros e studs extras ao longo do eixo (o `start` mudou de lugar). */
+/** Desloca offsets, centros, studs extras e quebras forçadas ao longo do eixo (o `start` mudou de lugar). */
 function shiftAlong(w: DraftWall, delta: number): DraftWall {
   if (delta === 0) return w;
   const openings = w.openings.map((o) => {
@@ -365,6 +420,7 @@ function shiftAlong(w: DraftWall, delta: number): DraftWall {
   });
   const next: DraftWall = { ...w, openings };
   if (w.extraStuds !== undefined) next.extraStuds = w.extraStuds.map((e) => (e.x === undefined ? e : { ...e, x: round1(e.x + delta) }));
+  if (w.panelBreaks !== undefined) next.panelBreaks = w.panelBreaks.map((x) => round1(x + delta));
   return next;
 }
 

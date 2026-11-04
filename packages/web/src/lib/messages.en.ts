@@ -40,6 +40,26 @@ function at(t: MessageTarget, body: string): string {
   return `${parts.join(', ')}: ${body}`;
 }
 const wallOnly = (t: MessageTarget): MessageTarget => ({ code: t.code, wallId: t.wallId });
+
+/** Motivo de `PANEL_BREAK_INVALID` (S29, `params.reason`). */
+function breakReason(p: P): string {
+  switch (p['reason']) {
+    case 'order':
+      return 'breaks must go from start to end with no repeats';
+    case 'end':
+      return `closer than ${inch(p['min'])} to the end of the wall — the joint studs do not fit next to the end stud or corner`;
+    case 'mark':
+      return `it is not on a layout stud (marks every ${inch(p['spacing'])} from mark 0)`;
+    case 'opening':
+      return `it falls in the zone of opening(s) ${list(p['openingIds'])} [${String(p['start'])}, ${String(p['end'])}]`;
+    case 'tee':
+      return `it falls in the tee strip${p['teeWallId'] === undefined ? '' : ` of wall ${String(p['teeWallId'])}`} (${String(p['lo'])}–${String(p['hi'])})`;
+    case 'member':
+      return `the joint studs would touch the ${String(p['role'])} at x=${String(p['memberX'])}`;
+    default:
+      return 'it is not a place where the wall can be split';
+  }
+}
 const openingOnly = (t: MessageTarget): MessageTarget => ({ code: t.code, openingId: t.openingId });
 
 /** Motivo estruturado de "exige engenheiro" (core `EngineerReason`). */
@@ -164,6 +184,12 @@ const ENGINE_ERRORS: Record<string, Template> = {
     at(
       wallOnly(t),
       `cannot split ${inch(p['length'])} into panels of at most ${inch(p['maxLength'])}${p['maxWeight'] === undefined ? '' : ` / ${String(p['maxWeight'])} lb`} — no free layout stud between x=${String(p['from'])} and x=${String(p['to'])}.`,
+    ),
+  PANEL_BREAK_INVALID: (p, t) => at(wallOnly(t), `the panel break at x=${String(p['at'])} is not allowed: ${breakReason(p)}.`),
+  PANEL_TOO_LONG: (p, t) =>
+    at(
+      wallOnly(t),
+      `the panel from x=${String(p['from'])} to x=${String(p['to'])} (${inch(p['length'])}) is longer than the ${inch(p['maxLength'])} limit — add a break.`,
     ),
   LAP_NO_ROOM: (p, t) =>
     at(

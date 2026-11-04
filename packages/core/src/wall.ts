@@ -52,6 +52,13 @@ export interface Wall {
   layoutOrigin?: number;
   /** Studs de altura inteira adicionais pedidos pelo projeto (S12). */
   extraStuds?: ExtraStud[];
+  /**
+   * Quebras de painel forçadas pelo revisor (S29), em x da parede (na planta, medidas do `start` e
+   * convertidas pelo motor). Ausente = escolha automática (P35). Presente = a lista **completa**, em ordem
+   * crescente: o motor não acrescenta quebra; `[]` = um painel só. Cada quebra tem de ser um candidato de
+   * `breakCandidates` e nenhum trecho pode passar de `config.panel.maxLength` — senão é erro com código.
+   */
+  panelBreaks?: number[];
   /** Pavimento da parede (1 = térreo). Ausente = 1. Entra no id dos painéis (S16): `{level}-{wallId}-P{n}`. */
   level?: number;
   /**

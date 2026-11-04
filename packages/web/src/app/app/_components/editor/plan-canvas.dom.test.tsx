@@ -112,3 +112,57 @@ describe('PlanCanvas: ponteiro (M10)', () => {
     expect(onDragEnd).not.toHaveBeenCalled();
   });
 });
+
+/** S29: quebras de painel na planta — clique no ponto acrescenta, arrastar move com snap no candidato, duplo clique tira. */
+describe('PlanCanvas: quebras de painel (S29)', () => {
+  const candidates = Array.from({ length: 29 }, (_, i) => (i + 1) * 16);
+  const breaks = new Map([['W01', { breaks: [144], manual: false, candidates }]]);
+
+  it('só a parede selecionada tem pontos e pegas; as outras só desenham o traço', () => {
+    const d = load(EXAMPLES[1]!.text);
+    const { container } = render(<PlanCanvas geometry={planGeometry(d)} selection={{ kind: 'none' }} issuesByWall={new Map()} fitKey="t" onSelect={() => {}} onEndpointDrag={() => {}} breaks={breaks} onBreaksChange={() => {}} initialSize={SIZE} />);
+    expect(container.querySelector('[data-panel-breaks="auto"]')).not.toBeNull();
+    expect(container.querySelector('[data-break-candidate]')).toBeNull();
+    expect(container.querySelector('[data-break-index]')).toBeNull();
+  });
+
+  it('clique num ponto acrescenta; arrastar a quebra vai ao candidato mais próximo; duplo clique tira', () => {
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
+    try {
+      const d = load(EXAMPLES[1]!.text);
+      const geometry = planGeometry(d);
+      const w01 = geometry.walls.find((w) => w.wallId === 'W01')!;
+      const onBreaksChange = vi.fn();
+      const onDragEnd = vi.fn();
+      const { container } = render(
+        <PlanCanvas geometry={geometry} selection={{ kind: 'wall', wallId: 'W01' }} issuesByWall={new Map()} fitKey="t" onSelect={() => {}} onEndpointDrag={() => {}} breaks={breaks} onBreaksChange={onBreaksChange} onDragEnd={onDragEnd} initialSize={SIZE} />,
+      );
+      const svg = container.querySelector('[data-plan-canvas] svg')!;
+      // O 144 já é quebra: não vira ponto.
+      expect(container.querySelector('[data-break-candidate="144"]')).toBeNull();
+      const dot = container.querySelector('[data-break-candidate="320"] circle')!;
+      fireEvent.pointerDown(dot, pointer(0, 0));
+      fireEvent.pointerUp(dot, pointer(0, 0));
+      expect(onBreaksChange).toHaveBeenLastCalledWith('W01', [144, 320]);
+
+      const start = handleAt(container, 'start');
+      const end = handleAt(container, 'end');
+      const scale = (end.x - start.x) / (w01.end.x - w01.start.x);
+      const grip = container.querySelector('[data-break-index="0"] line')!;
+      const x0 = Number(grip.getAttribute('x1'));
+      const y0 = (Number(grip.getAttribute('y1')) + Number(grip.getAttribute('y2'))) / 2;
+      fireEvent.pointerDown(grip, pointer(x0, y0));
+      fireEvent.pointerMove(svg, pointer(x0 + 20.4 * scale, y0 + 15));
+      act(() => void vi.advanceTimersToNextFrame());
+      expect(onBreaksChange).toHaveBeenLastCalledWith('W01', [160], expect.any(String));
+      expect(container.textContent).toContain(`break 13'-4"`);
+      fireEvent.pointerUp(svg, pointer(x0 + 20.4 * scale, y0));
+      expect(onDragEnd).toHaveBeenCalledTimes(1);
+
+      fireEvent.doubleClick(grip);
+      expect(onBreaksChange).toHaveBeenLastCalledWith('W01', []);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

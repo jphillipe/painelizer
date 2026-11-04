@@ -29,6 +29,7 @@ import {
   panelizeFrame,
   panelSvg,
   splitWall,
+  wallBreakCandidates,
   type BomLine,
   type CutLine,
   type EngineNotice,
@@ -160,6 +161,66 @@ function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]
     }
   }
   return { panels, problems };
+}
+
+/**
+ * Quebras de painel de uma parede para o editor (S29), em x do **arquivo**: parede solta = x da parede; planta =
+ * medido do `start` ao longo do eixo (o mesmo de `panelBreaks`, `openings[].offset`).
+ */
+export interface WallBreaks {
+  wallId: string;
+  /** Quebras em uso (forçadas ou automáticas). Ausente quando a parede não virou painéis (erro). */
+  breaks?: number[];
+  /** Onde a parede pode ser quebrada (`wallBreakCandidates`); vazio quando a parede nem enquadra. */
+  candidates: number[];
+  /** A parede tem `panelBreaks` (quebras do revisor). */
+  manual: boolean;
+}
+
+/**
+ * Quebras e candidatos de cada parede, na ordem do arquivo, a partir dos painéis já gerados (`panels` pode vir
+ * vazio ou parcial quando houve erro). Nunca lança por causa do projeto: parede que não enquadra sai sem
+ * candidatos.
+ */
+export function wallBreaks(project: Project, panels: readonly Panel[]): WallBreaks[] {
+  const used = (wallId: string, s0: number): number[] | undefined => {
+    const own = panels.filter((p) => p.wallId === wallId).sort((a, b) => a.wallOffset - b.wallOffset);
+    return own.length === 0 ? undefined : own.slice(1).map((p) => tidy(p.wallOffset + s0));
+  };
+  const candidates = (wall: Parameters<typeof wallBreakCandidates>[0], s0: number): number[] => {
+    try {
+      return wallBreakCandidates(wall, project.config).map((x) => tidy(x + s0));
+    } catch (e) {
+      if (e instanceof RangeError) return [];
+      throw e;
+    }
+  };
+  const entry = (wallId: string, manual: boolean, s0: number, wall: Parameters<typeof wallBreakCandidates>[0] | undefined): WallBreaks => {
+    const breaks = used(wallId, s0);
+    return { wallId, ...(breaks === undefined ? {} : { breaks }), candidates: wall === undefined ? [] : candidates(wall, s0), manual };
+  };
+
+  const house = project.house;
+  if (house === undefined) return project.walls.map((w) => entry(w.id, w.panelBreaks !== undefined, 0, w));
+  let frames: WallFrame[] = [];
+  try {
+    frames = frameWalls(house);
+  } catch (e) {
+    if (!(e instanceof RangeError)) throw e;
+  }
+  return house.walls.map((w) => {
+    const frame = frames.find((f) => f.wallId === w.id);
+    if (frame === undefined) return entry(w.id, w.panelBreaks !== undefined, 0, undefined);
+    // Distância do start à ponta da plate, ao longo do eixo (negativa quando a plate começa antes do ponto).
+    const len = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+    const s0 = len === 0 ? 0 : ((frame.plateStart.x - w.start.x) * (w.end.x - w.start.x) + (frame.plateStart.y - w.start.y) * (w.end.y - w.start.y)) / len;
+    return entry(w.id, w.panelBreaks !== undefined, s0, frame.wall);
+  });
+}
+
+/** Sem resto de ponto flutuante da conversão (1e-6"). */
+function tidy(x: number): number {
+  return Math.round(x * 1e6) / 1e6;
 }
 
 export function buildProject(project: Project): BuildResult {

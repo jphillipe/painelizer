@@ -109,5 +109,108 @@
         ]
       }
     ]
+  },
+  "forced": {
+    "$comment": "S29 (2026-11-04): a mesma parede com quebras forçadas pelo revisor (wall.panelBreaks = [160, 320], confirmado pelo humano). A lista é completa: o automático daria 2 × 240, o forçado dá 3 painéis de 160 — 160 e 320 são candidatos (studs de layout fora das zonas da porta 165–209 e da janela 333–375). Lap da double top (P23/P37): na junta 160 avança 48 até 208 (passa do header da porta, que acaba em 207.5, e cai sobre o king em 207.5–209) → double top do P1 de 208 emendada em 112 + 96 (estoque 192); na junta 320 o fim em 368 e o mínimo 344 caem no header da janela (334.5–373.5) → vai ao king em 374.25 (lap 54.25). P2: double top de 166.25 a partir de 48; P3: de 105.75 a partir de 54.25. Pesos (P8): 257.8, 286.2, 291.5 lb.",
+    "panelBreaks": [160, 320],
+    "expected": {
+      "panels": [
+          {
+            "id": "1-W-480-P1",
+            "wallId": "W-480",
+            "level": 1,
+            "wallOffset": 0,
+            "length": 160,
+            "layoutOrigin": 0,
+            "weightLb": 257.8,
+            "warnings": [],
+            "fieldCuts": [],
+            "members": [
+              { "role": "bottomPlate", "section": "2x6", "length": 160, "x": 0, "y": 0 },
+              { "role": "topPlate", "section": "2x6", "length": 160, "x": 0, "y": 94.125 },
+              { "role": "doubleTopPlate", "section": "2x6", "length": 112, "x": 0, "y": 95.625 },
+              { "role": "doubleTopPlate", "section": "2x6", "length": 96, "x": 112, "y": 95.625 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 158.5, "y": 1.5 }
+            ]
+          },
+          {
+            "id": "1-W-480-P2",
+            "wallId": "W-480",
+            "level": 1,
+            "wallOffset": 160,
+            "length": 160,
+            "layoutOrigin": -160,
+            "weightLb": 286.2,
+            "warnings": [],
+            "fieldCuts": [
+              { "role": "bottomPlate", "openingId": "P1", "x": 8, "length": 38 }
+            ],
+            "members": [
+              { "role": "bottomPlate", "section": "2x6", "length": 160, "x": 0, "y": 0 },
+              { "role": "topPlate", "section": "2x6", "length": 160, "x": 0, "y": 94.125 },
+              { "role": "doubleTopPlate", "section": "2x6", "length": 166.25, "x": 48, "y": 95.625 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 158.5, "y": 1.5 },
+              { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 5, "y": 1.5 },
+              { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 47.5, "y": 1.5 },
+              { "role": "jackStud", "section": "2x6", "length": 81, "x": 6.5, "y": 1.5 },
+              { "role": "jackStud", "section": "2x6", "length": 81, "x": 46, "y": 1.5 },
+              { "role": "header", "section": "2x10", "length": 41, "x": 6.5, "y": 82.5 },
+              { "role": "cripple", "section": "2x6", "length": 2.375, "x": 15.25, "y": 91.75 },
+              { "role": "cripple", "section": "2x6", "length": 2.375, "x": 31.25, "y": 91.75 }
+            ]
+          },
+          {
+            "id": "1-W-480-P3",
+            "wallId": "W-480",
+            "level": 1,
+            "wallOffset": 320,
+            "length": 160,
+            "layoutOrigin": -320,
+            "weightLb": 291.5,
+            "warnings": [],
+            "fieldCuts": [],
+            "members": [
+              { "role": "bottomPlate", "section": "2x6", "length": 160, "x": 0, "y": 0 },
+              { "role": "topPlate", "section": "2x6", "length": 160, "x": 0, "y": 94.125 },
+              { "role": "doubleTopPlate", "section": "2x6", "length": 105.75, "x": 54.25, "y": 95.625 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 143.25, "y": 1.5 },
+              { "role": "stud", "section": "2x6", "length": 92.625, "x": 158.5, "y": 1.5 },
+              { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 13, "y": 1.5 },
+              { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 53.5, "y": 1.5 },
+              { "role": "jackStud", "section": "2x6", "length": 81, "x": 14.5, "y": 1.5 },
+              { "role": "jackStud", "section": "2x6", "length": 81, "x": 52, "y": 1.5 },
+              { "role": "header", "section": "2x10", "length": 39, "x": 14.5, "y": 82.5 },
+              { "role": "sill", "section": "2x6", "length": 36, "x": 16, "y": 33 },
+              { "role": "cripple", "section": "2x6", "length": 31.5, "x": 31.25, "y": 1.5 },
+              { "role": "cripple", "section": "2x6", "length": 31.5, "x": 47.25, "y": 1.5 },
+              { "role": "cripple", "section": "2x6", "length": 2.375, "x": 31.25, "y": 91.75 },
+              { "role": "cripple", "section": "2x6", "length": 2.375, "x": 47.25, "y": 91.75 }
+            ]
+          }
+      ]
+    }
   }
 }

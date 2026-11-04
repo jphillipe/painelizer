@@ -14,6 +14,9 @@
  *   minimiza o painel mais longo, preferindo só marcas múltiplas de `module` contadas da marca 0 do layout e,
  *   se com elas não há divisão, qualquer marca. Empate: quebras mais próximas da divisão em partes iguais.
  *   Sem divisão possível → `RangeError` com a parede e o trecho sem candidato.
+ * - **Quebras forçadas** (`forcedBreaks`, S29): `wall.panelBreaks` é a lista completa — o motor não escolhe nem
+ *   acrescenta. Cada uma tem de ser candidata (`whyNotBreak` diz por que não é: ordem, ponta, marca, abertura,
+ *   T ou peça) e nenhum trecho pode passar de `maxLength`; peso acima de `maxWeight` continua só aviso.
  */
 
 import type { Config, PanelConfig } from '../config';
@@ -39,10 +42,57 @@ export function validatePanelConfig(cfg: PanelConfig): void {
 }
 
 export interface BreakContext {
-  /** Zonas de abertura (fundidas) da parede. */
-  zones: readonly OpeningZone[];
+  /** Zonas de abertura (fundidas) da parede; `openingIds` entra na mensagem da quebra forçada. */
+  zones: readonly (OpeningZone & { openingIds?: readonly string[] })[];
   /** Faixas de T na parede. */
   strips: readonly TeeStrip[];
+}
+
+/** Por que `x` não pode ser quebra de painel (S29). Na ordem em que `whyNotBreak` confere. */
+export type BreakRejection =
+  | { reason: 'end'; min: number; length: number }
+  | { reason: 'opening'; openingIds: readonly string[]; start: number; end: number }
+  | { reason: 'tee'; lo: number; hi: number; teeWallId?: string }
+  | { reason: 'mark'; spacing: number }
+  | { reason: 'member'; role: string; memberX: number };
+
+/** Stud de layout comum (não flat, não extra), o único que vira par de studs na junta. */
+function isLayoutStud(m: Panel['members'][number]): boolean {
+  return m.role === 'stud' && m.flat !== true && m.label === undefined;
+}
+
+/**
+ * `undefined` se a parede pode ser quebrada em `x` (o critério de `breakCandidates`); senão o motivo. A faixa
+ * da junta é `[x − t, x + t]` (os dois studs que ela recebe).
+ *
+ * @param panel painel da parede inteira (`panelizeWall`)
+ */
+export function whyNotBreak(
+  x: number,
+  panel: Pick<Panel, 'members' | 'length' | 'layoutOrigin'>,
+  config: Config,
+  ctx: BreakContext,
+): BreakRejection | undefined {
+  const t = config.studThickness;
+  const lo = x - t;
+  const hi = x + t;
+  if (!(lo >= 2 * t - EPS && hi <= panel.length - 2 * t + EPS)) return { reason: 'end', min: 3 * t, length: panel.length };
+  const zone = ctx.zones.find((z) => overlaps(lo, hi, z.start, z.end));
+  if (zone !== undefined) return { reason: 'opening', openingIds: zone.openingIds ?? [], start: zone.start, end: zone.end };
+  const strip = ctx.strips.find((z) => overlaps(lo, hi, z.lo, z.hi));
+  if (strip !== undefined) return { reason: 'tee', lo: strip.lo, hi: strip.hi, ...(strip.wallId === undefined ? {} : { teeWallId: strip.wallId }) };
+  const k = (x - panel.layoutOrigin) / config.studSpacing;
+  if (Math.abs(k - Math.round(k)) > 1e-6) return { reason: 'mark', spacing: config.studSpacing };
+  const own = panel.members.find((m) => isLayoutStud(m) && Math.abs(m.x + t / 2 - x) < EPS);
+  const blocker = panel.members.find((m) => {
+    if (m === own || isPlateRole(m.role)) return false;
+    const sp = span(m);
+    return overlaps(lo, hi, sp.lo, sp.hi);
+  });
+  if (blocker !== undefined) return { reason: 'member', role: blocker.role, memberX: blocker.x };
+  // Marca sem stud de layout e sem peça na faixa não acontece (o stud só sai por sobreposição); guarda.
+  if (own === undefined) return { reason: 'mark', spacing: config.studSpacing };
+  return undefined;
 }
 
 /**
@@ -56,28 +106,52 @@ export function breakCandidates(
   ctx: BreakContext,
 ): number[] {
   const t = config.studThickness;
-  const origin = panel.layoutOrigin;
-  const closer = panel.length - t;
   const out: number[] = [];
   for (const s of panel.members) {
-    if (s.role !== 'stud' || s.flat === true || s.label !== undefined) continue;
-    if (Math.abs(s.x) < EPS || Math.abs(s.x - closer) < EPS) continue;
+    if (!isLayoutStud(s)) continue;
     const c = s.x + t / 2;
-    const k = (c - origin) / config.studSpacing;
-    if (Math.abs(k - Math.round(k)) > 1e-6) continue;
-    const lo = c - t;
-    const hi = c + t;
-    if (lo < 2 * t - EPS || hi > panel.length - 2 * t + EPS) continue;
-    if (ctx.zones.some((z) => overlaps(lo, hi, z.start, z.end))) continue;
-    if (ctx.strips.some((z) => overlaps(lo, hi, z.lo, z.hi))) continue;
-    const blocked = panel.members.some((m) => {
-      if (m === s || isPlateRole(m.role)) return false;
-      const sp = span(m);
-      return overlaps(lo, hi, sp.lo, sp.hi);
-    });
-    if (!blocked) out.push(c);
+    if (whyNotBreak(c, panel, config, ctx) === undefined) out.push(c);
   }
   return out.sort((a, b) => a - b);
+}
+
+export interface ForcedBreakOptions {
+  /** Comprimento da parede. */
+  length: number;
+  /** Motivo de recusa de cada quebra (`whyNotBreak` sobre o painel da parede inteira). */
+  reject: (x: number) => BreakRejection | undefined;
+  /** Para as mensagens de erro. */
+  wallId?: string;
+}
+
+/**
+ * As quebras forçadas (`wall.panelBreaks`), conferidas: crescentes e sem repetição, cada uma candidata e
+ * nenhum trecho acima de `maxLength`. Devolve a lista como veio.
+ *
+ * @throws EngineError `VALUE_INVALID` (não finita), `PANEL_BREAK_INVALID` (com `reason`), `PANEL_TOO_LONG`
+ */
+export function forcedBreaks(forced: readonly number[], opts: ForcedBreakOptions, cfg: PanelConfig): number[] {
+  const where = { wallId: opts.wallId };
+  forced.forEach((x, i) => {
+    if (!Number.isFinite(x)) throw new EngineError('VALUE_INVALID', where, { field: 'panelBreaks', value: x });
+    if (i > 0 && x <= forced[i - 1]! + EPS) throw new EngineError('PANEL_BREAK_INVALID', where, { at: x, reason: 'order' });
+  });
+  for (const x of forced) {
+    const why = opts.reject(x);
+    if (why !== undefined) {
+      const { reason, ...rest } = why;
+      throw new EngineError('PANEL_BREAK_INVALID', where, { at: x, reason, ...rest });
+    }
+  }
+  const bounds = [0, ...forced, opts.length];
+  for (let i = 1; i < bounds.length; i++) {
+    const a = bounds[i - 1]!;
+    const b = bounds[i]!;
+    if (b - a > cfg.maxLength + EPS) {
+      throw new EngineError('PANEL_TOO_LONG', where, { from: a, to: b, length: b - a, maxLength: cfg.maxLength });
+    }
+  }
+  return [...forced];
 }
 
 export interface BreakOptions {

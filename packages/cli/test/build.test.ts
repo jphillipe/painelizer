@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BuildError, buildProject, problemText, svgFileName } from '../src/build';
-import { parseProject, type Project } from '../src/project';
+import { BuildError, buildProject, panelizeProject, problemText, svgFileName, wallBreaks } from '../src/build';
+import { parseProject, projectFrom, type Project } from '../src/project';
 
 const EXAMPLE = new URL('../examples/casa-exemplo.json', import.meta.url);
 const example = (): Project => parseProject(readFileSync(EXAMPLE, 'utf8'), 'casa-exemplo.json');
@@ -333,5 +333,42 @@ describe('svgFileName', () => {
     expect(svgFileName('W 01/P1')).toBe('W_01_P1.svg');
     expect(svgFileName('..')).toBe('_.svg');
     expect(svgFileName('')).toBe('panel.svg');
+  });
+});
+
+describe('wallBreaks (S29: quebras e candidatos para o editor)', () => {
+  const fx = JSON.parse(readFileSync(new URL('../../core/test/fixtures/wall-480-split.json', import.meta.url), 'utf8')) as {
+    config: object;
+    wall: Record<string, unknown>;
+  };
+  const loose = (wall: Record<string, unknown> = {}): Project => projectFrom({ config: fx.config, walls: [{ ...fx.wall, ...wall }] });
+  const run = (p: Project) => wallBreaks(p, panelizeProject(p).panels);
+  const excluded = new Set([176, 192, 208, 336, 352, 368]);
+  const candidates = Array.from({ length: 29 }, (_, i) => (i + 1) * 16).filter((c) => !excluded.has(c));
+
+  it('parede solta: as quebras do automático e os candidatos, em x da parede', () => {
+    expect(run(loose())).toEqual([{ wallId: 'W-480', breaks: [240], candidates, manual: false }]);
+  });
+
+  it('com panelBreaks: as do revisor; com erro, sem breaks mas com candidatos', () => {
+    expect(run(loose({ panelBreaks: [160, 320] }))).toEqual([{ wallId: 'W-480', breaks: [160, 320], candidates, manual: true }]);
+    const bad = loose({ panelBreaks: [192, 320] });
+    expect(panelizeProject(bad).problems.map((p) => p.code)).toEqual(['PANEL_BREAK_INVALID']);
+    expect(run(bad)).toEqual([{ wallId: 'W-480', candidates, manual: true }]);
+  });
+
+  it('planta: medidas do start (a plate da parede que atravessa começa 2.75" antes)', () => {
+    const base = { height: 97.125, section: '2x6', exterior: false, bearing: false, openings: [] };
+    const p = projectFrom({
+      config: fx.config,
+      walls: [
+        { id: 'W1', start: { x: 0, y: 0 }, end: { x: 470, y: 0 }, ...base, panelBreaks: [237.25] },
+        { id: 'W2', start: { x: 0, y: 0 }, end: { x: 0, y: 240 }, ...base },
+      ],
+    });
+    const [w1, w2] = run(p);
+    expect(w1).toMatchObject({ wallId: 'W1', breaks: [237.25], manual: true });
+    expect(w1!.candidates.slice(0, 3)).toEqual([13.25, 29.25, 45.25]);
+    expect(w2).toMatchObject({ wallId: 'W2', breaks: [], manual: false });
   });
 });

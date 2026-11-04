@@ -101,6 +101,8 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   TEE_IN_OPENING: 'A tee lands inside an opening',
   TEE_WITHOUT_STUD: 'Tee without a stud on one side',
   CANNOT_SPLIT: 'Wall cannot be split into panels',
+  PANEL_BREAK_INVALID: 'Panel break in a place the wall cannot split',
+  PANEL_TOO_LONG: 'Panel longer than the limit',
   LAP_NO_ROOM: 'No room for the double top plate lap',
   SPLICE_NO_STUD: 'No stud to splice the plate',
   EXTRA_STUD_IN_OPENING: 'Extra stud inside an opening',

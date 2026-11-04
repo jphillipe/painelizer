@@ -1,0 +1,293 @@
+'use client';
+
+import { PlusIcon, Trash2Icon } from 'lucide-react';
+import type { Dispatch } from 'react';
+import { headerSection, readField } from 'cli/schema';
+import { Button } from '@/components/ui/button';
+import type { DraftHeaderEntry, DraftOpeningType, HeaderSectionDraft, ProjectDraft } from '@/lib/editor/draft';
+import type { EditorAction, Patch } from '@/lib/editor/state';
+import { EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
+
+/**
+ * Catálogo editável (S29): tipos de abertura (`config.openingTypes`, por tag) e marcas de header
+ * (`config.headerSchedule`). Renomear a tag/marca troca a referência em todas as aberturas que a usam (no
+ * reducer); apagar só quando nenhuma abertura usa. O motor confere o resto (tamanho, seção, plies).
+ */
+export function CatalogEditor({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
+  return (
+    <>
+      <OpeningTypes draft={draft} dispatch={dispatch} />
+      <HeaderSchedule draft={draft} dispatch={dispatch} />
+    </>
+  );
+}
+
+/** Quantas aberturas usam a tag (`by: 'tag'`) ou a marca de header (`by: 'headerMark'`). */
+export function usageCount(draft: ProjectDraft, by: 'tag' | 'headerMark', key: string): number {
+  return draft.walls.reduce((n, w) => n + w.openings.filter((o) => o[by] === key).length, 0);
+}
+
+/** Primeira chave livre `prefix1`, `prefix2`… */
+export function freeKey(catalog: Readonly<Record<string, unknown>> | undefined, prefix: string): string {
+  for (let i = 1; ; i++) if (catalog?.[`${prefix}${i}`] === undefined) return `${prefix}${i}`;
+}
+
+function OpeningTypes({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
+  const types = draft.config.openingTypes ?? {};
+  const entries = Object.entries(types);
+  const put = (tag: string, t: DraftOpeningType, patch: Patch<DraftOpeningType>): void =>
+    dispatch({ type: 'setOpeningType', tag, value: clean<DraftOpeningType>({ ...t, ...patch }) });
+  return (
+    <Section
+      title={`Opening schedule (${entries.length})`}
+      actions={
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() =>
+            dispatch({
+              type: 'setOpeningType',
+              tag: freeKey(types, 'T'),
+              value: { kind: 'window', width: 36, height: 48 },
+            })
+          }
+        >
+          <PlusIcon /> Add type
+        </Button>
+      }
+    >
+      {entries.length === 0 ? (
+        <p className="text-[13px] text-ink-3">No schedule: openings carry their own rough opening.</p>
+      ) : null}
+      <ul className="space-y-3">
+        {entries.map(([tag, t]) => {
+          const used = usageCount(draft, 'tag', tag);
+          const p = `ot-${tag}`;
+          return (
+            <li key={tag} className="space-y-3 rounded-md border bg-card p-3" data-opening-type={tag}>
+              <div className="flex items-end gap-2">
+                <Field id={`${p}-tag`} label="Tag" className="flex-1">
+                  <TextInput
+                    id={`${p}-tag`}
+                    value={tag}
+                    required
+                    mono
+                    validate={(v) => (v === tag || types[v] === undefined ? undefined : 'Another type has this tag')}
+                    onCommit={(v) => v !== undefined && dispatch({ type: 'renameOpeningType', tag, newTag: v })}
+                  />
+                </Field>
+                <span className="pb-2 text-[12px] whitespace-nowrap text-ink-3">
+                  {used === 0 ? 'not used' : `${used} opening${used === 1 ? '' : 's'}`}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="mb-1.5"
+                  aria-label={`Remove type ${tag}`}
+                  disabled={used > 0}
+                  title={used > 0 ? 'Used by openings: change them first' : undefined}
+                  onClick={() => dispatch({ type: 'setOpeningType', tag, value: undefined })}
+                >
+                  <Trash2Icon />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Field id={`${p}-kind`} label="Kind">
+                  <EnumSelect
+                    id={`${p}-kind`}
+                    value={t.kind}
+                    noneLabel="Not set"
+                    options={KIND_OPTIONS}
+                    onChange={(v) => put(tag, t, { kind: v as DraftOpeningType['kind'] })}
+                  />
+                </Field>
+                <Field id={`${p}-w`} label="Width">
+                  <MeasureInput id={`${p}-w`} value={t.width} positive onCommit={(v) => put(tag, t, { width: v })} />
+                </Field>
+                <Field id={`${p}-h`} label="Height">
+                  <MeasureInput id={`${p}-h`} value={t.height} positive onCommit={(v) => put(tag, t, { height: v })} />
+                </Field>
+                <Field id={`${p}-sill`} label="Sill">
+                  <MeasureInput
+                    id={`${p}-sill`}
+                    value={t.sillHeight}
+                    placeholder="default"
+                    onCommit={(v) => put(tag, t, { sillHeight: v })}
+                  />
+                </Field>
+                <Field id={`${p}-rw`} label="RO width">
+                  <MeasureInput
+                    id={`${p}-rw`}
+                    value={t.roughWidth}
+                    positive
+                    placeholder="clearance"
+                    onCommit={(v) => put(tag, t, { roughWidth: v })}
+                  />
+                </Field>
+                <Field id={`${p}-rh`} label="RO height">
+                  <MeasureInput
+                    id={`${p}-rh`}
+                    value={t.roughHeight}
+                    positive
+                    placeholder="clearance"
+                    onCommit={(v) => put(tag, t, { roughHeight: v })}
+                  />
+                </Field>
+                <Field id={`${p}-frame`} label="Door frame">
+                  <EnumSelect
+                    id={`${p}-frame`}
+                    value={t.frame}
+                    noneLabel={t.kind === 'door' ? 'Wood (default)' : '—'}
+                    options={FRAME_OPTIONS}
+                    onChange={(v) => put(tag, t, { frame: v as DraftOpeningType['frame'] })}
+                  />
+                </Field>
+                <Field id={`${p}-desc`} label="Description">
+                  <TextInput id={`${p}-desc`} value={t.description} onCommit={(v) => put(tag, t, { description: v })} />
+                </Field>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
+function HeaderSchedule({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
+  const schedule = draft.config.headerSchedule ?? {};
+  const entries = Object.entries(schedule);
+  const put = (mark: string, h: DraftHeaderEntry, patch: Patch<DraftHeaderEntry>): void =>
+    dispatch({ type: 'setHeaderEntry', mark, value: clean<DraftHeaderEntry>({ ...h, ...patch }) });
+  return (
+    <Section
+      title={`Header schedule (${entries.length})`}
+      actions={
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() =>
+            dispatch({ type: 'setHeaderEntry', mark: freeKey(schedule, 'H'), value: { section: '2x10', plies: 2 } })
+          }
+        >
+          <PlusIcon /> Add mark
+        </Button>
+      }
+    >
+      {entries.length === 0 ? (
+        <p className="text-[13px] text-ink-3">No header schedule: headers come from the opening or the IRC table.</p>
+      ) : null}
+      <ul className="space-y-3">
+        {entries.map(([mark, h]) => {
+          const used = usageCount(draft, 'headerMark', mark);
+          const p = `hs-${mark}`;
+          return (
+            <li key={mark} className="space-y-3 rounded-md border bg-card p-3" data-header-mark={mark}>
+              <div className="flex items-end gap-2">
+                <Field id={`${p}-mark`} label="Mark" className="flex-1">
+                  <TextInput
+                    id={`${p}-mark`}
+                    value={mark}
+                    required
+                    mono
+                    validate={(v) =>
+                      v === mark || schedule[v] === undefined ? undefined : 'Another header has this mark'
+                    }
+                    onCommit={(v) => v !== undefined && dispatch({ type: 'renameHeaderEntry', mark, newMark: v })}
+                  />
+                </Field>
+                <span className="pb-2 text-[12px] whitespace-nowrap text-ink-3">
+                  {used === 0 ? 'not used' : `${used} opening${used === 1 ? '' : 's'}`}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="mb-1.5"
+                  aria-label={`Remove header ${mark}`}
+                  disabled={used > 0}
+                  title={used > 0 ? 'Used by openings: change them first' : undefined}
+                  onClick={() => dispatch({ type: 'setHeaderEntry', mark, value: undefined })}
+                >
+                  <Trash2Icon />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Field id={`${p}-section`} label="Section" className="col-span-2">
+                  <TextInput
+                    id={`${p}-section`}
+                    value={sectionText(h.section)}
+                    mono
+                    placeholder={`2x10 or LVL 1.75x9.25`}
+                    validate={sectionError}
+                    onCommit={(v) => put(mark, h, { section: v })}
+                  />
+                </Field>
+                <Field id={`${p}-plies`} label="Plies">
+                  <NumberInput
+                    id={`${p}-plies`}
+                    value={h.plies}
+                    integer
+                    min={1}
+                    onCommit={(v) => put(mark, h, { plies: v })}
+                  />
+                </Field>
+                <Field id={`${p}-jacks`} label="Jacks">
+                  <NumberInput
+                    id={`${p}-jacks`}
+                    value={h.jackStuds}
+                    integer
+                    min={1}
+                    placeholder="table"
+                    onCommit={(v) => put(mark, h, { jackStuds: v })}
+                  />
+                </Field>
+                <Field id={`${p}-kings`} label="Kings">
+                  <NumberInput
+                    id={`${p}-kings`}
+                    value={h.kingStuds}
+                    integer
+                    min={1}
+                    placeholder="table"
+                    onCommit={(v) => put(mark, h, { kingStuds: v })}
+                  />
+                </Field>
+                <Field id={`${p}-desc`} label="Description" className="col-span-3">
+                  <TextInput
+                    id={`${p}-desc`}
+                    value={h.description}
+                    onCommit={(v) => put(mark, h, { description: v })}
+                  />
+                </Field>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
+/** Seção de header como texto (`"LVL 1.75x9.25"`); o objeto do arquivo vira o mesmo texto ao editar. */
+export function sectionText(s: HeaderSectionDraft | undefined): string | undefined {
+  return s === undefined || typeof s === 'string' ? s : `${s.material} ${s.width}x${s.depth}`;
+}
+
+/** Mesma regra do schema do arquivo (S28.2): serrada da lista ou `LVL`/`PSL <esp>x<prof>`. */
+export function sectionError(v: string): string | undefined {
+  return readField(headerSection, v).ok ? undefined : 'Use 2x4…2x12, or LVL / PSL <width>x<depth>';
+}
+
+/** Tira as chaves `undefined` (patch que limpou o campo). */
+function clean<T extends object>(o: Patch<T>): T {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+}
+
+const KIND_OPTIONS = [
+  { value: 'window', label: 'Window' },
+  { value: 'door', label: 'Door' },
+] as const;
+const FRAME_OPTIONS = [
+  { value: 'wood', label: 'Wood' },
+  { value: 'hm', label: 'Hollow metal' },
+  { value: 'al', label: 'Aluminum' },
+] as const;

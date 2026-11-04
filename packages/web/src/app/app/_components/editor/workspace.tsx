@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState, type Dispatch, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type Dispatch, type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
+import { breaksByWall, shownBreaks } from '@/lib/editor/breaks';
 import { wallById, type ProjectDraft } from '@/lib/editor/draft';
 import { projectFileName, projectFileText } from '@/lib/editor/project-file';
 import type { PlanGeometry } from '@/lib/editor/geometry';
@@ -101,6 +102,10 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     }
   };
   const canvas = useRef<PlanCanvasHandle>(null);
+  // Quebras de painel (S29): candidatos da última checagem; as do revisor vêm do draft (valem antes da resposta).
+  const breakInfo = useMemo(() => breaksByWall(check.result), [check.result]);
+  const breaks = useMemo(() => new Map(draft.walls.map((w) => [w.id, shownBreaks(w, breakInfo.get(w.id))])), [draft.walls, breakInfo]);
+  const setBreaks = (wallId: string, list: number[] | undefined, txn?: string): void => dispatch({ type: 'setPanelBreaks', wallId, breaks: list, ...(txn === undefined ? {} : { txn }) });
 
   const select = (selection: Selection): void => dispatch({ type: 'select', selection });
   /** Seleção vinda de uma lista: traz a parede para a vista e, em tela estreita, abre o inspetor. */
@@ -147,6 +152,8 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
       onEndpointDrag={(wallId, end, point, txn) => dispatch({ type: 'moveEndpoint', wallId, end, point, txn })}
       onOpeningDrag={(wallId, openingId, s0, roughWidth, txn) => dispatch({ type: 'moveOpening', wallId, openingId, s0, roughWidth, txn })}
       onWallNudge={(wallId, dx, dy, txn) => dispatch({ type: 'moveWall', wallId, dx, dy, txn })}
+      breaks={breaks}
+      onBreaksChange={setBreaks}
       onDragEnd={() => dispatch({ type: 'endTransaction' })}
       level={level}
       onLevel={setLevel}
@@ -203,7 +210,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
     },
     { id: 'reading', label: 'Reading', content: <ReadingPanel outcome={outcome} source={state.source} slug={slug} /> },
   ];
-  const inspector = <Inspector state={state} draft={draft} dispatch={dispatch} provenance={provenance} issues={issues} outcome={outcome} onOutcome={onOutcome} showProjectData={false} flat />;
+  const inspector = <Inspector state={state} draft={draft} dispatch={dispatch} breaks={breaks} provenance={provenance} issues={issues} outcome={outcome} onOutcome={onOutcome} showProjectData={false} flat />;
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">

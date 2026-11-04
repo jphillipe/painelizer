@@ -109,6 +109,8 @@ export interface DraftWall {
   /** Tipo de parede do arquiteto (a extração escreve; o motor não lê). */
   wallType?: string;
   extraStuds?: DraftExtraStud[];
+  /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); ausente = automático. */
+  panelBreaks?: number[];
   openings: DraftOpening[];
   extra?: Extra;
 }
@@ -368,6 +370,7 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
     level: r.field(W.level, w['level'], `${path}.level`),
     wallType: r.field(W.wallType, w['wallType'], `${path}.wallType`),
     extraStuds,
+    panelBreaks: r.field(W.panelBreaks, w['panelBreaks'], `${path}.panelBreaks`),
     openings,
     extra: rest(w, WALL_KEYS),
   });
@@ -640,6 +643,7 @@ function wallJson(w: DraftWall): Record<string, unknown> {
     level: w.level,
     wallType: w.wallType,
     extraStuds: w.extraStuds === undefined ? undefined : w.extraStuds.map((e) => compact({ ...e })),
+    panelBreaks: w.panelBreaks === undefined ? undefined : [...w.panelBreaks],
     openings: w.openings.map(openingJson),
     ...(w.extra ?? {}),
   });

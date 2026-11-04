@@ -523,4 +523,13 @@ it("config.corner ('california' | 'three-stud') e config.tee ('ladder' | 'backer
     expect(() => projectFrom(withExtras([{ x: 40, count: 0 }]), 'projeto')).toThrow(/extraStuds\[0\]\.count: esperado inteiro ≥ 1/);
     expect(() => projectFrom(withExtras([{ x: 40, label: '' }]), 'projeto')).toThrow(/extraStuds\[0\]\.label: esperado texto não vazio/);
   });
+
+  it('wall.panelBreaks (S29): lista de medidas pés-pol; o core confere ordem e candidatos', () => {
+    const withBreaks = (panelBreaks: unknown) => valid({ walls: [{ ...(valid().walls as object[])[0], panelBreaks }] });
+    expect(projectFrom(withBreaks(["5'-4\"", 96])).walls[0]?.panelBreaks).toEqual([64, 96]);
+    expect(projectFrom(withBreaks([])).walls[0]?.panelBreaks).toEqual([]);
+    expect(projectFrom(valid()).walls[0]).not.toHaveProperty('panelBreaks');
+    expect(() => projectFrom(withBreaks(64), 'projeto')).toThrow(/projeto\.walls\[0\]\.panelBreaks: esperado array/);
+    expect(() => projectFrom(withBreaks(['x']), 'projeto')).toThrow(/walls\[0\]\.panelBreaks\[0\]/);
+  });
 });
