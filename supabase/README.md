@@ -22,7 +22,9 @@ segurança). As chaves já estão em `packages/web/.env.local`; cadastro desliga
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
    ```
 4. **SQL Editor → New query**: cole `supabase/migrations/20261022000000_projects.sql` e **Run**; depois
-   `20261103000000_drawings.sql` (bucket dos desenhos). (Com a CLI: `supabase link` e `supabase db push`.)
+   `20261103000000_drawings.sql` (bucket dos desenhos), `20261104000000_extraction_jobs.sql` (leituras da IA) e
+   `20261104000100_drawings_cleanup.sql` (limpeza do bucket; o agendamento fica desligado — ver abaixo). (Com a
+   CLI: `supabase link` e `supabase db push`.)
 5. **Authentication → Sign In / Providers → Email**: deixe ligado. Em **Authentication → Settings**, desligue
    **Allow new users to sign up** — o app não tem cadastro; as contas são criadas aqui.
 6. **Authentication → Users → Add user → Create new user**: e-mail, senha e **Auto Confirm User** marcado.
@@ -44,3 +46,38 @@ login não foi configurado — para um deploy esquecido não expor a chave da AP
   envio (`<uploadId>/<arquivo>`), subidos direto do navegador; o projeto guarda os caminhos em
   `data -> '$panelizer' -> 'reading' -> 'drawings'`. RLS de time em `storage.objects` para esse bucket. Aplicada
   em 2026-11-03 pelo conector MCP.
+- `extraction_jobs` (S24): uma leitura da IA por linha — `status`, `phase`, tokens, `message`, `result jsonb` (o
+  resultado inteiro, entregue uma vez), `cancel_requested`, `created_at`/`updated_at` (trigger; batimento a cada
+  ~5 s da instância que roda)/`ended_at`. **RLS por dono** (`owner_id = auth.uid()`), não de time: só quem disparou
+  acompanha, cancela e recolhe. `sweep_extraction_jobs(ttl)` tira os sem atividade há 24 h (só o dono do banco).
+- Limpeza de `drawings` (S24): `orphan_drawings(min_age)` lista os objetos de pastas sem referência em projeto nem
+  em job guardado, paradas há mais de 24 h; `sweep_orphan_drawings()` apaga pela API de Storage (pg_net). Nenhuma
+  das duas é executável por `authenticated`/`anon`.
+
+## S24 — aplicar (passos do humano; nada disto foi aplicado)
+
+**Antes do push do código da S24** (o deploy pelo Actions sai no push da `main`): sem a tabela, a leitura roda mas
+o job não é gravado e, com uma instância, o F5 durante a leitura deixa de recolher o resultado.
+
+1. SQL Editor → cole `migrations/20261104000000_extraction_jobs.sql` → **Run**. Depois
+   `migrations/20261104000100_drawings_cleanup.sql` → **Run**. (Ou `supabase db push`.)
+2. Conferir: **Database → Tables → extraction_jobs** com RLS ligada e 4 políticas; **Advisors → Security** sem aviso
+   novo. `select * from public.orphan_drawings();` lista o que a limpeza apagaria (não apaga nada).
+3. Push / deploy. Depois de uma leitura real, `select id, status, phase, output_tokens, updated_at from
+   public.extraction_jobs order by created_at desc limit 5;` mostra a linha.
+4. (Opcional) `--max-instances` acima de 1 — `docs/12-hospedagem-cloud-run.md`, "Mais de uma instância".
+
+**Ligar a limpeza agendada** (quando quiser; até lá o bucket só cresce, como antes):
+
+1. **Database → Extensions**: ligar `pg_net` e `pg_cron`.
+2. **Settings → API Keys → Secret keys → New secret key** chamada `drawings-cleanup` (só para isto; a chave não
+   entra no app nem no repositório).
+3. SQL Editor (os valores vão só aqui):
+   ```sql
+   select vault.create_secret('https://sulbendliqbfibvmzcpz.supabase.co', 'project_url');
+   select vault.create_secret('<sb_secret_… da chave drawings-cleanup>', 'drawings_cleanup_key');
+   ```
+4. Teste à mão: `select public.sweep_orphan_drawings();` (devolve quantos DELETE enfileirou) e, um minuto depois,
+   `select status_code, error_msg from net._http_response order by created desc limit 20;` — esperado 200.
+5. Agendar (o bloco comentado no fim de `20261104000100_drawings_cleanup.sql`):
+   `select cron.schedule('panelizer-drawings-cleanup', '17 7 * * *', $job$ select public.sweep_orphan_drawings(); select public.sweep_extraction_jobs(); $job$);`

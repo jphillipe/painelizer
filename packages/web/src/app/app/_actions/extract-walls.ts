@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authActionClient } from '@/lib/safe-action';
 import { parseDrawings, parsePages, parsePagesByFile, pickProjectData, uploadFieldsSchema } from '@/schemas/extract';
 import { downloadDrawings } from '@/services/drawings.service';
-import { fromFiles, withDrawings, type UploadedFile } from '@/services/extract.service';
+import { fromFiles, type UploadedFile } from '@/services/extract.service';
 import type { DrawingRef } from '@/lib/drawings';
 
 export type UploadFormInput = Awaited<ReturnType<typeof readUploadForm>>;
@@ -58,12 +58,15 @@ export async function readUploadForm(form: FormData) {
  * depois de um F5. Sem chave no servidor, devolve `{ ok: false, reason: 'no_key' }` sem ler os arquivos.
  * A leitura que deu certo leva os desenhos consigo (vão para o `.panelizer.json` e para o banco).
  */
-export const extractWalls = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form }) => {
+export const extractWalls = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form, ctx }) => {
   const { fields, files, drawings, storageError, pages, pagesByFile, level, jobId } = await readUploadForm(form);
   if (storageError !== undefined) return { ok: false as const, reason: 'input' as const, message: storageError };
   const given = pickProjectData(fields);
-  const outcome = await fromFiles(files, {
+  // S24: o job é do usuário da sessão, e os desenhos entram no resultado guardado (vale também para o recolhido após F5).
+  return fromFiles(files, {
     ...(pages === undefined ? {} : { pages }),
+    owner: ctx.user?.id,
+    drawings,
     pagesByFile,
     given,
     ...(jobId === undefined ? {} : { jobId }),
@@ -73,5 +76,4 @@ export const extractWalls = authActionClient.inputSchema(z.instanceof(FormData))
       ...(fields.notes === '' ? {} : { extra: fields.notes }),
     },
   });
-  return withDrawings(outcome, drawings);
 });

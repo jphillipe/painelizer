@@ -1,17 +1,19 @@
 'use server';
 
+import { devToolsEnabled } from '@/lib/dev-tools';
 import { authActionClient } from '@/lib/safe-action';
 import { finishResponseSchema } from '@/schemas/extract';
-import { fromRecorded } from '@/services/extract.service';
+import { replayRecorded } from '@/services/extract.service';
+import { listExamples } from '@/services/panels.service';
 import type { ExtractOutcome } from '@/types/extract';
 
-/** Advanced: resposta gravada do modelo (JSON) → mesma revisão da extração real, sem chave. */
+/**
+ * Resposta gravada do modelo → mesma revisão da extração real, sem chave. Sample de leitura pelo id (sempre); JSON
+ * colado do Advanced só com `devToolsEnabled()` no servidor (S23, A9).
+ */
 export const finishResponse = authActionClient.inputSchema(finishResponseSchema).action(async ({ parsedInput }): Promise<ExtractOutcome> => {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(parsedInput.responseJson);
-  } catch (e) {
-    return { ok: false, reason: 'input', message: `Not valid JSON: ${(e as Error).message}` };
-  }
-  return fromRecorded(raw);
+  return replayRecorded(parsedInput, {
+    devTools: devToolsEnabled(),
+    sample: (id) => listExamples().find((e) => e.kind === 'reading' && e.id === id)?.text,
+  });
 });

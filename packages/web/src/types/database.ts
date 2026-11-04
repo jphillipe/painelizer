@@ -32,6 +32,40 @@ export type ProjectInsert = {
 
 export type ProjectUpdate = Partial<ProjectInsert>;
 
+/** S24: uma leitura da IA (supabase/migrations/20261104000000_extraction_jobs.sql). RLS por dono. */
+export type ExtractionJobRow = {
+  id: string;
+  owner_id: string;
+  status: 'running' | 'done' | 'failed' | 'cancelled';
+  phase: 'preparing' | 'waiting' | 'reading';
+  input_tokens: number | null;
+  output_tokens: number;
+  message: string | null;
+  /** O `ExtractOutcome` (types/extract.ts) do fim da leitura. */
+  result: Json | null;
+  cancel_requested: boolean;
+  created_at: string;
+  updated_at: string;
+  ended_at: string | null;
+};
+
+export type ExtractionJobInsert = {
+  id: string;
+  owner_id?: string;
+  status?: ExtractionJobRow['status'];
+  phase?: ExtractionJobRow['phase'];
+  input_tokens?: number | null;
+  output_tokens?: number;
+  message?: string | null;
+  result?: Json | null;
+  cancel_requested?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  ended_at?: string | null;
+};
+
+export type ExtractionJobUpdate = Partial<ExtractionJobInsert>;
+
 export interface Database {
   public: {
     Tables: {
@@ -39,6 +73,12 @@ export interface Database {
         Row: ProjectRow;
         Insert: ProjectInsert;
         Update: ProjectUpdate;
+        Relationships: [];
+      };
+      extraction_jobs: {
+        Row: ExtractionJobRow;
+        Insert: ExtractionJobInsert;
+        Update: ExtractionJobUpdate;
         Relationships: [];
       };
     };
