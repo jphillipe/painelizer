@@ -79,10 +79,44 @@ gcloud run deploy panelizer --source . --region us-east1 --allow-unauthenticated
 - O build leva uns 5 a 8 minutos (instala o workspace e roda o `next build`). No fim imprime a URL do serviço,
   do tipo `https://panelizer-xxxxxxxxxx-ue.a.run.app`. Abra: deve pedir login.
 - `--allow-unauthenticated` só quer dizer que a URL é pública; o login do app continua barrando quem não tem conta.
-- `--timeout 3600`: uma requisição pode durar até 60 min (a leitura leva ~10). `--max-instances 1`: o registro de
-  leituras em curso vive na memória do processo (M7); com uma instância só, progresso, cancelar e retomar após
-  F5 funcionam como no localhost. Sobe para mais quando os jobs forem para o banco.
-- `--memory 1Gi`: o pdf.js e o resvg (PDF das folhas) passam de 512 MB em conjuntos grandes.
+- `--timeout 3600`: uma requisição pode durar até 60 min (a leitura leva ~10). `--max-instances 1`: até a S24 o
+  registro de leituras em curso vivia só na memória do processo (M7); com uma instância só, progresso, cancelar e
+  retomar após F5 funcionavam como no localhost. **Depois da migração `20261104000000_extraction_jobs.sql`
+  aplicada (S24) o limite pode subir** — ver "Mais de uma instância" logo abaixo. O script e o comando acima
+  continuam com 1 até alguém decidir subir.
+- `--memory 1Gi`: o pdf.js e o resvg (PDF das folhas) passam de 512 MB em conjuntos grandes. Desde a S25 cada PDF
+  é aberto uma vez por leitura e os que mandam páginas ficam abertos até a requisição sair (os outros fecham
+  depois da seleção); o orçamento de 19 MiB de PDF recortado limita quanto fica aberto.
+- Modelo e effort da leitura (S25, opcional): `EXTRACT_MODEL` e `EXTRACT_EFFORT` (ver `packages/web/.env.example`);
+  sem elas, `claude-opus-5-5` com effort `high`. Para trocar sem novo build: `gcloud run services update panelizer
+  --region us-east1 --update-env-vars EXTRACT_EFFORT=medium`. Cada leitura grava o que usou em
+  `$panelizer.reading.provenance`.
+
+### Mais de uma instância (depois da S24)
+
+Desde a S24 cada leitura é uma linha de `extraction_jobs` no Supabase (`packages/web/src/services/extract-jobs.ts`):
+a instância que roda a leitura grava fase e tokens a cada ~5 s e o resultado no fim; qualquer instância responde
+ao progresso, ao "Cancel" e à coleta do resultado depois de um F5. O que isso muda aqui:
+
+- **Deploy no meio de uma leitura**: o Cloud Run deixa a requisição em curso terminar na revisão antiga enquanto
+  as novas vão para a revisão nova. Antes, a tela (que consulta o progresso a cada 3 s) caía na revisão nova, que
+  não conhecia o job — "The server no longer knows this read". Agora a revisão nova lê a linha e recolhe o
+  resultado gravado pela antiga.
+- **Cancelar noutra instância**: o `AbortController` só existe no processo que roda a leitura; a outra marca
+  `cancel_requested` na linha e a que roda aborta no batimento seguinte (até ~5 s).
+- **Instância morta no meio** (crash, ou o Cloud Run encerrando a revisão antes do fim): a linha fica `running`
+  sem batimento; depois de 2 min a tela mostra "The server stopped during this read…" em vez de esperar para sempre.
+  O que a API já cobrou não volta — é o mesmo de antes, só que agora a tela diz.
+- **Nenhum outro estado do servidor fica na memória** (conferido em 2026-11-04: o registro de jobs era o único
+  `globalThis` do app; login é cookie, projetos e desenhos estão no Supabase). Sem Supabase configurado, os jobs
+  voltam para a memória — serve para desenvolvimento, não para mais de uma instância.
+
+Ordem para subir: (1) aplicar a migração no Supabase (`supabase/README.md`); (2) fazer o deploy do código da S24;
+(3) só então trocar `--max-instances 1` por, por exemplo, `--max-instances 3` (`gcloud run services update
+panelizer --region us-east1 --max-instances 3`; o deploy pelo Actions herda o valor). Com o código da S24 e a
+migração **não** aplicada, a leitura funciona mas não grava o job (aviso `extract job: insert` no log) e só
+volta pela própria requisição — por isso a migração vem antes. Custo: `--min-instances 0` continua; instância a
+mais só sobe com tráfego simultâneo.
 
 Atualizações: o mesmo comando. Variáveis, segredo, memória e limites ficam guardados na revisão anterior, então
 um deploy sem as flags também vale: `gcloud run deploy panelizer --source . --region us-east1`.
@@ -160,10 +194,17 @@ Cloud Run › panelizer › Manage custom domains, ou Firebase Hosting na frente
 
 `.github/workflows/deploy.yml` roda a cada push na `main` (e pelo botão Actions › Deploy › Run workflow):
 
-1. **Tests and typecheck** — `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`. Se algo falhar,
-   o deploy não acontece. Os testes que precisam da chave da Anthropic ou dos PDFs de `docs/examples` se pulam.
-2. **Cloud Run** — entra no Google sem chave guardada (Workload Identity Federation), roda
-   `gcloud run deploy --source .` e confere `/api/health`; falha se `ai` ou `auth` vierem `false`.
+1. **Lint, typecheck, test and build** — `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`,
+   `pnpm test` e `pnpm --filter web build` (S27). Se algo falhar, o deploy não acontece. Os testes que precisam
+   da chave da Anthropic (`EXTRACT_LIVE=1`) ou dos PDFs de `docs/examples` se pulam.
+2. **Cloud Run** — entra no Google sem chave guardada (Workload Identity Federation), guarda a revisão que está
+   no ar, roda `gcloud run deploy --source .`, manda o tráfego para a revisão mais nova
+   (`update-traffic --to-latest`, que desfaz um rollback anterior) e confere `/api/health`: falha se `ai` ou
+   `auth` vierem `false` ou se a resposta não vier da revisão nova. **Health falhou → rollback**: o tráfego
+   volta inteiro para a revisão guardada (`update-traffic --to-revisions=<anterior>=100`); a revisão nova fica
+   criada, sem tráfego, para ler os logs. O próximo deploy bom devolve o tráfego à mais nova.
+
+PRs e pushes fora da `main` passam pelo mesmo check em `.github/workflows/ci.yml`, sem deploy.
 
 O deploy pelo Actions **só troca o código**: variáveis do Supabase, segredo da Anthropic, memória, timeout e
 acesso público vêm da revisão anterior, como o Cloud Run faz quando a linha de comando não os menciona. Para

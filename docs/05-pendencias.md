@@ -242,6 +242,21 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   tokens de entrada, mais o raciocínio)? Plantas de outros pavimentos e cortes ficam por último. — hipótese: 40 folhas e
   22 MB por leitura (`select.ts`), o resto vira aviso `FOLHAS_FORA`; o humano pode escolher as páginas.
 
+## Novas (abertas em 2026-10-30, leituras do Ringgold e do Horace)
+- [ ] **P42 — Posição de porta estimada pela escala.** (2026-10-30) Quando a planta não cota a porta nem dá regra
+  escrita, a IA mede a posição no recorte ampliado pela escala do desenho e a marca `scaled` (confiança ≤ 0,5); a
+  porta entra no projeto com o aviso `ABERTURA_ESTIMADA`. A fábrica prefere assim, ou porta sem cota fica fora até
+  alguém cotar? — hipótese: o erro dessa medida fica em até ~2" e é aceitável como ponto de partida que o revisor
+  confere sobre a planta de fundo.
+- [ ] **P43 — Conjuntos grandes (Horace) numa leitura só.** (2026-10-30) A seleção automática do Horace
+  (Architectural + Structural, 133 PDFs → 32 folhas úteis) soma ~633 k tokens de entrada: as folhas de notas e
+  schedules do escritório são muito mais densas que as do Ringgold (~18 k tokens por página contra ~7 k), e a leitura
+  estourou o teto de saída (o raciocínio conta). Vale uma leitura por ala ou uma seleção manual padrão para conjuntos
+  de escritório grande? — hipótese: conjunto desse porte se lê escolhendo as páginas (planta do pavimento, plantas
+  ampliadas da ala em questão, tipos de parede, schedules de portas e janelas, notas estruturais e a planta de
+  framing do pavimento — uns 10 a 12 PDFs), ou em duas leituras por ala.
+  **Hipótese medida (S25, 2026-11-04) — estimador por densidade** (`packages/web/src/lib/extract-cost.ts`): entrada sem cache = 500 + 1 400·páginas + **1,05·caracteres do texto posicionado** (`textChars` da prévia) + 4 900·recortes + 1 600·imagens; mais o system prompt (~6 000 tokens) como escrita de cache; saída = 68 000 + 700·páginas + 500·recortes, com alerta acima de 96 000 (onde o Horace parou). Preço da tabela do Opus 5.5 (US$ 4 / 20 por M; cache: escrita 1,25×, leitura US$ 0,20/M). Ajustado em três leituras reais: Ringgold A-100 + A-800 (2 páginas, 16 730 caracteres) → 20 989 medidos, estima 20 900; Ringgold 9 folhas sem recortes (49 883 caracteres) → ~66 000, estima 65 500; Horace automático (34 folhas, 500 468 caracteres, 14–16 recortes) → ~633 000, estima 642 000 e marca a saída em risco. Com os 6 recortes do Ringgold estima 94 900 contra os 83 000 medidos (+14 %, dentro da faixa de ±30 %). As folhas do Horace têm ~14 700 caracteres por página contra ~5 500 das do Ringgold: o custo por folha segue o texto, não a folha. Confere-se a cada leitura real: `usage` (com cache) e `provenance` ficam gravados no resultado e no `.panelizer.json`. O que ainda é suposição: o coeficiente por caractere vem de dois conjuntos de dois escritórios (pode mudar com carimbos ou fontes diferentes) e a saída por folha/recorte de três leituras; `count_tokens` como gate da prévia daria o número exato da entrada.
+
 ## Registro da análise (2026-09-28)
 Resumo da revisão de escopo feita antes da S1, para não se perder:
 - Viabilidade: Fases 1–3 são geometria determinística, alta confiança. Fase 4 (visão sobre PDF) é o item mais
@@ -259,19 +274,22 @@ Resumo da revisão de escopo feita antes da S1, para não se perder:
   renderizar e olhar via navegador); tabela IRC em duas passadas (Claude estrutura + testes de consistência,
   humano digita, Claude roda os testes); sem paralelizar antes da Fase 3; subir para um remoto Git.
 
-- **P42 — Posição de porta estimada pela escala (2026-10-30).** Quando a planta não cota a porta nem dá regra escrita, a IA mede a posição no recorte ampliado pela escala do desenho e a marca `scaled` (confiança ≤ 0,5); a porta entra no projeto com o aviso `ABERTURA_ESTIMADA`. Hipótese em vigor: o erro dessa medida fica em até ~2" e é aceitável como ponto de partida que o revisor confere sobre a planta de fundo. A fábrica confirma se prefere assim ou se porta sem cota deve ficar fora até alguém cotar.
-
-- **P43 — Conjuntos grandes (Horace) numa leitura só (2026-10-30).** A seleção automática do Horace (Architectural + Structural, 133 PDFs → 32 folhas úteis) soma ~633 k tokens de entrada: as folhas de notas e schedules do escritório são muito mais densas que as do Ringgold (~18 k tokens por página contra ~7 k), e a leitura estourou o teto de saída (o raciocínio conta). Hipótese em vigor: conjunto desse porte se lê escolhendo as páginas (planta do pavimento, plantas ampliadas da ala em questão, tipos de parede, schedules de portas e janelas, notas estruturais e a planta de framing do pavimento — uns 10 a 12 PDFs), ou em duas leituras por ala; o estimador de custo do web precisa de um termo por densidade de texto da página (hoje assume 7 300 tokens por página). A fábrica/humano decide se vale uma leitura por ala ou uma seleção manual padrão para conjuntos de escritório grande.
-
 ## Storage (S22.3, 2026-11-03)
 
 - **Teto de 50 MB por arquivo** no bucket `drawings`: é o máximo de um objeto no plano gratuito do Supabase. Um PDF
   maior (conjuntos escaneados chegam a isso) exige plano Pro, que permite upload retomável até 50 GB. Hipótese em
   vigor: 50 MB basta para os conjuntos de arquiteto (Matilda inteiro tem 19,7 MB; o Horace vem em 133 arquivos).
-- **Envios abandonados** ficam no bucket: quem solta arquivos e não lê (ou cancela, ou a leitura falha) deixa a
-  pasta `<uploadId>/` sem projeto apontando para ela. Não há limpeza automática. Hipótese: volume baixo numa
-  ferramenta interna; se crescer, uma rotina lista as pastas sem referência em `projects.data` e apaga as com mais
-  de 7 dias.
+- **Envios abandonados** — **limpeza pronta, falta aplicar (S24, 2026-11-04).** Quem solta arquivos e não lê (ou
+  cancela, ou a leitura falha) deixa a pasta `<uploadId>/` sem projeto apontando para ela.
+  `supabase/migrations/20261104000100_drawings_cleanup.sql` define `orphan_drawings()` (pastas sem referência em
+  `projects.data -> '$panelizer' -> 'reading' -> 'drawings'` nem em job de leitura guardado, com a última mudança
+  há mais de **24 h**) e `sweep_orphan_drawings()`, que apaga pela API de Storage (pg_net; apagar a linha de
+  `storage.objects` por SQL deixaria o arquivo cobrado no disco). O agendamento diário (pg_cron) está escrito e
+  **comentado** no fim da migração; precisa de pg_net, pg_cron e de dois segredos no Vault (`project_url`,
+  `drawings_cleanup_key` = uma chave *secret* só para isto). Passos em `supabase/README.md`. A janela caiu de
+  7 dias (hipótese anterior) para 24 h: o envio vira projeto em minutos, e o job de leitura guardado também vale
+  24 h. Não depende da fábrica: falta aplicar e ligar o agendamento depois de
+  conferir `select * from public.orphan_drawings();` à mão.
 
 ## Novas (abertas em 2026-11-04, prancha da fábrica de 2026-10-28 — `docs/14-prancha-fabrica.md`)
 A prancha avisa que dimensões e fixações são exemplos conceituais; aqui elas viram hipótese em vigor até a fábrica

@@ -15,7 +15,12 @@ equipe usando só o desenho gerado.
 - Configuração: espaçamento (16"/24" OC), largura da edificação, carga de neve no solo, pavimentos suportados,
   altura padrão de header (opcional; ausente = encostado na top plate), comprimento e peso máximos de painel,
   estilo de canto e de interseção T.
-- Entrada v1 = arquivo JSON. (IA lendo PDF e tela vêm depois — ver Ordem de construção em `00-visao.md`.)
+- Três caminhos, todos para o mesmo formato de projeto (`packages/cli/src/project.ts`):
+  - **arquivo JSON** (CLI ou "Project file" no app);
+  - **leitura do conjunto de PDFs por IA** (`packages/extract`, S18–S19, S25): a IA devolve paredes e aberturas com
+    confiança e evidência; o humano revisa e corrige no editor antes de gerar (confirmação humana obrigatória). A
+    IA só lê: o motor continua determinístico;
+  - **editor do app** (S21): planta, propriedades, planta do arquiteto por baixo.
 
 ### Motor
 - Plates: bottom, top, double top; laps em cantos e emendas.
@@ -33,6 +38,11 @@ equipe usando só o desenho gerado.
 - Numeração `{pavimento}-{parede}-P{n}`.
 - Validações como avisos, não erros.
 
+### App e dados (Fase 5–6)
+- App web (`packages/web`, Next.js no Cloud Run — `docs/12`) com login e projetos salvos no **Supabase** (S22:
+  auth, tabela `projects` com `data jsonb`, revisão para conflito; S22.3: desenhos no bucket `drawings`; S24:
+  jobs de leitura no banco). Ferramenta interna: um time, sem papéis ainda (S32).
+
 ### Saídas
 - Desenho de elevação por painel (SVG → PDF), com cotas, ID, orientação, lista de peças na margem.
 - Lista de corte por painel (papel, seção, comprimento, quantidade).
@@ -49,10 +59,11 @@ equipe usando só o desenho gerado.
 - IA como motor de cálculo.
 
 ## Backlog v2
-- Leitura de PDF com Claude (visão) → `Wall[]` com confiança; confirmação humana obrigatória.
 - Importação/exportação DXF. Se os arquitetos entregarem DXF, a importação sobe para a Fase 4 no lugar da visão
   sobre PDF (ver P12 em `05-pendencias.md`): cotas vetoriais são mais confiáveis que leitura de imagem.
 - Rake walls.
 - Aproveitamento de chapa de sheathing (corte otimizado); o sheathing em si entrou na v1 em 2026-11-04.
 - Visualizador 3D no navegador.
-- Backend multiusuário (Supabase: auth, tabela `projects` com coluna `data jsonb`, storage para PDFs).
+
+Entraram na v1 (antes backlog v2): leitura de PDF por IA (Fase 4, S18–S19) e o backend no Supabase (S22) —
+revisão de 2026-11-04 (`docs/13`, S27).

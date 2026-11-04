@@ -195,9 +195,10 @@ Estados obrigatórios em toda tela de resultado: **vazio** (texto ink-3 e a aç�
   ilustrativa e o card de prévia saíram. Quando há leitura e o humano volta aos desenhos, um Alert diz quantas
   paredes foram lidas, com "Review walls". A tela de espera (fase, tokens, "Cancel the read", retomada após F5)
   não mudou. **Cada passo é uma tela**: o passo ativo ocupa a área toda, o anterior some; a barra de passos leva de
-  volta aos concluídos (círculo com check), e as telas 2 e 3 têm "Back" e "Start over". Até a S22 o estado fica
-  no cliente (sem URL por passo); com projetos salvos, cada passo ganha rota própria.
-- **Nunca perder trabalho (M2):** o projeto aberto é gravado no navegador a cada edição (`localStorage`, até a S22) e
+  volta aos concluídos (círculo com check), e as telas 2 e 3 têm "Back" e "Start over". Desde a S22.1 o projeto
+  salvo tem rota por passo (`/app/projects/<id>` no editor, `/panels` no passo 3); `/app` é o projeto novo.
+- **Nunca perder trabalho (M2):** o projeto aberto é gravado no navegador a cada edição (`localStorage`, uma sessão
+  por projeto desde a S23; com Supabase, o servidor tem a cópia de verdade e o navegador é o buffer de F5 e queda) e
   `/app` sem projeto oferece "Resume *nome*?" num Alert `default` logo abaixo da barra de passos (Resume accent,
   Discard ghost). O passo 1 fica montado e escondido nos outros passos (arquivos e campos sobrevivem). "Start over"
   confirma em `Dialog` quando há edições, resultado ou leitura. Remover parede/abertura avisa em toast com "Undo".

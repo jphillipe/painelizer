@@ -1,5 +1,9 @@
 # 11 — Revisão do app (2026-10-20): diagnóstico e plano M1–M10
 
+> **Executado.** M1–M10 feitas entre 2026-10-20 e 2026-10-21 (registro e "Feita em" de cada uma em
+> `03-sessoes.md`, Fase 5). O diagnóstico abaixo descreve o app daquela data; o seguinte é `13-revisao-2026-11.md`.
+> Não atualizar este arquivo.
+
 ## Contexto
 
 Gerado na sessão de 2026-10-20 a pedido do humano ("análise completa do projeto… melhorias de funcionalidade, UI/UX, design, cor, contraste e animações"). A M1 foi feita na mesma sessão; o estado de cada item fica em `03-sessoes.md`.

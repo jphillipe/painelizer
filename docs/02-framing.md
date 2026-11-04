@@ -171,6 +171,40 @@ nota a); coluna = a de menos kings entre as que cobrem o vento (coluna "< 140 mp
   `requiresEngineer` sem `kingStuds`: erro pedindo `kingStuds` na abertura. Parede interna: `kingStuds ?? 1`.
 - O número de kings entra na zona (RO ± (kings + jacks)·1.5) e na fusão de zonas, como já acontecia.
 
+### Vizinhança apertada e tolerância de leitura (hipóteses P30, P39, P40)
+A leitura por IA erra de 1/8" a ~1"; sem estas três regras, um RO que encosta numa vizinha, num T ou na ponta da
+parede derrubaria o projeto inteiro. Todas avisam (com a hipótese no campo `hypothesis` do aviso) e nunca mexem
+em mais do que o necessário.
+- **Tolerância de leitura** (`nudgeOpenings` em `rules/nudge.ts`, chamada por `nudgeWall` em `panelizeWall.ts`,
+  P40): roda antes de tudo em
+  `splitWall`. Zona da abertura (RO + jacks + kings) fora de `[0, length]`, ou faixa de T sobre o RO: a abertura
+  anda o mínimo para não conflitar, até `MAX_NUDGE` = 1 1/2" (um stud), e sai o aviso `OPENING_NUDGED` (de, para,
+  o que tocava). Depois de deslocada não pode ter conflito nenhum nem ficar a menos de jack + king + jack do RO de
+  uma vizinha; senão fica onde estava e o erro de sempre aparece. Faixa de T só na zona (sem tocar o RO) não é
+  conflito: é `OPENING_AT_TEE`. Aberturas em ordem de offset; cada uma vê as vizinhas já deslocadas.
+- **Jacks na vizinhança** (`fitNeighborJacks` em `rules/zones.ts`, P30): par de RO vizinhos sem espaço para os jacks
+  pedidos + kings compartilhados passa a 1 jack por lado nas duas aberturas, se jack + king + jack (4.5" no
+  default) couber. Aviso `HEADER_JACKS_BELOW_TABLE` com `reason: 'neighbor'` na abertura afetada.
+- **Kings compartilhados** (`mergeOpeningZones` com `fit`, P39): se ainda faltar espaço, os kings compartilhados caem
+  para o que cabe (mínimo 1), com aviso `HEADER_KINGS_BELOW_TABLE` e `reason: 'shared'`. Nem 1 king cabendo:
+  `OPENINGS_TOO_CLOSE` (erro).
+- Ordem dentro de `planOpenings`: header e kings de cada abertura → `fitNeighborJacks` → fusão de zonas com `fit`.
+
+## Avisos e erros do motor (S26, `src/messages.ts`)
+- **Avisos** (`Warning`) nunca interrompem a geração. Saem com `code`, ids (`wallId`, `openingId`), parâmetros e,
+  quando a regra é hipótese, `hypothesis` (`'P30'`, `'P39'`, `'P40'`…). A frase em português é montada a partir
+  deles em `messages.ts` (CLI e folha); o app monta a sua em inglês com os mesmos parâmetros
+  (`packages/web/src/lib/messages.en.ts`) e nunca lê o português. A folha não imprime "hipótese"; o CLI acrescenta.
+  Os 13 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
+  `WIND_SPEED_MISSING`, `SPECIES_NOT_IN_TABLE`, `DOOR_RO_HEIGHT_MISMATCH`, `OPENING_AT_TEE`, `OPENING_NEAR_CORNER`,
+  `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `FIRE_BLOCKING_REQUIRED`, `PANEL_OVERWEIGHT`.
+- **Erros que o projeto provoca** (dado do humano ou da leitura) são `EngineError` com código de
+  `ENGINE_ERROR_CODES` (planta, catálogo e aberturas, header e kings…) e os mesmos ids e parâmetros; guardas internas
+  (estado que nenhuma entrada válida produz) seguem `RangeError`. Fora da tabela continua `requiresEngineer`, nunca
+  extrapolação.
+- Os avisos e erros da **leitura** (`packages/extract`: `OPENING_ESTIMATED`, `SHEET_DUPLICATE`, `NO_TITLE_BLOCK`…) são de outro catálogo
+  (`extract/src/notices.ts`); não são do motor.
+
 ## Exemplo resolvido — parede 144" com janela
 Parede: 144" × 97.125", 2x6, externa, portante. Janela: RO 36 × 48, offset 48.
 

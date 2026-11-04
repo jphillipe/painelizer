@@ -21,13 +21,20 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
   `ends` > mais longa > primeira do arquivo (P21). Offsets medidos do `start`; o motor converte para o painel.
 - Antes de implementar qualquer regra de framing, explique a abordagem em até 5 linhas e aguarde confirmação.
 - Uma sessão = um item de `docs/03-sessoes.md`. Ao terminar: marcar o item, registrar decisões novas em
-  `docs/04-decisoes.md` e sugerir uma mensagem de commit descrevendo a regra (não o código).
-- NUNCA rodar `git commit` ou `git push`. Quem commita é o humano. Deixar as mudanças no working tree.
+  `docs/04-decisoes.md` e commitar com uma mensagem que descreva a regra (não o código).
 - Sem IA generativa dentro do motor. O motor é determinístico.
 
 ## Comandos
 - `pnpm test` — vitest
-- `pnpm typecheck` — tsc --noEmit
+- `pnpm typecheck` — tsc --noEmit (TypeScript 7, `tsconfig.base.json` com `noUnused*`/`noImplicitReturns`)
+- `pnpm lint` — ESLint (`eslint.config.mjs`); `pnpm check` = lint + typecheck + test (o que o CI roda, mais o build)
+- `pnpm --filter web build` — `next build` (o CI e o deploy rodam)
+- `pnpm format:check` — Prettier só confere; não rodar `prettier --write` no repo inteiro (reformat é commit à parte)
+- `pnpm web` — app Next.js em desenvolvimento (`packages/web`, env em `packages/web/.env.local`)
+- `pnpm extract <pdf> --out <pasta>` — leitura por IA (chamada paga; `--dry-run` não chama a API)
+- `pnpm panelizer build <projeto.json> --out <pasta>` — CLI do motor
+- `git push` na `main` publica no Cloud Run (`.github/workflows/deploy.yml`); migrações do Supabase vão antes
+- `pnpm hipoteses` — regenera `docs/08-revisar.md` a partir de `05-pendencias.md` e dos comentários `Pnn`
 
 ## Glossário mínimo
 stud, plate (bottom/top/double top), king stud, jack stud (trimmer), header, sill, cripple, rough opening (RO),

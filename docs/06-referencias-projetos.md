@@ -5,6 +5,12 @@ em `docs/examples`. **Nenhum deles é folha de painel da fábrica**: são docume
 Por isso respondem "o que o projeto exige", não "como a fábrica monta". Cada item abaixo diz de onde veio e
 qual pendência de `05-pendencias.md` ele toca. Nada aqui altera hipótese sem confirmação humana.
 
+> **Estado em 2026-11-04 (S27).** As propostas de motor deste arquivo já foram implementadas: jacks e kings por
+> abertura (S9.2, S12), tabela R602.7.5 de kings (S12), catálogo `openingTypes`/`headerSchedule`, abertura por
+> `type` + `center` + `headerMark`, `sillHeight`, LVL/PSL e `building.species` (S12.5, `rules/catalog.ts`),
+> sill dupla (P25). Os trechos "hoje …" e "proposta" abaixo descrevem o motor de 2026-09-29/10-13 e ficam como
+> registro. Continua de fora: o spacer de 1/2" entre plies na BOM.
+
 ## Os projetos
 
 | Projeto | Local / código | Tipo | O que tem de útil |
@@ -53,8 +59,8 @@ uma ferramenta de divisão de PDF (ignorar).
   2 kings, 1 jack); (c) a planta manda "minimum (1) king stud; at basement level (2) king studs each side";
   (d) headers maiores aparecem como "(2) 2X12 SPF", "(3) 2X12 SPF", "(3)/(4) LVL 11 7/8" nas plantas.
   Ringgold usa "(2) 1.75x16 LVL" para aberturas grandes. **Impacto no motor:** `Config` precisa de
-  `jackStuds` e `kingStuds` por abertura (hoje é 1 e 1 fixo), e a S9 deve aceitar uma tabela por projeto além
-  da IRC. A hipótese "1 king + 1 jack" continua válida para RO < 3'-8".
+  `jackStuds` e `kingStuds` por abertura (era 1 e 1 fixo; feito na S9.2/S12), e a S9 deve aceitar uma tabela por
+  projeto além da IRC (feito como `headerSchedule`, S12.5). A hipótese "1 king + 1 jack" continua válida para RO < 3'-8".
 - **Header em parede 2x6 (Horace S-502 det. 1):** "(2) 2x header or beam" com **1/2" sheathing spacer** entre
   os plies, ou "(3) 2x header" com dois spacers de 1/2". Em parede 2x4: (2) 2x, spacer 1/2". Ou seja, o header
   preenche a espessura da parede (2×1.5 + 0.5 = 3.5; 3×1.5 + 2×0.5 = 5.5). Isso é material (OSB) que hoje não
@@ -138,7 +144,7 @@ informação de uma abertura está espalhada em **cinco lugares**, e nenhum dele
   fundação; hold-down "HD / (2) 2x" = kings extras além dos jacks; studs agrupados "■(4)". Madeira: **Hem-Fir
   No. 2** (S-003), não SPF. Sill dupla em abertura > 6'-0" (S-507, já no motor como P25).
 
-**O que isso muda no motor (proposta, ver S12.5 em 03-sessoes):** hoje a abertura entra já resolvida (`offset`
+**O que isso muda no motor (proposta implementada na S12.5, `rules/catalog.ts`):** em 2026-10-13 a abertura entrava já resolvida (`offset`
 da borda esquerda, `roughWidth`, `roughHeight`, `header` por seção 2x). O projeto real fala em **tag + eixo +
 marca de header**. Falta uma camada de catálogo por projeto: (a) `openingTypes` (window/door schedule: tag →
 tamanho nominal, tipo de batente, peitoril, regra de RO); (b) `headerSchedule` (marca → peças, jacks, kings),

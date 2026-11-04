@@ -973,9 +973,10 @@ Cada item abaixo é 2–4 sessões; quebrar em subitens ao chegar.
 Planejada em 2026-11-04 na revisão do projeto (`docs/13-revisao-2026-11.md`, aprovada pelo humano). Cada item é uma
 sessão. "SRF" = sem regra de framing (não precisa submeter abordagem antes de escrever código). Ordem decidida em
 `04-decisoes.md` (2026-11-04): fechar os defeitos que perdem leitura paga antes de qualquer fatoração.
-Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S39) → S24 em diante**.
+Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S39) → S24 em diante**. Revista de novo
+pelo humano em 2026-11-04: **Fase 6 inteira primeiro (S23 → S24 → S25 → S26 → S27), em sessões encadeadas**, depois a Fase 8.
 
-- [ ] **S23 — Não perder a leitura nem a edição (web, SRF).** Defeitos A1–A6 e A9 do doc 13. (a) `SavedJob` ganha
+- [x] **S23 — Não perder a leitura nem a edição (web, SRF).** Defeitos A1–A6 e A9 do doc 13. (a) `SavedJob` ganha
   `jobId` de verdade em `lib/editor/persist.ts` (`loadJob` descarta o campo hoje; o `if` de retomada em
   `use-saved-session.ts:56` nunca é verdadeiro) + teste de ida e volta e teste dom de F5 durante leitura retomando a
   espera; (b) base do `useProjectSync` = o texto enviado no `create`, não o texto atual; (c) token de geração
@@ -987,14 +988,55 @@ Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S
   o teste real passa a exigir `EXTRACT_LIVE=1` (hoje chama a API paga se a chave estiver no ambiente) e
   `extract/vitest.config.ts` com `testTimeout: 30_000` (dois testes estouram 5 s na rodada fria e derrubam o
   deploy). Saída: um teste dom por defeito; conferido no browser com a leitura gravada do Ringgold.
-- [ ] **S24 — Jobs de leitura no banco e lixo do bucket (web + supabase, SRF).** Tabela `extraction_jobs` (id,
+  Feita em 2026-11-04 (sessão encadeada, sem commit). (a) `SavedJob.jobId` grava e volta (`loadJob` valida; job de
+  antes da S23 sem id continua virando o aviso de leitura perdida); o cast saiu de `use-saved-session`. (b)(c)(f) A
+  criação saiu da `new-project-view` para `use-project-create.ts`: manda o `.panelizer.json` do draft carregado (com a
+  leitura — antes ia só o JSON do CLI) e devolve esse texto em `ServerProject.text`, que vira a baseline do
+  `useProjectSync`; se o editor já mudou, grava 500 ms depois. Geração por projeto aberto/"Start over" descarta a
+  resposta em voo. Sample (inclusive o card do Ringgold) só cria na primeira edição, e sempre como projeto novo. (d)
+  Chip "Edited elsewhere" com "Save as copy" (cria "Copy of <nome>" e passa a gravar nele; também no projeto apagado),
+  "Overwrite" (grava com a revisão do conflito) e "Reload", estes dois com confirmação; a mensagem do servidor deixou
+  de prometer que as edições ficam. (e) `EditorState.underlayView` + `viewedUnderlay()`; `$underlay` grava sem
+  `opacity`/`visible` (arquivo antigo com eles vale como vista inicial). (g) Sessão local em `panelizer.session.v1:<id>`
+  (sem id, a chave antiga); banner oferece a mais recente; limpeza de 14 dias ao abrir `/app`; quota estourada tira as
+  outras sessões antes da leitura. Além do pedido: F5 em `/app/projects/<id>` reabre as edições locais que o servidor
+  não tem sobre a mesma revisão (e grava) e o editor grava a sessão ao desmontar — sem isso o "your work is saved" do
+  (h) seria falso. (i) `devToolsEnabled()` em `lib/dev-tools.ts` para páginas e action; `finishResponse` aceita
+  `sampleId` (o servidor lê o sample) sempre e JSON colado só com dev tools — o card do Ringgold mandava o JSON e
+  quebraria com a guarda pura; `PROJECT_TEXT_MAX` 16 MB em create/save. Extract: `EXTRACT_LIVE=1` e
+  `vitest.config.ts` (30 s). Testes: web 334 → 357, todos verdes; typecheck verde. Browser (dev server sem Supabase,
+  porta 3001): F5 com job gravado volta à espera e consulta o servidor; "Hide" esconde a planta sem mudar o texto da
+  sessão; card do Ringgold abre. Não conferido no browser: tudo que depende de login (chip "Saved", conflito,
+  criação no banco, sample sem linha, reabrir edição local), leitura real (custo) e `next build`.
+- [x] **S24 — Jobs de leitura no banco e lixo do bucket (web + supabase, SRF).** Tabela `extraction_jobs` (id,
   owner, status, fase, tokens, resultado jsonb, criado/atualizado; RLS por dono) em migração nova; `services/
   extract-jobs.ts` vira adaptador injetável como `ProjectsTable` (teste com `Map`); actions `cancelExtraction`/
   `extractionProgress`/`extractionResult` checam o dono; resultado sobrevive a deploy e restart; `--max-instances`
   deixa de ser 1 (atualizar `docs/12`). Limpeza de `drawings`: função SQL agendada (pg_cron) que apaga pastas
   sem referência em `projects.data` com mais de 24 h, registrada em 05-pendencias "Storage". Saída: leitura real
   com deploy no meio → resultado recolhido; teste do adaptador com bucket falso.
-- [ ] **S25 — Extração: seleção de folhas e custo honesto (extract + web, SRF).** (a) `classifySheet` usa o nome
+  Feita em 2026-11-04 (sessão encadeada, sem commit; **migrações escritas, não aplicadas**). Migração
+  `20261104000000_extraction_jobs.sql`: tabela com `status`/`phase`/tokens/`message`/`result jsonb`/`cancel_requested`/
+  `ended_at`, trigger `set_updated_at`, RLS por dono e `sweep_extraction_jobs(ttl)`. `services/extract-jobs.ts`
+  virou registro com `ExtractJobsTable` injetável (adaptador em `lib/supabase/extract-jobs-table.ts`; sem Supabase,
+  `memoryExtractJobsTable` num `Map` em `globalThis`, o mesmo dos testes): `startJob` → `report` só em memória →
+  batimento a cada 5 s grava fase e tokens e lê `cancel_requested` → `finish` grava o resultado. Cancelar noutra
+  instância marca no banco; `running` sem batimento há 2 min vira `failed` com "The server stopped during this
+  read…"; resultado não recolhido vale 24 h (era 1 h), varrido por dono ao abrir o próximo job. As três actions
+  passam `ctx.user?.id` e job de outro dono é `unknown`. Além do pedido: o resultado guardado no job passa a levar
+  os `drawings` (antes `withDrawings` só entrava na resposta da action — a leitura recolhida após F5 chegava sem os
+  caminhos, e a limpeza apagaria a planta) e um erro inesperado em `fromFiles` fecha o job antes de subir (antes
+  ficava `running` para sempre). Migração `20261104000100_drawings_cleanup.sql`: `orphan_drawings(min_age)` (pastas
+  sem referência em `projects.data` nem em `extraction_jobs.result`, última mudança há mais de 24 h) e
+  `sweep_orphan_drawings()` que apaga **pela API de Storage via pg_net** (DELETE por SQL em `storage.objects` deixa o
+  arquivo cobrado), segredos no Vault, pg_cron comentado. Docs: `12` ("Mais de uma instância", script intocado),
+  `05` Storage "pronta, falta aplicar", `supabase/README.md` com os passos. Testes: web 357 → 362 (registro com duas
+  "instâncias" sobre o mesmo `Map`, batimento com timers falsos, dono, restart, varredura, banco fora; service com
+  dono e desenhos no job). SQL conferido em PGlite (Postgres embutido, com `auth`/`storage`/`vault`/`net` falsos):
+  as quatro migrações aplicam em ordem, órfãos certos, RLS recusa linha alheia, funções fechadas para
+  `authenticated`. Não conferido: Supabase real (RLS, trigger, PostgREST), leitura real com deploy no meio, DELETE
+  do Storage com chave `sb_secret` só no `apikey`, browser (exige leitura paga), `next build`.
+- [x] **S25 — Extração: seleção de folhas e custo honesto (extract + web, SRF).** (a) `classifySheet` usa o nome
   do arquivo só em PDF de 1 página ou página sem título (hoje "Bath"/"Schedule" no nome classifica todas as
   páginas); duplicata descartada vira aviso; fallback de 20 páginas não recebe recortes; (b) estimador de custo
   com termo por densidade (caracteres do texto posicionado que a prévia já lê) e saída proporcional a folhas +
@@ -1005,14 +1047,74 @@ Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S
   env; (f) PDF aberto uma vez por fonte; `pageKey()`; fontes casadas por índice, não por nome. Saída: Matilda,
   Horace e Ringgold escolhem as mesmas folhas de hoje (testes de classificação); prévia do Horace completo estima
   > 500 k tokens.
-- [ ] **S26 — Mensagens com código (core + extract + web; toca o core, mas não regra de framing).** `WarningCode`
+  Feita em 2026-11-04 (sessão encadeada, sem commit; **nenhuma chamada paga**). (a) `select.ts`: `fileNameCounts`
+  (nome só em PDF de 1 página ou página sem título reconhecível; `classifySheet` ganhou `pagesInFile`),
+  `choosePages` devolve `duplicates` → aviso `FOLHA_DUPLICADA`; fallback sem carimbo vai sem recortes, com aviso
+  `SEM_CARIMBO` (página pedida continua recortada). Ringgold (9 folhas) e Horace (133 PDFs → 34 folhas, 13 fora)
+  escolhem exatamente o que escolhiam antes — lista gravada antes da mudança, conferida em `test/sets.test.ts`
+  (pula sem `docs/examples`); Matilda pelos casos de `select.test.ts` (o PDF não está no repositório). (b)
+  `web/lib/extract-cost.ts` pela densidade (P43 virou hipótese medida: 1,05 token por caractere do texto
+  posicionado + 1 400 por página + 4 900 por recorte; saída 68 000 + 700/página + 500/recorte com alerta acima de
+  96 000), preço da tabela do Opus 5.5, `actualCost` com cache; a prévia devolve `textChars` e a tela avisa quando a
+  saída corre risco. (c) `checkStop` trata todos os `stop_reason` (truncamento: "128000 tokens de saída… já é o
+  máximo; mande menos folhas ou baixe o effort"); `timeout` 10 min e `maxRetries` 2 no construtor e por requisição;
+  `signal` conferido na seleção, no texto, antes do recorte do PDF e entre recortes. (d) `PROMPT_HASH` +
+  `provenance` (modelo, effort, `max_tokens`, opções de recorte efetivas) no `ExtractResult`, no `pedido.json` do
+  dry-run, no `resultado.json` do `read-set` e em `$panelizer.reading.provenance` (a reconversão mantém); `usage`
+  com `cacheCreationInputTokens`/`cacheReadInputTokens`; `EXTRACT_MODEL`/`EXTRACT_EFFORT` no web
+  (`extractModelOptions`, `.env.example`, `docs/12`). (e) `openPdf` (um parse por fonte; os sem página fecham
+  depois da seleção), `pageKey`, fontes por índice em `fitTiles`/`previewExtraction`/prévia do web/`read-set`.
+  Web: títulos e ajuda em inglês para `FOLHA_DUPLICADA` e `SEM_CARIMBO`. Testes: extract 178 → 204, web 362 → 372;
+  `pnpm test` e `pnpm typecheck` verdes na raiz. Dry-run pelo CLI: Ringgold (`pnpm extract … --level 1 --dry-run`)
+  9 folhas, 6 recortes, 49 883 caracteres → estimativa US$ 1,96 (faixa 1,37–2,54); Horace inteiro pelo `read-set
+  --dry-run` (o CLI lê um PDF só) 34 folhas, 14 recortes (2 cortados para caber, em JPEG), 500 468 caracteres →
+  **~648 k tokens** de entrada, US$ 4,57 e alerta de saída. O aviso novo mostrou que as plantas de shear wall
+  `S-104.A`/`S-106.A`/`S-107.A` do Horace saem como "cópia" da `S-104`/`S-106`/`S-107` de framing (o número
+  com `.A` não casa no padrão) — sempre saíram, agora avisa. Browser (`next dev` sem Supabase, porta 3001): Ringgold
+  → "about US$ 2.13" (9 páginas + 12 recortes) e, com páginas 3,15, "about US$ 1.68" — o valor com os 16 730
+  caracteres medidos (sem eles daria 1,66); sem erro no console. Não conferido: leitura real (custo; coeficientes
+  só medidos em três leituras), alerta de saída na tela (exige subir o Horace), proveniência num `.panelizer.json`
+  salvo de uma leitura nova, `next build`.
+- [x] **S26 — Mensagens com código (core + extract + web; toca o core, mas não regra de framing).** `WarningCode`
   tipado com os 13 códigos; `EngineError { code, wallId?, openingId?, params }` no lugar de `Error`/`RangeError` de
   texto livre no core; `Warning.hypothesis?: 'P30' | …` fora do texto (o "hipótese P30" não vai mais para a serra);
   códigos do extract em inglês; `web/lib/editor/problems.ts` deixa de localizar por regex em português;
   `messages.en.ts` cobre todo código do core, do extract e dos adaptadores do Supabase; texto original só em
   "Details". Fixtures com `warnings` conferidos por código; members e snapshots inalterados. Saída: nenhuma frase em
   português na UI com a 28x40, o Ringgold solto e a leitura gravada.
-- [ ] **S27 — Base de qualidade: lint, tsconfig, CI de PR, docs (SRF).** ESLint (`react-hooks`, `@next/next`) +
+  Feita em 2026-11-04 (sessão encadeada, sem commit; nenhuma peça mudou). Core: `src/messages.ts` com
+  `WARNING_CODES` (os 13), `ENGINE_ERROR_CODES` (49, os que um projeto provoca), `EngineError extends RangeError
+  { code, wallId, openingId, alsoWalls, params }` com `.at(where)` para quem pega somar contexto, `Warning { code,
+  message, wallId?, openingId?, params?, hypothesis? }` e a frase em português montada **só** de código + parâmetros
+  (`warningMessagePt`/`engineErrorMessagePt`), com o mesmo texto de antes. "Hipótese P30/P39/P40" saiu da frase (a
+  folha não leva; o CLI imprime `(hipótese Pxx)` no aviso). Motivos estruturados onde havia texto: `HeaderChoice`/
+  `KingChoice.detail` (`EngineerReason`), `Nudge.touched`, `LapObstacle.kind`; `resolveOpening(spec, config,
+  wallId?)`. Guardas internas (argumentos de `layoutStuds`, `panelSvg`…) seguem `RangeError`. CLI: `BuildProblem`
+  (aviso + `stage`: plan/wall/bom/files) e `problemText` (mesma linha de antes); `ProjectError(path, detail,
+  engine?, kind)`. Extract: `src/notices.ts` (exportado também como `extract/notices`, puro, para o navegador) com
+  códigos em inglês (`OPENING_UNPLACED`, `OPENING_UNSIZED`, `DOOR_RO_HEIGHT_ASSUMED`, `OPENING_ESTIMATED`,
+  `ROOM_WITHOUT_DOOR`, `DEFAULT_HEADER_HEIGHT`, `TILES_DROPPED`, `SHEETS_DROPPED`, `SHEET_DUPLICATE`,
+  `NO_TITLE_BLOCK`; problema `WALL_HEIGHT_MISSING`), `ReadingNotice` (source/panelId/path/stage), `noticeText` (a
+  linha do CLI e do `revisao.md`), `LEGACY_EXTRACT_CODES` + `legacyNotice`/`readingNotices` (texto gravado antes
+  da S26 → aviso com código novo), `ExtractError` com `code`/`params` e `ExtractInputError` (`RangeError` com código).
+  Web: `Notice` trafega no lugar das strings (`CheckResult`, `GenerateResult`, `ExtractOutcome`); `problems.ts`
+  localiza por `wallId`/`openingId`/`alsoWalls`/`panelId` e pelo caminho estrutural do parser (sumiram
+  `idsInMessage`, `wallIdsIn`, `parseProblem`/`parseWarning`, `TEXT_TITLES`, `TEXT_HELP`, `normalizeText`);
+  geometria no cliente guarda o `EngineError` (`houseNotice`); `lib/messages.en.ts` cobre todo código do core, do
+  extract, do CLI/parser e dos adaptadores do Supabase (`INSERT_NO_ROW`, `DOWNLOAD_NO_DATA`, `DB_ERROR`,
+  `STORAGE_ERROR`); `describeServerError` diz a frase do código para `ExtractError`/`ProjectError`/`BuildError`.
+  O texto original só aparece em "Details" (`IssueText`/`OriginalText`); falha da leitura leva `detail`.
+  Leitura gravada (`.panelizer.json`, sessão do navegador, job no banco) passa por `normalizeReading`. Além do
+  pedido: ajuda por motivo (`HEADER_JACKS_BELOW_TABLE:table` ≠ vizinhança P30); caminho `config.X` do parser cai na
+  família do editor (a leitura mostrava "precut stud lengths" duas vezes); texto livre da IA (origem, notas,
+  evidência) recolhido em "Details". **Fixtures: nenhum mudou** (todos os `warnings` eram `[]`); snapshots
+  inalterados. Testes: core 612 → 616, cli 113, extract 204 → 210, web 372 → 380; `pnpm test` e `pnpm typecheck`
+  verdes. Browser (`next dev` sem Supabase, porta 3001): 28x40 sem avisos; Ringgold solto (`ringgold-checkpoint`
+  pelo "Project file") com 2 avisos em inglês ligados à S2; leitura gravada do Ringgold (card) com 43 issues em
+  inglês e "Add opening" pelo id do aviso; um `.panelizer.json` montado com os avisos no texto antigo abre com os
+  códigos novos — em nenhum dos três há frase em português fora de "Details". Não conferido: leitura real (custo),
+  Supabase real (erros dos adaptadores), `next build`; folha e planta SVG seguem em português (snapshots; S34).
+- [x] **S27 — Base de qualidade: lint, tsconfig, CI de PR, docs (SRF).** ESLint (`react-hooks`, `@next/next`) +
   Prettier + `.editorconfig` (revisar os 7 `eslint-disable` que hoje não fazem nada); `tsconfig.base.json` sem
   `jsx` no core e com `noUnused*`/`noImplicitReturns`; `ci.yml` em `pull_request` e push com lint + typecheck +
   test + `pnpm --filter web build`; `deploy.yml` com rollback para a revisão anterior quando o health falhar;
@@ -1023,6 +1125,28 @@ Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S
   `06-referencias` (propostas já implementadas), cabeçalhos "arquivado"/"executado" em `07` e `11`, `10-design`
   linha do localStorage; comentários velhos (`panelizeWall.ts:4-6`, `maxDuration`/Vercel, "até a S22",
   `next.config.ts`). Saída: `pnpm lint` verde; CI de PR verde num PR de teste.
+  Feita em 2026-11-04 (sessão encadeada, sem commit, sem deploy). **Lint**: ESLint 10 em flat config na raiz
+  (`eslint.config.mjs`; typescript-eslint sem regras de tipo, `react-hooks` com `rules-of-hooks`/`exhaustive-deps`
+  como erro, `@next/next` recommended + core-web-vitals, `disable` sem uso = erro); `pnpm lint` na raiz e em cada
+  pacote. TypeScript 6.0 na raiz só como parser do lint (o 7 não tem API JS). Os `exhaustive-deps` desligados eram
+  13: 1 sem efeito saiu, 3 escondiam closure velha e foram corrigidos (`result-sheets`, `new-project-view`,
+  `use-saved-session`), 10 ficam com o motivo escrito. Regras do React Compiler ficam desligadas (33 acusações).
+  **tsconfig**: `tsconfig.base.json` com `noUnusedLocals`/`noUnusedParameters`/`noImplicitReturns` **ligadas nos 4
+  pacotes**; core com `lib: ["esnext"]`, sem `jsx` nem DOM. **Prettier** (`printWidth 120`, aspas simples) e
+  `.editorconfig` configurados; nada reformatado — só `pnpm format:check`, fora do CI (o reformat geral é commit à
+  parte do humano). **CI**: `ci.yml` (PR e push fora da `main`: install, lint, typecheck, test, `next build`);
+  `deploy.yml` com o mesmo check, `update-traffic --to-latest` depois do deploy, health exigindo a revisão nova e
+  rollback para a revisão anterior quando o health falha; `.dockerignore`/`.gcloudignore` sem `scripts`,
+  `.github` e `test`. **Hipóteses**: o script lê `- **Pnn` e varre `packages/web/src`; P42/P43 no formato padrão;
+  `08-revisar.md` com 38 hipóteses (eram 36). **Docs**: README reescrito; `CLAUDE.md` só na seção Comandos (a regra
+  de commit ficou — retirá-la é do humano); `01-escopo` (IA e Supabase dentro), `02-framing` (P30/P39/P40,
+  `nudgeOpenings`/`fitNeighborJacks`, avisos e erros com código), `06-referencias` (propostas implementadas), `11`
+  executado (`07` já tinha o cabeçalho), `10-design` (sessão local e rota por passo), `12` (deploy com rollback).
+  **Código**: comentários velhos do §D; `maxDuration` (Vercel) saiu das páginas; `extract` corta o nome do PDF
+  também em `\`. Verde na raiz: `pnpm lint`, `pnpm typecheck`, `pnpm test` (core 616, cli 113, extract 210 + 1
+  pulado, web 379 — saiu o teste do `maxDuration`) e `pnpm --filter web build` (também sem `.env.local`, como no
+  CI). Não conferido: CI e deploy no GitHub (nenhum PR de teste — não houve push), permissão da conta
+  `github-deploy` para `update-traffic`, imagem Docker com o `.dockerignore` novo (sem Docker local).
 
 - [ ] **Checkpoint 2 — validação com a fábrica (sem Claude; depois da S23).** Substitui o roteiro de 2026-10-06:
   levar o **app publicado** (não o CLI) com o Ringgold e a 28x40 — folhas, planta e BOM na tela e em PDF. Perguntas
