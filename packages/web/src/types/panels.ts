@@ -1,5 +1,28 @@
 /** Tipos do resultado do motor como o app os vê (sem dependência de core/cli: trafegam entre servidor e cliente). */
 
+/**
+ * Aviso ou problema do motor, do parser ou da leitura (S26): código, ids e parâmetros. A tela monta a frase em
+ * inglês (`lib/messages.en.ts`); `message` é a frase original em português, que só aparece em "Details".
+ */
+export interface Notice {
+  code: string;
+  message: string;
+  /** De onde veio: `engine` (motor), `parser` (arquivo de projeto), `extraction` (leitura da IA), `project` (dado do projeto inteiro). */
+  source?: 'engine' | 'parser' | 'extraction' | 'project';
+  wallId?: string;
+  openingId?: string;
+  /** Outras paredes citadas (cruzamento, sobreposição, T). */
+  alsoWalls?: string[];
+  panelId?: string;
+  /** Campo do arquivo (`walls[2].openings[0].center`), nos erros do parser. */
+  path?: string;
+  /** Etapa do build em que o motor parou. */
+  stage?: 'plan' | 'wall' | 'bom' | 'files';
+  params?: Readonly<Record<string, unknown>>;
+  /** Hipótese de `docs/05-pendencias.md` em que o aviso se apoia (`P30`). */
+  hypothesis?: string;
+}
+
 export interface PanelSummary {
   id: string;
   wallId: string;
@@ -44,17 +67,17 @@ export type GenerateResult =
       projectName: string;
       panels: PanelSummary[];
       files: GeneratedFile[];
-      warnings: string[];
+      warnings: Notice[];
       bom: BomRow[];
       /** Por painel, na ordem dos painéis. */
       cutLists: { panelId: string; lines: CutRow[] }[];
     }
-  | { ok: false; problems: string[] };
+  | { ok: false; problems: Notice[] };
 
 /** Checagem do editor (S21): o que o motor diria, sem os arquivos. */
 export type CheckResult =
-  | { ok: true; projectName: string; panels: PanelSummary[]; warnings: string[] }
-  | { ok: false; problems: string[] };
+  | { ok: true; projectName: string; panels: PanelSummary[]; warnings: Notice[] }
+  | { ok: false; problems: Notice[] };
 
 export interface Example {
   id: string;

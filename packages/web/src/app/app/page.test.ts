@@ -9,8 +9,4 @@ describe('/app (Server Component)', () => {
     // o header sem usuário no HTML estático. Regressão vista em 2026-10-30.
     expect(page.dynamic).toBe('force-dynamic');
   });
-
-  it('mantém o teto de duração das actions para a Vercel', () => {
-    expect(page.maxDuration).toBe(300);
-  });
 });

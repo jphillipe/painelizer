@@ -1,6 +1,7 @@
 /** Resultado da extração como a tela o vê (sem depender do pacote extract: trafega servidor → cliente). */
 
 import type { DrawingRef } from '@/lib/drawings';
+import type { Notice } from './panels';
 
 export interface OpeningReview {
   id: string;
@@ -41,6 +42,17 @@ export interface ProjectData {
 
 export const EMPTY_PROJECT_DATA: ProjectData = { wallHeight: '', headerHeight: '', sillHeight: '', floors: '', floorSpan: '', snow: '', width: '', wind: '', exposure: '' };
 
+/** Proveniência de uma leitura (o `ReadingProvenance` do extract, em forma de dado para o arquivo de projeto). */
+export interface ReadingProvenance {
+  /** Hash curto (sha-256, 16 hex) do system prompt completo do extract na hora da leitura. */
+  promptHash: string;
+  model: string;
+  effort: string;
+  maxTokens: number;
+  /** Opções de recorte efetivas (`dpi`, `maxPerPage`, `format`…), ou `false` sem recortes. */
+  tiles: Record<string, unknown> | false;
+}
+
 export type ExtractOutcome =
   | {
       ok: true;
@@ -56,20 +68,31 @@ export type ExtractOutcome =
       walls: WallReview[];
       openingTypes: { tag: string; kind: string; size: string; confidence: number }[];
       notes: string[];
-      /** O que impede o `build` (`parser: …`, `motor: …`); vazio = pode gerar. */
-      problems: string[];
-      warnings: string[];
+      /** O que impede o `build` (parser, motor, altura); vazio = pode gerar. Arquivo de antes da S26: lido do texto (`readingNotices`). */
+      problems: Notice[];
+      warnings: Notice[];
       report: string;
       model: string;
-      usage: { inputTokens: number; outputTokens: number };
+      /** Tokens da API; o cache (system prompt) vem à parte desde a S25. */
+      usage: { inputTokens: number; outputTokens: number; cacheCreationInputTokens?: number; cacheReadInputTokens?: number };
       pagesSent: { name: string; pages: number[] }[];
+      /**
+       * Com que prompt e parâmetros a leitura foi feita (S25): hash do system prompt, modelo pedido, effort, teto
+       * de saída e opções de recorte. Ausente em leitura gravada ou anterior à S25.
+       */
+      provenance?: ReadingProvenance;
       /** Os desenhos no Storage de onde a leitura saiu (S22.3); ausente sem Supabase ou numa leitura gravada. */
       drawings?: DrawingRef[];
     }
   | {
       ok: false;
       reason: 'no_key' | 'input' | 'extraction' | 'api' | 'cancelled';
+      /** Em inglês, para a tela. */
       message: string;
+      /** Código do erro da leitura (S26), quando o extract deu um. */
+      code?: string;
+      /** A frase original (português, do extract), só para "Details". */
+      detail?: string;
       rawText?: string;
     };
 
@@ -110,8 +133,10 @@ export type ExtractPreview =
       encodedBytes: number;
       /** Recortes em alta resolução das plantas que vão junto (2026-10-30). */
       tiles: { count: number; encodedBytes: number };
+      /** Caracteres do texto posicionado enviado: o termo por densidade do estimador de custo (S25). */
+      textChars?: number;
     }
-  | { ok: false; message: string };
+  | { ok: false; message: string; detail?: string };
 
 export const ACCEPTED_UPLOAD_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
 export const ACCEPTED_UPLOAD_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif'] as const;

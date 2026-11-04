@@ -12,7 +12,11 @@ export interface ReadingPanelProps {
   slug: string;
 }
 
-/** Aba "Reading" do navegador (S21.4): tudo que a IA disse sobre a leitura, num lugar só — modelo, páginas, notas, relatório. */
+/**
+ * Aba "Reading" do navegador (S21.4): tudo que a IA disse sobre a leitura, num lugar só — modelo, páginas, notas,
+ * relatório. S26: o texto livre da IA (origem, notas) e o relatório vêm no idioma do prompt (português até a S34):
+ * ficam recolhidos em "Details", como a mensagem original dos avisos.
+ */
 export function ReadingPanel({ outcome, source, slug }: ReadingPanelProps) {
   if (outcome === undefined) {
     return (
@@ -32,22 +36,23 @@ export function ReadingPanel({ outcome, source, slug }: ReadingPanelProps) {
             <dd className="font-mono">{outcome.pagesSent.map((p) => `${p.name} p.${p.pages.join(',')}`).join(' · ')}</dd>
           </>
         ) : null}
-        <dt className="text-ink-3">Origin</dt>
-        <dd>{outcome.origin}</dd>
         <dt className="text-ink-3">Tokens</dt>
         <dd className="font-mono">
           {outcome.usage.inputTokens} in · {outcome.usage.outputTokens} out
         </dd>
       </dl>
-      {outcome.notes.length > 0 ? (
-        <div>
-          <p className="eyebrow mb-2">Notes from the AI</p>
-          <ul className="list-disc space-y-1 pl-4 text-[13px] text-ink-2">
+      {outcome.notes.length > 0 || outcome.origin !== '' ? (
+        <details>
+          <summary className="cursor-pointer text-[13px] text-ink-2 select-none">
+            Details: origin and notes from the AI{outcome.notes.length > 0 ? ` (${outcome.notes.length})` : ''}
+          </summary>
+          {outcome.origin !== '' ? <p className="mt-2 text-[13px] text-ink-2">{outcome.origin}</p> : null}
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-[13px] text-ink-2">
             {outcome.notes.map((n) => (
               <li key={n}>{n}</li>
             ))}
           </ul>
-        </div>
+        </details>
       ) : null}
       <details>
         <summary className="cursor-pointer text-[13px] text-ink-2 select-none">Full review report</summary>

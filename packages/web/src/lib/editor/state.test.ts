@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { textFromDraft, wallById, type ProjectDraft } from './draft';
-import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, type EditorAction, type EditorState } from './state';
+import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, viewedUnderlay, type EditorAction, type EditorState } from './state';
 
 const loaded = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' });
 const loose = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[2]!.text, source: 'sample' });
@@ -206,7 +206,7 @@ describe('edição de aberturas', () => {
   it('updateOpening, renameOpening, moveOpening (center ou offset conforme a forma)', () => {
     const s0 = run(loaded(), { type: 'select', selection: { kind: 'opening', wallId: 'W01', openingId: 'J1' } });
     const s1 = editorReducer(s0, { type: 'updateOpening', wallId: 'W01', openingId: 'J1', patch: { jackStuds: 2, header: undefined } });
-    const j1 = wallById(draftOf(s1), 'W01')?.openings.find((o) => o.id === 'J1')!;
+    const j1 = wallById(draftOf(s1), 'W01')!.openings.find((o) => o.id === 'J1')!;
     expect(j1.jackStuds).toBe(2);
     expect('header' in j1).toBe(false);
     expect(editorReducer(s1, { type: 'renameOpening', wallId: 'W01', openingId: 'J1', newId: 'P1' })).toBe(s1);
@@ -268,19 +268,35 @@ describe('M5: moveWall e setReviewed', () => {
 
 describe('M6: underlay', () => {
   const u = { version: 1 as const, source: { name: 'a.pdf', page: 1 }, image: 'data:image/png;base64,AA', width: 10, height: 10, scale: 1, origin: { x: 0, y: 0 }, rotation: 0 as const, opacity: 0.35, visible: true };
-  it('setUnderlay grava em `$underlay` com histórico; remover apaga a chave; a vista muda sem undo nem dirty', () => {
+  it('setUnderlay grava em `$underlay` com histórico (sem a vista); remover apaga a chave', () => {
     const s = editorReducer(loaded(), { type: 'setUnderlay', underlay: u });
     expect(draftOf(s).extra?.['$underlay']).toMatchObject({ source: { name: 'a.pdf' } });
+    expect(draftOf(s).extra?.['$underlay']).not.toHaveProperty('opacity');
+    expect(draftOf(s).extra?.['$underlay']).not.toHaveProperty('visible');
     expect(s.dirty).toBe(true);
     expect(canUndo(s)).toBe(true);
-    const viewed = editorReducer({ ...s, dirty: false }, { type: 'setUnderlayView', opacity: 0.6, visible: false });
-    expect(viewed.dirty).toBe(false);
-    expect(viewed.past).toEqual(s.past);
-    expect(viewed.revision).toBe(s.revision + 1);
-    expect(draftOf(viewed).extra?.['$underlay']).toMatchObject({ opacity: 0.6, visible: false });
-    expect(editorReducer(viewed, { type: 'setUnderlayView', opacity: 0.6 })).toBe(viewed);
-    const gone = editorReducer(viewed, { type: 'setUnderlay', underlay: undefined });
+    const gone = editorReducer(s, { type: 'setUnderlay', underlay: undefined });
     expect(draftOf(gone).extra?.['$underlay']).toBeUndefined();
+  });
+
+  it('S23 (A5): "Hide" e a opacidade são vista — draft, revisão, dirty e histórico não mudam', () => {
+    const s = { ...editorReducer(loaded(), { type: 'setUnderlay', underlay: u }), dirty: false };
+    const viewed = editorReducer(s, { type: 'setUnderlayView', opacity: 0.6, visible: false });
+    expect(viewed.draft).toBe(s.draft);
+    expect(viewed.revision).toBe(s.revision);
+    expect(viewed.dirty).toBe(false);
+    expect(viewed.past).toBe(s.past);
+    expect(viewedUnderlay(viewed)).toMatchObject({ opacity: 0.6, visible: false });
+    expect(editorReducer(viewed, { type: 'setUnderlayView', opacity: 0.6 })).toBe(viewed);
+    // Calibrar o mesmo desenho mantém a vista e não a escreve no arquivo; desenho novo volta ao padrão.
+    const rotatedState = editorReducer(viewed, { type: 'setUnderlay', underlay: { ...viewedUnderlay(viewed)!, rotation: 90 } });
+    expect(viewedUnderlay(rotatedState)).toMatchObject({ rotation: 90, opacity: 0.6, visible: false });
+    expect(draftOf(rotatedState).extra?.['$underlay']).not.toHaveProperty('visible');
+    const replaced = editorReducer(viewed, { type: 'setUnderlay', underlay: { ...u, image: 'data:image/png;base64,BB' } });
+    expect(viewedUnderlay(replaced)).toMatchObject({ opacity: 0.35, visible: true });
     expect(editorReducer(loaded(), { type: 'setUnderlayView', opacity: 0.5 })).toEqual(loaded());
+    // Arquivo de antes da S23 com a vista dentro: vale como vista inicial.
+    const legacy = editorReducer(initialEditorState, { type: 'load', source: 'file', text: JSON.stringify({ ...JSON.parse(textFromDraft(draftOf(loaded()))), $underlay: { ...u, visible: false } }) });
+    expect(viewedUnderlay(legacy)?.visible).toBe(false);
   });
 });

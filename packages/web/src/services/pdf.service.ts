@@ -40,7 +40,7 @@ export function rasterize(svg: string, widthPx: number): Uint8Array {
 }
 
 export async function sheetsPdf(pages: readonly PdfPage[], opts: PdfOptions): Promise<Uint8Array> {
-  if (pages.length === 0) throw new RangeError('nenhuma folha para o PDF');
+  if (pages.length === 0) throw new RangeError('no sheets to put in the PDF');
   const dpi = opts.dpi ?? DEFAULT_DPI;
   const doc = await PDFDocument.create();
   doc.setTitle(`${opts.projectName} — fabrication sheets`);

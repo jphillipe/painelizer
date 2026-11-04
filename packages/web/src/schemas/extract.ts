@@ -84,6 +84,16 @@ export const applyProjectDataSchema = z.object({
     pagesSent: z.array(z.object({ name: z.string(), pages: z.array(z.number()) })),
     /** S22.3: a reconversão mantém os desenhos da leitura. */
     drawings: drawingsSchema.optional(),
+    /** S25: e a proveniência (hash do prompt, modelo, effort, recortes). */
+    provenance: z
+      .object({
+        promptHash: z.string().max(64),
+        model: z.string().max(100),
+        effort: z.string().max(20),
+        maxTokens: z.number(),
+        tiles: z.union([z.literal(false), z.record(z.string(), z.unknown())]),
+      })
+      .optional(),
   }),
   data: projectDataSchema,
 });
@@ -110,7 +120,10 @@ export function parsePagesByFile(s: string): Record<string, number[]> {
 /** Consultas ao job de extração (M7). */
 export const jobIdSchema = z.object({ jobId: z.string().min(8).max(64) });
 
-/** Resposta gravada do modelo, como texto JSON (Advanced). */
-export const finishResponseSchema = z.object({
-  responseJson: z.string().min(2, 'Paste or open the recorded response JSON.'),
-});
+/** Resposta gravada do modelo: um sample pelo id, ou o texto JSON colado no Advanced (só com dev tools, S23). */
+export const finishResponseSchema = z
+  .object({
+    sampleId: z.string().min(1).max(100).optional(),
+    responseJson: z.string().min(2, 'Paste or open the recorded response JSON.').optional(),
+  })
+  .refine((v) => (v.sampleId === undefined) !== (v.responseJson === undefined), { message: 'Pick a sample or paste a recorded response.' });

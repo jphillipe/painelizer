@@ -8,6 +8,7 @@ import { isIdFree, isPlanWall, type DraftWall, type ProjectDraft } from '@/lib/e
 import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
+import { IssueText } from './issue-text';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
 import { resolveDraftOpening } from '@/lib/editor/resolve';
 import { isReviewed, type EditorAction, type Selection } from '@/lib/editor/state';
@@ -184,24 +185,21 @@ export function WallProperties({ draft, wall, provenance, issues, dispatch, onSe
               Confidence <Badge variant={TONE_VARIANT[confidenceTone(provenance.confidence)]} className="font-mono">{provenance.confidence.toFixed(2)}</Badge>
               {provenance.wallType !== null ? <span className="ml-2 text-ink-3">type {provenance.wallType}</span> : null}
             </p>
-            {collapsible ? (
-              <details className="text-ink-2">
-                <summary className="cursor-pointer text-ink-3 select-none">Evidence</summary>
-                <p className="mt-1">{provenance.evidence}</p>
-              </details>
-            ) : (
-              <p className="text-ink-2">{provenance.evidence}</p>
-            )}
+            {/* S26: a evidência é texto da IA, no idioma do prompt — sempre recolhida. */}
+            <details className="text-ink-2">
+              <summary className="cursor-pointer text-ink-3 select-none">Evidence (details)</summary>
+              <p className="mt-1">{provenance.evidence}</p>
+            </details>
           </div>
         </Section>
       ) : null}
 
       {issues.length > 0 && !collapsible ? (
         <Section title={`Issues on this wall (${issues.length})`}>
-          <ul className="space-y-1 font-mono text-[12px]">
+          <ul className="space-y-1 text-[12px]">
             {issues.map((i, n) => (
               <li key={`${n}-${i.text}`} className={i.severity === 'problem' ? 'text-destructive' : 'text-warning'}>
-                {i.text}
+                <IssueText issue={i} />
               </li>
             ))}
           </ul>

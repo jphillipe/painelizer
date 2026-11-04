@@ -5,6 +5,8 @@
  */
 
 import { engineeredSection, resolveOpening, type Config, type Opening, type OpeningSpec, type Section } from 'core';
+import { noticeOfError, noticeText } from '@/lib/notices';
+import type { Notice } from '@/types/panels';
 import { compact, type DraftConfig, type DraftOpening, type HeaderSectionDraft, type ProjectDraft } from './draft';
 
 /** `Config` mínima do core a partir do draft (defaults do CLI onde o draft não diz). */
@@ -60,14 +62,16 @@ export function specFromDraft(o: DraftOpening): OpeningSpec {
   });
 }
 
-export type ResolvedOpening = { ok: true; opening: Opening } | { ok: false; message: string };
+/** Falha: `message` em inglês (do código do core, S26); `notice` guarda o código e a frase original para "Details". */
+export type ResolvedOpening = { ok: true; opening: Opening } | { ok: false; message: string; notice: Notice };
 
-/** Resolve uma abertura do draft com o catálogo do projeto; mensagem do core quando não dá. */
+/** Resolve uma abertura do draft com o catálogo do projeto; o erro do core, por código, quando não dá. */
 export function resolveDraftOpening(d: ProjectDraft, o: DraftOpening, config: Config = configFromDraft(d)): ResolvedOpening {
   try {
     return { ok: true, opening: resolveOpening(specFromDraft(o), config) };
   } catch (e) {
-    return { ok: false, message: (e as Error).message };
+    const notice = noticeOfError(e);
+    return { ok: false, message: noticeText(notice), notice };
   }
 }
 

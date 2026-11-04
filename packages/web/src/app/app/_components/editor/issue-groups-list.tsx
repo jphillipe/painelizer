@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { helpFor, quickFixFor, type QuickFix } from '@/lib/editor/issue-help';
 import { LABELS } from '@/lib/editor/labels';
 import type { IssueAction, IssueGroup } from '@/lib/editor/issue-groups';
-import type { Issue } from '@/lib/editor/problems';
+import { hasOriginal, issueMessage, type Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
 import { cn } from '@/lib/utils';
 import { MeasureInput, NumberInput } from './fields';
@@ -122,12 +122,13 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
                       return (
                         <li key={`${n}-${i.text}`}>
                           {t === undefined ? (
-                            i.text
+                            <span className="font-sans">{issueMessage(i)}</span>
                           ) : (
-                            <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => onSelect(t)}>
-                              {i.text}
+                            <button type="button" className="text-left font-sans underline-offset-2 hover:underline" onClick={() => onSelect(t)}>
+                              {issueMessage(i)}
                             </button>
                           )}
+                          {hasOriginal(i) ? <span className="block text-ink-3">{i.text}</span> : null}
                         </li>
                       );
                     })}

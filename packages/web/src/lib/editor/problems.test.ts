@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseProject } from 'cli/project';
-import { byWall, countIssues, draftIssues, idIndex, idsInMessage, parseProblem, parseWarning, type IdIndex } from './problems';
+import { parseProject, ProjectError } from 'cli/project';
+import { frameWalls, noticeOf, type EngineError, type HouseWall } from 'core';
+import { legacyNotice } from 'extract/notices';
+import type { Notice } from '@/types/panels';
+import { byWall, countIssues, draftIssues, hasOriginal, idIndex, issueFromNotice, issueMessage, parseEngineResult, type IdIndex } from './problems';
 import { draftFromJson, type ProjectDraft } from './draft';
 
 const ids: IdIndex = {
@@ -15,66 +18,75 @@ const ids: IdIndex = {
   ]),
 };
 
-describe('parseProblem: mensagens reais do motor e do parser', () => {
-  it('frame.ts: parede e abertura', () => {
-    const i = parseProblem(`parede W01, abertura J1: RO de 0" a 36" do start não cabe na plate (de 2.75" a 480" do start)`, ids);
-    expect(i).toMatchObject({ severity: 'problem', source: 'engine', wallId: 'W01', openingId: 'J1' });
+describe('issueFromNotice (S26): parede e abertura pelos campos do aviso, nunca pelo texto', () => {
+  it('erro do motor com parede e abertura: localiza, frase em inglês, original intacto', () => {
+    const n: Notice = { source: 'engine', code: 'OPENING_OFF_PLATE', message: 'parede W01, abertura J1: RO de 0" a 36" do start não cabe na plate (de 2.75" a 480" do start)', wallId: 'W01', openingId: 'J1', params: { from: 0, to: 36, s0: 2.75, s1: 480 } };
+    const i = issueFromNotice(n, 'problem', ids);
+    expect(i).toMatchObject({ severity: 'problem', source: 'engine', code: 'OPENING_OFF_PLATE', wallId: 'W01', openingId: 'J1', text: n.message });
+    expect(issueMessage(i)).toBe('Wall W01, opening J1: the rough opening from 0" to 36" (measured from start) does not fit on the plate (2.75" to 480").');
+    expect(hasOriginal(i)).toBe(true);
   });
 
-  it('build.ts: prefixo "parede X:" e "planta:"', () => {
-    expect(parseProblem('parede S2: header fora da tabela R602.7(1) para a abertura S2-D1 (vão 58.5")', ids)).toMatchObject({ wallId: 'S2' });
-    const crossing = parseProblem('planta: paredes N1 e S1 se cruzam em (10, 20) — divida uma delas', ids);
-    expect(crossing).toMatchObject({ source: 'engine', wallId: 'N1', alsoWalls: ['S1'] });
+  it('erro de planta real (frameWalls): parede, alsoWalls e família plan.open', () => {
+    const wall = (id: string, x0: number, y0: number, x1: number, y1: number): HouseWall => ({ id, start: { x: x0, y: y0 }, end: { x: x1, y: y1 }, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] });
+    let notice: Notice | undefined;
+    try {
+      frameWalls({ walls: [wall('N1', 0, 50, 200, 50), wall('S1', 100, 0, 100, 200)] });
+    } catch (e) {
+      notice = { source: 'engine', stage: 'plan', ...noticeOf(e as EngineError) };
+    }
+    const crossing = issueFromNotice(notice!, 'problem', ids);
+    expect(crossing).toMatchObject({ source: 'engine', code: 'WALLS_CROSS', kind: 'plan.open', wallId: 'N1', alsoWalls: ['S1'] });
     expect([...byWall([crossing]).keys()]).toEqual(['N1', 'S1']);
+    expect(issueMessage(crossing)).toBe('Walls N1 and S1 cross at (100, 50) — split one of them at the crossing.');
   });
 
-  it('connections.ts: id com hífen não casa dentro de outro id', () => {
-    const i = parseProblem('paredes I12-U3 (end) e S2 (start): conflito de ends', ids);
-    expect(i.wallId).toBe('I12-U3');
-    expect(idsInMessage('abertura S2-D1 fora', ids)).toEqual({ wallId: 'S2', openingId: 'S2-D1' });
-    expect(idsInMessage('o painel 1-S2-P1 passa', ids)).toEqual({});
+  it('abertura de outra parede define a parede; abertura fora do draft fica só em cited', () => {
+    expect(issueFromNotice({ code: 'DOOR_RO_HEIGHT_MISMATCH', message: 'x', openingId: 'S2-D1' }, 'warning', ids)).toMatchObject({ wallId: 'S2', openingId: 'S2-D1' });
+    const ghost = issueFromNotice({ code: 'OPENING_UNPLACED', message: 'x', source: 'extraction', wallId: 'I12-U3', openingId: 'I12-U3-9' }, 'warning', ids);
+    expect(ghost).toMatchObject({ wallId: 'I12-U3', cited: { wallId: 'I12-U3', openingId: 'I12-U3-9' } });
+    expect(ghost.openingId).toBeUndefined();
   });
 
-  it('parser: caminho walls[i].openings[j] vale pelo índice, com o nome do projeto como fonte', () => {
-    const a = parseProblem('project.walls[2].openings[1].center: medida inválida "x"', ids);
+  it('parser: caminho walls[i].openings[j] (estrutural) vale pelo índice', () => {
+    const a = issueFromNotice({ source: 'parser', code: 'PROJECT_INVALID', message: 'project.walls[2].openings[1].center: medida inválida "x"', path: 'walls[2].openings[1].center', params: { path: 'walls[2].openings[1].center' } }, 'problem', ids);
     expect(a).toMatchObject({ source: 'parser', wallId: 'S2', openingId: 'S2-D1', path: 'walls[2].openings[1].center' });
-    const b = parseProblem('26 Ringgold St.walls[4].height: esperado medida > 0, recebido nada', ids);
-    expect(b).toMatchObject({ source: 'parser', wallId: 'I12-U3', path: 'walls[4].height' });
-    const c = parseProblem('parser: 26 Ringgold St.walls[0].openings: parede N1: tag "A" não está em config.openingTypes', ids);
-    expect(c).toMatchObject({ source: 'parser', wallId: 'N1' });
-    expect(parseProblem('project.walls: id duplicado "S1"', ids)).toMatchObject({ source: 'engine', wallId: 'S1' });
+    expect(issueMessage(a)).toBe('The project file has an invalid value at walls[2].openings[1].center.');
   });
 
-  it('mensagens do parser de verdade localizam a parede', () => {
+  it('erro de verdade do parser: ProjectError traz o caminho', () => {
     const text = JSON.stringify({ name: 'x', config: { studSpacing: 16, studLength: [92.625] }, walls: [{ id: 'A1', length: 96, height: 97, section: '2x4', exterior: false, bearing: false }, { id: 'B2', length: 96, height: -1, section: '2x4', exterior: false, bearing: false }] });
-    let message = '';
+    let error: ProjectError | undefined;
     try {
       parseProject(text, 'project');
     } catch (e) {
-      message = (e as Error).message;
+      error = e as ProjectError;
     }
-    expect(parseProblem(message, { walls: ['A1', 'B2'], openings: new Map() })).toMatchObject({ source: 'parser', wallId: 'B2', path: 'walls[1].height' });
+    expect(error!.path).toBe('project.walls[1].height');
+    const i = issueFromNotice({ source: 'parser', code: 'PROJECT_INVALID', message: error!.message, path: 'walls[1].height' }, 'problem', { walls: ['A1', 'B2'], openings: new Map() });
+    expect(i).toMatchObject({ source: 'parser', wallId: 'B2', path: 'walls[1].height' });
   });
 
-  it('altura: e extração: são do projeto / da extração', () => {
-    expect(parseProblem('altura: os desenhos não trazem cortes (2 parede(s) sem altura: N1, S1); informe a altura', ids)).toMatchObject({ source: 'project' });
-    expect(parseProblem('altura: …', ids).wallId).toBeUndefined();
-    const w = parseWarning('extração ABERTURA_SEM_POSICAO: parede I12-U3, abertura I12-U3-1 (U2): a leitura não achou a cota', ids);
-    expect(w).toMatchObject({ severity: 'warning', source: 'extraction', code: 'ABERTURA_SEM_POSICAO', wallId: 'I12-U3', openingId: 'I12-U3-1' });
-    expect(parseWarning('extração ALTURA_PADRAO: portas sem altura: S2-D1, N1-A-1', ids)).toMatchObject({ source: 'extraction', code: 'ALTURA_PADRAO' });
-  });
-
-  it('motor: prefixo do convert', () => {
-    expect(parseProblem('motor: parede S2: entre os RO de S2-1-2 e S2-D1 sobram 8.25"', ids)).toMatchObject({ source: 'engine', wallId: 'S2' });
+  it('dado do projeto inteiro não aponta parede; HEADER_DATA_MISSING entra na família do draft', () => {
+    expect(issueFromNotice({ source: 'project', code: 'WALL_HEIGHT_MISSING', message: 'x', params: { count: 2, wallIds: ['N1', 'S1'] } }, 'problem', ids)).toMatchObject({ source: 'project', kind: 'wall.height' });
+    expect(issueFromNotice({ source: 'engine', stage: 'bom', code: 'PIECE_OVER_STOCK', message: 'x', params: { length: 300, max: 240 } }, 'problem', ids).source).toBe('project');
+    const h = issueFromNotice({ code: 'HEADER_DATA_MISSING', message: 'x', wallId: 'S2', openingId: 'S2-D1', params: { missing: 'floorsSupported' } }, 'problem', ids);
+    expect(h).toMatchObject({ kind: 'wall.floorsSupported', wallId: 'S2' });
   });
 });
 
-describe('parseWarning: avisos do motor', () => {
-  it('painel → parede; abertura citada no texto', () => {
-    const w = parseWarning('1-S2-P1 HEADER_JACKS_BELOW_TABLE: abertura S2-D1: 1 jack(s) de cada lado; a tabela pede 2 (hipótese P30)', ids);
-    expect(w).toMatchObject({ severity: 'warning', source: 'engine', code: 'HEADER_JACKS_BELOW_TABLE', panelId: '1-S2-P1', wallId: 'S2', openingId: 'S2-D1' });
-    expect(parseWarning('2-I12-U3-P3 OPENING_NUDGED: abertura I12-U3-1 deslocada 3/8"', ids)).toMatchObject({ wallId: 'I12-U3', openingId: 'I12-U3-1', panelId: '2-I12-U3-P3' });
-    expect(parseWarning('1-W01-P2 FIRE_BLOCKING_REQUIRED: parede com mais de 10\' de altura', ids)).toMatchObject({ wallId: 'W01', code: 'FIRE_BLOCKING_REQUIRED' });
+describe('avisos do motor e da leitura', () => {
+  it('painel → parede quando o aviso não traz a parede; hipótese fica no campo', () => {
+    const [w] = parseEngineResult({ warnings: [{ source: 'engine', panelId: '1-S2-P1', code: 'HEADER_JACKS_BELOW_TABLE', message: 'x', openingId: 'S2-D1', hypothesis: 'P30', params: { reason: 'neighbor', wanted: 2, gap: 6, neighborId: 'S2-1-2' } }] }, ids);
+    expect(w).toMatchObject({ severity: 'warning', source: 'engine', code: 'HEADER_JACKS_BELOW_TABLE', panelId: '1-S2-P1', wallId: 'S2', openingId: 'S2-D1', hypothesis: 'P30' });
+    expect(issueMessage(w!)).toBe('Wall S2, opening S2-D1: 1 jack stud per side instead of 2 — only 6" to the rough opening of S2-1-2.');
+  });
+
+  it('aviso de leitura gravado como texto (antes da S26): código novo, ids do prefixo, frase em inglês', () => {
+    const n = legacyNotice('extração ABERTURA_SEM_POSICAO: parede I12-U3, abertura I12-U3-1 (U2): a leitura não achou a cota');
+    const w = issueFromNotice(n as Notice, 'warning', ids);
+    expect(w).toMatchObject({ source: 'extraction', code: 'OPENING_UNPLACED', wallId: 'I12-U3', cited: { openingId: 'I12-U3-1' } });
+    expect(issueMessage(w)).toMatch(/^Wall I12-U3, opening I12-U3-1: the AI found this U2 opening/);
   });
 });
 

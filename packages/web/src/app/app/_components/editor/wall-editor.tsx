@@ -9,7 +9,7 @@ import { geometryIssues, planGeometry, type PlanGeometry } from '@/lib/editor/ge
 import { readingWarningResolved } from '@/lib/editor/issue-help';
 import { dropRepeated, groupIssues } from '@/lib/editor/issue-groups';
 import { projectDataNeeds } from '@/lib/editor/requirements';
-import { byWall, countIssues, draftIssues, idIndex, parseEngineResult, parseWarning, type Issue } from '@/lib/editor/problems';
+import { byWall, countIssues, draftIssues, idIndex, issueFromNotice, parseEngineResult, type Issue } from '@/lib/editor/problems';
 import { provenanceIndex } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
@@ -19,6 +19,7 @@ import type { ExtractOutcome } from '@/types/extract';
 import { useEditorShortcuts } from './use-editor-shortcuts';
 import type { SaveStatus } from '@/lib/editor/project-sync';
 import type { CheckState } from './use-project-check';
+import type { SaveConflictActions } from './editor-top-bar';
 import { Workspace } from './workspace';
 
 export interface WallEditorProps {
@@ -41,13 +42,15 @@ export interface WallEditorProps {
   /** Auto-save no servidor (S22.1): estado do chip da top bar e o "Retry" dele. */
   save?: SaveStatus;
   onRetrySave?: () => void;
+  /** S23 (A4): "Save as copy" e "Overwrite" do conflito. */
+  saveActions?: SaveConflictActions;
 }
 
 /**
  * Passo 02 (S21): a camada de dados do editor — geometria da planta, issues (modelo + geometria + motor + leitura),
  * proveniência da IA — e os atalhos. A interface é o `Workspace` (S21.4).
  */
-export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave }: WallEditorProps) {
+export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pending, onGenerate, onOutcome, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave, saveActions }: WallEditorProps) {
   const { draft } = state;
   // Remover parede/abertura avisa com "Undo" (M2): o Undo do toast só vale enquanto nada mais foi editado.
   const latest = useRef(state);
@@ -92,13 +95,14 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
     if (draft === undefined) return [];
     const own = draftIssues(draft, state.loadProblems);
     const engine = check.result === undefined ? [] : dropRepeated(parseEngineResult(check.result.ok ? { warnings: check.result.warnings } : { problems: check.result.problems }, ids), own);
-    // A geometria no cliente vê o mesmo erro que o motor dirá ("planta: …"): não repetir quando a checagem já chegou.
-    const said = new Set(engine.map((i) => i.text.replace(/^(planta|motor): /, '')));
-    const geo = geometry === undefined ? [] : geometryIssues(geometry, ids).filter((i) => !said.has(i.text));
-    // Avisos da leitura são texto fixo: somem quando o draft já os resolveu (abertura adicionada, header dado).
+    // A geometria no cliente vê o mesmo erro que o motor dirá (etapa da planta): não repetir quando a checagem já
+    // chegou — mesmo código na mesma parede.
+    const said = new Set(engine.map((i) => `${i.code ?? ''}:${i.wallId ?? ''}`));
+    const geo = geometry === undefined ? [] : geometryIssues(geometry, ids).filter((i) => !said.has(`${i.code ?? ''}:${i.wallId ?? ''}`));
+    // Avisos da leitura são fixos: somem quando o draft já os resolveu (abertura adicionada, header dado).
     const reading = (outcome?.warnings ?? [])
-      .filter((w) => w.startsWith('extração '))
-      .map((w) => parseWarning(w, ids))
+      .filter((w) => w.source === 'extraction')
+      .map((w) => issueFromNotice(w, 'warning', ids))
       .filter((i) => !readingWarningResolved(i, draft));
     return [...own, ...geo, ...engine, ...reading];
   }, [draft, state.loadProblems, check.result, outcome, geometry, ids]);
@@ -164,6 +168,7 @@ export function WallEditor({ state, dispatch: rawDispatch, outcome, check, pendi
       storage={storage}
       save={save}
       onRetrySave={onRetrySave}
+      saveActions={saveActions}
     />
   );
 }

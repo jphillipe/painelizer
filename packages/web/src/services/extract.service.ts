@@ -8,19 +8,24 @@
 import 'server-only';
 import {
   apiErrorInfo,
+  EFFORTS,
   ExtractError,
+  ExtractInputError,
   extractWalls,
   finish,
   previewExtraction,
+  type Effort,
   type ExtractHints,
+  type ExtractOptions,
   type ExtractResult,
   type ExtractSource,
   type ImageMediaType,
 } from 'extract';
 import type { DrawingRef } from '@/lib/drawings';
+import { extractErrorMessage } from '@/lib/messages.en';
 import { toConvertOptions } from '@/schemas/extract';
-import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ExtractPreview, type ProjectData, type WallReview } from '@/types/extract';
-import { createJob, finishJob, reportProgress } from './extract-jobs';
+import { EMPTY_PROJECT_DATA, type ExtractOutcome, type ExtractPreview, type ProjectData, type ReadingProvenance, type WallReview } from '@/types/extract';
+import { defaultDeps as defaultJobsDeps, startJob, type ExtractJobsDeps } from './extract-jobs';
 
 export type { ExtractOutcome, OpeningReview, WallReview } from '@/types/extract';
 
@@ -35,6 +40,8 @@ export interface ExtractDeps {
   extract: typeof extractWalls;
   preview?: typeof previewExtraction;
   hasKey: () => boolean;
+  /** Onde os jobs de leitura moram (S24): o banco, ou memória sem Supabase e nos testes. */
+  jobs?: ExtractJobsDeps;
 }
 
 export function hasKey(): boolean {
@@ -42,6 +49,21 @@ export function hasKey(): boolean {
 }
 
 export const defaultDeps: ExtractDeps = { extract: extractWalls, preview: previewExtraction, hasKey };
+
+/**
+ * Modelo e effort da leitura pelo ambiente (S25, B6): `EXTRACT_MODEL` (padrão do extract: `claude-opus-5-5`) e
+ * `EXTRACT_EFFORT` (`low` | `medium` | `high` | `xhigh` | `max`; padrão `high`). Vazio = padrão; effort fora da
+ * lista é ignorado (a leitura não pode quebrar por um erro de digitação no deploy). Ambos vão para a
+ * proveniência gravada na leitura.
+ */
+export function extractModelOptions(env: Readonly<Record<string, string | undefined>> = process.env): Pick<ExtractOptions, 'model' | 'effort'> {
+  const model = (env['EXTRACT_MODEL'] ?? '').trim();
+  const effort = (env['EXTRACT_EFFORT'] ?? '').trim().toLowerCase();
+  return {
+    ...(model === '' ? {} : { model }),
+    ...((EFFORTS as readonly string[]).includes(effort) ? { effort: effort as Effort } : {}),
+  };
+}
 
 const IMAGE_TYPES: Record<string, ImageMediaType> = {
   'image/png': 'image/png',
@@ -76,6 +98,14 @@ export interface FromFilesOptions {
   given?: ProjectData;
   /** Id do job (M7): registra progresso e cancelamento e guarda o resultado para um cliente que recarregou. */
   jobId?: string;
+  /** Dono do job (S24): id do usuário da sessão; ausente sem Supabase. */
+  owner?: string | undefined;
+  /**
+   * Desenhos no Storage de onde a leitura sai (S22.3). Entram no resultado guardado no job (S24): sem isso, a
+   * leitura recolhida depois de um F5 chegava sem os caminhos, o projeto não os referenciava e a limpeza do bucket
+   * apagaria a planta de fundo.
+   */
+  drawings?: readonly DrawingRef[] | undefined;
 }
 
 function sourcesOf(files: readonly UploadedFile[], opts: Pick<FromFilesOptions, 'pages' | 'pagesByFile'>): ExtractSource[] | string {
@@ -100,7 +130,7 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
   const given = opts.given ?? EMPTY_PROJECT_DATA;
   const sources = sourcesOf(files, opts);
   if (typeof sources === 'string') return { ok: false, reason: 'input', message: sources };
-  const job = opts.jobId === undefined ? undefined : createJob(opts.jobId);
+  const job = opts.jobId === undefined ? undefined : await startJob(opts.jobId, opts.owner, deps.jobs ?? defaultJobsDeps);
   let outcome: ExtractOutcome;
   try {
     const result = await deps.extract(
@@ -109,13 +139,19 @@ export async function fromFiles(files: readonly UploadedFile[], opts: FromFilesO
         ...(opts.hints === undefined ? {} : { hints: opts.hints }),
         convert: toConvertOptions(given),
       },
-      job === undefined ? {} : { signal: job.controller.signal, onProgress: (p) => reportProgress(job, p) },
+      { ...extractModelOptions(), ...(job === undefined ? {} : { signal: job.signal, onProgress: (p) => job.report(p) }) },
     );
-    outcome = toOutcome(result, given);
+    outcome = withDrawings(toOutcome(result, given), opts.drawings);
   } catch (e) {
-    outcome = failure(e);
+    try {
+      outcome = failure(e);
+    } catch (unexpected) {
+      // Erro que `failure` não reconhece sobe para a action; o job não pode ficar `running` com batimento eterno.
+      await job?.finish({ ok: false, reason: 'api', message: 'The read failed on the server.' });
+      throw unexpected;
+    }
   }
-  if (job !== undefined) finishJob(job, outcome);
+  await job?.finish(outcome);
   return outcome;
 }
 
@@ -130,13 +166,14 @@ export async function preview(files: readonly UploadedFile[], opts: Pick<FromFil
   const run = deps.preview ?? previewExtraction;
   try {
     const info = await run({ sources, ...(opts.hints === undefined ? {} : { hints: opts.hints }) });
-    const out: Extract<ExtractPreview, { ok: true }>['files'] = sources.map((s) => ({
+    // Pelo índice da fonte, não pelo nome (S25): dois arquivos com o mesmo nome não trocam páginas.
+    const out: Extract<ExtractPreview, { ok: true }>['files'] = sources.map((s, i) => ({
       name: s.name,
       kind: s.kind,
       pages: info.sheets
-        .filter((p) => p.name === s.name)
+        .filter((p) => p.source === i)
         .map(({ page, sheet, title, category }) => ({ page, ...(sheet === undefined ? {} : { sheet }), ...(title === undefined ? {} : { title }), ...(category === undefined ? {} : { category }) })),
-      dropped: info.pagesDropped.filter((d) => d.name === s.name).map((d) => ({ page: d.page, ...(d.sheet === undefined ? {} : { sheet: d.sheet }), category: d.category })),
+      dropped: info.pagesDropped.filter((d) => d.source === i).map((d) => ({ page: d.page, ...(d.sheet === undefined ? {} : { sheet: d.sheet }), category: d.category })),
     }));
     return {
       ok: true,
@@ -145,11 +182,23 @@ export async function preview(files: readonly UploadedFile[], opts: Pick<FromFil
       images: info.images,
       encodedBytes: info.encodedBytes,
       tiles: { count: info.tiles.count, encodedBytes: info.tiles.encodedBytes },
+      textChars: info.textChars,
     };
   } catch (e) {
-    if (e instanceof RangeError || e instanceof SyntaxError) return { ok: false, message: e.message };
+    const input = inputError(e);
+    if (input !== undefined) return { ok: false, ...input };
     throw e;
   }
+}
+
+/**
+ * Entrada que o extract recusou (S26): frase em inglês pelo código (`ExtractInputError`), a original em `detail`.
+ * `undefined` = não é erro de entrada.
+ */
+function inputError(e: unknown): { message: string; detail: string; code?: string } | undefined {
+  if (e instanceof ExtractInputError) return { message: extractErrorMessage(e.code, e.params), detail: e.message, code: e.code };
+  if (e instanceof RangeError || e instanceof SyntaxError) return { message: 'The files could not be read. See Details.', detail: e.message };
+  return undefined;
 }
 
 /** Resposta gravada do modelo (JSON) → mesmo pós-processamento, sem chave e sem rede. */
@@ -161,9 +210,42 @@ export function fromRecorded(raw: unknown, given: ProjectData = EMPTY_PROJECT_DA
   }
 }
 
+/**
+ * Action `finishResponse` (S23, A9): um sample de leitura gravada pelo id — o servidor lê a resposta dos próprios
+ * exemplos, o cliente não manda JSON — sempre; JSON colado ("Advanced") só com as ferramentas de desenvolvimento.
+ * Antes qualquer sessão logada mandava qualquer JSON para a conversão em produção.
+ */
+export function replayRecorded(input: { sampleId?: string | undefined; responseJson?: string | undefined }, opts: { devTools: boolean; sample: (id: string) => string | undefined }): ExtractOutcome {
+  let text: string;
+  if (input.sampleId !== undefined) {
+    const sample = opts.sample(input.sampleId);
+    if (sample === undefined) return { ok: false, reason: 'input', message: `There is no sample reading “${input.sampleId}”.` };
+    text = sample;
+  } else if (input.responseJson !== undefined) {
+    if (!opts.devTools) return { ok: false, reason: 'input', message: 'Recorded responses can only be loaded on a development server.' };
+    text = input.responseJson;
+  } else {
+    return { ok: false, reason: 'input', message: 'Pick a sample or paste a recorded response.' };
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    return { ok: false, reason: 'input', message: `Not valid JSON: ${(e as Error).message}` };
+  }
+  return fromRecorded(raw);
+}
+
 function failure(e: unknown): ExtractOutcome {
   if (e instanceof ExtractError) {
-    return { ok: false, reason: 'extraction', message: e.message, ...(e.rawText === undefined ? {} : { rawText: e.rawText }) };
+    return {
+      ok: false,
+      reason: 'extraction',
+      message: extractErrorMessage(e.code, e.params),
+      detail: e.message,
+      ...(e.code === undefined ? {} : { code: e.code }),
+      ...(e.rawText === undefined ? {} : { rawText: e.rawText }),
+    };
   }
   const api = apiErrorInfo(e);
   if (api?.aborted || (e instanceof Error && e.name === 'AbortError')) {
@@ -175,7 +257,8 @@ function failure(e: unknown): ExtractOutcome {
   if (api) {
     return { ok: false, reason: 'api', message: `API error${api.status === undefined ? '' : ` ${api.status}`}: ${api.message}` };
   }
-  if (e instanceof RangeError || e instanceof SyntaxError) return { ok: false, reason: 'input', message: e.message };
+  const input = inputError(e);
+  if (input !== undefined) return { ok: false, reason: 'input', ...input };
   throw e;
 }
 
@@ -183,11 +266,16 @@ function point(p: { x: string; y: string }): string {
   return `(${p.x}, ${p.y})`;
 }
 
-/** Reaplica dados do projeto a uma leitura já feita (revisão), sem chamar a IA; mantém modelo, páginas e desenhos. */
-export function reconvert(raw: unknown, given: ProjectData, meta: { model: string; pagesSent: { name: string; pages: number[] }[]; drawings?: DrawingRef[] | undefined }): ExtractOutcome {
+/** Reaplica dados do projeto a uma leitura já feita (revisão), sem chamar a IA; mantém modelo, páginas, desenhos e proveniência. */
+export function reconvert(
+  raw: unknown,
+  given: ProjectData,
+  meta: { model: string; pagesSent: { name: string; pages: number[] }[]; drawings?: DrawingRef[] | undefined; provenance?: ReadingProvenance | undefined },
+): ExtractOutcome {
   try {
     const r = finish(raw, toConvertOptions(given), meta.model, { inputTokens: 0, outputTokens: 0 });
-    return withDrawings(toOutcome({ ...r, pagesSent: meta.pagesSent }, given), meta.drawings);
+    const outcome = withDrawings(toOutcome({ ...r, pagesSent: meta.pagesSent }, given), meta.drawings);
+    return outcome.ok && meta.provenance !== undefined ? { ...outcome, provenance: meta.provenance } : outcome;
   } catch (e) {
     return failure(e);
   }
@@ -233,5 +321,6 @@ export function toOutcome(r: ExtractResult, given: ProjectData): ExtractOutcome 
     model: r.model,
     usage: r.usage,
     pagesSent: r.pagesSent,
+    ...(r.provenance === undefined ? {} : { provenance: { ...r.provenance, tiles: r.provenance.tiles === false ? false : { ...r.provenance.tiles } } }),
   };
 }

@@ -3,12 +3,14 @@
 import { OctagonXIcon, TriangleAlertIcon } from 'lucide-react';
 import { helpFor } from '@/lib/editor/issue-help';
 import { ISSUE_TITLES } from '@/lib/editor/issue-groups';
-import type { Issue } from '@/lib/editor/problems';
+import { hasOriginal, issueMessage, type Issue } from '@/lib/editor/problems';
+import { OriginalText } from './issue-text';
 import { cn } from '@/lib/utils';
 
 /**
  * Issues do item selecionado no topo do inspetor (S21.4): título em inglês quando a família é conhecida, como
- * resolver, e o texto original logo abaixo. Problemas em vermelho, avisos em dourado escuro.
+ * resolver, a frase do código (S26) e o texto original do motor só em "Details". Problemas em vermelho, avisos em
+ * dourado escuro.
  */
 export function IssueCallout({ issues }: { issues: readonly Issue[] }) {
   if (issues.length === 0) return null;
@@ -25,7 +27,8 @@ export function IssueCallout({ issues }: { issues: readonly Issue[] }) {
               <span className="min-w-0 space-y-0.5">
                 {title !== undefined ? <span className="block font-semibold">{title}</span> : null}
                 {help !== undefined ? <span className="block text-[12px] leading-snug text-ink-2">{help.fix}</span> : null}
-                <span className={cn('block font-mono text-[12px] text-ink-3', title === undefined && 'text-[12px] text-ink')}>{i.text}</span>
+                <span className={cn('block text-[12px] text-ink-3', title === undefined && 'text-ink')}>{issueMessage(i)}</span>
+                {hasOriginal(i) ? <OriginalText text={i.text} /> : null}
               </span>
             </li>
           );

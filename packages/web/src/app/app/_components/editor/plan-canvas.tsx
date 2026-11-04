@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, Kbd } from '@/components/ui/to
 import type { Point } from '@/lib/editor/draft';
 import { alongFromStart, draggedEndpoint, draggedOpeningStart, segmentRect, type OpeningGeom, type PlanGeometry, type WallGeom } from '@/lib/editor/geometry';
 import { formatMeasure } from '@/lib/editor/measure';
+import { noticeText } from '@/lib/notices';
 import type { Issue } from '@/lib/editor/problems';
 import type { Selection } from '@/lib/editor/state';
 import { svgMatrix, type Underlay } from '@/lib/editor/underlay';
@@ -130,6 +131,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
   useEffect(() => {
     if (size === undefined || bounds === undefined) return;
     setViewport(fitViewport(bounds, size, FIT_PADDING_PX));
+    // `bounds` fora de propósito (comentário acima); `size` entra pelas medidas, não pela identidade do objeto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size?.width, size?.height, fitKey]);
 
@@ -352,6 +354,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
         animateTo(centerOn(v, rect, size, FIT_PADDING_PX));
       },
     }),
+    // `fit`/`animateTo` são recriados a cada render, mas só leem `size`/`bounds` (aqui) e refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [size?.width, size?.height, bounds],
   );
@@ -524,7 +527,7 @@ export function PlanCanvas({ geometry, selection, issuesByWall, northAngle, fitK
                 const z = planToScreen(viewport, b.end);
                 return (
                   <g key={b.wallId} data-wall-id={b.wallId}>
-                    <title>{b.error}</title>
+                    <title>{noticeText(b.error)}</title>
                     <line x1={a.x} y1={a.y} x2={z.x} y2={z.y} stroke="var(--color-destructive)" strokeWidth={3} strokeDasharray="6 4" />
                     <Label x={(a.x + z.x) / 2} y={(a.y + z.y) / 2} text={b.wallId} tone="destructive" />
                   </g>

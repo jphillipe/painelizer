@@ -68,7 +68,6 @@ describe('caminho quente do editor (M8)', () => {
     const ids = idIndex(d);
     const issues = time(() => groupIssues(draftIssues(d, []), ids));
     const text = time(() => textFromDraft(withoutUnderlay(d)));
-    // eslint-disable-next-line no-console
     console.log(`[perf] ${d.walls.length} walls · planGeometry ${geometry.toFixed(1)} ms · issues ${issues.toFixed(1)} ms · textFromDraft ${text.toFixed(1)} ms`);
     expect(geometry).toBeLessThan(60);
     expect(issues).toBeLessThan(60);

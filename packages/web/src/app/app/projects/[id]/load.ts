@@ -1,5 +1,6 @@
 import 'server-only';
 import { notFound, redirect } from 'next/navigation';
+import { devToolsEnabled } from '@/lib/dev-tools';
 import { supabaseEnv } from '@/lib/supabase/env';
 import { hasKey } from '@/services/extract.service';
 import { listExamples } from '@/services/panels.service';
@@ -17,7 +18,7 @@ export async function projectPageProps(id: string): Promise<Omit<NewProjectViewP
     if (loaded.reason === 'unconfigured') redirect('/app');
     throw new Error(loaded.message);
   }
-  const devTools = process.env.NODE_ENV !== 'production' || process.env.PANELIZER_DEV_TOOLS === '1';
+  const devTools = devToolsEnabled();
   return {
     examples: listExamples(),
     aiEnabled: hasKey(),

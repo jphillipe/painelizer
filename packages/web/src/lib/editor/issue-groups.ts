@@ -1,8 +1,8 @@
 /**
  * Grupos de issues (S21.4): a lista do editor mostra um item por família ("Wall height is missing · 30 walls")
- * em vez de uma linha por parede. A chave é o `kind` do próprio editor, o código do motor/extração ou, sem
- * nenhum dos dois, o texto com os ids trocados por um marcador. O título é inglês (mapa abaixo); o texto
- * original de cada issue fica intacto em `items` — nunca some, só vira detalhe (docs/10-design.md §3).
+ * em vez de uma linha por parede. A chave é o `kind` do próprio editor ou o código do motor/parser/leitura (S26:
+ * todo aviso tem código; nada é reconhecido pelo texto). O título é inglês (mapa abaixo); o texto original de
+ * cada issue fica intacto em `items` — nunca some, só vira detalhe (docs/10-design.md §3).
  */
 
 import type { IdIndex, Issue, Severity } from './problems';
@@ -49,14 +49,16 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   'config.building': 'Snow load and building width are missing (IRC header table)',
   'wall.floorsSupported': 'Floors above the wall are missing (IRC header table)',
   // extração (packages/extract)
-  ABERTURA_SEM_POSICAO: 'Opening position not found in the drawing',
-  ABERTURA_SEM_MEDIDA: 'Opening size not found in the drawing',
-  ALTURA_PADRAO: 'Default header height used',
-  ALTURA_RO_PORTA: 'Door RO height assumed',
-  FOLHAS_FORA: 'Sheets left out of the reading',
-  ABERTURA_ESTIMADA: 'Opening position measured by scale (no dimension)',
-  COMODO_SEM_PORTA: 'Room without a door in the reading',
-  RECORTES_FORA: 'High-res crops left out of the reading',
+  OPENING_UNPLACED: 'Opening position not found in the drawing',
+  OPENING_UNSIZED: 'Opening size not found in the drawing',
+  DEFAULT_HEADER_HEIGHT: 'Default header height used',
+  DOOR_RO_HEIGHT_ASSUMED: 'Door RO height assumed',
+  SHEETS_DROPPED: 'Sheets left out of the reading',
+  OPENING_ESTIMATED: 'Opening position measured by scale (no dimension)',
+  ROOM_WITHOUT_DOOR: 'Room without a door in the reading',
+  TILES_DROPPED: 'High-res crops left out of the reading',
+  SHEET_DUPLICATE: 'Duplicate sheet left out of the reading',
+  NO_TITLE_BLOCK: 'No sheet numbers found: first pages sent',
   // motor (packages/core)
   HEADER_JACKS_BELOW_TABLE: 'Fewer jack studs than the IRC table',
   HEADER_KINGS_BELOW_TABLE: 'Fewer king studs than the IRC table',
@@ -71,6 +73,43 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   FIRE_BLOCKING_REQUIRED: 'Fire blocking required',
   SPECIES_NOT_IN_TABLE: 'Species not covered by the IRC table',
   WIND_SPEED_MISSING: 'Wind speed is missing (king stud table)',
+  // motor (packages/core) — erros que um projeto provoca; o CLI e o parser
+  HEADER_DATA_MISSING: 'Bearing wall needs snow load and building width (IRC header table)',
+  HEADER_OUT_OF_TABLE: 'Header outside the IRC table — engineer required',
+  KINGS_OUT_OF_TABLE: 'King studs outside the IRC table — engineer required',
+  OPENING_OFF_PLATE: 'Opening does not fit on the plate',
+  OPENING_OUT_OF_WALL: 'Opening runs past the end of the wall',
+  CORNER_STUD_OFF_PLATE: 'Corner stud does not fit on the plate',
+  FLAT_HEADER_SPAN: 'Opening too wide for a flat header',
+  FLAT_HEADER_GAP: 'Flat header too far below the top plate',
+  HEADER_TOO_THICK: 'Project header thicker than the wall',
+  HEADER_ABOVE_TOP_PLATE: 'Header above the top plate',
+  HEADER_NO_ROOM_FOR_JACK: 'No room for the jack stud',
+  SILL_NO_ROOM: 'No room for the sill',
+  OPENINGS_TOO_CLOSE: 'Openings too close together',
+  OPENING_TAG_UNKNOWN: 'Opening tag is not in the schedule',
+  HEADER_MARK_UNKNOWN: 'Header mark is not in the schedule',
+  OPENING_TYPE_MISSING: 'Window or door is not set',
+  OPENING_SIZE_MISSING: 'Rough opening size is missing',
+  OPENING_POSITION_MISSING: 'Opening position is missing',
+  WALLS_CROSS: 'Two walls cross',
+  WALLS_OVERLAP: 'Two walls overlap',
+  WALL_END_TWO_JOINTS: 'A wall end meets two walls',
+  CORNER_ENDS_CONFLICT: 'Both walls claim the same corner',
+  WALL_OFF_AXIS: 'Wall is not parallel to an axis',
+  WALL_ZERO_LENGTH: 'Wall start and end are the same point',
+  TEE_IN_OPENING: 'A tee lands inside an opening',
+  TEE_WITHOUT_STUD: 'Tee without a stud on one side',
+  CANNOT_SPLIT: 'Wall cannot be split into panels',
+  LAP_NO_ROOM: 'No room for the double top plate lap',
+  SPLICE_NO_STUD: 'No stud to splice the plate',
+  EXTRA_STUD_IN_OPENING: 'Extra stud inside an opening',
+  EXTRA_STUD_OUT_OF_WALL: 'Extra stud outside the wall',
+  PIECE_OVER_STOCK: 'Piece longer than any stock length',
+  PANEL_FILE_CLASH: 'Two panels would write the same file',
+  PROJECT_INVALID: 'Invalid value in the project file',
+  PROJECT_JSON_INVALID: 'The project file is not valid JSON',
+  ENGINE_INTERNAL: 'The engine rejected the project',
 };
 
 const ISSUE_ACTIONS: Readonly<Record<string, IssueAction>> = {
@@ -83,44 +122,16 @@ const ISSUE_ACTIONS: Readonly<Record<string, IssueAction>> = {
   SPECIES_NOT_IN_TABLE: 'projectSettings',
 };
 
-/** Problemas do motor sem código, reconhecidos pelo texto (`packages/core`): título em inglês e ação. */
-const TEXT_TITLES: readonly { re: RegExp; title: string; action?: IssueAction }[] = [
-  { re: /sem header no projeto e sem config\.building/, title: 'Bearing wall needs snow load and building width (IRC header table)', action: 'projectData' },
-  { re: /header fora da tabela/, title: 'Header outside the IRC table — engineer required' },
-  { re: /não cabe na plate/, title: 'Opening does not fit on the plate' },
-  { re: /stud de canto .* não cabe/, title: 'Corner stud does not fit on the plate' },
-];
-
 function actionFor(issue: Issue): IssueAction | undefined {
-  const mapped = ISSUE_ACTIONS[issue.kind ?? issue.code ?? ''];
-  if (mapped !== undefined) return mapped;
-  if (issue.kind === undefined && issue.code === undefined) {
-    const t = TEXT_TITLES.find((x) => x.re.test(issue.text));
-    if (t?.action !== undefined) return t.action;
-    if (/config\.building|floorsSupported/.test(issue.text)) return 'projectData';
-  }
-  return undefined;
+  return ISSUE_ACTIONS[issue.kind ?? issue.code ?? ''];
 }
 
-const PREFIX_RE = /^(?:extração [A-Z][A-Z0-9_]*|parser|motor|planta|altura|lista de material|\S+ [A-Z][A-Z0-9_]+): /;
-const LEAD_RE = /^(?:paredes?|aberturas?|walls?|openings?|config|painel|panel)\b[^:]*: /i;
-const ID_MARK = '▢';
-
-const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** Texto sem prefixo de origem e com os ids do projeto (paredes, aberturas) trocados por `▢`; números ficam. */
-export function normalizeText(text: string, ids: IdIndex): string {
-  let out = text.replace(PREFIX_RE, '');
-  const walls = [...ids.walls].sort((a, b) => b.length - a.length);
-  // ids de painel (`1-S2-P1`) primeiro: um marcador só
-  for (const id of walls) out = out.replace(new RegExp(`(?<![A-Za-z0-9_-])\\d+-${escapeRe(id)}-P\\d+(?![A-Za-z0-9_-])`, 'g'), ID_MARK);
-  const all = [...walls, ...[...ids.openings.values()].flat()].filter((id) => id.length >= 2).sort((a, b) => b.length - a.length);
-  for (const id of all) out = out.replace(new RegExp(`(?<![A-Za-z0-9_-])${escapeRe(id)}(?![A-Za-z0-9_-])`, 'g'), ID_MARK);
-  return out;
-}
-
-export function groupKey(issue: Issue, ids: IdIndex): string {
-  return issue.kind ?? issue.code ?? `${issue.severity}:${normalizeText(issue.text, ids)}`;
+/**
+ * Chave do grupo: a família do editor ou o código. Sem nenhum dos dois (só o editor cria issue assim, e já em
+ * inglês), o próprio texto.
+ */
+export function groupKey(issue: Issue, _ids?: IdIndex): string {
+  return issue.kind ?? issue.code ?? `${issue.severity}:${issue.text}`;
 }
 
 function humanize(code: string): string {
@@ -128,15 +139,12 @@ function humanize(code: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Título do grupo: mapa por chave; sem mapa, o código humanizado ou o texto normalizado sem o "parede ▢:" inicial. */
-export function groupTitle(issue: Issue, ids: IdIndex): string {
+/** Título do grupo: mapa por chave; sem mapa, o código humanizado; sem código, a frase da issue (do editor, em inglês). */
+export function groupTitle(issue: Issue, _ids?: IdIndex): string {
   const mapped = ISSUE_TITLES[issue.kind ?? issue.code ?? ''];
   if (mapped !== undefined) return mapped;
   if (issue.code !== undefined) return humanize(issue.code);
-  const known = TEXT_TITLES.find((x) => x.re.test(issue.text));
-  if (known !== undefined) return known.title;
-  const text = normalizeText(issue.text, ids).replace(LEAD_RE, '').trim();
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return issue.text;
 }
 
 /** Problemas antes de avisos; dentro de cada severidade, grupos maiores primeiro, empate pela ordem de chegada. */
@@ -172,7 +180,7 @@ export function needsProjectData(issues: readonly Issue[]): boolean {
 
 /**
  * Issues do motor que repetem uma família que o draft já apontou na mesma parede saem da lista: o humano vê uma
- * vez "Floors above the wall are missing", não duas (uma em inglês do editor, outra em português do motor).
+ * vez "Floors above the wall are missing", não duas (uma do editor, outra do motor).
  */
 export function dropRepeated(engine: readonly Issue[], own: readonly Issue[]): Issue[] {
   return engine.filter((e) => e.kind === undefined || !own.some((o) => o.kind === e.kind && (o.wallId === e.wallId || o.wallId === undefined || e.wallId === undefined)));

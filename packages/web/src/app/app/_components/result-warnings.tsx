@@ -4,11 +4,11 @@ import { TriangleAlertIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { helpFor } from '@/lib/editor/issue-help';
 import { groupIssues } from '@/lib/editor/issue-groups';
-import { parseEngineResult, type IdIndex } from '@/lib/editor/problems';
-import type { PanelSummary } from '@/types/panels';
+import { hasOriginal, issueMessage, parseEngineResult, type IdIndex } from '@/lib/editor/problems';
+import type { Notice, PanelSummary } from '@/types/panels';
 
 export interface ResultWarningsProps {
-  warnings: readonly string[];
+  warnings: readonly Notice[];
   panels: readonly PanelSummary[];
   /** Ids do projeto (parede → aberturas), para ligar cada aviso à peça; sem o draft, só as paredes dos painéis. */
   ids: IdIndex | undefined;
@@ -65,7 +65,10 @@ export function ResultWarnings({ warnings, panels, ids, onOpenSheet }: ResultWar
                 <summary className="cursor-pointer text-ink-3 select-none">Details</summary>
                 <ul className="mt-1 space-y-1 font-mono text-[12px] text-ink-2">
                   {g.items.map((i, n) => (
-                    <li key={`${n}-${i.text}`}>{i.text}</li>
+                    <li key={`${n}-${i.text}`}>
+                      <span className="block font-sans">{issueMessage(i)}</span>
+                      {hasOriginal(i) ? <span className="block text-ink-3">{i.text}</span> : null}
+                    </li>
                   ))}
                 </ul>
               </details>

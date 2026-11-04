@@ -12,6 +12,11 @@ export interface ServerProject {
   revision: number;
   /** ISO, do `updated_at` do servidor. */
   savedAt: string;
+  /**
+   * Texto que acabou de ir no `create` (S23, A2): é o que o servidor tem, e a baseline do auto-save. Sem ele a
+   * baseline seria o texto do editor na volta da criação, e uma edição feita durante a criação nunca subiria.
+   */
+  text?: string;
 }
 
 export type SaveStatus =
@@ -21,7 +26,7 @@ export type SaveStatus =
   | { kind: 'saving' }
   /** Falhou (rede, servidor): tenta de novo na próxima edição ou pelo botão. */
   | { kind: 'error'; message: string }
-  /** Outra pessoa gravou antes: nada mais é gravado até recarregar. */
+  /** Outra pessoa gravou antes: nada mais é gravado até o humano recarregar, salvar como cópia ou sobrescrever (S23). */
   | { kind: 'conflict'; message: string; revision: number }
   | { kind: 'deleted'; message: string };
 

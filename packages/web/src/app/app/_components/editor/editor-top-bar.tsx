@@ -6,6 +6,7 @@ import { describeSave, type SaveStatus } from '@/lib/editor/project-sync';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ConfirmDialog } from '../confirm-dialog';
 import type { CheckState } from './use-project-check';
 
 export interface TopBarMenuItem {
@@ -36,6 +37,18 @@ export interface EditorTopBarProps {
   /** Auto-save no servidor (S22.1): "Saved · just now", "Saving…", "Not saved" com Retry, "Edited elsewhere" com Reload. */
   save?: SaveStatus | undefined;
   onRetrySave?: (() => void) | undefined;
+  /** S23 (A4): saídas do conflito além de recarregar ("Save as copy" também quando o projeto foi apagado). */
+  saveActions?: SaveConflictActions | undefined;
+}
+
+/** O que o chip oferece quando o auto-save parou (conflito ou projeto apagado). */
+export interface SaveConflictActions {
+  /** Cria um projeto novo com o que está no editor e passa a gravar nele. */
+  saveAsCopy?: () => void;
+  /** Grava por cima da revisão de quem gravou antes. */
+  overwrite?: () => void;
+  /** Padrão: `window.location.reload()` (os testes trocam). */
+  reload?: () => void;
 }
 
 /**
@@ -43,7 +56,7 @@ export interface EditorTopBarProps {
  * principal sempre visível. Downloads, configurações e "Start over" ficam no menu `⋯`. Abaixo de `sm` (M5) são
  * duas linhas fixas: passos + nome | status + Generate + menu — nada quebra em três.
  */
-export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu, save, onRetrySave }: EditorTopBarProps) {
+export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu, save, onRetrySave, saveActions }: EditorTopBarProps) {
   const hint = problems > 0 ? (needsData ? 'Fill in the project data first.' : `Fix ${problems} problem${problems === 1 ? '' : 's'} first.`) : check.status === 'error' ? (check.error ?? 'Could not check the project.') : '';
   return (
     <div className="no-print grid shrink-0 grid-cols-1 gap-x-4 gap-y-1.5 border-b border-line bg-card px-[var(--gutter)] py-2 sm:flex sm:flex-wrap sm:items-center">
@@ -60,7 +73,7 @@ export function EditorTopBar({ name, walls, openings, reviewed, check, problems,
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-none" aria-live="polite">
           <StatusChip check={check} problems={problems} warnings={warnings} />
-          {save !== undefined ? <SaveChip status={save} onRetry={onRetrySave} /> : null}
+          {save !== undefined ? <SaveChip status={save} onRetry={onRetrySave} actions={saveActions} /> : null}
         </div>
         {hint !== '' ? <span className="hidden truncate text-[13px] text-ink-3 md:inline">{hint}</span> : null}
         <Button variant="accent" size="sm" disabled={pending || !ready} onClick={onGenerate} title={hint === '' ? undefined : hint} className="ml-auto shrink-0 sm:ml-0">
@@ -98,8 +111,9 @@ export function EditorTopBar({ name, walls, openings, reviewed, check, problems,
  * Estado do auto-save (S22.1). "just now" envelhece sozinho (um tique por meio minuto). Conflito e erro trazem a
  * ação na própria barra: recarregar para ver a versão de quem gravou antes, ou tentar de novo.
  */
-function SaveChip({ status, onRetry }: { status: SaveStatus; onRetry: (() => void) | undefined }) {
+function SaveChip({ status, onRetry, actions }: { status: SaveStatus; onRetry: (() => void) | undefined; actions: SaveConflictActions | undefined }) {
   const [now, setNow] = useState(() => Date.now());
+  const [confirm, setConfirm] = useState<'overwrite' | 'reload' | undefined>(undefined);
   useEffect(() => {
     if (status.kind !== 'saved') return;
     const t = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -121,14 +135,47 @@ function SaveChip({ status, onRetry }: { status: SaveStatus; onRetry: (() => voi
       </Badge>
     );
   }
+  const copyButton =
+    actions?.saveAsCopy !== undefined ? (
+      <button type="button" className="ml-1 underline underline-offset-2" onClick={actions.saveAsCopy}>
+        Save as copy
+      </button>
+    ) : null;
   if (status.kind === 'conflict') {
+    // S23 (A4): antes só "Reload", que trocava as edições daqui pela versão do servidor sem dizer.
     return (
-      <Badge key="conflict" variant="warning" className="animate-pop" title={status.message}>
-        <TriangleAlertIcon /> {label.text}
-        <button type="button" className="ml-1 underline underline-offset-2" onClick={() => window.location.reload()}>
-          Reload
-        </button>
-      </Badge>
+      <>
+        <Badge key="conflict" variant="warning" className="animate-pop" title={status.message}>
+          <TriangleAlertIcon /> {label.text}
+          {copyButton}
+          {actions?.overwrite !== undefined ? (
+            <button type="button" className="ml-1 underline underline-offset-2" onClick={() => setConfirm('overwrite')}>
+              Overwrite
+            </button>
+          ) : null}
+          <button type="button" className="ml-1 underline underline-offset-2" onClick={() => setConfirm('reload')}>
+            Reload
+          </button>
+        </Badge>
+        <ConfirmDialog
+          open={confirm !== undefined}
+          onOpenChange={(open) => (open ? undefined : setConfirm(undefined))}
+          title={confirm === 'overwrite' ? 'Overwrite the other version?' : 'Reload and drop your changes?'}
+          description={
+            confirm === 'overwrite'
+              ? `Someone saved revision ${status.revision} of this project after you opened it. Overwriting replaces their version with yours; their changes are lost. To keep both, save yours as a copy instead.`
+              : 'Reloading opens the version on the server. Your changes since the last save are lost. To keep them, save them as a copy first.'
+          }
+          confirmLabel={confirm === 'overwrite' ? 'Overwrite' : 'Reload'}
+          destructive
+          onConfirm={() => {
+            const which = confirm;
+            setConfirm(undefined);
+            if (which === 'overwrite') actions?.overwrite?.();
+            else (actions?.reload ?? (() => window.location.reload()))();
+          }}
+        />
+      </>
     );
   }
   return (
@@ -139,6 +186,7 @@ function SaveChip({ status, onRetry }: { status: SaveStatus; onRetry: (() => voi
           Retry
         </button>
       ) : null}
+      {status.kind === 'deleted' ? copyButton : null}
     </Badge>
   );
 }

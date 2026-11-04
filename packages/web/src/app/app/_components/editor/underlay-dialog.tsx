@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DRAWINGS_BUCKET, type DrawingRef } from '@/lib/drawings';
 import type { Rect } from '@/lib/editor/geometry';
@@ -182,6 +181,8 @@ export function UnderlayDialog({ open, onOpenChange, sourceFiles, storedDrawings
                   {thumbs.map((t) => (
                     <li key={t.page}>
                       <button type="button" aria-pressed={page === t.page} onClick={() => setPage(t.page)} className={cn('relative block overflow-hidden rounded-sm border bg-paper-2 transition-[border-color,box-shadow] duration-200', page === t.page ? 'border-selection shadow-[0_0_0_2px_var(--color-selection)]' : 'border-line hover:border-line-strong')} title={`Page ${t.page}`}>
+                        {/* Miniatura gerada no navegador (blob/data URL): next/image não tem o que otimizar. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={t.url} alt={`Page ${t.page}`} width={THUMB_PX} className="block" />
                         <span className={cn('absolute right-1 bottom-1 rounded-sm px-1 font-mono text-[11px] font-semibold', page === t.page ? 'bg-selection text-paper' : 'bg-paper/90 text-ink')}>{t.page}</span>
                       </button>

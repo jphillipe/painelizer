@@ -2,6 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
+import { projectFileText } from '@/lib/editor/project-file';
 import type { ServerProject } from '@/lib/editor/project-sync';
 import { editorReducer, initialEditorState, isReviewed, type EditorState } from '@/lib/editor/state';
 import type { SaveResult } from '@/services/projects.service';
@@ -173,5 +174,70 @@ describe('useProjectSync — baseline é o texto (S22.1)', () => {
     });
     expect(executeAsync).toHaveBeenCalledTimes(1);
     expect(executeAsync.mock.calls[0]![0].text).toContain('"report": "b"');
+  });
+});
+
+describe('useProjectSync (S23)', () => {
+  const flush = async (): Promise<void> => {
+    await act(async () => {
+      vi.advanceTimersByTime(SYNC_DELAY_MS + 10);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+  };
+
+  it('A2: edição feita durante a criação — a baseline é o texto enviado, e a edição grava em seguida', async () => {
+    executeAsync.mockResolvedValueOnce(saved(2));
+    const sent = projectFileText(loaded.draft!, undefined);
+    const editedDuringCreate = edited(loaded);
+    const hook = renderHook(({ s, p }: { s: EditorState; p: ServerProject | undefined }) => useProjectSync(s, undefined, p, () => {}), { initialProps: { s: loaded, p: undefined as ServerProject | undefined } });
+    hook.rerender({ s: editedDuringCreate, p: undefined });
+    // A criação volta com o texto que foi: o editor já tem outro.
+    hook.rerender({ s: editedDuringCreate, p: { ...project, text: sent } });
+    await flush();
+    expect(executeAsync).toHaveBeenCalledTimes(1);
+    expect(executeAsync.mock.calls[0]![0].text).toBe(projectFileText(editedDuringCreate.draft!, undefined));
+  });
+
+  it('A2: sem edição durante a criação, nada grava', async () => {
+    const sent = projectFileText(loaded.draft!, undefined);
+    const hook = renderHook(({ p }: { p: ServerProject | undefined }) => useProjectSync(loaded, undefined, p, () => {}), { initialProps: { p: undefined as ServerProject | undefined } });
+    hook.rerender({ p: { ...project, text: sent } });
+    await flush();
+    expect(executeAsync).not.toHaveBeenCalled();
+    expect(hook.result.current.status).toMatchObject({ kind: 'saved' });
+  });
+
+  it('A4: "Overwrite" grava por cima da revisão do conflito e volta a "saved"', async () => {
+    executeAsync.mockResolvedValueOnce({ data: { ok: false, reason: 'conflict', revision: 7, updatedAt: 'x', message: 'edited elsewhere' } });
+    executeAsync.mockResolvedValueOnce(saved(8));
+    const onProject = vi.fn();
+    const hook = renderHook(({ s }: { s: EditorState }) => useProjectSync(s, undefined, project, onProject), { initialProps: { s: loaded } });
+    hook.rerender({ s: edited(loaded) });
+    await flush();
+    expect(hook.result.current.status).toMatchObject({ kind: 'conflict', revision: 7 });
+    await act(async () => {
+      hook.result.current.overwrite();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(executeAsync).toHaveBeenCalledTimes(2);
+    expect(executeAsync.mock.calls[1]![0]).toMatchObject({ id: 'p1', revision: 7 });
+    expect(onProject).toHaveBeenLastCalledWith(expect.objectContaining({ revision: 8 }));
+    expect(hook.result.current.status).toMatchObject({ kind: 'saved' });
+  });
+
+  it('A5: "Hide" e a opacidade da planta por baixo não gravam nem mexem no chip', async () => {
+    const u = { version: 1 as const, source: { name: 'a.pdf' }, image: 'data:image/png;base64,AA', width: 10, height: 10, scale: 1, origin: { x: 0, y: 0 }, rotation: 0 as const, opacity: 0.35, visible: true };
+    const withDrawing = editorReducer(loaded, { type: 'setUnderlay', underlay: u });
+    const hook = renderHook(({ s }: { s: EditorState }) => useProjectSync(s, undefined, project, () => {}), { initialProps: { s: initialEditorState } });
+    hook.rerender({ s: withDrawing });
+    const status = hook.result.current.status;
+    const hidden = editorReducer(withDrawing, { type: 'setUnderlayView', visible: false });
+    hook.rerender({ s: hidden });
+    hook.rerender({ s: editorReducer(hidden, { type: 'setUnderlayView', opacity: 0.8 }) });
+    await flush();
+    expect(executeAsync).not.toHaveBeenCalled();
+    expect(hook.result.current.status).toBe(status);
   });
 });

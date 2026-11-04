@@ -29,7 +29,6 @@ describe('check vs generate (M8)', () => {
     expect(c.warnings).toEqual(g.warnings);
     const tGenerate = time(() => generate(text));
     const tCheck = time(() => check(text));
-    // eslint-disable-next-line no-console
     console.log(`[perf] ${g.panels.length} panels · generate ${tGenerate.toFixed(0)} ms · check ${tCheck.toFixed(0)} ms`);
     expect(tCheck).toBeLessThan(tGenerate);
   });

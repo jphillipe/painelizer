@@ -1,8 +1,8 @@
 /**
  * Planta do arquiteto por baixo das paredes (M6): uma página do PDF (ou uma imagem) desenhada atrás da planta do
  * editor, para conferir a leitura da IA contra o desenho. Guardada no draft em `$underlay` (chave com `$`: o CLI
- * ignora, a serialização preserva, o arquivo de projeto e a sessão levam junto; `withoutUnderlay` tira antes de
- * mandar ao motor). Transformação: pixel da imagem (u, v; v para baixo) → planta (polegadas, y para cima):
+ * ignora, a serialização preserva, o arquivo de projeto e a sessão levam junto; `engineText` tira as chaves `$…`
+ * antes de mandar ao motor). Transformação: pixel da imagem (u, v; v para baixo) → planta (polegadas, y para cima):
  * `plan = origin + R(rotation) · (u·scale, −v·scale)`. Puro.
  */
 
@@ -53,6 +53,25 @@ export function underlayOf(d: Pick<ProjectDraft, 'extra'>): Underlay | undefined
     opacity: typeof u.opacity === 'number' ? Math.min(1, Math.max(0.05, u.opacity)) : DEFAULT_UNDERLAY_OPACITY,
     visible: u.visible !== false,
   };
+}
+
+/**
+ * Vista do underlay (S23, A5): opacidade e mostrar/ocultar são estado de UI do editor, não do arquivo — antes um
+ * clique em "Hide" mudava o texto, o auto-save gravava e subia a revisão ("Edited elsewhere" para outra pessoa).
+ * Arquivos de antes da S23 ainda trazem `opacity`/`visible`: valem como vista inicial até a próxima calibração.
+ */
+export type UnderlayView = { opacity?: number; visible?: boolean };
+
+/** O que vai para `$underlay`: imagem e calibração, sem a vista. */
+export function withoutView(u: Underlay): Omit<Underlay, 'opacity' | 'visible'> {
+  const { opacity: _o, visible: _v, ...stored } = u;
+  return stored;
+}
+
+/** Underlay como a tela o mostra: o do arquivo com a vista do editor por cima. */
+export function inView(u: Underlay | undefined, view: UnderlayView | undefined): Underlay | undefined {
+  if (u === undefined || view === undefined) return u;
+  return { ...u, ...(view.opacity === undefined ? {} : { opacity: Math.min(1, Math.max(0.05, view.opacity)) }), ...(view.visible === undefined ? {} : { visible: view.visible }) };
 }
 
 /** Draft sem o underlay (para o motor e a checagem: a imagem pesa centenas de KB e o motor não a lê). */

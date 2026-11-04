@@ -138,7 +138,8 @@ export async function saveProject(input: { id: string; revision: number; name: s
       reason: 'conflict',
       revision: current.revision,
       updatedAt: current.updated_at,
-      message: `This project was edited elsewhere (revision ${current.revision}). Reload to see the latest version; your unsaved changes stay in this browser.`,
+      // S23 (A4): "Reload" troca as edições daqui pela versão do servidor — a mensagem não promete o contrário.
+      message: `This project was edited elsewhere (revision ${current.revision}). Your changes here are not saved: save them as a copy, overwrite the other version, or reload to drop them.`,
     };
   } catch (e) {
     return { ok: false, reason: 'failed', message: `Could not save the project: ${failure(e)}` };

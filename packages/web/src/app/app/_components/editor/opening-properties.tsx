@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { isIdFree, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
+import { IssueText, OriginalText } from './issue-text';
 import { confidenceTone, type OpeningProvenance } from '@/lib/editor/provenance';
 import { catalogTags, headerMarks, openingWidth, resolveDraftOpening } from '@/lib/editor/resolve';
 import type { EditorAction } from '@/lib/editor/state';
@@ -66,7 +67,10 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
               {resolved.opening.headerHeight !== undefined ? ` · top of RO ${formatMeasure(resolved.opening.headerHeight)}` : ' · header under the top plate'}
             </>
           ) : (
-            <span className="text-destructive">{resolved.message}</span>
+            <>
+              <span className="font-sans text-destructive">{resolved.message}</span>
+              {resolved.notice.message !== resolved.message ? <OriginalText text={resolved.notice.message} /> : null}
+            </>
           )}
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -201,10 +205,10 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
 
       {issues.length > 0 && !collapsible ? (
         <Section title={`Issues on this opening (${issues.length})`}>
-          <ul className="space-y-1 font-mono text-[12px]">
+          <ul className="space-y-1 text-[12px]">
             {issues.map((i, n) => (
               <li key={`${n}-${i.text}`} className={i.severity === 'problem' ? 'text-destructive' : 'text-warning'}>
-                {i.text}
+                <IssueText issue={i} />
               </li>
             ))}
           </ul>

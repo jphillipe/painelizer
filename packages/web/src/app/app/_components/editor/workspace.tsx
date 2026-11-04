@@ -10,7 +10,7 @@ import type { IssueGroup } from '@/lib/editor/issue-groups';
 import type { Issue } from '@/lib/editor/problems';
 import type { WallProvenance } from '@/lib/editor/provenance';
 import type { ProjectDataNeeds } from '@/lib/editor/requirements';
-import { reviewedCount, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
+import { reviewedCount, viewedUnderlay, type EditorAction, type EditorState, type Selection } from '@/lib/editor/state';
 import type { LevelFilter } from '@/lib/editor/wall-filters';
 import { useMediaQuery, WIDE_QUERY } from '@/lib/use-media-query';
 import type { DrawingRef } from '@/lib/drawings';
@@ -18,7 +18,7 @@ import type { SupabaseEnv } from '@/lib/supabase/env';
 import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
 import { EditorToolbar } from './editor-toolbar';
-import { EditorTopBar, type TopBarMenuItem } from './editor-top-bar';
+import { EditorTopBar, type SaveConflictActions, type TopBarMenuItem } from './editor-top-bar';
 import { Inspector } from './inspector';
 import { IssueGroupsList } from './issue-groups-list';
 import { Navigator, type NavigatorTab } from './navigator';
@@ -28,7 +28,7 @@ import { ReadingPanel } from './reading-panel';
 import { ShortcutsDialog } from './shortcuts-dialog';
 import { CalibrationBanner, UnderlayControls, calibrationPoint, withPixelAt, type Calibration } from './underlay-controls';
 import { UnderlayDialog } from './underlay-dialog';
-import { underlayOf, type Underlay } from '@/lib/editor/underlay';
+import type { Underlay } from '@/lib/editor/underlay';
 import { WallElevation } from './wall-elevation';
 import type { SaveStatus } from '@/lib/editor/project-sync';
 import type { CheckState } from './use-project-check';
@@ -69,6 +69,7 @@ export interface WorkspaceProps {
   /** Auto-save no servidor (S22.1). */
   save?: SaveStatus | undefined;
   onRetrySave?: (() => void) | undefined;
+  saveActions?: SaveConflictActions | undefined;
 }
 
 /**
@@ -77,7 +78,7 @@ export interface WorkspaceProps {
  * interface aqui (aba, card de setup dispensado); o projeto continua no reducer. Remontado por `key` quando
  * outro projeto entra.
  */
-export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], storedDrawings = [], storage, save, onRetrySave }: WorkspaceProps) {
+export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWall, groups, provenance, outcome, check, counts, ready, pending, needsData, needs, name, slug, onGenerate, onOutcome, steps, onStartOver, help, sourceFiles = [], storedDrawings = [], storage, save, onRetrySave, saveActions }: WorkspaceProps) {
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
   const [dismissed, setDismissed] = useState(false);
@@ -86,7 +87,8 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
   // Planta do arquiteto por baixo (M6): dialog de escolha e calibração em curso.
   const [underlayOpen, setUnderlayOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | undefined>(undefined);
-  const underlay = underlayOf(draft);
+  // S23: com a vista (opacidade/visível) do editor por cima; a vista não está no arquivo.
+  const underlay = viewedUnderlay(state);
   const setUnderlay = (u: Underlay | undefined): void => dispatch({ type: 'setUnderlay', underlay: u });
   const onCalibrationPoint = (p: { x: number; y: number }): void => {
     if (underlay === undefined || calibration === undefined) return;
@@ -205,7 +207,7 @@ export function Workspace({ state, draft, dispatch, geometry, issues, issuesByWa
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">
-      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} save={save} onRetrySave={onRetrySave} />
+      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} save={save} onRetrySave={onRetrySave} saveActions={saveActions} />
       {wide ? (
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="flex min-h-0 flex-col border-r border-line bg-card" aria-label="Navigator">

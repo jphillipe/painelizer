@@ -35,7 +35,7 @@ describe('aba Materials (M3)', () => {
       { id: '1-S2-P2', wallId: 'S2', length: 144, pieces: 20, weightLb: 200 },
       { id: '1-N1-P1', wallId: 'N1', length: 192, pieces: 30, weightLb: 300 },
     ];
-    const m = warningsByPanel(['1-S2-P1 HEADER_JACKS_BELOW_TABLE: a', '1-S2-P1 HEADER_JACKS_BELOW_TABLE: b', '1-N1-P1 WIND_SPEED_MISSING: c', 'extração X: d'], panels.map((p) => p.id));
+    const m = warningsByPanel([{ panelId: '1-S2-P1' }, { panelId: '1-S2-P1' }, { panelId: '1-N1-P1' }, {}], panels.map((p) => p.id));
     expect(m.get('1-S2-P1')).toBe(2);
     expect(m.get('1-S2-P2')).toBeUndefined();
     expect(m.get('1-N1-P1')).toBe(1);

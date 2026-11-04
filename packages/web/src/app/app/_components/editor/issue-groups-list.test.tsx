@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { groupIssues } from '@/lib/editor/issue-groups';
-import { parseWarning, type IdIndex, type Issue } from '@/lib/editor/problems';
+import { issueFromNotice, type IdIndex, type Issue } from '@/lib/editor/problems';
 import { IssueGroupsList } from './issue-groups-list';
 
 const ids: IdIndex = { walls: Array.from({ length: 30 }, (_, i) => `W${i + 1}`), openings: new Map([['W1', ['W1-1']]]) };
@@ -19,11 +19,15 @@ describe('IssueGroupsList (SSR)', () => {
     expect(html).toContain('wall W17: height is missing');
   });
 
-  it('aviso da extração: título em inglês clicável e o texto cru nos detalhes; vazio diz "No problems"', () => {
-    const w = parseWarning('extração ABERTURA_SEM_POSICAO: parede W1, abertura W1-1 (W2): a leitura não achou a cota do eixo', ids);
+  it('aviso da extração: título e frase em inglês; o texto cru só nos detalhes; vazio diz "No problems"', () => {
+    const w = issueFromNotice({ source: 'extraction', code: 'OPENING_UNPLACED', message: 'parede W1, abertura W1-1 (W2): a leitura não achou a cota do eixo', wallId: 'W1', openingId: 'W1-1', params: { tag: 'W2' } }, 'warning', ids);
     const html = renderToStaticMarkup(<IssueGroupsList groups={groupIssues([w], ids)} stale={false} checking={false} selection={{ kind: 'wall', wallId: 'W1' }} onSelect={() => {}} onAction={() => {}} />);
     expect(html).toContain('Opening position not found in the drawing');
-    expect(html).toContain('a leitura não achou');
+    expect(html).toContain('Wall W1, opening W1-1: the AI found this W2 opening but no dimension to its axis');
+    // O original aparece, mas dentro de <details> ("Details").
+    const details = html.slice(html.indexOf('<details'));
+    expect(details).toContain('a leitura não achou');
+    expect(html.slice(0, html.indexOf('<details'))).not.toContain('a leitura não achou');
     expect(html).not.toContain('Fill in project data');
     const empty = renderToStaticMarkup(<IssueGroupsList groups={[]} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} />);
     expect(empty).toContain('No problems');

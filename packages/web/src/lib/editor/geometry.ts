@@ -11,7 +11,9 @@
 
 import { axisOf, frameWalls, pointAt, sectionDepth, type Axis, type HouseWall, type Opening, type WallFrame } from 'core';
 import { draftFormat, isPlanWall, type DraftFormat, type DraftOpening, type DraftWall, type Point, type ProjectDraft, type WallSection } from './draft';
-import { idIndex, wallIdsIn, type IdIndex, type Issue } from './problems';
+import { noticeOfError, noticeText } from '@/lib/notices';
+import type { Notice } from '@/types/panels';
+import { issueFromNotice, type IdIndex, type Issue } from './problems';
 import { configFromDraft, resolveDraftOpening } from './resolve';
 
 export interface Rect {
@@ -31,6 +33,7 @@ export interface OpeningGeom {
   rect: Rect | undefined;
   /** Resolvida pelo core (tag, RO, posição). Falsa = desenhada tracejada com o que se sabe. */
   resolved: boolean;
+  /** Por que o core não resolveu (inglês). */
   error?: string;
   form: 'center' | 'offset' | 'none';
 }
@@ -62,7 +65,8 @@ export interface BrokenWall {
   wallId: string;
   start: Point;
   end: Point;
-  error: string;
+  /** O erro do core (código + frase original). */
+  error: Notice;
 }
 
 export interface PlanGeometry {
@@ -71,9 +75,10 @@ export interface PlanGeometry {
   broken: BrokenWall[];
   /** Caixa de tudo que se desenha; ausente sem paredes em planta. */
   bounds: Rect | undefined;
-  /** Mensagem do core quando a casa não fecha (`frameWalls` lançou). */
+  /** Por que a casa não fecha (`frameWalls` lançou), em inglês; o erro com código em `houseNotice`. */
   houseError: string | undefined;
-  /** Paredes citadas em `houseError`. */
+  houseNotice: Notice | undefined;
+  /** Paredes citadas no erro (a do erro e as `alsoWalls`). */
   houseErrorWalls: string[];
   levels: number[];
 }
@@ -109,7 +114,7 @@ export function planGeometry(draft: ProjectDraft, lastGood?: PlanGeometry): Plan
     try {
       axes.set(w.id, axisOf(hw));
     } catch (e) {
-      broken.push({ wallId: w.id, start: w.start, end: w.end, error: (e as Error).message });
+      broken.push({ wallId: w.id, start: w.start, end: w.end, error: noticeOfError(e) });
       continue;
     }
     houseWalls.push(hw);
@@ -117,18 +122,18 @@ export function planGeometry(draft: ProjectDraft, lastGood?: PlanGeometry): Plan
   }
 
   let frames: Map<string, WallFrame> | undefined;
-  let houseError: string | undefined;
+  let houseNotice: Notice | undefined;
   if (broken.length === 0) {
     try {
       frames = new Map(frameWalls({ walls: houseWalls }).map((f) => [f.wallId, f]));
     } catch (e) {
-      houseError = (e as Error).message;
+      houseNotice = noticeOfError(e);
     }
   } else {
-    houseError = broken[0]!.error;
+    houseNotice = broken[0]!.error;
   }
-  const ids = idIndex(draft);
-  const houseErrorWalls = houseError === undefined ? [] : wallIdsIn(houseError, ids);
+  const houseError = houseNotice === undefined ? undefined : noticeText(houseNotice);
+  const houseErrorWalls = houseNotice === undefined ? [] : [...(houseNotice.wallId === undefined ? [] : [houseNotice.wallId]), ...(houseNotice.alsoWalls ?? [])];
   const lastByWall = new Map((lastGood?.walls ?? []).map((g) => [g.wallId, g]));
 
   const walls: WallGeom[] = houseWalls.map((hw) => {
@@ -174,7 +179,7 @@ export function planGeometry(draft: ProjectDraft, lastGood?: PlanGeometry): Plan
 
   const rects = [...walls.map((w) => w.rect), ...broken.map((b) => segmentRect(b.start, b.end, 1))];
   const levels = [...new Set(walls.map((w) => w.level))].sort((a, b) => a - b);
-  return { format, walls, broken, bounds: union(rects), houseError, houseErrorWalls, levels };
+  return { format, walls, broken, bounds: union(rects), houseError, houseNotice, houseErrorWalls, levels };
 }
 
 function formOf(o: DraftOpening): 'center' | 'offset' | 'none' {
@@ -268,13 +273,9 @@ function snapTo(value: number, step: number): number {
 /** Problemas que só a geometria vê: casa que não fecha e paredes sem eixo. */
 export function geometryIssues(g: PlanGeometry, ids: IdIndex): Issue[] {
   const issues: Issue[] = [];
-  for (const b of g.broken) issues.push({ severity: 'problem', source: 'geometry', kind: 'wall.noAxis', text: b.error, wallId: b.wallId });
-  if (g.houseError !== undefined && g.broken.length === 0) {
-    const [wallId, ...alsoWalls] = wallIdsIn(g.houseError, ids);
-    const issue: Issue = { severity: 'problem', source: 'geometry', kind: 'plan.open', text: g.houseError };
-    if (wallId !== undefined) issue.wallId = wallId;
-    if (alsoWalls.length > 0) issue.alsoWalls = alsoWalls;
-    issues.push(issue);
+  for (const b of g.broken) issues.push({ ...issueFromNotice(b.error, 'problem', ids), source: 'geometry', kind: 'wall.noAxis', wallId: b.wallId });
+  if (g.houseNotice !== undefined && g.broken.length === 0) {
+    issues.push({ ...issueFromNotice(g.houseNotice, 'problem', ids), source: 'geometry', kind: 'plan.open' });
   }
   return issues;
 }

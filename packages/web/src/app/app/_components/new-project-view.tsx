@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useWorkspaceLayout } from "@/components/shell-layout";
 import { engineText } from "./editor/use-project-check";
+import { draftFromText } from "@/lib/editor/draft";
 import { describeAge, type SavedSession } from "@/lib/editor/persist";
 import {
   parseProjectFile,
@@ -31,6 +32,7 @@ import {
   type Reading,
 } from "@/lib/editor/project-file";
 import { projectPath, type ServerProject } from "@/lib/editor/project-sync";
+import { copyName } from "@/lib/projects";
 import type { SupabaseEnv } from "@/lib/supabase/env";
 import { idIndex } from "@/lib/editor/problems";
 import {
@@ -42,18 +44,19 @@ import { prefersReducedMotion } from "@/lib/motion";
 import type { ExtractJob, ExtractOutcome } from "@/types/extract";
 import type { Example, GenerateResult } from "@/types/panels";
 import { cancelExtraction } from "../_actions/cancel-extraction";
-import { createProjectAction } from "../_actions/create-project";
 import { extractionResult } from "../_actions/extraction-result";
 import { generatePanels } from "../_actions/generate-panels";
 import { AdvancedImport } from "./advanced-import";
 import { ConfirmDialog } from "./confirm-dialog";
 import { useProjectCheck } from "./editor/use-project-check";
+import { OriginalText } from "./editor/issue-text";
 import { WallEditor } from "./editor/wall-editor";
 import { ExtractProgress } from "./extract-progress";
 import { ResultView } from "./result-view";
 import { SampleCards } from './sample-cards';
 import { doneSteps, StepBar, type StepId } from "./step-bar";
 import { UploadForm } from "./upload-form";
+import { useProjectCreate, type CreateWhen } from "./use-project-create";
 import { useProjectSync } from "./use-project-sync";
 import { useSavedSession } from "./use-saved-session";
 
@@ -79,8 +82,9 @@ const SOURCE_LABEL: Record<DraftSource, string> = {
 /**
  * Nova obra em três telas (docs/10-design.md §4): cada passo ocupa a tela sozinho; a barra de passos leva de
  * volta aos concluídos. O passo 02 é o editor (S21): o projeto vive no `editorReducer` (draft, seleção,
- * histórico) e a leitura da IA (`outcome`) fica como proveniência. Estado no cliente até a S22 — com auto-save
- * no navegador e banner de retomada (M2), para uma leitura de 10 minutos não morrer num F5.
+ * histórico) e a leitura da IA (`outcome`) fica como proveniência. Com Supabase o projeto vive no servidor
+ * (S22, auto-save em `useProjectSync`); a sessão no navegador (M2, uma por projeto desde a S23) é o buffer de
+ * F5 e queda, com banner de retomada.
  */
 export function NewProjectView({
   examples,
@@ -125,7 +129,16 @@ export function NewProjectView({
       ),
   });
 
-  const { executeAsync: createOnServer } = useAction(createProjectAction);
+  // S22.1: o projeto ganha id no servidor na primeira abertura; a URL troca sem remontar a tela (os arquivos
+  // soltos no passo 01 continuam disponíveis para a planta de fundo). Sem Supabase, segue só no navegador.
+  // S23: o texto enviado é a baseline do auto-save (A2), "Start over" descarta a resposta em voo (A3), sample só
+  // cria na primeira edição (A6) — ver `useProjectCreate`.
+  const creation = useProjectCreate(editor, okOutcome, (created, copy) => {
+    setServer(created);
+    window.history.replaceState(null, "", projectPath(created.id));
+    if (copy !== undefined) toast.success(`Saved as “${copy}”.`);
+  });
+  const { opened: createOpened, cancel: cancelCreate } = creation;
   const openProject = useCallback(
     (
       text: string,
@@ -133,33 +146,18 @@ export function NewProjectView({
       reading: Reading | undefined,
       dirty = false,
       existing?: ServerProject,
+      /** Sample (A6): só ganha linha no banco na primeira edição. */
+      createWhen: CreateWhen = source === "sample" ? "on-edit" : "now",
     ) => {
+      createOpened(existing === undefined ? createWhen : undefined);
       setOutcome(reading);
       dispatch({ type: "load", text, source, dirty });
       setResult(undefined);
       setStep(2);
       setServer(existing);
-      if (existing !== undefined) {
-        window.history.replaceState(null, "", projectPath(existing.id));
-        return;
-      }
-      // S22.1: o projeto ganha id no servidor na primeira abertura; a URL troca sem remontar a tela (os arquivos
-      // soltos no passo 01 continuam disponíveis para a planta de fundo). Sem Supabase, segue só no navegador.
-      void createOnServer({ text, ...(reading?.projectName === undefined ? {} : { name: reading.projectName }) }).then((r) => {
-        const data = r.data;
-        if (data === undefined) {
-          toast.error(r.serverError ?? "Could not save the project on the server.");
-          return;
-        }
-        if (!data.ok) {
-          if (data.reason !== "unconfigured") toast.error(data.message);
-          return;
-        }
-        setServer({ id: data.id, revision: data.revision, savedAt: data.savedAt });
-        window.history.replaceState(null, "", projectPath(data.id));
-      });
+      if (existing !== undefined) window.history.replaceState(null, "", projectPath(existing.id));
     },
-    [createOnServer],
+    [createOpened],
   );
   const onOutcome = (o: ExtractOutcome) => {
     // Reconverter a leitura (project data) de um projeto já salvo mantém a identidade no servidor; uma leitura nova
@@ -177,6 +175,9 @@ export function NewProjectView({
   // M7: leitura em curso — cancelar e, para um job retomado depois de um F5, recolher o resultado do servidor.
   const { execute: cancelRead } = useAction(cancelExtraction);
   const { executeAsync: fetchResult } = useAction(extractionResult);
+  // `onOutcome` é recriado a cada render (lê `server`); o callback chama o do render mais recente.
+  const onOutcomeRef = useRef(onOutcome);
+  onOutcomeRef.current = onOutcome;
   const onResumedDone = useCallback(async () => {
     const current = job;
     if (current === undefined) return;
@@ -186,8 +187,7 @@ export function NewProjectView({
       toast.warning(
         "The read finished, but its result was already collected or has expired.",
       );
-    else onOutcome(r.data);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    else onOutcomeRef.current(r.data);
   }, [job, fetchResult]);
   const onResumedEnded = useCallback(
     (
@@ -212,6 +212,11 @@ export function NewProjectView({
       file.reading,
     );
   };
+  // Leitura gravada de exemplo (S23, A6): projeto novo — mesmo com outro aberto — que só vai ao banco na primeira edição.
+  const onSampleOutcome = (o: ExtractOutcome) => {
+    if (o.ok) openProject(o.projectText, "extraction", o, false, undefined, "on-edit");
+    else onOutcome(o);
+  };
   const openSample = (text: string) => {
     if (text.trim() !== "") openProject(text, "sample", undefined);
   };
@@ -221,6 +226,7 @@ export function NewProjectView({
     generate.execute({ projectText: engineText(editor.draft) });
   };
   const startOver = () => {
+    cancelCreate();
     setConfirmingStartOver(false);
     setOutcome(undefined);
     setResult(undefined);
@@ -261,15 +267,21 @@ export function NewProjectView({
     [openProject],
   );
   const onResumeJob = useCallback((j: ExtractJob) => setJob(j), []);
-  const session = useSavedSession(
-    editor,
-    okOutcome,
-    job,
-    onResume,
+  const session = useSavedSession(editor, okOutcome, job, onResume, {
     onResumeJob,
-    server,
-  );
+    project: server,
+    generation: creation.generation,
+  });
   const sync = useProjectSync(editor, okOutcome, server, setServer);
+
+  // Conflito ou projeto apagado (S23, A4): o que está no editor vira um projeto novo, "Copy of <nome>".
+  const saveAsCopy = () => {
+    if (editor.draft === undefined) return;
+    const name = copyName(editor.draft.name ?? okOutcome?.projectName ?? "Untitled project");
+    dispatch({ type: "updateProject", patch: { name } });
+    creation.copy(name);
+  };
+  const saveActions = { saveAsCopy, overwrite: sync.overwrite };
 
   // Projeto vindo da rota (S22.1): abre no editor; no passo 03 gera os painéis assim que o draft carrega.
   const loadedFromRoute = useRef(false);
@@ -277,12 +289,21 @@ export function NewProjectView({
     if (project === undefined || loadedFromRoute.current) return;
     loadedFromRoute.current = true;
     const file = parseProjectFile(project.text);
-    openProject(file.projectText, file.reading === undefined ? "file" : "extraction", file.reading, false, {
-      id: project.id,
-      revision: project.revision,
-      savedAt: project.savedAt,
-    });
+    const identity: ServerProject = { id: project.id, revision: project.revision, savedAt: project.savedAt };
+    // S23: edições deste navegador que não chegaram ao servidor (F5 no meio do debounce, rede, editor quebrado)
+    // sobre a mesma revisão voltam no lugar da versão do servidor; a baseline do auto-save é o texto do servidor, e
+    // as edições sobem logo em seguida.
+    const local = session.unsaved(project.id, project.revision, file.projectText);
+    const onServer = local === undefined ? undefined : draftFromText(file.projectText);
+    if (local !== undefined && onServer?.ok === true) {
+      openProject(local.text, file.reading === undefined ? "file" : "extraction", file.reading, true, { ...identity, text: projectFileText(onServer.draft, file.reading) });
+      toast("Restored your changes from this browser that hadn’t reached the server yet. Saving them now.");
+    } else {
+      openProject(file.projectText, file.reading === undefined ? "file" : "extraction", file.reading, false, identity);
+    }
     if (initialStep === 3) setStep(3);
+    // Uma vez por montagem (`loadedFromRoute`): `session` muda depois sem pedir nova carga.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, initialStep, openProject]);
   const autoGenerated = useRef(false);
   useEffect(() => {
@@ -290,6 +311,7 @@ export function NewProjectView({
     autoGenerated.current = true;
     generatedFrom.current = editor.revision;
     generate.execute({ projectText: engineText(editor.draft) });
+    // Uma vez (`autoGenerated`), quando o draft da rota chega ao passo 03; `generate` e `revision` não disparam.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStep, editor.draft, step]);
 
@@ -352,7 +374,7 @@ export function NewProjectView({
             : undefined
         }
       />
-      <SampleCards examples={examples} disabled={generate.isPending || extracting} onPick={openSample} onOutcome={onOutcome} />
+      <SampleCards examples={examples} disabled={generate.isPending || extracting} onPick={openSample} onOutcome={onSampleOutcome} />
       {devTools ? (
         <Card className="gap-3 p-5">
           <AdvancedImport onProjectFile={openFile} onOutcome={onOutcome} />
@@ -393,6 +415,7 @@ export function NewProjectView({
           storage={storage}
           save={sync.status}
           onRetrySave={sync.retry}
+          saveActions={saveActions}
         />
       ) : (
         <div className="space-y-8">
@@ -494,6 +517,9 @@ export function NewProjectView({
                     (outcome && !outcome.ok
                       ? outcome.message
                       : "Upload drawings or pick a sample first.")}
+                  {editor.loadError === undefined && outcome && !outcome.ok && outcome.detail !== undefined ? (
+                    <OriginalText text={outcome.detail} />
+                  ) : null}
                 </AlertDescription>
               </Alert>
             </section>

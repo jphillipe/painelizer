@@ -59,9 +59,18 @@ export function ProjectDataForm({ outcome, onOutcome, variant = 'card', confirm 
       toast.error(error.serverError ?? fieldMsg ?? 'Could not apply the project data.');
     },
   });
-  // S22.3: a reconversão mantém os desenhos do Storage de onde a leitura saiu.
+  // S22.3: a reconversão mantém os desenhos do Storage de onde a leitura saiu; S25: e a proveniência.
   const apply = (data: ProjectData): void =>
-    execute({ output: outcome.output, meta: { model: outcome.model, pagesSent: outcome.pagesSent ?? [], ...(outcome.drawings === undefined ? {} : { drawings: outcome.drawings }) }, data });
+    execute({
+      output: outcome.output,
+      meta: {
+        model: outcome.model,
+        pagesSent: outcome.pagesSent ?? [],
+        ...(outcome.drawings === undefined ? {} : { drawings: outcome.drawings }),
+        ...(outcome.provenance === undefined ? {} : { provenance: outcome.provenance }),
+      },
+      data,
+    });
   const setup = variant === 'setup';
   const required = needs?.required ?? [];
 

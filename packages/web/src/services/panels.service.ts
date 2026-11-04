@@ -9,12 +9,12 @@ import ringgoldReading from '@/samples/ringgold-st-multifamily-reading.json' wit
 import { buildProject, BuildError, panelizeProject, type BuildResult } from 'cli/build';
 import { EXAMPLES } from 'cli/examples';
 import { parseProject, ProjectError, type Project } from 'cli/project';
-import type { Panel } from 'core';
-import type { CheckResult, Example, GenerateResult, PanelSummary } from '@/types/panels';
+import { EngineError, noticeOf, type Panel } from 'core';
+import type { CheckResult, Example, GenerateResult, Notice, PanelSummary } from '@/types/panels';
 
 export type { CheckResult, Example, GeneratedFile, GenerateResult, PanelSummary } from '@/types/panels';
 
-type Run = { ok: true; project: Project; built: BuildResult } | { ok: false; problems: string[] };
+type Run = { ok: true; project: Project; built: BuildResult } | { ok: false; problems: Notice[] };
 
 /** Parser + motor. Nunca lança por causa do projeto: JSON inválido, parser e motor viram `problems`. */
 function run(projectText: string): Run {
@@ -26,14 +26,25 @@ function run(projectText: string): Run {
   }
 }
 
-function problemsOf(e: unknown): string[] {
-  if (e instanceof ProjectError) return [e.message];
-  if (e instanceof BuildError) return e.problems;
-  if (e instanceof RangeError) return [e.message];
+/** Erro do parser ou do motor → avisos com código (S26); o resto (bug) sobe. */
+function problemsOf(e: unknown): Notice[] {
+  if (e instanceof ProjectError) return [parserNotice(e)];
+  if (e instanceof BuildError) return e.problems.map((p) => ({ source: 'engine', ...p }));
+  if (e instanceof EngineError) return [{ source: 'engine', ...noticeOf(e) }];
+  if (e instanceof RangeError) return [{ source: 'engine', code: 'ENGINE_INTERNAL', message: e.message }];
   throw e;
 }
 
-function summarize(panels: readonly Panel[]): { panels: PanelSummary[]; warnings: string[] } {
+/** O caminho relativo ao projeto (`walls[2].openings`); erro do catálogo do core leva o código de lá. */
+function parserNotice(e: ProjectError): Notice {
+  const path = e.path.startsWith('project.') ? e.path.slice('project.'.length) : e.path;
+  if (e.kind === 'json') return { source: 'parser', code: 'PROJECT_JSON_INVALID', message: e.message };
+  const engine = e.engine;
+  if (engine === undefined) return { source: 'parser', code: 'PROJECT_INVALID', message: e.message, path, params: { path } };
+  return { source: 'parser', ...noticeOf(engine), message: e.message, path, params: { ...engine.params, path } };
+}
+
+function summarize(panels: readonly Panel[]): { panels: PanelSummary[]; warnings: Notice[] } {
   return {
     panels: panels.map((p) => ({
       id: p.id,
@@ -42,7 +53,7 @@ function summarize(panels: readonly Panel[]): { panels: PanelSummary[]; warnings
       pieces: p.members.reduce((n, m) => n + (m.plies ?? 1), 0),
       weightLb: p.weightLb,
     })),
-    warnings: panels.flatMap((p) => p.warnings.map((w) => `${p.id} ${w.code}: ${w.message}`)),
+    warnings: panels.flatMap((p) => p.warnings.map((w): Notice => ({ source: 'engine', panelId: p.id, ...w }))),
   };
 }
 
@@ -77,7 +88,7 @@ export function check(projectText: string): CheckResult {
   try {
     const project = parseProject(projectText, 'project');
     const { panels, problems } = panelizeProject(project);
-    if (problems.length > 0) return { ok: false, problems };
+    if (problems.length > 0) return { ok: false, problems: problems.map((p): Notice => ({ source: 'engine', ...p })) };
     return { ok: true, projectName: project.name, ...summarize(panels) };
   } catch (e) {
     return { ok: false, problems: problemsOf(e) };

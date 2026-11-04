@@ -28,10 +28,13 @@ export interface ProjectsTable {
   delete(id: string): Promise<boolean>;
 }
 
+/** Falha do Supabase com código (S26): a tela diz a frase de `lib/messages.en.ts`; `message` é o detalhe (inglês, do PostgREST/Storage). */
 export class ProjectsTableError extends Error {
-  constructor(message: string) {
+  readonly code: 'INSERT_NO_ROW' | 'DB_ERROR';
+  constructor(message: string, code: 'INSERT_NO_ROW' | 'DB_ERROR' = 'DB_ERROR') {
     super(message);
     this.name = 'ProjectsTableError';
+    this.code = code;
   }
 }
 
@@ -40,7 +43,7 @@ export function supabaseProjectsTable(client: SupabaseClient<Database>): Project
   return {
     async insert(row) {
       const { data, error } = await table().insert(row).select('id, revision, updated_at').single();
-      if (error !== null || data === null) throw new ProjectsTableError(error?.message ?? 'insert sem retorno');
+      if (error !== null || data === null) throw new ProjectsTableError(error?.message ?? 'insert returned no row', error === null ? 'INSERT_NO_ROW' : 'DB_ERROR');
       return data;
     },
     async get(id) {

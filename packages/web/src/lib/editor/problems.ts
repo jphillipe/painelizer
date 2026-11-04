@@ -2,12 +2,13 @@
  * Issues do editor (S21): o que o modelo, o parser do CLI, o motor e a extração apontam, cada um ligado à parede
  * e à abertura que cita, para a lista de issues selecionar a peça certa e a lista de paredes contar por linha.
  *
- * As mensagens do parser e do motor são strings em português (`parede W01, abertura J1: …`, `1-S2-P1
- * HEADER_JACKS_BELOW_TABLE: …`, `project.walls[2].openings[0].center: …`); o texto original fica intacto em
- * `text`, e os ids saem por varredura dos ids conhecidos do projeto (tokens inteiros, para `S2` não casar
- * dentro de `S2-D1` nem de `1-S2-P1`). Caminhos do parser (`walls[i]`) só valem para a revisão que foi checada.
+ * S26: motor, parser e leitura mandam `Notice` (código, ids, parâmetros); a parede e a abertura vêm dos campos,
+ * nunca do texto. O texto original (português) fica intacto em `text`, só para "Details"; a frase da tela é
+ * `issueMessage` (`lib/messages.en.ts`). Caminhos do parser (`walls[i]`) só valem para a revisão que foi checada.
  */
 
+import { englishMessage } from '@/lib/messages.en';
+import type { Notice } from '@/types/panels';
 import { draftFormat, isPlanWall, type DraftProblem, type ProjectDraft } from './draft';
 
 export type Severity = 'problem' | 'warning';
@@ -17,7 +18,7 @@ export type IssueSource = 'draft' | 'geometry' | 'parser' | 'engine' | 'extracti
 export interface Issue {
   severity: Severity;
   source: IssueSource;
-  /** Mensagem original, sem tradução. */
+  /** Mensagem original, sem tradução (o editor já escreve em inglês; motor e leitura, em português). */
   text: string;
   /** Família da issue do próprio editor (`wall.height`, `opening.position`, `plan.open`…): agrupa na lista (S21.4). */
   kind?: string;
@@ -29,6 +30,14 @@ export interface Issue {
   panelId?: string;
   /** Caminho do campo (`walls[2].openings[0].center`), quando a mensagem o traz. */
   path?: string;
+  /** Parâmetros do código (S26): é deles que sai a frase em inglês. */
+  params?: Readonly<Record<string, unknown>>;
+  hypothesis?: string;
+  /**
+   * Parede e abertura como o aviso as citou, existam ou não no draft: a abertura que a leitura deixou fora
+   * (`OPENING_UNPLACED`) não está no projeto, mas o "Add opening" precisa do id dela.
+   */
+  cited?: { wallId?: string; openingId?: string };
 }
 
 /** Ids do projeto na ordem do arquivo: os índices dos caminhos do parser mapeiam por aqui. */
@@ -46,131 +55,86 @@ export function idIndex(draft: ProjectDraft): IdIndex {
 }
 
 const PATH_RE = /(?:^|[\s.:])walls\[(\d+)\](?:\.openings\[(\d+)\])?((?:\.[A-Za-z]+(?:\[\d+\])?)*)/;
-const SOURCE_RE = /^(parser|motor|planta|altura|lista de material): /;
-const EXTRACTION_RE = /^extração ([A-Z][A-Z0-9_]*): /;
-const WARNING_RE = /^(\S+) ([A-Z][A-Z0-9_]+): /;
-const PANEL_ID_RE = /^(\d+)-(.+)-P(\d+)$/;
+const PANEL_ID_RE = /^\d+-(.+)-P\d+$/;
 
-/** Problema (string do service ou da extração) → issue com a parede e a abertura que ele cita. */
-export function parseProblem(text: string, ids: IdIndex): Issue {
-  return locate({ severity: 'problem', source: 'engine', text }, text, ids);
+/** A frase em inglês da issue: a do código (com os parâmetros), senão o próprio texto (o editor já escreve em inglês). */
+export function issueMessage(issue: Issue): string {
+  if (issue.code === undefined) return issue.text;
+  return englishMessage({ code: issue.code, wallId: issue.cited?.wallId ?? issue.wallId, openingId: issue.cited?.openingId ?? issue.openingId, panelId: issue.panelId, path: issue.path, params: issue.params }) ?? issue.text;
 }
 
-/** Aviso do motor (`<painel> CODE: …`) ou da extração (`extração CODE: …`) → issue. */
-export function parseWarning(text: string, ids: IdIndex): Issue {
-  const issue: Issue = { severity: 'warning', source: 'engine', text };
-  const ext = EXTRACTION_RE.exec(text);
-  if (ext) return locate(issue, text, ids);
-  const m = WARNING_RE.exec(text);
-  if (m) {
-    const panelId = m[1]!;
-    issue.code = m[2]!;
-    issue.panelId = panelId;
-    const p = PANEL_ID_RE.exec(panelId);
-    const wallId = p !== null && ids.walls.includes(p[2]!) ? p[2]! : undefined;
-    if (wallId !== undefined) issue.wallId = wallId;
-    const rest = text.slice(m[0].length);
-    const found = idsInMessage(rest, ids, wallId);
-    if (issue.wallId === undefined && found.wallId !== undefined) issue.wallId = found.wallId;
-    if (found.openingId !== undefined) issue.openingId = found.openingId;
-    return issue;
-  }
-  return locate(issue, text, ids);
+/** O texto original difere da frase mostrada: "Details" tem algo a acrescentar. */
+export function hasOriginal(issue: Issue): boolean {
+  return issueMessage(issue) !== issue.text;
 }
 
-export function parseEngineResult(r: { problems?: readonly string[]; warnings?: readonly string[] }, ids: IdIndex): Issue[] {
-  return [...(r.problems ?? []).map((p) => parseProblem(p, ids)), ...(r.warnings ?? []).map((w) => parseWarning(w, ids))];
+/** Família do editor que o código repete (o draft já aponta o mesmo em inglês): a lista mostra uma vez. */
+function kindOf(n: Notice): string | undefined {
+  if (n.code === 'HEADER_DATA_MISSING') return n.params?.['missing'] === 'floorsSupported' ? 'wall.floorsSupported' : 'config.building';
+  if (n.code === 'WALL_HEIGHT_MISSING') return 'wall.height';
+  if (n.stage === 'plan') return 'plan.open'; // mesma família do erro que a geometria vê no cliente
+  // Campo do config que o parser recusou: a família do draft (`config.studLength` vazio = "precut stud lengths are missing").
+  const config = n.path === undefined ? null : /^(config\.[A-Za-z]+)/.exec(n.path);
+  if (config) return config[1]!;
+  return undefined;
 }
 
-function locate(issue: Issue, text: string, ids: IdIndex): Issue {
-  let body = text;
-  const ext = EXTRACTION_RE.exec(body);
-  if (ext) {
-    issue.source = 'extraction';
-    issue.code = ext[1]!;
-    body = body.slice(ext[0].length);
-  } else {
-    const src = SOURCE_RE.exec(body);
-    if (src) {
-      const tag = src[1]!;
-      issue.source = tag === 'parser' ? 'parser' : tag === 'altura' || tag === 'lista de material' ? 'project' : 'engine';
-      if (tag === 'planta') issue.kind = 'plan.open'; // mesma família do erro que a geometria vê no cliente
-      body = body.slice(src[0].length);
-    }
-    // O motor pede o mesmo que o draft já apontou: mesma família, para a lista não mostrar duas vezes.
-    if (/sem config\.building/.test(body)) issue.kind = 'config.building';
-    else if (/sem wall\.floorsSupported/.test(body)) issue.kind = 'wall.floorsSupported';
-    else if (/^altura: /.test(text)) issue.kind = 'wall.height';
-    if (issue.source === 'project') return issue; // lista paredes por nome, mas o problema é do projeto inteiro
+/** Aviso/problema com código → issue ligada à parede e à abertura do draft. */
+export function issueFromNotice(n: Notice, severity: Severity, ids: IdIndex): Issue {
+  const source: IssueSource = n.stage === 'bom' || n.code === 'WALL_HEIGHT_MISSING' ? 'project' : (n.source ?? 'engine');
+  const issue: Issue = { severity, source, text: n.message, code: n.code };
+  const kind = kindOf(n);
+  if (kind !== undefined) issue.kind = kind;
+  if (n.params !== undefined) issue.params = n.params;
+  if (n.hypothesis !== undefined) issue.hypothesis = n.hypothesis;
+  if (n.panelId !== undefined) issue.panelId = n.panelId;
+  if (n.wallId !== undefined || n.openingId !== undefined) {
+    issue.cited = { ...(n.wallId === undefined ? {} : { wallId: n.wallId }), ...(n.openingId === undefined ? {} : { openingId: n.openingId }) };
   }
-  const path = PATH_RE.exec(body);
-  if (path) {
-    issue.source = issue.source === 'engine' ? 'parser' : issue.source;
-    const wallId = ids.walls[Number(path[1])];
-    if (wallId !== undefined) {
-      issue.wallId = wallId;
-      if (path[2] !== undefined) {
-        const openingId = ids.openings.get(wallId)?.[Number(path[2])];
-        if (openingId !== undefined) issue.openingId = openingId;
-      }
-    }
-    issue.path = `walls[${path[1]}]${path[2] === undefined ? '' : `.openings[${path[2]}]`}${path[3] ?? ''}`;
-    return issue;
-  }
-  const found = idsInMessage(body, ids);
-  if (found.wallId !== undefined) issue.wallId = found.wallId;
-  if (found.openingId !== undefined) issue.openingId = found.openingId;
-  const others = wallIdsIn(body, ids).filter((w) => w !== issue.wallId);
-  if (issue.wallId !== undefined && others.length > 0) issue.alsoWalls = others;
-  return issue;
-}
+  if (source === 'project') return issue; // lista paredes por nome, mas o problema é do projeto inteiro
 
-const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const whole = (id: string): RegExp => new RegExp(`(?<![A-Za-z0-9_-])${escapeRe(id)}(?![A-Za-z0-9_-])`);
-
-/**
- * Parede e abertura citadas numa mensagem: `parede W01`, `paredes N1 e S1`, `"W01"` (id duplicado) ou, no
- * fim, qualquer id conhecido com 2+ caracteres como token inteiro. A abertura vem de `abertura <id>` e precisa
- * existir na parede achada (ou em qualquer parede, que então define a parede).
- */
-export function idsInMessage(text: string, ids: IdIndex, preferWall?: string): { wallId?: string; openingId?: string } {
-  const out: { wallId?: string; openingId?: string } = {};
-  const named = [...text.matchAll(/\bparedes? ([^\s:,()]+)/g)].map((m) => m[1]!);
-  const quoted = [...text.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
-  const candidates = [...named, ...quoted].find((c) => ids.walls.includes(c));
-  if (preferWall !== undefined) out.wallId = preferWall;
-  else if (candidates !== undefined) out.wallId = candidates;
-  else {
-    const byLength = [...ids.walls].filter((w) => w.length >= 2).sort((a, b) => b.length - a.length);
-    const hit = byLength.find((w) => whole(w).test(text));
-    if (hit !== undefined) out.wallId = hit;
+  if (n.path !== undefined) locatePath(issue, n.path, ids);
+  let wallId = n.wallId !== undefined && ids.walls.includes(n.wallId) ? n.wallId : issue.wallId;
+  if (wallId === undefined && n.panelId !== undefined) {
+    const p = PANEL_ID_RE.exec(n.panelId);
+    if (p !== null && ids.walls.includes(p[1]!)) wallId = p[1]!;
   }
-  const ab = /\babertura ([^\s:,()]+)/.exec(text);
-  if (ab) {
-    const openingId = ab[1]!;
-    if (out.wallId !== undefined && ids.openings.get(out.wallId)?.includes(openingId)) {
-      out.openingId = openingId;
-    } else {
-      for (const [wallId, list] of ids.openings) {
-        if (list.includes(openingId)) {
-          out.wallId = wallId;
-          out.openingId = openingId;
+  if (n.openingId !== undefined) {
+    if (wallId !== undefined && ids.openings.get(wallId)?.includes(n.openingId)) issue.openingId = n.openingId;
+    else if (wallId === undefined) {
+      for (const [w, list] of ids.openings) {
+        if (list.includes(n.openingId)) {
+          wallId = w;
+          issue.openingId = n.openingId;
           break;
         }
       }
     }
   }
-  return out;
+  if (wallId !== undefined) issue.wallId = wallId;
+  const others = (n.alsoWalls ?? []).filter((w) => w !== wallId && ids.walls.includes(w));
+  if (others.length > 0) issue.alsoWalls = others;
+  return issue;
 }
 
-/** Todas as paredes citadas numa mensagem como token inteiro (mais longas primeiro), na ordem em que aparecem. */
-export function wallIdsIn(text: string, ids: IdIndex): string[] {
-  const hits: { id: string; at: number }[] = [];
-  for (const id of [...ids.walls].sort((a, b) => b.length - a.length)) {
-    const m = whole(id).exec(text);
-    if (m !== null && !hits.some((h) => h.at <= m.index && m.index < h.at + h.id.length)) hits.push({ id, at: m.index });
+export function parseEngineResult(r: { problems?: readonly Notice[]; warnings?: readonly Notice[] }, ids: IdIndex): Issue[] {
+  return [...(r.problems ?? []).map((p) => issueFromNotice(p, 'problem', ids)), ...(r.warnings ?? []).map((w) => issueFromNotice(w, 'warning', ids))];
+}
+
+/** Caminho do parser (`walls[2].openings[0].center`, estrutural) → parede e abertura pelo índice. */
+function locatePath(issue: Issue, text: string, ids: IdIndex): Issue {
+  const path = PATH_RE.exec(text);
+  if (!path) return issue;
+  const wallId = ids.walls[Number(path[1])];
+  if (wallId !== undefined) {
+    issue.wallId = wallId;
+    if (path[2] !== undefined) {
+      const openingId = ids.openings.get(wallId)?.[Number(path[2])];
+      if (openingId !== undefined) issue.openingId = openingId;
+    }
   }
-  return hits.sort((a, b) => a.at - b.at).map((h) => h.id);
+  issue.path = `walls[${path[1]}]${path[2] === undefined ? '' : `.openings[${path[2]}]`}${path[3] ?? ''}`;
+  return issue;
 }
 
 /** O que o modelo já sabe antes do parser: campos obrigatórios ausentes, ids repetidos, formato misto, catálogo. */
@@ -182,7 +146,7 @@ export function draftIssues(draft: ProjectDraft, load: readonly DraftProblem[]):
     const issue: Issue = { severity: 'problem', source: 'draft', text: p.path === '' ? p.text : `${p.path}: ${p.text}` };
     const config = /^(?:project\.)?(config\.[A-Za-z]+)/.exec(p.path);
     if (config) issue.kind = config[1]!;
-    return locate(issue, p.path, ids);
+    return locatePath(issue, p.path, ids);
   });
   const problem = (kind: string, text: string, loc: { wallId?: string; openingId?: string } = {}): void => {
     issues.push({ severity: 'problem', source: 'draft', kind, text, ...loc });

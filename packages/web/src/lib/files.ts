@@ -98,11 +98,11 @@ export function fileLabel(path: string, panelId?: string): string {
   return path;
 }
 
-/** Nº de avisos por painel (M3; o resultado os mostra na lista de folhas): os avisos do motor começam com o id do painel. */
-export function warningsByPanel(warnings: readonly string[], panelIds: readonly string[]): Map<string, number> {
+/** Nº de avisos por painel (M3; o resultado os mostra na lista de folhas): os avisos do motor trazem `panelId` (S26). */
+export function warningsByPanel(warnings: readonly { panelId?: string }[], panelIds: readonly string[]): Map<string, number> {
   const out = new Map<string, number>();
   for (const w of warnings) {
-    const id = panelIds.find((p) => w.startsWith(`${p} `));
+    const id = w.panelId === undefined ? undefined : panelIds.find((p) => p === w.panelId);
     if (id !== undefined) out.set(id, (out.get(id) ?? 0) + 1);
   }
 

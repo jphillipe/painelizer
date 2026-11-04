@@ -19,10 +19,13 @@ export interface DrawingsStore {
   copy(from: string, to: string): Promise<void>;
 }
 
+/** Falha do Supabase com código (S26): a tela diz a frase de `lib/messages.en.ts`; `message` é o detalhe (inglês, do PostgREST/Storage). */
 export class DrawingsStoreError extends Error {
-  constructor(message: string) {
+  readonly code: 'DOWNLOAD_NO_DATA' | 'STORAGE_ERROR';
+  constructor(message: string, code: 'DOWNLOAD_NO_DATA' | 'STORAGE_ERROR' = 'STORAGE_ERROR') {
     super(message);
     this.name = 'DrawingsStoreError';
+    this.code = code;
   }
 }
 
@@ -31,7 +34,7 @@ export function supabaseDrawingsStore(client: SupabaseClient<Database>): Drawing
   return {
     async download(path) {
       const { data, error } = await bucket().download(path);
-      if (error !== null || data === null) throw new DrawingsStoreError(error?.message ?? `download sem retorno: ${path}`);
+      if (error !== null || data === null) throw new DrawingsStoreError(error?.message ?? `download returned no data: ${path}`, error === null ? 'DOWNLOAD_NO_DATA' : 'STORAGE_ERROR');
       return new Uint8Array(await data.arrayBuffer());
     },
     async list(prefix) {

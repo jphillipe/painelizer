@@ -73,7 +73,8 @@ describe('planGeometry: casa que não fecha', () => {
     // W05 interna (264,0 → 264,336) cortada por uma parede nova horizontal no meio da casa.
     d.walls.push({ id: 'X1', start: { x: 100, y: 168 }, end: { x: 400, y: 168 }, section: '2x4', exterior: false, bearing: false, height: 97.125, openings: [] });
     const g = planGeometry(d);
-    expect(g.houseError).toMatch(/cruzam/);
+    expect(g.houseError).toBe('Walls W05 and X1 cross at (264, 168) — split one of them at the crossing.');
+    expect(g.houseNotice).toMatchObject({ code: 'WALLS_CROSS', wallId: 'W05', alsoWalls: ['X1'] });
     expect(g.houseErrorWalls).toEqual(['W05', 'X1']);
     expect(g.walls).toHaveLength(6);
     expect(g.walls.every((w) => !w.framed)).toBe(true);
@@ -107,7 +108,8 @@ describe('planGeometry: casa que não fecha', () => {
     const g = planGeometry(d);
     expect(g.broken.map((b) => b.wallId)).toEqual(['W05']);
     expect(g.walls).toHaveLength(4);
-    expect(g.houseError).toMatch(/fora dos eixos/);
+    expect(g.houseError).toMatch(/^Wall W05: not parallel to the x or y axis/);
+    expect(g.broken[0]!.error).toMatchObject({ code: 'WALL_OFF_AXIS', wallId: 'W05' });
     const issues = geometryIssues(g, idIndex(d));
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ wallId: 'W05', source: 'geometry' });

@@ -21,7 +21,7 @@ import {
   type Point,
   type ProjectDraft,
 } from './draft';
-import { UNDERLAY_KEY, underlayOf, type Underlay } from './underlay';
+import { inView, UNDERLAY_KEY, underlayOf, withoutView, type Underlay, type UnderlayView } from './underlay';
 
 export type Selection =
   | { kind: 'none' }
@@ -49,6 +49,13 @@ export interface EditorState {
   revision: number;
   /** Alguma edição desde a carga. */
   dirty: boolean;
+  /** Opacidade/visibilidade do underlay (S23): estado de UI, fora do draft — não grava nem sobe `revision`. */
+  underlayView?: UnderlayView;
+}
+
+/** Underlay do draft como a planta o mostra (com a vista do editor por cima). */
+export function viewedUnderlay(state: Pick<EditorState, 'draft' | 'underlayView'>): Underlay | undefined {
+  return state.draft === undefined ? undefined : inView(underlayOf(state.draft), state.underlayView);
 }
 
 export type EditorAction =
@@ -77,7 +84,7 @@ export type EditorAction =
   | { type: 'setReviewed'; wallId: string; reviewed: boolean }
   /** Planta do arquiteto por baixo (M6): imagem e calibração em `$underlay` na raiz; `undefined` remove. Undoável. */
   | { type: 'setUnderlay'; underlay: Underlay | undefined }
-  /** Só opacidade/visibilidade do underlay: muda o draft sem histórico nem `dirty` (é vista, não edição). */
+  /** Só opacidade/visibilidade do underlay: estado de UI (S23) — o draft, a revisão e o histórico não mudam. */
   | { type: 'setUnderlayView'; opacity?: number; visible?: boolean }
   /** `preset` (S21.4): id e tag que a leitura já tinha para uma abertura que ficou fora do projeto (sem posição). */
   | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
@@ -242,16 +249,19 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     }
     case 'setUnderlay': {
       const extra = { ...(d.extra ?? {}) };
+      const before = underlayOf(d);
       if (action.underlay === undefined) delete extra[UNDERLAY_KEY];
-      else extra[UNDERLAY_KEY] = action.underlay;
-      return commit(state, Object.keys(extra).length === 0 ? omit(d, 'extra') : { ...d, extra });
+      else extra[UNDERLAY_KEY] = withoutView(action.underlay);
+      const next = commit(state, Object.keys(extra).length === 0 ? omit(d, 'extra') : { ...d, extra });
+      // Desenho novo (ou removido) volta à vista padrão; calibrar o mesmo desenho mantém a vista.
+      return action.underlay === undefined || action.underlay.image !== before?.image ? omit(next, 'underlayView') : next;
     }
     case 'setUnderlayView': {
-      const current = underlayOf(d);
+      const current = viewedUnderlay(state);
       if (current === undefined) return state;
-      const next: Underlay = { ...current, ...(action.opacity === undefined ? {} : { opacity: action.opacity }), ...(action.visible === undefined ? {} : { visible: action.visible }) };
-      if (next.opacity === current.opacity && next.visible === current.visible) return state;
-      return { ...state, draft: { ...d, extra: { ...(d.extra ?? {}), [UNDERLAY_KEY]: next } }, revision: state.revision + 1 };
+      const next = inView(current, action);
+      if (next === undefined || (next.opacity === current.opacity && next.visible === current.visible)) return state;
+      return { ...state, underlayView: { opacity: next.opacity, visible: next.visible } };
     }
     case 'setReviewed': {
       const w = d.walls.find((x) => x.id === action.wallId);

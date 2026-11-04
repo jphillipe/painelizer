@@ -56,7 +56,7 @@ export function SampleCards({ examples, disabled, onPick, onOutcome }: SampleCar
                 onClick={() => {
                   if (reading) {
                     setLoadingId(e.id);
-                    execute({ responseJson: e.text });
+                    execute({ sampleId: e.id });
                   } else onPick(e.text);
                 }}
                 className={cn(

@@ -16,7 +16,9 @@ const config: NextConfig = {
     serverActions: { bodySizeLimit: '300mb' },
     // O proxy de login (src/proxy.ts, S22.0) guarda o corpo do pedido, e esse buffer tem teto próprio: 10 MB por
     // padrão. Acima disso o corpo chega truncado à action ("Unexpected end of form", 500) — visto com um conjunto
-    // de 19,7 MB em 2026-11-03. Mesmo teto do serverActions; o do Cloud Run (32 MB por pedido) continua até a S22.3.
+    // de 19,7 MB em 2026-11-03. Com Supabase (S22.3) os desenhos sobem direto ao Storage e a action só recebe os
+    // caminhos; os 300 MB valem para o caminho sem Supabase (desenvolvimento), em que os arquivos vão no corpo.
+    // No Cloud Run esse caminho continua preso aos 32 MB por pedido.
     proxyClientMaxBodySize: '300mb',
   },
 };

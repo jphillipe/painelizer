@@ -39,7 +39,7 @@ export interface UploadFormProps {
 }
 
 const AUTO = 'auto';
-/** Acima disto a prévia (que sobe os arquivos) só sob pedido. */
+/** Acima disto não há prévia (nem custo no botão), porque a prévia sobe os arquivos. O estado de "pedir a prévia" não tinha botão e saiu na S27. */
 const AUTO_PREVIEW_BYTES = 40 * 1024 * 1024;
 const PREVIEW_DELAY_MS = 800;
 
@@ -58,8 +58,6 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
   const upload = useDrawingsUpload(storage, files);
   const [filesError, setFilesError] = useState<string | undefined>(undefined);
   const [preview, setPreview] = useState<ExtractPreview | undefined>(undefined);
-  const [previewing, setPreviewing] = useState(false);
-  const [previewWanted, setPreviewWanted] = useState(false);
   const startedAt = useRef(0);
   const previewSeq = useRef(0);
   const form = useForm<UploadFields>({
@@ -96,22 +94,21 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
   // Prévia (M7): 800 ms depois da última mudança em arquivos, páginas ou pavimento; sem arquivos, nada.
   const uploadsReady = !upload.enabled || upload.refs !== undefined;
   useEffect(() => {
-    if (files.length === 0 || (!previewAuto && !previewWanted) || !uploadsReady) {
+    if (files.length === 0 || !previewAuto || !uploadsReady) {
       setPreview(undefined);
       return;
     }
     const seq = (previewSeq.current += 1);
-    setPreviewing(true);
     const timer = setTimeout(() => {
       void runPreview(formData()).then((r) => {
         if (seq !== previewSeq.current) return;
-        setPreviewing(false);
         setPreview(r.data ?? { ok: false, message: r.serverError ?? 'Could not preview the set.' });
       });
     }, PREVIEW_DELAY_MS);
     return () => clearTimeout(timer);
+    // `formData` é recriado a cada render, mas só lê arquivos, refs, páginas e pavimento, que estão nas deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, pagesField, levelField, previewAuto, previewWanted, uploadsReady, upload.refs]);
+  }, [files, pagesField, levelField, previewAuto, uploadsReady, upload.refs]);
 
   const submit = (fields: UploadFields) => {
     if (files.length === 0) {
@@ -134,7 +131,9 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
     onFilesChange?.(next);
     if (next.length > 0) setFilesError(undefined);
   };
-  const estimate = preview?.ok ? estimateCost(preview.pagesTotal, preview.images, preview.tiles.count) : undefined;
+  const estimate = preview?.ok
+    ? estimateCost({ pages: preview.pagesTotal, images: preview.images, tiles: preview.tiles.count, ...(preview.textChars === undefined ? {} : { textChars: preview.textChars }) })
+    : undefined;
 
   return (
     <Form {...form}>
@@ -290,6 +289,7 @@ export function UploadForm({ aiEnabled, onOutcome, onJobChange, onSample, onFile
             {preview?.ok
               ? `${preview.pagesTotal} page${preview.pagesTotal === 1 ? '' : 's'}${preview.tiles.count > 0 ? ` + ${preview.tiles.count} high-res crop${preview.tiles.count === 1 ? '' : 's'} of the plan` : ''} go to the AI · `
               : ''}
+            {estimate?.outputAtRisk === true ? 'This set is large: the AI may run out of room before it finishes the answer — pick the sheets (plan, schedules, wall types) to be safe. ' : ''}
             The read takes several minutes and can be cancelled. You review every wall before anything is built.
             {onSample !== undefined ? (
               <>

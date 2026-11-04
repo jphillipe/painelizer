@@ -5,8 +5,10 @@
  * Puro; sem DOM.
  */
 
+import { readingNotices } from 'extract/notices';
 import { textFromDraft, type ProjectDraft } from './draft';
-import type { ExtractOutcome } from '@/types/extract';
+import type { ExtractOutcome, ReadingProvenance } from '@/types/extract';
+import type { Notice } from '@/types/panels';
 
 export type Reading = Extract<ExtractOutcome, { ok: true }>;
 
@@ -60,6 +62,37 @@ export function parseProjectFile(text: string): ParsedProjectFile {
   return { projectText, reading };
 }
 
+/**
+ * Avisos e problemas de uma leitura gravada: objetos com código (S26) passam; texto de antes da S26
+ * (`extração ABERTURA_SEM_POSICAO: …`, `1-S2-P1 CODE: …`) vira aviso com o código novo (`extract/notices`).
+ */
+export function storedNotices(raw: unknown): Notice[] {
+  return readingNotices(raw) as Notice[];
+}
+
+/** Leitura vinda de fora (sessão do navegador, job guardado no banco): avisos no formato atual. */
+export function normalizeReading<T extends ExtractOutcome>(r: T): T {
+  if (!r.ok) return r;
+  // Só o que existe: uma leitura sem a lista continua sem ela.
+  return {
+    ...r,
+    ...(Array.isArray(r.problems) ? { problems: storedNotices(r.problems) } : {}),
+    ...(Array.isArray(r.warnings) ? { warnings: storedNotices(r.warnings) } : {}),
+  };
+}
+
+function isProvenance(v: unknown): v is ReadingProvenance {
+  if (v === null || typeof v !== 'object') return false;
+  const p = v as Partial<ReadingProvenance>;
+  return (
+    typeof p.promptHash === 'string' &&
+    typeof p.model === 'string' &&
+    typeof p.effort === 'string' &&
+    typeof p.maxTokens === 'number' &&
+    (p.tiles === false || (p.tiles !== null && typeof p.tiles === 'object'))
+  );
+}
+
 function readingFrom(meta: unknown, projectText: string): Reading | undefined {
   if (meta === null || typeof meta !== 'object') return undefined;
   const m = meta as { version?: unknown; reading?: unknown };
@@ -77,13 +110,15 @@ function readingFrom(meta: unknown, projectText: string): Reading | undefined {
     walls: r.walls,
     openingTypes: Array.isArray(r.openingTypes) ? r.openingTypes : [],
     notes: Array.isArray(r.notes) ? r.notes : [],
-    problems: Array.isArray(r.problems) ? r.problems : [],
-    warnings: Array.isArray(r.warnings) ? r.warnings : [],
+    problems: storedNotices(r.problems),
+    warnings: storedNotices(r.warnings),
     report: typeof r.report === 'string' ? r.report : '',
     model: r.model,
     usage: r.usage ?? { inputTokens: 0, outputTokens: 0 },
     pagesSent: Array.isArray(r.pagesSent) ? r.pagesSent : [],
     // S22.3: os desenhos no Storage viajam com a leitura (o underlay de um projeto reaberto baixa de lá).
     ...(Array.isArray(r.drawings) ? { drawings: r.drawings } : {}),
+    // S25: com que prompt, modelo, effort e recortes a leitura foi feita.
+    ...(isProvenance(r.provenance) ? { provenance: r.provenance } : {}),
   };
 }

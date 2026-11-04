@@ -59,15 +59,18 @@ export function ResultSheets({ sheets, panels, warningsByPanel, selected, onSele
   // ← → trocam de folha quando a aba está aberta numa folha só (não em campos nem com a lupa aberta).
   useEffect(() => {
     if (showAll || zoomOpen) return;
+    const step = (delta: number): void => {
+      const next = sheets[index + delta];
+      if (next !== undefined) onSelect(next.panelId);
+    };
     const onKey = (e: KeyboardEvent): void => {
       if (inEditableContext(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === 'ArrowLeft') go(-1);
-      else if (e.key === 'ArrowRight') go(1);
+      if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'ArrowRight') step(1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAll, zoomOpen, index, sheets]);
+  }, [showAll, zoomOpen, index, sheets, onSelect]);
 
   const openInTab = (s: Sheet): void => {
     const url = URL.createObjectURL(new Blob([s.svg], { type: 'image/svg+xml' }));

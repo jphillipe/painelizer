@@ -26,10 +26,10 @@ export function AdvancedImport({ onProjectFile, onOutcome }: AdvancedImportProps
     onError: ({ error }) => toast.error(error.serverError ?? 'Could not load the recorded response.'),
   });
 
-  const read = async (input: HTMLInputElement, use: (text: string) => void) => {
+  const read = async (input: HTMLInputElement, apply: (text: string) => void) => {
     const file = input.files?.[0];
     if (!file) return;
-    use(await file.text());
+    apply(await file.text());
     // Mesmo arquivo de novo (depois de "Start over") dispara `change` outra vez.
     input.value = '';
   };

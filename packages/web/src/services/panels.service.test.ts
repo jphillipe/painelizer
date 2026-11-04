@@ -31,19 +31,20 @@ describe('panels.service.generate', () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it('ringgold: os 2 avisos de jacks chegam como texto com o id do painel', () => {
+  it('ringgold: os 2 avisos de jacks chegam com código, painel e parede (S26)', () => {
     const r = generate(exampleText('ringgold-checkpoint') as string);
-    if (!r.ok) throw new Error(r.problems.join('\n'));
+    if (!r.ok) throw new Error(r.problems.map((p) => p.message).join('\n'));
     expect(r.warnings).toHaveLength(2);
-    expect(r.warnings[0]).toMatch(/^1-S2-P1 HEADER_JACKS_BELOW_TABLE: /);
+    expect(r.warnings[0]).toMatchObject({ source: 'engine', panelId: '1-S2-P1', code: 'HEADER_JACKS_BELOW_TABLE', wallId: 'S2' });
+    expect(r.warnings[0]!.message).not.toMatch(/hipótese/);
     expect(r.files.some((f) => f.path === 'plan.svg')).toBe(false); // paredes soltas: sem planta
   });
 
   it('JSON inválido e projeto inválido viram problems, não exceção', () => {
-    expect(generate('{')).toEqual({ ok: false, problems: [expect.stringContaining('JSON inválido')] });
+    expect(generate('{')).toEqual({ ok: false, problems: [expect.objectContaining({ source: 'parser', code: 'PROJECT_JSON_INVALID' })] });
     const r = generate(JSON.stringify({ name: 'x', config: { studSpacing: 16, studLength: [92.625] }, walls: [] }));
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.problems[0]).toMatch(/nenhuma parede/);
+    if (!r.ok) expect(r.problems[0]).toMatchObject({ source: 'parser', code: 'PROJECT_INVALID', path: 'walls' });
   });
 
   it('erro do motor (header fora da tabela) vira problems do motor', () => {
@@ -59,7 +60,7 @@ describe('panels.service.generate', () => {
     });
     const r = generate(text);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.problems[0]).toMatch(/header fora da tabela/);
+    if (!r.ok) expect(r.problems[0]).toMatchObject({ source: 'engine', code: 'HEADER_OUT_OF_TABLE', wallId: 'W1', openingId: 'J', stage: 'wall', params: { why: 'span' } });
   });
 });
 
@@ -79,7 +80,7 @@ describe('panels.service.check', () => {
     const bad = JSON.stringify({ name: 'x', config: { studSpacing: 16, studLength: [92.625] }, walls: [{ id: 'W1', length: 96, height: 97, section: '2x4', exterior: false, bearing: false, openings: [{ id: 'D', type: 'door', offset: 90, roughWidth: 38, roughHeight: 82.5 }] }] });
     const r = check(bad);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.problems[0]).toMatch(/parede W1/);
+    if (!r.ok) expect(r.problems[0]).toMatchObject({ wallId: 'W1', openingId: 'D' });
   });
 });
 
@@ -93,5 +94,20 @@ describe('listExamples', () => {
     expect(list[2]!.facts).toBe('5 walls · 12 panels');
     expect(JSON.parse(list[0]!.text)).toMatchObject({ projectName: 'Ringgold St MultiFamily' });
     expect(exampleText('nope')).toBeUndefined();
+  });
+});
+
+describe('S26: nada em português na frase dos avisos dos exemplos', () => {
+  it('28x40, casa-exemplo e Ringgold solto: todo aviso tem código com frase em inglês', async () => {
+    const { englishMessage } = await import('@/lib/messages.en');
+    for (const id of ['casa-exemplo', 'house-28x40', 'ringgold-checkpoint']) {
+      const r = check(exampleText(id) as string);
+      if (!r.ok) throw new Error(id);
+      for (const w of r.warnings) {
+        const text = englishMessage(w);
+        expect(text, `${id} ${w.code}`).toBeDefined();
+        expect(text, `${id} ${w.code}`).not.toMatch(/\b(parede|abertura|não|hipótese)\b|ção/);
+      }
+    }
   });
 });
