@@ -2,21 +2,30 @@ import { describe, expect, it } from 'vitest';
 import type { Config, Opening, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { validatePanel } from '../../src/panelize/validate';
-import plain from '../fixtures/wall-144-plain.json';
-import window from '../fixtures/wall-144-window.json';
-import low from '../fixtures/wall-144-window-82.5.json';
-import door from '../fixtures/wall-120-door.json';
-import windowDoor from '../fixtures/wall-144-window-door.json';
-import irc from '../fixtures/wall-144-window-irc.json';
-import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import lowJson from '../fixtures/wall-144-window-82.5.json';
+import doorJson from '../fixtures/wall-120-door.json';
+import windowDoorJson from '../fixtures/wall-144-window-door.json';
+import ircJson from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const wall = plain.wall as Wall;
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
+const low = wallFixture(lowJson);
+const door = wallFixture(doorJson);
+const windowDoor = wallFixture(windowDoorJson);
+const irc = wallFixture(ircJson);
+const nonBearingDoor = wallFixture(nonBearingDoorJson);
+
+const wall = plain.wall;
 /** Config do fixture plain com vento (S12): paredes externas montadas à mão não avisam WIND_SPEED_MISSING. */
 const config: Config = {
-  ...(plain.config as Config),
+  ...plain.config,
   building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 },
 };
-const wWall = window.wall as Wall;
+const wWall = window.wall;
 const win = wWall.openings[0] as Opening;
 
 const codes = (w: Wall, c: Config = config) => panelizeWall(w, c).warnings.map((x) => x.code);
@@ -32,8 +41,8 @@ describe('validatePanel — fixtures', () => {
     ['wall-144-window-irc', irc],
     ['wall-120-door-nonbearing', nonBearingDoor],
   ])('%s: sem avisos de validação', (_name, fx) => {
-    const panel = panelizeWall(fx.wall as Wall, fx.config as Config);
-    expect(validatePanel(panel, fx.wall as Wall, fx.config as Config)).toEqual([]);
+    const panel = panelizeWall(fx.wall, fx.config);
+    expect(validatePanel(panel, fx.wall, fx.config)).toEqual([]);
     expect(panel.warnings).toEqual(fx.expected.warnings);
   });
 });
@@ -140,10 +149,10 @@ describe('ordem dos avisos', () => {
   it('parede, depois aberturas, depois validação', () => {
     // Porta com RO que não bate com o header (aviso da abertura) a 1" do início (validação),
     // em parede fora dos pré-cortes (aviso da parede).
-    const dWall = door.wall as Wall;
+    const dWall = door.wall;
     const d = dWall.openings[0] as Opening;
     const w: Wall = { ...dWall, height: 103.125, openings: [{ ...d, offset: 4, roughHeight: 80 }] };
-    expect(codes(w, door.config as Config)).toEqual([
+    expect(codes(w, door.config)).toEqual([
       'STUD_LENGTH_MISMATCH',
       'DOOR_RO_HEIGHT_MISMATCH',
       'OPENING_NEAR_CORNER',

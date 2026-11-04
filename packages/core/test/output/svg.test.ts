@@ -3,21 +3,29 @@ import type { Config, Member, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { esc, memberBox, panelSvg, px, verticalCenters, viewNote } from '../../src/output/svg';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
-import type { House } from '../../src/house/types';
-import cornerL from '../fixtures/house-corner-L.json';
-import plain from '../fixtures/wall-144-plain.json';
-import window from '../fixtures/wall-144-window.json';
-import door from '../fixtures/wall-120-door.json';
-import windowDoor from '../fixtures/wall-144-window-door.json';
-import irc from '../fixtures/wall-144-window-irc.json';
-import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
+import cornerLJson from '../fixtures/house-corner-L.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import doorJson from '../fixtures/wall-120-door.json';
+import windowDoorJson from '../fixtures/wall-144-window-door.json';
+import ircJson from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import { houseFixture, wallFixture } from '../helpers/fixtures';
 
-const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
-const nonBearingDoorPanel = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
+const cornerL = houseFixture(cornerLJson);
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
+const door = wallFixture(doorJson);
+const windowDoor = wallFixture(windowDoorJson);
+const irc = wallFixture(ircJson);
+const nonBearingDoor = wallFixture(nonBearingDoorJson);
 
-const windowPanel = panelizeWall(window.wall as Wall, window.config as Config);
-const lowHeaderPanel = panelizeWall(window.wall as Wall, {
-  ...(window.config as Config),
+const plainPanel = panelizeWall(plain.wall, plain.config);
+const nonBearingDoorPanel = panelizeWall(nonBearingDoor.wall, nonBearingDoor.config);
+
+const windowPanel = panelizeWall(window.wall, window.config);
+const lowHeaderPanel = panelizeWall(window.wall, {
+  ...window.config,
   headerHeight: 82.5,
 });
 
@@ -140,7 +148,7 @@ describe('panelSvg', () => {
   });
 
   it('header escolhido pela tabela: seção, plies e a tabela de origem no <title>', async () => {
-    const out = panelSvg(panelizeWall(irc.wall as Wall, irc.config as Config));
+    const out = panelSvg(panelizeWall(irc.wall, irc.config));
     expect(out).toContain(
       '<title>header 2x6 × 42&quot; (2 plies) [R602.7(1)] — x=45&quot; y=82 1/2&quot;</title>',
     );
@@ -190,7 +198,7 @@ describe('panelSvg', () => {
 });
 
 describe('panelSvg — corte na obra', () => {
-  const doorPanel = panelizeWall(door.wall as Wall, door.config as Config);
+  const doorPanel = panelizeWall(door.wall, door.config);
   const doorSvg = panelSvg(doorPanel);
 
   it('trecho da bottom plate no vão da porta hachurado: x=40, 38" → 240 px, 152 px de largura', () => {
@@ -242,7 +250,7 @@ describe('panelSvg — corte na obra', () => {
   });
 
   it('snapshot da janela + porta em test/__snapshots__/wall-144-window-door.svg', async () => {
-    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    const panel = panelizeWall(windowDoor.wall, windowDoor.config);
     const out = panelSvg(panel);
     expect(rects(out)).toHaveLength(24);
     await expect(out).toMatchFileSnapshot('../__snapshots__/wall-144-window-door.svg');
@@ -264,8 +272,8 @@ describe('helpers', () => {
 describe('panelSvg — studs extras (S12)', () => {
   it('label do projeto entre aspas no <title> do stud extra; stud comum sem aspas', () => {
     const panel = panelizeWall(
-      { ...(plain.wall as Wall), extraStuds: [{ x: 40, label: 'HDU2 "post"' }] },
-      plain.config as Config,
+      { ...plain.wall, extraStuds: [{ x: 40, label: 'HDU2 "post"' }] },
+      plain.config,
     );
     const out = panelSvg(panel);
     expect(out).toContain(
@@ -277,7 +285,7 @@ describe('panelSvg — studs extras (S12)', () => {
 });
 
 describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
-  const config: Config = { ...(plain.config as Config), building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 } };
+  const config: Config = { ...plain.config, building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 } };
   const base: Omit<Wall, 'id' | 'length'> = { height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 0, openings: [] };
 
   it('memberBox do stud flat: profundidade da seção de largura', () => {
@@ -332,7 +340,7 @@ describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
 });
 
 describe('panelSvg — folha de fabricação (S17)', () => {
-  const windowDoorPanel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+  const windowDoorPanel = panelizeWall(windowDoor.wall, windowDoor.config);
   const sheet = panelSvg(windowDoorPanel, { project: 'Casa X', date: '2026-10-14', revision: 'A' });
 
   it('cabeçalho: projeto, data e revisão vêm de opts; parede, pavimento, seção, externa/portante, dimensões, peças a cortar (plies contam) e peso', () => {
@@ -387,22 +395,22 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(sheet).toContain('>H · 2x10 × 39&quot; (2 plies)</text>');
     expect(labels(sheet, 'header')).toHaveLength(0);
     expect(labels(panelSvg(nonBearingDoorPanel), 'header')).toHaveLength(1);
-    const cfg: Config = { ...(plain.config as Config), building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 } };
-    const tee = panelizeWall({ ...(plain.wall as Wall), length: 192, joints: { tees: [{ x: 72, width: 3.5 }] } }, cfg);
+    const cfg: Config = { ...plain.config, building: { groundSnowLoad: 50, buildingWidth: 336, windSpeed: 120 } };
+    const tee = panelizeWall({ ...plain.wall, length: 192, joints: { tees: [{ x: 72, width: 3.5 }] } }, cfg);
     expect(labels(panelSvg(tee), 'block')).toHaveLength(3);
     // Kings vizinhos (2 por lado) na mesma altura: o segundo desce 11 px.
-    const twoKings = panelizeWall({ ...(window.wall as Wall), openings: [{ ...(window.wall as Wall).openings[0]!, kingStuds: 2 }] }, window.config as Config);
+    const twoKings = panelizeWall({ ...window.wall, openings: [{ ...window.wall.openings[0]!, kingStuds: 2 }] }, window.config);
     const ks = labels(panelSvg(twoKings), 'kingStud').map((t) => Number(attr(t, 'y')));
     expect(ks).toHaveLength(4);
     expect(new Set(ks).size).toBe(2);
   });
 
   it('stud extra: o label do projeto girado ao longo da peça, um rótulo por conjunto de studs colados', () => {
-    const one = panelSvg(panelizeWall({ ...(plain.wall as Wall), extraStuds: [{ x: 40, label: 'HDU2 post' }] }, plain.config as Config));
+    const one = panelSvg(panelizeWall({ ...plain.wall, extraStuds: [{ x: 40, label: 'HDU2 post' }] }, plain.config));
     expect(one.match(/class="label extra"/g)).toHaveLength(1);
     expect(one).toContain('transform="rotate(-90 ');
     expect(one).toContain('>HDU2 post</text>');
-    const two = panelSvg(panelizeWall({ ...(plain.wall as Wall), extraStuds: [{ x: 40, count: 2, label: 'HDU2 post' }] }, plain.config as Config));
+    const two = panelSvg(panelizeWall({ ...plain.wall, extraStuds: [{ x: 40, count: 2, label: 'HDU2 post' }] }, plain.config));
     expect(two.match(/class="label extra"/g)).toHaveLength(1);
     // Centrado no conjunto 40–43: x = X0 + 41.5 × 4 + 3.
     expect(two).toContain(`<text class="label extra" x="${px(X0 + 41.5 * 4 + 3)}"`);
@@ -450,7 +458,7 @@ describe('panelSvg — folha de fabricação (S17)', () => {
   });
 
   it('painel de canto (house-corner-L): facing exterior na W1, interior na W2; snapshots', async () => {
-    const { panels } = panelizeHouse(cornerL.house as House, cornerL.config as Config);
+    const { panels } = panelizeHouse(cornerL.house, cornerL.config);
     const [w1, w2] = panels;
     expect(w1!.facing).toBe('exterior');
     expect(w2!.facing).toBe('interior');

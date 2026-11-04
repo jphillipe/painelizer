@@ -3,11 +3,14 @@ import { DEFAULT_PANEL_CONFIG, type Config, type Panel, type PanelConfig, type W
 import { framePanel } from '../../src/panelize/panelizeWall';
 import { teeStrips } from '../../src/rules/corners';
 import { breakCandidates, chooseBreaks, validatePanelConfig } from '../../src/rules/breaks';
-import split480 from '../fixtures/wall-480-split.json';
+import split480Json from '../fixtures/wall-480-split.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const config = split480.config as Config;
+const split480 = wallFixture(split480Json);
+
+const config = split480.config;
 const cfg: PanelConfig = { ...DEFAULT_PANEL_CONFIG };
-const wall480 = split480.wall as Wall;
+const wall480 = split480.wall;
 const marks16 = (c: number) => Math.abs(c / 48 - Math.round(c / 48)) < 1e-9;
 const every16 = (upTo: number) => Array.from({ length: Math.floor(upTo / 16) }, (_, i) => (i + 1) * 16);
 

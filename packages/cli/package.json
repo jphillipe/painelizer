@@ -9,6 +9,7 @@
   },
   "exports": {
     "./project": "./src/project.ts",
+    "./schema": "./src/schema.ts",
     "./build": "./src/build.ts",
     "./main": "./src/main.ts",
     "./examples": "./src/examples.ts"
@@ -29,6 +30,7 @@
     "vitest": "^5.0.2"
   },
   "dependencies": {
-    "core": "workspace:^"
+    "core": "workspace:^",
+    "zod": "^4.6.7"
   }
 }

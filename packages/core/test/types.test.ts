@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Panel, Wall } from '../src/types';
+import type { Panel } from '../src/types';
 import {
   engineeredSection,
   isLumberSection,
@@ -7,8 +7,12 @@ import {
   sectionDepth,
   sectionThickness,
 } from '../src/types';
-import plain from './fixtures/wall-144-plain.json';
-import window from './fixtures/wall-144-window.json';
+import plainJson from './fixtures/wall-144-plain.json';
+import windowJson from './fixtures/wall-144-window.json';
+import { wallFixture } from './helpers/fixtures';
+
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
 
 describe('types', () => {
   it('espessura real é derivada da seção', () => {
@@ -34,8 +38,8 @@ describe('types', () => {
 
   it('fixtures são compatíveis com Wall, Config e Panel', () => {
     for (const fx of [plain, window]) {
-      const wall = fx.wall as Wall;
-      const config = fx.config as Config;
+      const wall = fx.wall;
+      const config = fx.config;
       const panel: Panel = {
         id: wall.id,
         wallId: wall.id,

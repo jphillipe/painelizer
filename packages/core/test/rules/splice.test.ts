@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PANEL_CONFIG, type Config, type Panel, type PanelConfig, type Wall } from '../../src/types';
+import { DEFAULT_PANEL_CONFIG, type Panel, type PanelConfig } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { splicePlates, supportCenters } from '../../src/rules/splice';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
-import split480 from '../fixtures/wall-480-split.json';
-import spliced240 from '../fixtures/wall-240-spliced.json';
+import split480Json from '../fixtures/wall-480-split.json';
+import spliced240Json from '../fixtures/wall-240-spliced.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const config = split480.config as Config;
+const split480 = wallFixture(split480Json);
+const spliced240 = wallFixture(spliced240Json);
+
+const config = split480.config;
 const cfg: PanelConfig = { ...DEFAULT_PANEL_CONFIG };
 
 describe('splicePlates (P14)', () => {
-  const wall240 = spliced240.wall as Wall;
+  const wall240 = spliced240.wall;
   const whole = panelizeWall(wall240, config);
 
   it('wall-240: top 192 + 48, double top 144 + 96 (≥ 48 da emenda da top e das pontas), bottom 192 + 48', () => {

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { ENGINEERED_PCF, POUNDS_PER_FOOT, memberWeightLb, panelWeight, poundsPerFoot } from '../../src/rules/weight';
-import plain from '../fixtures/wall-144-plain.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import { wallFixture } from '../helpers/fixtures';
+
+const plain = wallFixture(plainJson);
 
 describe('peso da madeira (hipótese P8)', () => {
   it('tabela lb/pé por seção (SPF ~35 pcf) e densidade de LVL/PSL', () => {
@@ -21,7 +23,7 @@ describe('peso da madeira (hipótese P8)', () => {
   });
 
   it('wall-144-plain: 3 plates de 12\' (72 lb) + 10 studs (154.375 lb) = 226.4 lb, arredondado a 0.1', () => {
-    const panel = panelizeWall(plain.wall as Wall, plain.config as Config);
+    const panel = panelizeWall(plain.wall, plain.config);
     expect(panelWeight(panel)).toBe(226.4);
     expect(panelWeight({ members: [] })).toBe(0);
   });

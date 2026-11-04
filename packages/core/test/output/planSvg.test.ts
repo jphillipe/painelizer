@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Panel } from '../../src/types';
-import type { House } from '../../src/house/types';
+import type { Panel } from '../../src/types';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
 import { housePlanSvg } from '../../src/output/planSvg';
 import { px } from '../../src/output/svg';
-import house28x40 from '../fixtures/house-28x40.json';
-import cornerL from '../fixtures/house-corner-L.json';
+import house28x40Json from '../fixtures/house-28x40.json';
+import cornerLJson from '../fixtures/house-corner-L.json';
+import { houseFixture } from '../helpers/fixtures';
 
-const house = house28x40.house as House;
-const config = house28x40.config as Config;
+const house28x40 = houseFixture(house28x40Json);
+const cornerL = houseFixture(cornerLJson);
+
+const house = house28x40.house;
+const config = house28x40.config;
 const { panels } = panelizeHouse(house, config);
 const svg = housePlanSvg(house, panels);
 
@@ -168,8 +171,8 @@ describe('housePlanSvg — casa 28x40', () => {
 
 describe('housePlanSvg — canto em L', () => {
   it('W1 atravessa (plate de −2.75 a 144) e W2 encosta (de 2.75 a 120); sem juntas', () => {
-    const h = cornerL.house as House;
-    const out = housePlanSvg(h, panelizeHouse(h, cornerL.config as Config).panels);
+    const h = cornerL.house;
+    const out = housePlanSvg(h, panelizeHouse(h, cornerL.config).panels);
     const walls = tags(out, /<rect class="wall [^"]+"[^>]*>/g);
     expect(walls).toHaveLength(2);
     expect(attr(walls[0]!, 'width')).toBe(px(146.75 * 2));

@@ -124,6 +124,31 @@ describe('leitura tolerante', () => {
     expect(r.problems).toEqual([{ path: 'walls[0].end.y', text: 'Missing coordinate' }]);
   });
 
+  it('mesmo schema do CLI (S28.2): o que o parser recusa vira problem em inglês, pela regra da issue', () => {
+    const r = draftFromJson({
+      ...base,
+      config: { studSpacing: `16'`, studLength: [92.625, 'x'], building: { groundSnowLoad: 30, buildingWidth: 300, windSpeed: 0 } },
+      walls: [{ id: 'W1', length: 96, height: 97, section: '2x4', exterior: false, bearing: false, level: 0, openings: [{ id: 'J', header: { section: 'LVL', plies: 1 } }] }],
+    });
+    if (!r.ok) throw new Error('should open');
+    expect(r.problems).toEqual([
+      { path: 'config.studSpacing', text: `Expected 16 or 24 (inches), got "16'"` },
+      { path: 'config.studLength[1]', text: `Not a measure: "x" (use inches or feet-inches, e.g. 12'-6 1/2")` },
+      { path: 'config.building.windSpeed', text: 'Expected a number > 0, got 0' },
+      { path: 'walls[0].openings[0].header.section', text: expect.stringMatching(/^Expected 2x4, .*got "LVL"$/) },
+      { path: 'walls[0].level', text: 'Expected a whole number ≥ 1, got 0' },
+    ]);
+    expect(r.draft.config).toMatchObject({ building: { groundSnowLoad: 30, buildingWidth: 300 } });
+    expect(r.draft.config.studSpacing).toBeUndefined();
+  });
+
+  it('chave desconhecida sem $ fica em extra (o editor não perde) e o CLI strict a recusa', () => {
+    const text = JSON.stringify({ ...base, walls: [{ id: 'W1', length: 96, height: 97.125, section: '2x4', exterior: false, bearing: false, heigth: 97, openings: [] }] });
+    const draft = load(text);
+    expect(draft.walls[0]?.extra).toEqual({ heigth: 97 });
+    expect(() => parseProject(textFromDraft(draft), 'p')).toThrow(/^p\.walls\[0\]\.heigth: chave desconhecida/);
+  });
+
   it('seção de header engenheirada em objeto e em texto', () => {
     const r = draftFromJson({
       ...base,

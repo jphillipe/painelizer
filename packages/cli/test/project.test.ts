@@ -33,7 +33,7 @@ describe('parseProject', () => {
     ]);
     expect(p.house!.walls[0]!.ends).toEqual({ start: 'through' });
     expect(p.house!.walls[1]).not.toHaveProperty('ends');
-    expect(p.stockLengths).toBeUndefined();
+    expect(p.config.stockLengths).toBeUndefined();
   });
 
   describe('casa em planta (S13)', () => {
@@ -420,13 +420,11 @@ describe('parseProject', () => {
     expect(() => projectFrom(raw, 'projeto')).toThrow(message);
   });
 
-  it('stockLengths aceita pés-pol e é repassado — na raiz ou em config (S15), nunca nos dois', () => {
+  it('stockLengths aceita pés-pol e vai para config.stockLengths — na raiz ou em config (S15), nunca nos dois', () => {
     const p = projectFrom(valid({ stockLengths: [`8'`, 120, `16'`] }));
-    expect(p.stockLengths).toEqual([96, 120, 192]);
     expect(p.config.stockLengths).toEqual([96, 120, 192]);
     const inConfig = projectFrom(valid({ config: { ...(valid().config as object), stockLengths: [`20'`] } }));
     expect(inConfig.config.stockLengths).toEqual([240]);
-    expect(inConfig.stockLengths).toEqual([240]);
     expect(() => projectFrom(valid({ stockLengths: [96], config: { ...(valid().config as object), stockLengths: [96] } }), 'projeto')).toThrow(
       /projeto\.stockLengths: informe o estoque só uma vez/,
     );

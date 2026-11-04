@@ -2,13 +2,19 @@ import { describe, expect, it } from 'vitest';
 import type { Config, HeaderTableId, Member, Opening, Wall } from '../../src/types';
 import { framingForOpening, openingKingXs, openingStudCounts, openingZone } from '../../src/rules/openings';
 import { expectSameMembers } from '../helpers/members';
-import window from '../fixtures/wall-144-window.json';
-import low from '../fixtures/wall-144-window-82.5.json';
-import doorFx from '../fixtures/wall-120-door.json';
-import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import lowJson from '../fixtures/wall-144-window-82.5.json';
+import doorFxJson from '../fixtures/wall-120-door.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const wall = window.wall as Wall;
-const config = window.config as Config;
+const window = wallFixture(windowJson);
+const low = wallFixture(lowJson);
+const doorFx = wallFixture(doorFxJson);
+const nonBearingDoor = wallFixture(nonBearingDoorJson);
+
+const wall = window.wall;
+const config = window.config;
 const win = wall.openings[0] as Opening;
 
 const OPENING_ROLES = new Set(['kingStud', 'jackStud', 'header', 'sill', 'cripple']);
@@ -70,8 +76,8 @@ describe('framingForOpening — janela', () => {
   it('fixture wall-144-window-82.5: header baixo, cripples acima nas marcas 64 e 80 (studs em 63.25 e 79.25; vão de 2.375)', () => {
     const members = frame(
       low.wall.openings[0] as Opening,
-      low.wall as Wall,
-      low.config as Config,
+      low.wall,
+      low.config,
     );
     expectSameMembers(members, expectedLowOpening);
   });
@@ -82,7 +88,7 @@ describe('framingForOpening — janela', () => {
   });
 
   it('Opening.headerHeight sobrescreve config.headerHeight (o projeto manda, P2)', () => {
-    const lowConfig = low.config as Config;
+    const lowConfig = low.config;
     const members = frame({ ...win, headerHeight: 80 }, wall, lowConfig);
     expect(byRole(members, 'header')[0]?.y).toBe(80);
     expect(byRole(members, 'jackStud').map((j) => j.length)).toEqual([78.5, 78.5]);
@@ -95,7 +101,7 @@ describe('framingForOpening — janela', () => {
   });
 
   it('Opening.headerHeight também é validado (header invadindo a top plate)', () => {
-    expect(() => frame({ ...win, headerHeight: 90 }, wall, low.config as Config)).toThrow(
+    expect(() => frame({ ...win, headerHeight: 90 }, wall, low.config)).toThrow(
       RangeError,
     );
   });
@@ -236,7 +242,7 @@ describe('framingForOpening — janela', () => {
 describe('framingForOpening — parede não portante (R602.7.4)', () => {
   const nbWall: Wall = { ...wall, bearing: false };
   const { header: _h, ...noHeader } = win;
-  const lowConfig = low.config as Config; // headerHeight 82.5
+  const lowConfig = low.config; // headerHeight 82.5
 
   it('janela: peça deitada da seção da parede (1.5" de altura) sobre os jacks, sill e cripples abaixo como sempre', () => {
     const members = frame(noHeader, nbWall, lowConfig);
@@ -284,8 +290,8 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
   });
 
   it('porta: fixture wall-120-door-nonbearing (14 peças, sem cripples acima, corte na obra)', () => {
-    const w = nonBearingDoor.wall as Wall;
-    const { members, fieldCuts, warnings } = framingForOpening(w.openings[0]!, w, nonBearingDoor.config as Config);
+    const w = nonBearingDoor.wall;
+    const { members, fieldCuts, warnings } = framingForOpening(w.openings[0]!, w, nonBearingDoor.config);
     const expected = (nonBearingDoor.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
     expectSameMembers(members, expected);
     expect(byRole(members, 'cripple')).toEqual([]);
@@ -322,8 +328,8 @@ describe('openingKingXs', () => {
 });
 
 describe('framingForOpening — porta', () => {
-  const dWall = doorFx.wall as Wall;
-  const dConfig = doorFx.config as Config;
+  const dWall = doorFx.wall;
+  const dConfig = doorFx.config;
   const door = dWall.openings[0] as Opening;
   const expectedDoor = (doorFx.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
 
@@ -405,9 +411,9 @@ describe('framingForOpening — sill dupla (S12, config.doubleSillOver)', () => 
   });
 
   it('porta não tem sill, dupla ou simples', () => {
-    const dWall = doorFx.wall as Wall;
+    const dWall = doorFx.wall;
     const members = framingForOpening({ ...dWall.openings[0]!, roughWidth: 84 }, { ...dWall, length: 192 }, {
-      ...(doorFx.config as Config),
+      ...doorFx.config,
       doubleSillOver: 72,
     }).members;
     expect(byRole(members, 'sill')).toEqual([]);

@@ -3,33 +3,58 @@
  * medida já em polegadas decimais e a forma de catálogo das aberturas (`tag`/`center`/`headerMark`) preservada —
  * o parser do CLI a resolve e descarta, então o editor não pode trabalhar sobre o `Project` parseado.
  *
- * Leitura tolerante: o que o parser recusaria vira `DraftProblem` (campo fica `undefined`), não exceção — o
- * editor precisa abrir o projeto para o humano corrigir. Invariante: tudo que `parseProject` aceita abre sem
- * problems. Só JSON inválido ou `walls` que não é lista impedem a abertura.
+ * Leitura tolerante pelo **mesmo schema** do CLI (`cli/schema`, S28.2): cada campo passa pelo schema dele
+ * (`readField`, o `safeParse` do campo); o que o CLI recusaria vira `DraftProblem` no caminho (campo fica
+ * `undefined`, frase em inglês pela regra da issue), não exceção — o editor precisa abrir o projeto para o humano
+ * corrigir. Nós (`config`, paredes, aberturas…) são lidos campo a campo para um campo ruim não derrubar os vizinhos;
+ * os defaults do schema não entram no draft (campo ausente fica ausente). Invariante: tudo que `parseProject`
+ * aceita abre sem problems. Só JSON inválido ou `walls` que não é lista impedem a abertura.
  *
- * Escrita (`textFromDraft`): chaves conhecidas em ordem fixa, medidas como número (sem perda; pés-pol
- * arredondaria a 1/16"), chaves desconhecidas (`$comment`, `wallType`…) devolvidas em `extra`. Nós aninhados
- * (`building`, `panel`, catálogo, `header`, `ends`, `extraStuds`) só guardam chaves conhecidas.
+ * Escrita (`textFromDraft`): chaves conhecidas (as das shapes do schema) em ordem fixa, medidas como número (sem
+ * perda; pés-pol arredondaria a 1/16"), chaves desconhecidas (`$comment`, `$reviewed`…) devolvidas em `extra` — o
+ * CLI ignora as com `$` e recusa as outras. Nós aninhados (`building`, `panel`, catálogo, `header`, `ends`,
+ * `extraStuds`) só guardam chaves conhecidas.
  *
  * `lib/editor/*` é a única camada do cliente que importa `core` (docs/10-design.md §7).
  */
 
-import { parseFeetInches } from 'core';
+import {
+  parseFeetInches,
+  type CornerStyle,
+  type DoorFrame,
+  type EndRule,
+  type Exposure,
+  type FloorSpan,
+  type LumberSpecies,
+  type OpeningType,
+  type Point,
+  type TeeStyle,
+  type WallSection,
+} from 'core';
+import {
+  buildingShape,
+  configShape,
+  endsShape,
+  engineeredSectionShape,
+  extraStudShape,
+  headerEntryShape,
+  headerSection,
+  headerShape,
+  isRecord,
+  looseWallShape,
+  openingShape,
+  openingTypeShape,
+  panelShape,
+  planWallShape,
+  pointShape,
+  readField,
+  rootShape,
+  type FieldIssue,
+} from 'cli/schema';
+import type { z } from 'zod';
 
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export type WallSection = '2x4' | '2x6';
-export type OpeningType = 'window' | 'door';
-export type EndRule = 'through' | 'butt';
-export type FloorSpan = 'center' | 'clear';
-export type Exposure = 'B' | 'C' | 'D';
-export type Species = 'SPF' | 'Hem-Fir' | 'DF' | 'SP';
-export type DoorFrame = 'wood' | 'hm' | 'al';
-export type CornerStyle = 'california' | 'three-stud';
-export type TeeStyle = 'ladder' | 'backer';
+export type { CornerStyle, DoorFrame, EndRule, Exposure, FloorSpan, OpeningType, Point, TeeStyle, WallSection };
+export type Species = LumberSpecies;
 /** Seção de header como o arquivo escreve: `"2x10"`, `"LVL 1.75x9.25"` ou objeto com medidas em polegadas. */
 export type HeaderSectionDraft = string | { material: 'LVL' | 'PSL'; width: number; depth: number };
 /** Chaves que o parser ignora e o editor devolve intactas. */
@@ -81,7 +106,7 @@ export interface DraftWall {
   floorSpan?: FloorSpan;
   buildingWidth?: number;
   level?: number;
-  /** Tipo de parede do arquiteto (a extração escreve; o parser ignora). */
+  /** Tipo de parede do arquiteto (a extração escreve; o motor não lê). */
   wallType?: string;
   extraStuds?: DraftExtraStud[];
   openings: DraftOpening[];
@@ -164,29 +189,11 @@ export type DraftLoad =
   | { ok: true; draft: ProjectDraft; problems: DraftProblem[] }
   | { ok: false; problems: DraftProblem[] };
 
-const WALL_SECTIONS: readonly WallSection[] = ['2x4', '2x6'];
-const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
-const END_RULES: readonly EndRule[] = ['through', 'butt'];
-const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
-const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
-const SPECIES: readonly Species[] = ['SPF', 'Hem-Fir', 'DF', 'SP'];
-const DOOR_FRAMES: readonly DoorFrame[] = ['wood', 'hm', 'al'];
-const CORNERS: readonly CornerStyle[] = ['california', 'three-stud'];
-const TEES: readonly TeeStyle[] = ['ladder', 'backer'];
-
-const ROOT_KEYS = ['name', 'date', 'revision', 'northAngle', 'config', 'walls', 'stockLengths'] as const;
-const CONFIG_KEYS = [
-  'studSpacing', 'studThickness', 'plateThickness', 'studLength', 'headerHeight', 'building', 'doubleSillOver',
-  'corner', 'tee', 'panel', 'stockLengths', 'openingTypes', 'headerSchedule',
-] as const;
-const WALL_KEYS = [
-  'id', 'start', 'end', 'ends', 'length', 'layoutOrigin', 'height', 'section', 'exterior', 'bearing',
-  'floorsSupported', 'floorSpan', 'buildingWidth', 'level', 'wallType', 'extraStuds', 'openings',
-] as const;
-const OPENING_KEYS = [
-  'id', 'tag', 'type', 'center', 'offset', 'roughWidth', 'roughHeight', 'headerMark', 'header', 'sillHeight',
-  'headerHeight', 'kingStuds', 'jackStuds',
-] as const;
+/** Chaves conhecidas = as das shapes do schema do CLI; as outras vão para `extra`. */
+const ROOT_KEYS = Object.keys(rootShape);
+const CONFIG_KEYS = Object.keys(configShape);
+const WALL_KEYS = [...new Set([...Object.keys(looseWallShape), ...Object.keys(planWallShape)])];
+const OPENING_KEYS = Object.keys(openingShape);
 
 // ---- leitura ----------------------------------------------------------------
 
@@ -204,14 +211,14 @@ export function draftFromText(text: string): DraftLoad {
 /** Lê o JSON já parseado. Só falha se não for objeto ou se `walls` não for lista. */
 export function draftFromJson(raw: unknown): DraftLoad {
   const r = new Reader();
-  if (!isObject(raw)) return { ok: false, problems: [{ path: '', text: `Expected a project object, got ${show(raw)}` }] };
+  if (!isRecord(raw)) return { ok: false, problems: [{ path: '', text: `Expected a project object, got ${show(raw)}` }] };
   const wallsRaw = raw['walls'];
   if (!Array.isArray(wallsRaw)) {
     return { ok: false, problems: [{ path: 'walls', text: `Expected a list of walls, got ${show(wallsRaw)}` }] };
   }
   const config = configFrom(r, raw['config'], 'config');
   if (raw['stockLengths'] !== undefined) {
-    const list = r.measureList(raw['stockLengths'], 'stockLengths', { positive: true });
+    const list = r.field(rootShape.stockLengths, raw['stockLengths'], 'stockLengths');
     if (config.stockLengths !== undefined) {
       r.fail('stockLengths', 'Stock lengths given twice (here and in config.stockLengths); keeping config');
     } else if (list !== undefined) {
@@ -224,10 +231,10 @@ export function draftFromJson(raw: unknown): DraftLoad {
     if (wall !== undefined) walls.push(wall);
   });
   const draft: ProjectDraft = compact({
-    name: r.str(raw['name'], 'name'),
-    date: r.str(raw['date'], 'date'),
-    revision: r.str(raw['revision'], 'revision'),
-    northAngle: r.num(raw['northAngle'], 'northAngle'),
+    name: r.field(rootShape.name, raw['name'], 'name'),
+    date: r.field(rootShape.date, raw['date'], 'date'),
+    revision: r.field(rootShape.revision, raw['revision'], 'revision'),
+    northAngle: r.field(rootShape.northAngle, raw['northAngle'], 'northAngle'),
     config,
     walls,
     extra: rest(raw, ROOT_KEYS),
@@ -238,25 +245,19 @@ export function draftFromJson(raw: unknown): DraftLoad {
 function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
   const c = r.obj(raw, path);
   if (c === undefined) return {};
-  const studLengthRaw = c['studLength'];
-  const studLength =
-    studLengthRaw === undefined
-      ? undefined
-      : Array.isArray(studLengthRaw)
-        ? r.measureList(studLengthRaw, `${path}.studLength`, { positive: true })
-        : wrap(r.measure(studLengthRaw, `${path}.studLength`, { positive: true }));
+  const C = configShape;
   return compact({
-    studSpacing: r.measure(c['studSpacing'], `${path}.studSpacing`, { positive: true }),
-    studThickness: r.measure(c['studThickness'], `${path}.studThickness`, { positive: true }),
-    plateThickness: r.measure(c['plateThickness'], `${path}.plateThickness`, { positive: true }),
-    studLength,
-    headerHeight: r.measure(c['headerHeight'], `${path}.headerHeight`, { positive: true }),
+    studSpacing: r.field(C.studSpacing, c['studSpacing'], `${path}.studSpacing`),
+    studThickness: r.field(C.studThickness, c['studThickness'], `${path}.studThickness`),
+    plateThickness: r.field(C.plateThickness, c['plateThickness'], `${path}.plateThickness`),
+    studLength: r.field(C.studLength, c['studLength'], `${path}.studLength`),
+    headerHeight: r.field(C.headerHeight, c['headerHeight'], `${path}.headerHeight`),
     building: buildingFrom(r, c['building'], `${path}.building`),
-    doubleSillOver: r.measure(c['doubleSillOver'], `${path}.doubleSillOver`, { positive: true }),
-    corner: r.oneOf(c['corner'], CORNERS, `${path}.corner`),
-    tee: r.oneOf(c['tee'], TEES, `${path}.tee`),
+    doubleSillOver: r.field(C.doubleSillOver, c['doubleSillOver'], `${path}.doubleSillOver`),
+    corner: r.field(C.corner, c['corner'], `${path}.corner`),
+    tee: r.field(C.tee, c['tee'], `${path}.tee`),
     panel: panelFrom(r, c['panel'], `${path}.panel`),
-    stockLengths: r.measureList(c['stockLengths'], `${path}.stockLengths`, { positive: true }),
+    stockLengths: r.field(C.stockLengths, c['stockLengths'], `${path}.stockLengths`),
     openingTypes: r.record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom),
     headerSchedule: r.record(c['headerSchedule'], `${path}.headerSchedule`, headerEntryFrom),
     extra: rest(c, CONFIG_KEYS),
@@ -264,67 +265,69 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
 }
 
 function buildingFrom(r: Reader, raw: unknown, path: string): DraftBuilding | undefined {
-  if (raw === undefined) return undefined;
   const b = r.obj(raw, path);
   if (b === undefined) return undefined;
+  const B = buildingShape;
   return compact({
-    groundSnowLoad: r.num(b['groundSnowLoad'], `${path}.groundSnowLoad`, 0),
-    buildingWidth: r.measure(b['buildingWidth'], `${path}.buildingWidth`, { positive: true }),
-    windSpeed: r.num(b['windSpeed'], `${path}.windSpeed`, 0),
-    exposure: r.oneOf(b['exposure'], EXPOSURES, `${path}.exposure`),
-    species: r.oneOf(b['species'], SPECIES, `${path}.species`),
+    groundSnowLoad: r.field(B.groundSnowLoad, b['groundSnowLoad'], `${path}.groundSnowLoad`),
+    buildingWidth: r.field(B.buildingWidth, b['buildingWidth'], `${path}.buildingWidth`),
+    windSpeed: r.field(B.windSpeed, b['windSpeed'], `${path}.windSpeed`),
+    exposure: r.field(B.exposure, b['exposure'], `${path}.exposure`),
+    species: r.field(B.species, b['species'], `${path}.species`),
   });
 }
 
 function panelFrom(r: Reader, raw: unknown, path: string): DraftPanelConfig | undefined {
-  if (raw === undefined) return undefined;
   const p = r.obj(raw, path);
   if (p === undefined) return undefined;
+  const P = panelShape;
   return compact({
-    maxLength: r.measure(p['maxLength'], `${path}.maxLength`, { positive: true }),
-    maxWeight: r.num(p['maxWeight'], `${path}.maxWeight`, 0),
-    module: r.measure(p['module'], `${path}.module`, { positive: true }),
-    lap: r.measure(p['lap'], `${path}.lap`, { positive: true }),
-    minLap: r.measure(p['minLap'], `${path}.minLap`, { positive: true }),
+    maxLength: r.field(P.maxLength, p['maxLength'], `${path}.maxLength`),
+    maxWeight: r.field(P.maxWeight, p['maxWeight'], `${path}.maxWeight`),
+    module: r.field(P.module, p['module'], `${path}.module`),
+    lap: r.field(P.lap, p['lap'], `${path}.lap`),
+    minLap: r.field(P.minLap, p['minLap'], `${path}.minLap`),
   });
 }
 
 function openingTypeFrom(r: Reader, raw: unknown, path: string): DraftOpeningType {
   const e = r.obj(raw, path);
   if (e === undefined) return {};
+  const T = openingTypeShape;
   return compact({
-    kind: r.oneOf(e['kind'], OPENING_TYPES, `${path}.kind`),
-    width: r.measure(e['width'], `${path}.width`, { positive: true }),
-    height: r.measure(e['height'], `${path}.height`, { positive: true }),
-    frame: r.oneOf(e['frame'], DOOR_FRAMES, `${path}.frame`),
-    sillHeight: r.measure(e['sillHeight'], `${path}.sillHeight`),
-    roughWidth: r.measure(e['roughWidth'], `${path}.roughWidth`, { positive: true }),
-    roughHeight: r.measure(e['roughHeight'], `${path}.roughHeight`, { positive: true }),
-    description: r.str(e['description'], `${path}.description`),
+    kind: r.field(T.kind, e['kind'], `${path}.kind`),
+    width: r.field(T.width, e['width'], `${path}.width`),
+    height: r.field(T.height, e['height'], `${path}.height`),
+    frame: r.field(T.frame, e['frame'], `${path}.frame`),
+    sillHeight: r.field(T.sillHeight, e['sillHeight'], `${path}.sillHeight`),
+    roughWidth: r.field(T.roughWidth, e['roughWidth'], `${path}.roughWidth`),
+    roughHeight: r.field(T.roughHeight, e['roughHeight'], `${path}.roughHeight`),
+    description: r.field(T.description, e['description'], `${path}.description`),
   });
 }
 
 function headerEntryFrom(r: Reader, raw: unknown, path: string): DraftHeaderEntry {
   const h = r.obj(raw, path);
   if (h === undefined) return {};
+  const H = headerEntryShape;
   return compact({
     section: headerSectionFrom(r, h['section'], `${path}.section`),
-    plies: r.int(h['plies'], `${path}.plies`, 1),
-    jackStuds: r.int(h['jackStuds'], `${path}.jackStuds`, 1),
-    kingStuds: r.int(h['kingStuds'], `${path}.kingStuds`, 1),
-    description: r.str(h['description'], `${path}.description`),
+    plies: r.field(H.plies, h['plies'], `${path}.plies`),
+    jackStuds: r.field(H.jackStuds, h['jackStuds'], `${path}.jackStuds`),
+    kingStuds: r.field(H.kingStuds, h['kingStuds'], `${path}.kingStuds`),
+    description: r.field(H.description, h['description'], `${path}.description`),
   });
 }
 
 /** `"2x10"`, `"LVL 1.75x9.25"` (texto é devolvido como veio) ou `{ material, width, depth }` com medidas. */
 function headerSectionFrom(r: Reader, v: unknown, path: string): HeaderSectionDraft | undefined {
   if (v === undefined) return undefined;
-  if (typeof v === 'string') return v;
-  const o = r.obj(v, path);
-  if (o === undefined) return undefined;
-  const material = r.oneOf(o['material'], ['LVL', 'PSL'] as const, `${path}.material`);
-  const width = r.measure(o['width'], `${path}.width`, { positive: true });
-  const depth = r.measure(o['depth'], `${path}.depth`, { positive: true });
+  // O schema converte o objeto em texto ("LVL 1.75x9.25"); o editor guarda o objeto como o arquivo o escreveu.
+  if (!isRecord(v)) return r.field(headerSection, v, path) === undefined ? undefined : (v as string);
+  const E = engineeredSectionShape;
+  const material = r.field(E.material, v['material'], `${path}.material`);
+  const width = r.field(E.width, v['width'], `${path}.width`);
+  const depth = r.field(E.depth, v['depth'], `${path}.depth`);
   if (material === undefined || width === undefined || depth === undefined) return undefined;
   return { material, width, depth };
 }
@@ -332,54 +335,38 @@ function headerSectionFrom(r: Reader, v: unknown, path: string): HeaderSectionDr
 function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWall | undefined {
   const w = r.obj(raw, path);
   if (w === undefined) return undefined;
-  const id = r.str(w['id'], `${path}.id`) ?? `wall-${index + 1}`;
+  const W = looseWallShape;
+  const id = r.field(W.id, w['id'], `${path}.id`) ?? `wall-${index + 1}`;
   if (w['id'] === undefined) r.fail(`${path}.id`, `Wall without id; named ${id}`);
-  const openingsRaw = w['openings'] ?? [];
   const openings: DraftOpening[] = [];
-  if (!Array.isArray(openingsRaw)) {
-    r.fail(`${path}.openings`, `Expected a list of openings, got ${show(openingsRaw)}`);
-  } else {
-    openingsRaw.forEach((o, i) => {
-      const op = openingFrom(r, o, `${path}.openings[${i}]`, i);
-      if (op !== undefined) openings.push(op);
-    });
-  }
-  const extraStudsRaw = w['extraStuds'];
-  let extraStuds: DraftExtraStud[] | undefined;
-  if (extraStudsRaw !== undefined) {
-    if (!Array.isArray(extraStudsRaw)) {
-      r.fail(`${path}.extraStuds`, `Expected a list, got ${show(extraStudsRaw)}`);
-    } else {
-      extraStuds = extraStudsRaw.map((e, i) => {
-        const p = `${path}.extraStuds[${i}]`;
-        const o = r.obj(e, p) ?? {};
-        return compact({ x: r.measure(o['x'], `${p}.x`), count: r.int(o['count'], `${p}.count`, 1), label: r.str(o['label'], `${p}.label`) });
-      });
-    }
-  }
-  let ends: DraftWall['ends'];
-  if (w['ends'] !== undefined) {
-    const e = r.obj(w['ends'], `${path}.ends`);
-    if (e !== undefined) {
-      ends = compact({ start: r.oneOf(e['start'], END_RULES, `${path}.ends.start`), end: r.oneOf(e['end'], END_RULES, `${path}.ends.end`) });
-    }
-  }
+  r.list(w['openings'], `${path}.openings`)?.forEach((o, i) => {
+    const op = openingFrom(r, o, `${path}.openings[${i}]`, i);
+    if (op !== undefined) openings.push(op);
+  });
+  const extraStuds = r.list(w['extraStuds'], `${path}.extraStuds`)?.map((e, i) => {
+    const p = `${path}.extraStuds[${i}]`;
+    const o = r.obj(e, p) ?? {};
+    const X = extraStudShape;
+    return compact({ x: r.field(X.x, o['x'], `${p}.x`), count: r.field(X.count, o['count'], `${p}.count`), label: r.field(X.label, o['label'], `${p}.label`) });
+  });
+  const e = r.obj(w['ends'], `${path}.ends`);
+  const ends = e === undefined ? undefined : compact({ start: r.field(endsShape.start, e['start'], `${path}.ends.start`), end: r.field(endsShape.end, e['end'], `${path}.ends.end`) });
   return compact({
     id,
     start: pointFrom(r, w['start'], `${path}.start`),
     end: pointFrom(r, w['end'], `${path}.end`),
     ends,
-    length: r.measure(w['length'], `${path}.length`, { positive: true }),
-    layoutOrigin: r.measure(w['layoutOrigin'], `${path}.layoutOrigin`, { signed: true }),
-    height: r.measure(w['height'], `${path}.height`, { positive: true }),
-    section: r.oneOf(w['section'], WALL_SECTIONS, `${path}.section`),
-    exterior: r.bool(w['exterior'], `${path}.exterior`),
-    bearing: r.bool(w['bearing'], `${path}.bearing`),
-    floorsSupported: r.int(w['floorsSupported'], `${path}.floorsSupported`, 0),
-    floorSpan: r.oneOf(w['floorSpan'], FLOOR_SPANS, `${path}.floorSpan`),
-    buildingWidth: r.measure(w['buildingWidth'], `${path}.buildingWidth`, { positive: true }),
-    level: r.int(w['level'], `${path}.level`, 1),
-    wallType: r.str(w['wallType'], `${path}.wallType`),
+    length: r.field(W.length, w['length'], `${path}.length`),
+    layoutOrigin: r.field(W.layoutOrigin, w['layoutOrigin'], `${path}.layoutOrigin`),
+    height: r.field(W.height, w['height'], `${path}.height`),
+    section: r.field(W.section, w['section'], `${path}.section`),
+    exterior: r.field(W.exterior, w['exterior'], `${path}.exterior`),
+    bearing: r.field(W.bearing, w['bearing'], `${path}.bearing`),
+    floorsSupported: r.field(W.floorsSupported, w['floorsSupported'], `${path}.floorsSupported`),
+    floorSpan: r.field(W.floorSpan, w['floorSpan'], `${path}.floorSpan`),
+    buildingWidth: r.field(W.buildingWidth, w['buildingWidth'], `${path}.buildingWidth`),
+    level: r.field(W.level, w['level'], `${path}.level`),
+    wallType: r.field(W.wallType, w['wallType'], `${path}.wallType`),
     extraStuds,
     openings,
     extra: rest(w, WALL_KEYS),
@@ -387,13 +374,12 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
 }
 
 function pointFrom(r: Reader, v: unknown, path: string): Point | undefined {
-  if (v === undefined) return undefined;
   const p = r.obj(v, path);
   if (p === undefined) return undefined;
   if (p['x'] === undefined) r.fail(`${path}.x`, 'Missing coordinate');
   if (p['y'] === undefined) r.fail(`${path}.y`, 'Missing coordinate');
-  const x = r.measure(p['x'], `${path}.x`, { signed: true });
-  const y = r.measure(p['y'], `${path}.y`, { signed: true });
+  const x = r.field(pointShape.x, p['x'], `${path}.x`);
+  const y = r.field(pointShape.y, p['y'], `${path}.y`);
   if (x === undefined || y === undefined) return undefined;
   return { x, y };
 }
@@ -401,33 +387,32 @@ function pointFrom(r: Reader, v: unknown, path: string): Point | undefined {
 function openingFrom(r: Reader, raw: unknown, path: string, index: number): DraftOpening | undefined {
   const o = r.obj(raw, path);
   if (o === undefined) return undefined;
-  const id = r.str(o['id'], `${path}.id`) ?? `opening-${index + 1}`;
+  const O = openingShape;
+  const id = r.field(O.id, o['id'], `${path}.id`) ?? `opening-${index + 1}`;
   if (o['id'] === undefined) r.fail(`${path}.id`, `Opening without id; named ${id}`);
-  let header: DraftHeader | undefined;
-  if (o['header'] !== undefined) {
-    const h = r.obj(o['header'], `${path}.header`);
-    if (h !== undefined) {
-      header = compact({
-        section: headerSectionFrom(r, h['section'], `${path}.header.section`),
-        plies: r.int(h['plies'], `${path}.header.plies`, 1),
-        jackStuds: r.int(h['jackStuds'], `${path}.header.jackStuds`, 1),
-      });
-    }
-  }
+  const h = r.obj(o['header'], `${path}.header`);
+  const header =
+    h === undefined
+      ? undefined
+      : compact({
+          section: headerSectionFrom(r, h['section'], `${path}.header.section`),
+          plies: r.field(headerShape.plies, h['plies'], `${path}.header.plies`),
+          jackStuds: r.field(headerShape.jackStuds, h['jackStuds'], `${path}.header.jackStuds`),
+        });
   return compact({
     id,
-    tag: r.str(o['tag'], `${path}.tag`),
-    type: r.oneOf(o['type'], OPENING_TYPES, `${path}.type`),
-    center: r.measure(o['center'], `${path}.center`),
-    offset: r.measure(o['offset'], `${path}.offset`),
-    roughWidth: r.measure(o['roughWidth'], `${path}.roughWidth`, { positive: true }),
-    roughHeight: r.measure(o['roughHeight'], `${path}.roughHeight`, { positive: true }),
-    headerMark: r.str(o['headerMark'], `${path}.headerMark`),
+    tag: r.field(O.tag, o['tag'], `${path}.tag`),
+    type: r.field(O.type, o['type'], `${path}.type`),
+    center: r.field(O.center, o['center'], `${path}.center`),
+    offset: r.field(O.offset, o['offset'], `${path}.offset`),
+    roughWidth: r.field(O.roughWidth, o['roughWidth'], `${path}.roughWidth`),
+    roughHeight: r.field(O.roughHeight, o['roughHeight'], `${path}.roughHeight`),
+    headerMark: r.field(O.headerMark, o['headerMark'], `${path}.headerMark`),
     header,
-    sillHeight: r.measure(o['sillHeight'], `${path}.sillHeight`),
-    headerHeight: r.measure(o['headerHeight'], `${path}.headerHeight`, { positive: true }),
-    kingStuds: r.int(o['kingStuds'], `${path}.kingStuds`, 1),
-    jackStuds: r.int(o['jackStuds'], `${path}.jackStuds`, 1),
+    sillHeight: r.field(O.sillHeight, o['sillHeight'], `${path}.sillHeight`),
+    headerHeight: r.field(O.headerHeight, o['headerHeight'], `${path}.headerHeight`),
+    kingStuds: r.field(O.kingStuds, o['kingStuds'], `${path}.kingStuds`),
+    jackStuds: r.field(O.jackStuds, o['jackStuds'], `${path}.jackStuds`),
     extra: rest(o, OPENING_KEYS),
   });
 }
@@ -440,96 +425,37 @@ class Reader {
     this.problems.push({ path, text });
   }
 
+  /**
+   * Lê um campo pelo schema dele no CLI. Ausente fica ausente — o default do schema (`studThickness` 1.5, campos de
+   * `panel`) não entra no draft, para o arquivo voltar como veio.
+   */
+  field<S extends z.ZodType>(schema: S, v: unknown, path: string): z.output<S> | undefined {
+    if (v === undefined) return undefined;
+    const r = readField(schema, v);
+    if (r.ok) return r.value;
+    for (const issue of r.issues) this.fail(joinPath(path, issue.path), englishText(issue));
+    return undefined;
+  }
+
   obj(v: unknown, path: string): Extra | undefined {
     if (v === undefined) return undefined;
-    if (!isObject(v)) {
+    if (!isRecord(v)) {
       this.fail(path, `Expected an object, got ${show(v)}`);
       return undefined;
     }
     return v;
   }
 
-  str(v: unknown, path: string): string | undefined {
-    if (v === undefined) return undefined;
-    if (typeof v !== 'string' || v.trim() === '') {
-      this.fail(path, `Expected text, got ${show(v)}`);
-      return undefined;
-    }
-    return v;
-  }
-
-  bool(v: unknown, path: string): boolean | undefined {
-    if (v === undefined) return undefined;
-    if (typeof v !== 'boolean') {
-      this.fail(path, `Expected true or false, got ${show(v)}`);
-      return undefined;
-    }
-    return v;
-  }
-
-  oneOf<T extends string>(v: unknown, allowed: readonly T[], path: string): T | undefined {
-    if (v === undefined) return undefined;
-    if (typeof v !== 'string' || !(allowed as readonly string[]).includes(v)) {
-      this.fail(path, `Expected one of ${allowed.join(', ')}, got ${show(v)}`);
-      return undefined;
-    }
-    return v as T;
-  }
-
-  /** Número puro (psf, mph, graus, lb), sem unidade de comprimento. */
-  num(v: unknown, path: string, min?: number): number | undefined {
-    if (v === undefined) return undefined;
-    if (typeof v !== 'number' || !Number.isFinite(v) || (min !== undefined && v < min)) {
-      this.fail(path, `Expected a number${min !== undefined ? ` ≥ ${min}` : ''}, got ${show(v)}`);
-      return undefined;
-    }
-    return v;
-  }
-
-  int(v: unknown, path: string, min: number): number | undefined {
-    if (v === undefined) return undefined;
-    if (typeof v !== 'number' || !Number.isInteger(v) || v < min) {
-      this.fail(path, `Expected a whole number ≥ ${min}, got ${show(v)}`);
-      return undefined;
-    }
-    return v;
-  }
-
-  /** Medida em polegadas: número ou texto pés-pol; `signed` aceita `-` na frente; `positive` exige > 0. */
-  measure(v: unknown, path: string, opts: { signed?: boolean; positive?: boolean } = {}): number | undefined {
-    if (v === undefined) return undefined;
-    const n = measureValue(v, opts.signed === true);
-    if (n === undefined) {
-      this.fail(path, `Not a measure: ${show(v)} (use inches or feet-inches, e.g. 12'-6 1/2")`);
-      return undefined;
-    }
-    if (opts.positive === true && n <= 0) {
-      this.fail(path, `Expected a measure > 0, got ${show(v)}`);
-      return undefined;
-    }
-    if (opts.signed !== true && n < 0) {
-      this.fail(path, `Expected a measure ≥ 0, got ${show(v)}`);
-      return undefined;
-    }
-    return n;
-  }
-
-  measureList(v: unknown, path: string, opts: { positive?: boolean } = {}): number[] | undefined {
+  list(v: unknown, path: string): unknown[] | undefined {
     if (v === undefined) return undefined;
     if (!Array.isArray(v)) {
-      this.fail(path, `Expected a list of measures, got ${show(v)}`);
+      this.fail(path, `Expected a list, got ${show(v)}`);
       return undefined;
     }
-    const out: number[] = [];
-    v.forEach((item, i) => {
-      const n = this.measure(item, `${path}[${i}]`, opts);
-      if (n !== undefined) out.push(n);
-    });
-    return out;
+    return v;
   }
 
   record<T>(v: unknown, path: string, item: (r: Reader, raw: unknown, p: string) => T): Record<string, T> | undefined {
-    if (v === undefined) return undefined;
     const o = this.obj(v, path);
     if (o === undefined) return undefined;
     const out: Record<string, T> = {};
@@ -541,6 +467,51 @@ class Reader {
       out[key] = item(this, value, `${path}.${key}`);
     }
     return out;
+  }
+}
+
+/** `config.studLength` + `[1]` → `config.studLength[1]`. */
+function joinPath(base: string, path: readonly (string | number)[]): string {
+  return path.reduce<string>((p, k) => (typeof k === 'number' ? `${p}[${k}]` : `${p}.${k}`), base);
+}
+
+/** A frase do problema em inglês, pela regra que o schema diz ter sido quebrada (o português é do CLI). */
+function englishText(issue: FieldIssue): string {
+  const p = issue.params;
+  const got = show(p.received);
+  switch (p.rule) {
+    case 'object':
+      return `Expected an object, got ${got}`;
+    case 'list':
+      return `Expected a list, got ${got}`;
+    case 'nonEmptyList':
+      return 'Expected at least one value';
+    case 'text':
+      return `Expected text, got ${got}`;
+    case 'boolean':
+      return `Expected true or false, got ${got}`;
+    case 'oneOf':
+      return `Expected one of ${(p.allowed ?? []).join(', ')}, got ${got}`;
+    case 'measure':
+      return `Not a measure: ${got} (use inches or feet-inches, e.g. 12'-6 1/2")`;
+    case 'nonNegative':
+      return `Expected a measure ≥ 0, got ${got}`;
+    case 'positive':
+      return `Expected a measure > 0, got ${got}`;
+    case 'number':
+      return `Expected a number${p.min === undefined ? '' : ` ${p.exclusive === true ? '>' : '≥'} ${p.min}`}, got ${got}`;
+    case 'integer':
+      return `Expected a whole number ≥ ${p.min ?? 0}, got ${got}`;
+    case 'studSpacing':
+      return `Expected 16 or 24 (inches), got ${got}`;
+    case 'headerSection':
+      return `Expected 2x4, 2x6, 2x8, 2x10, 2x12, "LVL <thickness>x<depth>", "PSL <thickness>x<depth>" or { material, width, depth }, got ${got}`;
+    case 'emptyKey':
+      return 'Empty key';
+    case 'unknownKey':
+      return 'Unknown key';
+    default:
+      return issue.message;
   }
 }
 
@@ -558,14 +529,6 @@ export function measureValue(v: unknown, signed: boolean): number | undefined {
   } catch {
     return undefined;
   }
-}
-
-function wrap(n: number | undefined): number[] | undefined {
-  return n === undefined ? undefined : [n];
-}
-
-function isObject(v: unknown): v is Extra {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 function show(v: unknown): string {

@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PANEL_CONFIG, type Config, type Member, type Wall } from '../../src/types';
+import { DEFAULT_PANEL_CONFIG, type Member, type Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { splitWall } from '../../src/panelize/splitWall';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
-import split480 from '../fixtures/wall-480-split.json';
-import spliced240 from '../fixtures/wall-240-spliced.json';
-import plain from '../fixtures/wall-144-plain.json';
+import split480Json from '../fixtures/wall-480-split.json';
+import spliced240Json from '../fixtures/wall-240-spliced.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const config = split480.config as Config;
+const split480 = wallFixture(split480Json);
+const spliced240 = wallFixture(spliced240Json);
+const plain = wallFixture(plainJson);
+
+const config = split480.config;
 
 interface ExpectedPanel {
   id: string;
@@ -27,7 +32,7 @@ describe('splitWall — fixtures', () => {
     ['wall-480-split', split480],
     ['wall-240-spliced', spliced240],
   ])('%s: painéis, peças, laps, emendas e peso como no fixture', (_name, fx) => {
-    const panels = splitWall(fx.wall as Wall, fx.config as Config);
+    const panels = splitWall(fx.wall, fx.config);
     const expected = fx.expected.panels as ExpectedPanel[];
     expect(panels.map((p) => p.id)).toEqual(expected.map((e) => e.id));
     expect(panels.map((p) => p.level)).toEqual(expected.map((e) => e.level));
@@ -37,13 +42,13 @@ describe('splitWall — fixtures', () => {
       expect(p.warnings.map((w) => w.code), p.id).toEqual(e.warnings.map((w) => w.code));
       expect(p.fieldCuts, p.id).toEqual(e.fieldCuts);
       expectSameMembers(p.members, e.members);
-      expect(p.height).toBe((fx.wall as Wall).height);
-      expect(p.section).toBe((fx.wall as Wall).section);
+      expect(p.height).toBe(fx.wall.height);
+      expect(p.section).toBe(fx.wall.section);
     }
   });
 
   it('wall-480: stud duplo na junta (fechamento do P1 em 238.5, primeiro stud do P2 em 0) e lap da double top', () => {
-    const [p1, p2] = splitWall(split480.wall as Wall, config);
+    const [p1, p2] = splitWall(split480.wall, config);
     const studXs = (ms: Member[]) => ms.filter((m) => m.role === 'stud').map((m) => m.x);
     expect(studXs(p1!.members)).toContain(238.5);
     expect(studXs(p2!.members)).toContain(0);
@@ -119,21 +124,21 @@ describe('splitWall — abertura deslocada por tolerância (P40)', () => {
 
 describe('splitWall — parede de um painel só', () => {
   it('parede que cabe: um painel igual ao panelizeWall, com id {level}-{wallId}-P1 (S16), wallOffset 0 e peso', () => {
-    const wall = plain.wall as Wall;
-    const [panel, ...rest] = splitWall(wall, plain.config as Config);
+    const wall = plain.wall;
+    const [panel, ...rest] = splitWall(wall, plain.config);
     expect(rest).toEqual([]);
-    expect(panel).toEqual({ ...panelizeWall(wall, plain.config as Config), id: '1-W-plain-P1', level: 1, wallOffset: 0, weightLb: 226.4 });
-    expect(splitWall({ ...wall, level: 3 }, plain.config as Config)[0]).toMatchObject({ id: '3-W-plain-P1', level: 3 });
-    expect(() => splitWall({ ...wall, level: 1.5 }, plain.config as Config)).toThrow(/parede W-plain: level deve ser inteiro ≥ 1 \(recebido 1\.5\)/);
+    expect(panel).toEqual({ ...panelizeWall(wall, plain.config), id: '1-W-plain-P1', level: 1, wallOffset: 0, weightLb: 226.4 });
+    expect(splitWall({ ...wall, level: 3 }, plain.config)[0]).toMatchObject({ id: '3-W-plain-P1', level: 3 });
+    expect(() => splitWall({ ...wall, level: 1.5 }, plain.config)).toThrow(/parede W-plain: level deve ser inteiro ≥ 1 \(recebido 1\.5\)/);
   });
 
   it('config.panel inválido é RangeError', () => {
-    expect(() => splitWall(plain.wall as Wall, { ...config, panel: { maxLength: 240, module: 48, lap: 48, minLap: 60 } })).toThrow(/minLap/);
+    expect(() => splitWall(plain.wall, { ...config, panel: { maxLength: 240, module: 48, lap: 48, minLap: 60 } })).toThrow(/minLap/);
   });
 });
 
 describe('splitWall — peso (P15)', () => {
-  const wall240 = spliced240.wall as Wall;
+  const wall240 = spliced240.wall;
 
   it('maxWeight baixo divide a parede que cabia no comprimento; a estimativa conta o stud da junta e o lap', () => {
     // 240" lisa pesa 367 lb. Com 200 lb por painel nenhuma marca múltipla de 48 serve (144 + 96: P1 com 9 studs,
@@ -149,18 +154,18 @@ describe('splitWall — peso (P15)', () => {
   });
 
   it('a estimativa da escolha bate com o peso real: máximo igual ao peso do painel mais pesado mantém a divisão', () => {
-    const [p1, p2] = splitWall(split480.wall as Wall, config);
+    const [p1, p2] = splitWall(split480.wall, config);
     const heaviest = Math.max(p1!.weightLb!, p2!.weightLb!);
-    const same = splitWall(split480.wall as Wall, { ...config, panel: { ...DEFAULT_PANEL_CONFIG, maxWeight: heaviest } });
+    const same = splitWall(split480.wall, { ...config, panel: { ...DEFAULT_PANEL_CONFIG, maxWeight: heaviest } });
     expect(same.map((p) => [p.length, p.weightLb])).toEqual([p1, p2].map((p) => [p!.length, p!.weightLb]));
     // Um décimo de libra a menos e a parede vai para três painéis.
-    expect(splitWall(split480.wall as Wall, { ...config, panel: { ...DEFAULT_PANEL_CONFIG, maxWeight: heaviest - 0.1 } })).toHaveLength(3);
+    expect(splitWall(split480.wall, { ...config, panel: { ...DEFAULT_PANEL_CONFIG, maxWeight: heaviest - 0.1 } })).toHaveLength(3);
   });
 
   it('lap encurtado por um header deixa o painel seguinte mais pesado que a estimativa: aviso PANEL_OVERWEIGHT, não erro', () => {
     // Janela em 280: o lap de 48 a partir da quebra em 240 cairia dentro do header (278.5–319.5) → encurta para 24,
     // e o P2 ganha 24" de double top (4 lb) que a estimativa não viu.
-    const wall: Wall = { ...(split480.wall as Wall), openings: [{ ...(split480.wall as Wall).openings[1]!, offset: 280 }] };
+    const wall: Wall = { ...split480.wall, openings: [{ ...split480.wall.openings[1]!, offset: 280 }] };
     const [p1, p2] = splitWall(wall, config);
     // A double top do P2 começa em 24 (216" → emendada na marca 144).
     expect(p2!.members.filter((m) => m.role === 'doubleTopPlate').map((m) => m.x)).toEqual([24, 144]);

@@ -3,8 +3,12 @@ import type { Config, Opening, Wall } from '../../src/types';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { resolveOpeningHeader } from '../../src/rules/openingHeader';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
-import irc from '../fixtures/wall-144-window-irc.json';
-import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
+import ircJson from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import { wallFixture } from '../helpers/fixtures';
+
+const irc = wallFixture(ircJson);
+const nonBearingDoor = wallFixture(nonBearingDoorJson);
 
 // Tabela FALSA (ver helper): colunas A = 20 psf/10', B = 20 psf/30', C = 40 psf/10', D = 40 psf/30'.
 const FAKE = loadHeaderTables(fakeHeaderJson());
@@ -222,8 +226,8 @@ describe('resolveOpeningHeader — parede não portante (R602.7.4)', () => {
 
 describe('resolveOpeningHeader — tabela IRC real', () => {
   it('fixture wall-144-window-irc: 50 psf, 28\', só telhado, RO 36" → 2-2x6 com 2 jacks pela R602.7(1)', () => {
-    const w = irc.wall as Wall;
-    expect(resolveOpeningHeader(w.openings[0]!, w, irc.config as Config)).toEqual({
+    const w = irc.wall;
+    expect(resolveOpeningHeader(w.openings[0]!, w, irc.config)).toEqual({
       ...irc.expected.header,
       flat: false,
       warnings: [],
@@ -231,8 +235,8 @@ describe('resolveOpeningHeader — tabela IRC real', () => {
   });
 
   it('fixture wall-120-door-nonbearing: 2x4 deitado pela R602.7.4', () => {
-    const w = nonBearingDoor.wall as Wall;
-    expect(resolveOpeningHeader(w.openings[0]!, w, nonBearingDoor.config as Config)).toEqual({
+    const w = nonBearingDoor.wall;
+    expect(resolveOpeningHeader(w.openings[0]!, w, nonBearingDoor.config)).toEqual({
       ...nonBearingDoor.expected.header,
       warnings: [],
     });

@@ -1191,12 +1191,34 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   mudado (`git diff --stat` vazio); folhas, planta e CSVs do CLI nos 3 exemplos idênticos byte a byte aos de
   antes. Não feito (fora do item): largura da folha com avisos/legenda, `font-size` em constantes, `Wall` separando
   entrada de derivado, leitor de JSON das tabelas fora de `headers.ts`.
-- [ ] **S28.2 — Schema zod único do projeto (cli + web, SRF).** `cli/src/schema.ts` (strict — chave desconhecida é
+- [x] **S28.2 — Schema zod único do projeto (cli + web, SRF).** `cli/src/schema.ts` (strict — chave desconhecida é
   erro; coerção pés-pol; `loose | plan` como união; `stockLengths` num lugar só; defaults num lugar; `studSpacing`
   sem aceitar pés) substitui a validação à mão de `project.ts`; `web/lib/editor/draft.ts` lê pelo mesmo schema em
   modo tolerante (`safeParse` + preservação de chaves `$…`); fixtures de teste do core validados pelo schema (some o
   `as Wall`). Critério: os 3 exemplos e a leitura gravada dão o mesmo `buildProject`; `draft.test.ts` de ida e volta
   continua verde.
+  Feita em 2026-11-04 (sessão encadeada; commit, sem push). **Schema** (`cli/src/schema.ts`, export `cli/schema`,
+  `zod` vira dependência do cli): folhas (`text`, `measure`, `positiveMeasure`, `signedMeasure`, `studSpacing`,
+  `count`, `precuts`, `headerSection`…) com a frase em português de antes e `params: { rule, received… }` na issue;
+  nós strict (`node(shape)`) — chave desconhecida é erro no caminho dela, **antes** dos campos (erro de grafia aponta
+  a grafia), `$…` passam em qualquer nível, `wallType` é conhecida e o motor não a lê, `defaultHeader*` e
+  `length`/`layoutOrigin` em parede de planta mantêm a frase própria; `ProjectFile` = cabeçalho + `{ format:
+  'loose' } | { format: 'plan', northAngle? }`; defaults (`studThickness`/`plateThickness` 1.5, `config.panel` do
+  core) só no schema; `stockLengths` da raiz entra em `config.stockLengths` e **`Project.stockLengths` saiu** (o build
+  lê só o `config`). Asserções de tipo (`SchemaMatchesCore`) amarram a saída de cada nó ao tipo do core.
+  **`project.ts`** (560 → 156 linhas): `projectFrom` = `safeParse` (primeira issue vira `ProjectError`, agora com
+  `field` = regra e valor) + `resolveOpenings` por parede; `measure` exportado sobre o mesmo leitor. **Editor**:
+  `draft.ts` lê campo a campo pelo `readField(shape.campo, v)` — defaults não entram no draft, um campo ruim não
+  derruba o nó, a frase em inglês sai de `params.rule` (sem ler o português) e as listas de chaves conhecidas vêm das
+  shapes; tipos de enum importados do core em vez de redeclarados. **Fixtures do core**: `test/helpers/fixtures.ts`
+  (`wallFixture`/`houseFixture`) passa `config` + `wall`/`house` pelo `projectFrom` do cli (import relativo, sem
+  ciclo de pacote); os 15 arquivos de teste perderam os 147 `as Wall`/`as Config`/`as House`, e o cli testa que os 12
+  fixtures passam no strict com o `config` igual ao do arquivo. Verde na raiz: `pnpm check` (core 620, cli 140,
+  extract 210 + 1 pulado, web 381) e `pnpm --filter web build`. `buildProject` dos 3 exemplos e da leitura gravada do
+  Ringgold (`toProject`) **idêntico byte a byte** ao de antes (JSON do `Project` e do `BuildResult`); fixtures e
+  snapshots sem um byte mudado; sample aberto no editor (dev sem Supabase) com 0 issues e sem erro no console. Não
+  feito (fora do item): `DraftConfig.studSpacing` continua `number` (o diálogo de configurações escreve medida
+  livre e o problema aparece na checagem); Prettier só nos arquivos novos (o reformat geral é commit à parte).
 - [ ] **S29 — Editor: quebra manual de painel e catálogo editável (web + core; regra de framing: submeter antes).**
   `wall.panelBreaks?: number[]` no formato do CLI (quebras forçadas respeitam as mesmas restrições de
   `breakCandidates`: fora de zona de abertura, longe de canto e de T; fora delas = erro com código); `check` devolve as

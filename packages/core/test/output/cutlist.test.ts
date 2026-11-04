@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Wall } from '../../src/types';
+import type { Member } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { cutList, cutRoleOf, roundLength } from '../../src/output/cutlist';
-import plain from '../fixtures/wall-144-plain.json';
-import window from '../fixtures/wall-144-window.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
+
+const plainPanel = panelizeWall(plain.wall, plain.config);
 
 describe('cutList', () => {
   it('fixture wall-144-plain: 3 plates + 10 studs, exatamente como expected.cutList', () => {

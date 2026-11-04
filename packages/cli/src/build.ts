@@ -117,7 +117,7 @@ export function panelizeProject(project: Project): { panels: Panel[]; problems: 
   let bom: BomLine[] = [];
   if (problems.length === 0) {
     try {
-      bom = projectBom(panels, project.config.studLength, project.config.stockLengths ?? project.stockLengths);
+      bom = projectBom(panels, project.config.studLength, project.config.stockLengths);
     } catch (e) {
       problems.push(problemOf(e, 'bom'));
     }

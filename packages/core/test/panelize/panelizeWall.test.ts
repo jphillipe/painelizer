@@ -2,21 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { labelOf, type Config, type Member, type Opening, type Panel, type Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { expectSameMembers } from '../helpers/members';
-import plain from '../fixtures/wall-144-plain.json';
-import window from '../fixtures/wall-144-window.json';
-import low from '../fixtures/wall-144-window-82.5.json';
-import door from '../fixtures/wall-120-door.json';
-import windowDoor from '../fixtures/wall-144-window-door.json';
-import irc from '../fixtures/wall-144-window-irc.json';
-import nonBearingDoor from '../fixtures/wall-120-door-nonbearing.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import lowJson from '../fixtures/wall-144-window-82.5.json';
+import doorJson from '../fixtures/wall-120-door.json';
+import windowDoorJson from '../fixtures/wall-144-window-door.json';
+import ircJson from '../fixtures/wall-144-window-irc.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
+import { wallFixture } from '../helpers/fixtures';
+
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
+const low = wallFixture(lowJson);
+const door = wallFixture(doorJson);
+const windowDoor = wallFixture(windowDoorJson);
+const irc = wallFixture(ircJson);
+const nonBearingDoor = wallFixture(nonBearingDoorJson);
 
 /** Header do projeto usado nas aberturas montadas à mão (o mesmo dos fixtures). */
 const H = { section: '2x10', plies: 2 } as const;
 
-const wall = plain.wall as Wall;
-const config = plain.config as Config;
+const wall = plain.wall;
+const config = plain.config;
 
 describe('panelizeWall — parede sem abertura', () => {
   it('fixture wall-144-plain passa exatamente (members por role, section, length, x, y)', () => {
@@ -96,8 +105,8 @@ function expectNoVerticalOverlap(members: Member[]) {
 }
 
 describe('panelizeWall — janela', () => {
-  const wWall = window.wall as Wall;
-  const wConfig = window.config as Config;
+  const wWall = window.wall;
+  const wConfig = window.config;
   const win = wWall.openings[0] as Opening;
   const studXs = (p: Panel) => p.members.filter((m) => m.role === 'stud').map((m) => m.x);
 
@@ -110,7 +119,7 @@ describe('panelizeWall — janela', () => {
   });
 
   it('fixture wall-144-window-82.5 passa exatamente (20 peças, caso típico da fábrica)', () => {
-    const panel = panelizeWall(low.wall as Wall, low.config as Config);
+    const panel = panelizeWall(low.wall, low.config);
     expectSameMembers(panel.members, low.expected.members as Member[]);
     expect(panel.members).toHaveLength(20);
     expect(panel.warnings).toEqual(low.expected.warnings);
@@ -127,7 +136,7 @@ describe('panelizeWall — janela', () => {
           { id: 'b', type: 'window', offset: 100, roughWidth: 36, roughHeight: 48, headerHeight: 80, header: H },
         ],
       },
-      low.config as Config,
+      low.config,
     );
     const headers = panel.members.filter((m) => m.role === 'header').map((h) => [h.x, h.y]);
     expect(headers).toEqual([
@@ -177,7 +186,7 @@ describe('panelizeWall — janela', () => {
 
 describe('panelizeWall — porta', () => {
   it('fixture wall-120-door passa exatamente (16 peças, bottom plate inteira, corte na obra)', () => {
-    const panel = panelizeWall(door.wall as Wall, door.config as Config);
+    const panel = panelizeWall(door.wall, door.config);
     expectSameMembers(panel.members, door.expected.members as Member[]);
     expect(panel.members).toHaveLength(16);
     expect(panel.fieldCuts).toEqual(door.expected.fieldCuts);
@@ -188,10 +197,10 @@ describe('panelizeWall — porta', () => {
   });
 
   it('aviso DOOR_RO_HEIGHT_MISMATCH da abertura chega ao painel, depois dos avisos da parede', () => {
-    const dWall = door.wall as Wall;
+    const dWall = door.wall;
     const panel = panelizeWall(
       { ...dWall, height: 103.125, openings: [{ ...dWall.openings[0]!, roughHeight: 80 }] },
-      door.config as Config,
+      door.config,
     );
     expect(panel.warnings.map((w) => w.code)).toEqual(['STUD_LENGTH_MISMATCH', 'DOOR_RO_HEIGHT_MISMATCH']);
   });
@@ -199,7 +208,7 @@ describe('panelizeWall — porta', () => {
 
 describe('panelizeWall — aberturas vizinhas', () => {
   it('fixture wall-144-window-door passa exatamente (24 peças, king compartilhado em 61.5)', () => {
-    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    const panel = panelizeWall(windowDoor.wall, windowDoor.config);
     expectSameMembers(panel.members, windowDoor.expected.members as Member[]);
     expect(panel.members).toHaveLength(24);
     expect(panel.fieldCuts).toEqual(windowDoor.expected.fieldCuts);
@@ -208,22 +217,22 @@ describe('panelizeWall — aberturas vizinhas', () => {
   });
 
   it('a ordem das aberturas na entrada não muda o painel', () => {
-    const wd = windowDoor.wall as Wall;
-    const panel = panelizeWall({ ...wd, openings: [...wd.openings].reverse() }, windowDoor.config as Config);
+    const wd = windowDoor.wall;
+    const panel = panelizeWall({ ...wd, openings: [...wd.openings].reverse() }, windowDoor.config);
     expectSameMembers(panel.members, windowDoor.expected.members as Member[]);
   });
 
   it('zonas que só se tocam fundem: um king entre as janelas, sem sobreposição', () => {
     const panel = panelizeWall(
       {
-        ...(window.wall as Wall),
+        ...window.wall,
         length: 192,
         openings: [
           { id: 'a', type: 'window', offset: 20, roughWidth: 24, roughHeight: 48, header: H }, // zona [17, 47]
           { id: 'b', type: 'window', offset: 50, roughWidth: 24, roughHeight: 48, header: H }, // zona [47, 77]
         ],
       },
-      window.config as Config,
+      window.config,
     );
     const kings = panel.members.filter((m) => m.role === 'kingStud').map((m) => m.x);
     expect(kings.sort((x, y) => x - y)).toEqual([17, 45.5, 75.5]);
@@ -232,15 +241,15 @@ describe('panelizeWall — aberturas vizinhas', () => {
   });
 
   it('RO vizinhos a menos de 4.5": RangeError (P16)', () => {
-    const wd = windowDoor.wall as Wall;
+    const wd = windowDoor.wall;
     const tooClose = { ...wd, openings: [wd.openings[0]!, { ...wd.openings[1]!, offset: 64 }] };
-    expect(() => panelizeWall(tooClose, windowDoor.config as Config)).toThrow(RangeError);
+    expect(() => panelizeWall(tooClose, windowDoor.config)).toThrow(RangeError);
   });
 });
 
 describe('panelizeWall — header pela tabela (S9.2)', () => {
-  const iWall = irc.wall as Wall;
-  const iConfig = irc.config as Config;
+  const iWall = irc.wall;
+  const iConfig = irc.config;
 
   it('fixture wall-144-window-irc passa exatamente (22 peças, 2-2x6 com 2 jacks pela R602.7(1))', () => {
     const panel = panelizeWall(iWall, iConfig);
@@ -291,7 +300,7 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
   });
 
   it('fixture wall-120-door-nonbearing passa exatamente (14 peças)', () => {
-    const panel = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
+    const panel = panelizeWall(nonBearingDoor.wall, nonBearingDoor.config);
     expectSameMembers(panel.members, nonBearingDoor.expected.members as Member[]);
     expect(panel.members).toHaveLength(14);
     expect(panel.fieldCuts).toEqual(nonBearingDoor.expected.fieldCuts);
@@ -411,8 +420,8 @@ describe('panelizeWall — studs extras do projeto (S12)', () => {
   });
 
   it('extra junto a uma abertura: fora da zona passa; dentro da zona é RangeError', () => {
-    const wWall = window.wall as Wall;
-    const wConfig = window.config as Config;
+    const wWall = window.wall;
+    const wConfig = window.config;
     // zona [45, 87]: 43.5–45 encosta no king e passa
     const touching = panelizeWall({ ...wWall, extraStuds: [{ x: 43.5 }] }, wConfig);
     expect(touching.members.some((m) => m.x === 43.5 && m.role === 'stud')).toBe(true);
@@ -440,7 +449,7 @@ describe('panelizeWall — studs extras do projeto (S12)', () => {
 
 describe('panelizeWall — dados da folha (S17)', () => {
   it('openings em x do painel, com o topo do RO = base do header; exterior e bearing da parede', () => {
-    const panel = panelizeWall(windowDoor.wall as Wall, windowDoor.config as Config);
+    const panel = panelizeWall(windowDoor.wall, windowDoor.config);
     expect(panel.openings).toEqual([
       { id: 'win1', type: 'window', x: 24, width: 36, top: 82.5, height: 48 },
       { id: 'door1', type: 'door', x: 64.5, width: 38, top: 82.5, height: 82.5 },
@@ -449,12 +458,12 @@ describe('panelizeWall — dados da folha (S17)', () => {
     expect(panel.bearing).toBe(true);
     expect(panelizeWall(wall, config).openings).toEqual([]);
     // Header deitado (não portante): topo do RO na base da peça deitada.
-    const nb = panelizeWall(nonBearingDoor.wall as Wall, nonBearingDoor.config as Config);
+    const nb = panelizeWall(nonBearingDoor.wall, nonBearingDoor.config);
     expect(nb.openings).toEqual([{ id: 'door1', type: 'door', x: 40, width: 38, top: 82.5, height: 82.5 }]);
     expect(nb.exterior).toBe(false);
     expect(nb.bearing).toBe(false);
     // Sem headerHeight: header encostado na top plate (topo do RO = 94.125 − profundidade).
-    const { headerHeight, ...noHeight } = window.config as Config;
-    expect(panelizeWall(window.wall as Wall, noHeight).openings![0]!.top).toBe(94.125 - 9.25);
+    const { headerHeight, ...noHeight } = window.config;
+    expect(panelizeWall(window.wall, noHeight).openings![0]!.top).toBe(94.125 - 9.25);
   });
 });

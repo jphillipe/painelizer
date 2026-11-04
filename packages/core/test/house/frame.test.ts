@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Opening } from '../../src/types';
 import type { House, HouseWall } from '../../src/house/types';
 import { frameWalls, type WallFrame } from '../../src/house/frame';
-import cornerL from '../fixtures/house-corner-L.json';
-import tee from '../fixtures/house-tee.json';
-import house28x40 from '../fixtures/house-28x40.json';
+import cornerLJson from '../fixtures/house-corner-L.json';
+import teeJson from '../fixtures/house-tee.json';
+import house28x40Json from '../fixtures/house-28x40.json';
+import { houseFixture } from '../helpers/fixtures';
+
+const cornerL = houseFixture(cornerLJson);
+const tee = houseFixture(teeJson);
+const house28x40 = houseFixture(house28x40Json);
 
 /** O que os fixtures registram de cada frame (tudo menos a `Wall` inteira). */
 function summary(f: WallFrame) {
@@ -35,12 +40,12 @@ describe('frameWalls — fixtures', () => {
     ['house-tee', tee],
     ['house-28x40', house28x40],
   ])('%s: plates, origem de layout, ligações e offsets convertidos', (_name, fx) => {
-    const frames = frameWalls(fx.house as House);
+    const frames = frameWalls(fx.house);
     expect(frames.map(summary)).toEqual(fx.expected.frames);
   });
 
   it('a Wall derivada não leva os campos da planta e mantém layoutOrigin', () => {
-    const [w1, w2] = frameWalls(cornerL.house as House);
+    const [w1, w2] = frameWalls(cornerL.house);
     expect(w1!.wall).toEqual({
       id: 'W1',
       length: 146.75,
@@ -154,12 +159,12 @@ describe('frameWalls — erros', () => {
 
 describe('frameWalls — lado da face externa (S17)', () => {
   it('casa 28x40 (laço anti-horário): fora à direita de start→end em todas as externas; interna sem outside', () => {
-    const frames = frameWalls(house28x40.house as House);
+    const frames = frameWalls(house28x40.house);
     expect(frames.map((f) => f.outside)).toEqual(['right', 'right', 'right', 'right', undefined]);
   });
 
   it('L: W1 (fora em −y) à direita; W2 sobe com a casa a +x, fora à esquerda; invertendo o sentido o lado troca', () => {
-    const frames = frameWalls(cornerL.house as House);
+    const frames = frameWalls(cornerL.house);
     expect(frames.map((f) => f.outside)).toEqual(['right', 'left']);
     const [w1, w2] = cornerL.house.walls as HouseWall[];
     const flipped = frameWalls({ walls: [w1!, { ...w2!, start: w2!.end, end: w2!.start }] });

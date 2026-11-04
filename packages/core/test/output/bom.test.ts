@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Member, Wall } from '../../src/types';
+import type { Member, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
 import { bom, stockLengthFor } from '../../src/output/bom';
 import { DEFAULT_STOCK_LENGTHS } from '../../src/types';
-import plain from '../fixtures/wall-144-plain.json';
-import window from '../fixtures/wall-144-window.json';
-import low from '../fixtures/wall-144-window-82.5.json';
+import plainJson from '../fixtures/wall-144-plain.json';
+import windowJson from '../fixtures/wall-144-window.json';
+import lowJson from '../fixtures/wall-144-window-82.5.json';
+import { wallFixture } from '../helpers/fixtures';
 
-const plainPanel = panelizeWall(plain.wall as Wall, plain.config as Config);
+const plain = wallFixture(plainJson);
+const window = wallFixture(windowJson);
+const low = wallFixture(lowJson);
+
+const plainPanel = panelizeWall(plain.wall, plain.config);
 
 describe('stockLengthFor', () => {
   it('escolhe o menor comercial que cabe', () => {
@@ -71,12 +76,12 @@ describe('bom', () => {
   });
 
   it('header LVL (S12.5): linha engineered comprada no comprimento da peça, sem sobra, depois das serradas', () => {
-    const wall = window.wall as Wall;
+    const wall = window.wall;
     const lvl: Wall = {
       ...wall,
       openings: [{ ...wall.openings[0]!, header: { section: 'LVL 1.75x9.25', plies: 2 } }],
     };
-    const panel = panelizeWall(lvl, window.config as Config);
+    const panel = panelizeWall(lvl, window.config);
     const lines = bom([panel], DEFAULT_STOCK_LENGTHS, window.config.studLength);
     const last = lines[lines.length - 1]!;
     // header = RO 36" + 1 jack de cada lado = 39" (como o 2-2x10 do fixture)
@@ -93,7 +98,7 @@ describe('bom', () => {
   });
 
   it('fixture wall-144-window-82.5: jacks de 81 e cripples curtos vão para o 8\', não para o pré-corte', () => {
-    const panel = panelizeWall(low.wall as Wall, low.config as Config);
+    const panel = panelizeWall(low.wall, low.config);
     const lines = bom([panel], DEFAULT_STOCK_LENGTHS, low.config.studLength);
     // pré-corte: 7 studs + 2 kings; 8': 2 jacks + 1 sill + 4 cripples
     expect(lines.map((l) => [l.section, l.stockLength, l.kind === 'precut', l.qty])).toEqual([
@@ -105,7 +110,7 @@ describe('bom', () => {
   });
 
   it("parede de 9': studs no pré-corte de 104 5/8\"", () => {
-    const nine = panelizeWall({ ...(plain.wall as Wall), height: 109.125 }, plain.config as Config);
+    const nine = panelizeWall({ ...plain.wall, height: 109.125 }, plain.config);
     expect(bom([nine]).map((l) => [l.stockLength, l.kind === 'precut', l.qty, l.waste])).toEqual([
       [104.625, true, 10, 0],
       [144, false, 3, 0],
@@ -140,7 +145,7 @@ describe('bom', () => {
 
   it('plate serrada mais longa que o maior comercial sai como linha oversize, sem erro (S15)', () => {
     // panelizeWall sem splitWall: as plates de 240" não foram emendadas.
-    const long = panelizeWall({ ...(plain.wall as Wall), id: 'W-20ft', length: 240 }, plain.config as Config);
+    const long = panelizeWall({ ...plain.wall, id: 'W-20ft', length: 240 }, plain.config);
     const lines = bom([long]);
     expect(lines.find((l) => l.kind === 'oversize')).toEqual({
       section: '2x6',

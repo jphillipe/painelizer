@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { Config, Panel } from '../../src/types';
+import type { Panel } from '../../src/types';
 import type { House, HouseWall } from '../../src/house/types';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
 import { splitWall } from '../../src/panelize/splitWall';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
-import cornerL from '../fixtures/house-corner-L.json';
-import tee from '../fixtures/house-tee.json';
-import house28x40 from '../fixtures/house-28x40.json';
+import cornerLJson from '../fixtures/house-corner-L.json';
+import teeJson from '../fixtures/house-tee.json';
+import house28x40Json from '../fixtures/house-28x40.json';
+import { houseFixture } from '../helpers/fixtures';
+
+const cornerL = houseFixture(cornerLJson);
+const tee = houseFixture(teeJson);
+const house28x40 = houseFixture(house28x40Json);
 
 /** Studs em pé (o stud flat do canto California é listado à parte em `expected.flat`). */
 const studXs = (p: Panel) => p.members.filter((m) => m.role === 'stud' && m.flat !== true).map((m) => m.x).sort((a, b) => a - b);
@@ -38,7 +43,7 @@ describe('panelizeHouse — fixtures', () => {
     ['house-tee', tee],
     ['house-28x40', house28x40],
   ])('%s: painéis por parede, peças, studs e avisos como no fixture', (_name, fx) => {
-    const { panels, frames, warnings } = panelizeHouse(fx.house as House, fx.config as Config);
+    const { panels, frames, warnings } = panelizeHouse(fx.house, fx.config);
     const expected = fx.expected.panels as Record<string, ExpectedPanel>;
     expect(panels.map((p) => p.id)).toEqual(fx.expected.panelIds);
     expect(panels.map((p) => p.id)).toEqual(Object.keys(expected));
@@ -74,31 +79,31 @@ describe('panelizeHouse — fixtures', () => {
   });
 
   it('os painéis de cada parede são exatamente o splitWall da Wall derivada (S15), mais o plan (S16) e o facing (S17)', () => {
-    const { panels, frames } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
-    expect(panels.map(({ plan, facing, ...p }) => p)).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config as Config)));
+    const { panels, frames } = panelizeHouse(house28x40.house, house28x40.config);
+    expect(panels.map(({ plan, facing, ...p }) => p)).toEqual(frames.flatMap((f) => splitWall(f.wall, house28x40.config)));
     expect(panels.map((p) => p.id)).toEqual([
       '1-W01-P1', '1-W01-P2', '1-W01-P3', '1-W02-P1', '1-W02-P2', '1-W03-P1', '1-W03-P2', '1-W03-P3', '1-W04-P1', '1-W04-P2', '1-W05-P1', '1-W05-P2',
     ]);
   });
 
   it('level da parede entra no id e no painel; parede sem level é pavimento 1 (S16)', () => {
-    const house = house28x40.house as House;
+    const house = house28x40.house;
     const walls = house.walls.map((w) => (w.id === 'W05' ? { ...w, level: 2 } : w));
-    const { panels, frames } = panelizeHouse({ walls }, house28x40.config as Config);
+    const { panels, frames } = panelizeHouse({ walls }, house28x40.config);
     expect(frames.map((f) => f.level)).toEqual([1, 1, 1, 1, 2]);
     expect(panels.filter((p) => p.wallId === 'W05').map((p) => [p.id, p.level])).toEqual([['2-W05-P1', 2], ['2-W05-P2', 2]]);
     expect(panels[0]!.level).toBe(1);
     // A planta não muda com o pavimento: o plan do W05 é o mesmo.
     expect(panels.filter((p) => p.wallId === 'W05').map((p) => p.plan)).toEqual(
-      panelizeHouse(house, house28x40.config as Config).panels.filter((p) => p.wallId === 'W05').map((p) => p.plan),
+      panelizeHouse(house, house28x40.config).panels.filter((p) => p.wallId === 'W05').map((p) => p.plan),
     );
-    expect(() => panelizeHouse({ walls: walls.map((w) => ({ ...w, level: 0 })) }, house28x40.config as Config)).toThrow(/level deve ser inteiro ≥ 1/);
+    expect(() => panelizeHouse({ walls: walls.map((w) => ({ ...w, level: 0 })) }, house28x40.config)).toThrow(/level deve ser inteiro ≥ 1/);
   });
 });
 
 describe('panelizeHouse — T e aberturas', () => {
   const base = { height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 0 } as const;
-  const config = tee.config as Config;
+  const config = tee.config;
   const H = { section: '2x10', plies: 2 } as const;
   const houseWith = (offset: number, teeX = 96): House => ({
     walls: [
@@ -171,10 +176,10 @@ describe('panelizeHouse — T e aberturas', () => {
 
 describe('panelizeHouse — facing (S17)', () => {
   it('painéis de parede externa levam facing pelo outside do frame; interna não', () => {
-    const { panels } = panelizeHouse(house28x40.house as House, house28x40.config as Config);
+    const { panels } = panelizeHouse(house28x40.house, house28x40.config);
     expect(panels.filter((p) => p.wallId !== 'W05').every((p) => p.facing === 'exterior')).toBe(true);
     expect(panels.filter((p) => p.wallId === 'W05').every((p) => p.facing === undefined)).toBe(true);
-    const L = panelizeHouse(cornerL.house as House, cornerL.config as Config).panels;
+    const L = panelizeHouse(cornerL.house, cornerL.config).panels;
     expect(L.map((p) => p.facing)).toEqual(['exterior', 'interior']);
   });
 });
