@@ -975,6 +975,7 @@ sessão. "SRF" = sem regra de framing (não precisa submeter abordagem antes de 
 `04-decisoes.md` (2026-11-04): fechar os defeitos que perdem leitura paga antes de qualquer fatoração.
 Ordem revista no mesmo dia, com a prancha da fábrica: **S23 → Fase 8 (S35–S39) → S24 em diante**. Revista de novo
 pelo humano em 2026-11-04: **Fase 6 inteira primeiro (S23 → S24 → S25 → S26 → S27), em sessões encadeadas**, depois a Fase 8.
+Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → S34) antes da Fase 8**.
 
 - [x] **S23 — Não perder a leitura nem a edição (web, SRF).** Defeitos A1–A6 e A9 do doc 13. (a) `SavedJob` ganha
   `jobId` de verdade em `lib/editor/persist.ts` (`loadJob` descarta o campo hoje; o `if` de retomada em
@@ -1210,7 +1211,7 @@ e capa com BOM, `getClaims()` no proxy (duas consultas de auth por action), unde
 ## Fase 8 — Pedidos da fábrica (prancha de 2026-10-28)
 
 Planejada em 2026-11-04 a partir da prancha e das mensagens do Nicolas Hernandez (`docs/14-prancha-fabrica.md`,
-plano aprovado pelo humano). **Ordem decidida: S23 → Fase 8 → S24 em diante** (`04-decisoes.md`, 2026-11-04): é o
+plano aprovado pelo humano). **Ordem: depois da Fase 7** (`04-decisoes.md`, 2026-11-04; antes valia "S23 → Fase 8 → S24"): é o
 primeiro pedido direto da fábrica com conteúdo de framing e muda o que a folha mostra, logo o que o Checkpoint 2
 valida. Toda sessão desta fase toca regra de framing: abordagem em até 5 linhas e confirmação antes de código;
 fixtures confirmados antes de editar. Hipóteses em P44–P49.
