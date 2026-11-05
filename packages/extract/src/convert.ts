@@ -94,9 +94,9 @@ export function defaultHeightWarnings(out: ExtractionOutput, opts: ConvertOption
   return [
     extractionNotice(
       'DEFAULT_HEADER_HEIGHT',
-      `${ids.length} abertura(s) sem altura no projeto ficam com o topo do RO a ${FACTORY_HEADER_HEIGHT} ` +
-        `do subfloor (padrão da fábrica, P2): ${ids.slice(0, 10).join(', ')}${ids.length > 10 ? '…' : ''} — confira nas ` +
-        'elevações ou informe a altura do header / do peitoril',
+      `${ids.length} opening(s) with no height in the project get the top of RO at ${FACTORY_HEADER_HEIGHT} ` +
+        `above subfloor (factory default, P2): ${ids.slice(0, 10).join(', ')}${ids.length > 10 ? '…' : ''} — check the ` +
+        'elevations or enter the header / sill height',
       {},
       { count: ids.length, height: FACTORY_HEADER_HEIGHT, openingIds: ids },
     ),
@@ -172,14 +172,14 @@ export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {
   const header = projectHeaderHeight(out, opts).value;
   return out.walls.flatMap((w) =>
     w.openings.flatMap((o) => {
-      const what = `parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'})`;
+      const what = `Wall ${w.id}, opening ${o.id} (${o.tag ?? o.type ?? '?'})`;
       const where = { wallId: w.id, openingId: o.id };
       const kind = { ...(o.tag === null ? {} : { tag: o.tag }), ...(o.type === null ? {} : { type: o.type }) };
       if (isUnplaced(o)) {
         return [
           extractionNotice(
             'OPENING_UNPLACED',
-            `${what}: a leitura não achou a cota do eixo — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe a posição`,
+            `${what}: the reading found no centerline dimension — the wall's panels come out WITHOUT this opening; frame it in the field or enter the position`,
             where,
             kind,
           ),
@@ -189,7 +189,7 @@ export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {
         return [
           extractionNotice(
             'OPENING_UNSIZED',
-            `${what}: sem tag no schedule e sem largura/altura do RO na leitura — os painéis da parede saem SEM esta abertura; enquadre na obra ou informe o RO`,
+            `${what}: no schedule tag and no RO width/height in the reading — the wall's panels come out WITHOUT this opening; frame it in the field or enter the RO`,
             where,
             kind,
           ),
@@ -200,7 +200,7 @@ export function unplacedOpenings(out: ExtractionOutput, opts: ConvertOptions = {
         return [
           extractionNotice(
             'DOOR_RO_HEIGHT_ASSUMED',
-            `${what}: a leitura deu a largura do RO (${o.roughWidth}) mas não a altura — RO do subfloor até a base do header, ${headerHeight} (P4); confira`,
+            `${what}: the reading gave the RO width (${o.roughWidth}) but not the height — RO from subfloor to the bottom of the header, ${headerHeight} (P4); check it`,
             where,
             { ...kind, roughWidth: o.roughWidth ?? '', headerHeight },
           ),
@@ -227,8 +227,8 @@ export function estimatedOpenings(out: ExtractionOutput): ReadingNotice[] {
       .map((o) =>
         extractionNotice(
           'OPENING_ESTIMATED',
-          `parede ${w.id}, abertura ${o.id} (${o.tag ?? o.type ?? '?'}): posição medida no desenho pela ` +
-            `escala, sem cota (confiança ${o.confidence.toFixed(2)}) — confira a posição na planta e ajuste`,
+          `Wall ${w.id}, opening ${o.id} (${o.tag ?? o.type ?? '?'}): position scaled from the drawing, ` +
+            `no dimension (confidence ${o.confidence.toFixed(2)}) — check the position on the plan and adjust`,
           { wallId: w.id, openingId: o.id },
           { ...(o.tag === null ? {} : { tag: o.tag }), ...(o.type === null ? {} : { type: o.type }), confidence: Number(o.confidence.toFixed(2)) },
         ),
@@ -243,8 +243,8 @@ export function roomsWithoutDoors(out: ExtractionOutput): ReadingNotice[] {
     .map((r) =>
       extractionNotice(
         'ROOM_WITHOUT_DOOR',
-        `${r.name}${r.level === null ? '' : ` (pavimento ${r.level})`}: nenhuma porta encontrada` +
-          `${r.note === null || r.note.trim() === '' ? '' : ` — ${r.note.trim()}`}; confira na planta e adicione a abertura na parede certa`,
+        `${r.name}${r.level === null ? '' : ` (level ${r.level})`}: no door found` +
+          `${r.note === null || r.note.trim() === '' ? '' : ` — ${r.note.trim()}`}; check the plan and add the opening to the right wall`,
         {},
         { room: r.name, ...(r.level === null ? {} : { level: r.level }) },
       ),
@@ -332,7 +332,7 @@ export function convert(out: ExtractionOutput, opts: ConvertOptions = {}): Conve
     problems.push({
       source: 'project',
       code: 'WALL_HEIGHT_MISSING',
-      message: `os desenhos não trazem cortes nem pé-direito (${noHeight.length} parede(s) sem altura: ${noHeight.slice(0, 5).join(', ')}${noHeight.length > 5 ? '…' : ''}); informe a altura da parede (subfloor ao topo da double top plate)`,
+      message: `the drawings have no sections or wall height (${noHeight.length} wall(s) with no height: ${noHeight.slice(0, 5).join(', ')}${noHeight.length > 5 ? '…' : ''}); enter the wall height (subfloor to top of double top plate)`,
       params: { count: noHeight.length, wallIds: noHeight },
     });
     return { project, problems, warnings };
@@ -382,32 +382,32 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
   const review: string[] = [];
   const lines: string[] = [];
 
-  lines.push(`# Extração — ${out.projectName}`);
+  lines.push(`# Extraction — ${out.projectName}`);
   lines.push('');
   lines.push(
-    `Pavimento ${out.level} · planta ${out.sheets.plan ?? '?'} · schedule ${out.sheets.schedule ?? '—'} · elevações ${out.sheets.elevations ?? '—'}`,
+    `Level ${out.level} · plan ${out.sheets.plan ?? '?'} · schedule ${out.sheets.schedule ?? '—'} · elevations ${out.sheets.elevations ?? '—'}`,
   );
-  lines.push(`Origem: ${out.origin}`);
-  lines.push(`Altura de parede: ${out.wallHeight ?? 'não lida'} · topo de RO padrão: ${out.headerHeight ?? 'não lido'}`);
+  lines.push(`Origin: ${out.origin}`);
+  lines.push(`Wall height: ${out.wallHeight ?? 'not read'} · default top of RO: ${out.headerHeight ?? 'not read'}`);
   lines.push('');
 
-  lines.push('## Paredes');
+  lines.push('## Walls');
   lines.push('');
-  lines.push('| id | de → até / comprimento | seção | tipo | ext | portante | conf | evidência |');
+  lines.push('| id | from → to / length | section | type | ext | bearing | conf | evidence |');
   lines.push('|---|---|---|---|---|---|---|---|');
   for (const w of out.walls) {
     const geo = w.start !== null && w.end !== null ? `${pt(w.start)} → ${pt(w.end)}` : (w.length ?? '—');
     lines.push(
-      `| ${w.id} | ${geo} | ${w.section} | ${w.wallType ?? '—'} | ${w.exterior ? 'sim' : 'não'} | ${w.bearing ? 'sim' : 'não'} | ${w.confidence.toFixed(2)} | ${w.evidence} |`,
+      `| ${w.id} | ${geo} | ${w.section} | ${w.wallType ?? '—'} | ${w.exterior ? 'yes' : 'no'} | ${w.bearing ? 'yes' : 'no'} | ${w.confidence.toFixed(2)} | ${w.evidence} |`,
     );
-    if (w.confidence < threshold) review.push(`parede ${w.id}: confiança ${w.confidence.toFixed(2)}`);
-    if ((w.start === null || w.end === null) && w.length === null) review.push(`parede ${w.id}: sem geometria`);
+    if (w.confidence < threshold) review.push(`wall ${w.id}: confidence ${w.confidence.toFixed(2)}`);
+    if ((w.start === null || w.end === null) && w.length === null) review.push(`wall ${w.id}: no geometry`);
     for (const o of w.openings) {
-      if (o.confidence < threshold) review.push(`abertura ${o.id} (${w.id}): confiança ${o.confidence.toFixed(2)}`);
-      if (o.center === null && o.offset === null) review.push(`abertura ${o.id} (${w.id}): sem posição`);
-      else if (o.positionSource === 'scaled') review.push(`abertura ${o.id} (${w.id}): posição estimada pela escala`);
+      if (o.confidence < threshold) review.push(`opening ${o.id} (${w.id}): confidence ${o.confidence.toFixed(2)}`);
+      if (o.center === null && o.offset === null) review.push(`opening ${o.id} (${w.id}): no position`);
+      else if (o.positionSource === 'scaled') review.push(`opening ${o.id} (${w.id}): position scaled from the drawing`);
       if (o.tag === null && (o.type === null || o.roughWidth === null || o.roughHeight === null)) {
-        review.push(`abertura ${o.id} (${w.id}): sem tag e sem RO completo`);
+        review.push(`opening ${o.id} (${w.id}): no tag and no complete RO`);
       }
     }
   }
@@ -415,72 +415,72 @@ export function reviewReport(out: ExtractionOutput, converted: Converted, opts: 
 
   const openings = out.walls.flatMap((w) => w.openings.map((o) => ({ w, o })));
   if (openings.length > 0) {
-    lines.push('## Aberturas');
+    lines.push('## Openings');
     lines.push('');
-    lines.push('| id | parede | tag/tipo | eixo | fonte | RO | topo RO | conf | evidência |');
+    lines.push('| id | wall | tag/type | center | source | RO | top of RO | conf | evidence |');
     lines.push('|---|---|---|---|---|---|---|---|---|');
     for (const { w, o } of openings) {
-      const ro = o.roughWidth !== null || o.roughHeight !== null ? `${o.roughWidth ?? '?'} × ${o.roughHeight ?? '?'}` : 'catálogo';
+      const ro = o.roughWidth !== null || o.roughHeight !== null ? `${o.roughWidth ?? '?'} × ${o.roughHeight ?? '?'}` : 'catalog';
       lines.push(
-        `| ${o.id} | ${w.id} | ${o.tag ?? o.type ?? '—'} | ${o.center ?? (o.offset !== null ? `borda ${o.offset}` : '—')} | ${o.positionSource ?? '—'} | ${ro} | ${o.headerHeight ?? '—'} | ${o.confidence.toFixed(2)} | ${o.evidence} |`,
+        `| ${o.id} | ${w.id} | ${o.tag ?? o.type ?? '—'} | ${o.center ?? (o.offset !== null ? `edge ${o.offset}` : '—')} | ${o.positionSource ?? '—'} | ${ro} | ${o.headerHeight ?? '—'} | ${o.confidence.toFixed(2)} | ${o.evidence} |`,
       );
     }
     lines.push('');
   }
 
   if (out.openingTypes.length > 0) {
-    lines.push('## Schedule de aberturas');
+    lines.push('## Opening schedule');
     lines.push('');
-    lines.push('| tag | tipo | nominal | batente | peitoril | RO | conf | evidência |');
+    lines.push('| tag | type | nominal | frame | sill | RO | conf | evidence |');
     lines.push('|---|---|---|---|---|---|---|---|');
     for (const t of out.openingTypes) {
       const ro = t.roughWidth !== null || t.roughHeight !== null ? `${t.roughWidth ?? '?'} × ${t.roughHeight ?? '?'}` : '—';
       lines.push(
         `| ${t.tag} | ${t.kind} | ${t.width} × ${t.height} | ${t.frame ?? '—'} | ${t.sillHeight ?? '—'} | ${ro} | ${t.confidence.toFixed(2)} | ${t.evidence} |`,
       );
-      if (t.confidence < threshold) review.push(`tipo ${t.tag}: confiança ${t.confidence.toFixed(2)}`);
+      if (t.confidence < threshold) review.push(`type ${t.tag}: confidence ${t.confidence.toFixed(2)}`);
     }
     lines.push('');
   }
 
   if (out.wallTypes.length > 0) {
-    lines.push('## Tipos de parede');
+    lines.push('## Wall types');
     lines.push('');
     for (const t of out.wallTypes) {
-      lines.push(`- **${t.tag}** ${t.section} ${t.exterior ? 'externa' : 'interna'} — ${t.description} (${t.evidence})`);
+      lines.push(`- **${t.tag}** ${t.section} ${t.exterior ? 'exterior' : 'interior'} — ${t.description} (${t.evidence})`);
     }
     lines.push('');
   }
 
   if (out.rooms.length > 0) {
-    lines.push('## Cômodos');
+    lines.push('## Rooms');
     lines.push('');
-    lines.push('| cômodo | pav. | portas | nota |');
+    lines.push('| room | level | doors | note |');
     lines.push('|---|---|---|---|');
     for (const r of out.rooms) {
-      lines.push(`| ${r.name} | ${r.level ?? '—'} | ${r.doors.length === 0 ? '**nenhuma**' : r.doors.join(', ')} | ${r.note ?? ''} |`);
-      if (r.doors.length === 0) review.push(`cômodo ${r.name}: sem porta`);
+      lines.push(`| ${r.name} | ${r.level ?? '—'} | ${r.doors.length === 0 ? '**none**' : r.doors.join(', ')} | ${r.note ?? ''} |`);
+      if (r.doors.length === 0) review.push(`room ${r.name}: no door`);
     }
     lines.push('');
   }
 
   for (const p of converted.problems) review.push(noticeText(p));
 
-  lines.push('## Revisar');
+  lines.push('## Review');
   lines.push('');
-  if (review.length === 0) lines.push('Nada abaixo do limiar; conferir mesmo assim contra a planta.');
+  if (review.length === 0) lines.push('Nothing below the threshold; check against the plan anyway.');
   for (const r of review) lines.push(`- ${r}`);
   lines.push('');
 
   if (converted.warnings.length > 0) {
-    lines.push('## Avisos do motor');
+    lines.push('## Engine warnings');
     lines.push('');
     for (const w of converted.warnings) lines.push(`- ${noticeText(w)}`);
     lines.push('');
   }
 
   if (out.notes.length > 0) {
-    lines.push('## Notas do modelo');
+    lines.push('## Model notes');
     lines.push('');
     for (const n of out.notes) lines.push(`- ${n}`);
     lines.push('');

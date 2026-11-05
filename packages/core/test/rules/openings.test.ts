@@ -209,7 +209,7 @@ describe('framingForOpening — janela', () => {
   it('sem header possível (parede portante, sem header do projeto nem dados da casa): erro, nenhuma peça', () => {
     const { header: _h, ...noHeader } = win;
     const { building: _b, ...noBuilding } = config;
-    expect(() => frame(noHeader, wall, noBuilding)).toThrow(/parede W-window, abertura win1: .*config\.building/);
+    expect(() => frame(noHeader, wall, noBuilding)).toThrow(/Wall W-window, opening win1: .*config\.building/);
   });
 
   it('options.header: usa o header recebido — jacks dele definem zona, kings e comprimento; avisos repassados', () => {
@@ -276,7 +276,7 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
     // top plate em 94.125; topo = base + 1.5 → base 68.625 dá 24"
     expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.625 }, nbWall, config)).not.toThrow();
     expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.5 }, nbWall, config)).toThrow(
-      /parede W-window, abertura win1: peça deitada \(R602\.7\.4\) com topo em 70".*24\.125" da top plate.*header da abertura/,
+      /Wall W-window, opening win1: flat header \(R602\.7\.4\) with its top at 70".*24\.125" below the top plate.*opening header/,
     );
     // com header do projeto a mesma abertura passa, em pé e com cripples acima
     const members = frame({ ...win, roughHeight: 40, headerHeight: 68.5 }, nbWall, config);
@@ -286,7 +286,7 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
 
   it('RO acima de 96" em parede não portante: Error pedindo o header do projeto', () => {
     const big = { ...noHeader, offset: 20, roughWidth: 100 };
-    expect(() => frame(big, { ...nbWall, length: 192 }, lowConfig)).toThrow(/até 96"/);
+    expect(() => frame(big, { ...nbWall, length: 192 }, lowConfig)).toThrow(/up to 96"/);
   });
 
   it('porta: fixture wall-120-door-nonbearing (14 peças, sem cripples acima, corte na obra)', () => {
@@ -426,11 +426,11 @@ describe('framingForOpening — sill dupla (S12, config.doubleSillOver)', () => 
         ...lowConfig,
         doubleSillOver: 72,
       });
-    expect(run).toThrow(/sill duplo sobre a bottom plate/);
+    expect(run).toThrow(/double sill on the bottom plate/);
   });
 
   it('doubleSillOver inválido lança RangeError', () => {
-    expect(() => wide(84, 0)).toThrow(/config\.doubleSillOver inválido/);
+    expect(() => wide(84, 0)).toThrow(/invalid config\.doubleSillOver/);
     expect(() => wide(84, NaN)).toThrow(RangeError);
   });
 });

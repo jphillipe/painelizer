@@ -72,10 +72,10 @@ describe('resolveOpeningHeader — header do projeto', () => {
 
   it('mais espesso que a parede: erro (4 plies em 2x6, 3 plies em 2x4)', () => {
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 4 } }))).toThrow(
-      /parede W1, abertura o1: header do projeto com 4 plies de 2x12 \(6"\) não cabe em parede 2x6/,
+      /Wall W1, opening o1: project header with 4 plies of 2x12 \(6"\) does not fit a 2x6 wall/,
     );
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 3 } }), { ...wall, section: '2x4' })).toThrow(
-      /não cabe em parede 2x4/,
+      /does not fit a 2x4 wall/,
     );
     expect(() => resolve(op(36, { header: { section: '2x12', plies: 3 } }))).not.toThrow();
   });
@@ -90,9 +90,9 @@ describe('resolveOpeningHeader — header do projeto', () => {
     });
     expect(() => resolve(op(72, { header: { section: 'LVL 1.75x9.25', plies: 2 } }), { ...wall, section: '2x4' })).not.toThrow();
     expect(() => resolve(op(72, { header: { section: 'LVL 1.75x9.25', plies: 4 } }))).toThrow(
-      /4 plies de LVL 1.75x9.25 \(7"\) não cabe em parede 2x6/,
+      /4 plies of LVL 1.75x9.25 \(7"\) does not fit a 2x6 wall/,
     );
-    expect(() => resolve(op(72, { header: { section: 'PSL 5.25x7', plies: 2 } }))).toThrow(/não cabe em parede 2x6/);
+    expect(() => resolve(op(72, { header: { section: 'PSL 5.25x7', plies: 2 } }))).toThrow(/does not fit a 2x6 wall/);
     expect(() => resolve(op(72, { header: { section: 'LVL 1.75' as never, plies: 2 } }))).toThrow(RangeError);
   });
 
@@ -103,7 +103,7 @@ describe('resolveOpeningHeader — header do projeto', () => {
     [{ jackStuds: 0 }],
   ])('número inválido %j → RangeError com parede e abertura', (extra) => {
     expect(() => resolve(op(36, extra as Partial<Opening>))).toThrow(RangeError);
-    expect(() => resolve(op(36, extra as Partial<Opening>))).toThrow(/parede W1, abertura o1/);
+    expect(() => resolve(op(36, extra as Partial<Opening>))).toThrow(/Wall W1, opening o1/);
   });
 });
 
@@ -131,7 +131,7 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
   it('seção da parede vai para a tabela: 9\' cabe em 2x6 (3 plies), não em 2x4', () => {
     expect(resolve(op(108))).toMatchObject({ section: '2x10', plies: 3 });
     expect(() => resolve(op(108), { ...wall, section: '2x4' })).toThrow(
-      /parede W1, abertura o1: header fora da tabela \(.*cabem em parede 2x4\).*engenheiro/,
+      /Wall W1, opening o1: header outside the table \(.*that fits a 2x4 wall\).*engineer/,
     );
   });
 
@@ -163,7 +163,7 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
     const r = resolve(op(72, { jackStuds: 1 }));
     expect(r).toMatchObject({ section: '2x10', jackStuds: 1 });
     expect(r.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE']);
-    expect(r.warnings[0]!.message).toMatch(/parede W1, abertura o1: 1 jack.*FAKE-EXT pede 2.*2-2x10/);
+    expect(r.warnings[0]!.message).toMatch(/Wall W1, opening o1: 1 jack.*FAKE-EXT asks for 2.*2-2x10/);
   });
 
   it('opening.jackStuds igual ou acima do NJ: sem aviso', () => {
@@ -172,21 +172,21 @@ describe('resolveOpeningHeader — parede portante, pela tabela', () => {
   });
 
   it('fora da tabela → Error com parede, abertura e motivo (nunca header chutado)', () => {
-    expect(() => resolve(op(200))).toThrow(/parede W1, abertura o1: header fora da tabela \(vão 200"/);
-    expect(() => resolve(op(36), { ...wall, floorsSupported: 2 })).toThrow(/2 pavimento/);
-    expect(() => resolve(op(36), { ...wall, buildingWidth: 400 })).toThrow(/largura 400"/);
+    expect(() => resolve(op(200))).toThrow(/Wall W1, opening o1: header outside the table \(a 200" span/);
+    expect(() => resolve(op(36), { ...wall, floorsSupported: 2 })).toThrow(/2 floor\(s\)/);
+    expect(() => resolve(op(36), { ...wall, buildingWidth: 400 })).toThrow(/building width 400"/);
   });
 
   it('dado faltando → Error dizendo qual', () => {
     const { building: _b, ...noBuilding } = config;
     const { floorsSupported: _f, ...noFloors } = wall;
-    expect(() => resolve(op(36), wall, noBuilding)).toThrow(/parede W1, abertura o1: .*sem config\.building/);
-    expect(() => resolve(op(36), noFloors)).toThrow(/parede W1, abertura o1: .*sem wall\.floorsSupported/);
+    expect(() => resolve(op(36), wall, noBuilding)).toThrow(/Wall W1, opening o1: .*no config\.building/);
+    expect(() => resolve(op(36), noFloors)).toThrow(/Wall W1, opening o1: .*no wall\.floorsSupported/);
   });
 
   it('dado inválido da casa → RangeError com parede e abertura', () => {
     expect(() => resolve(op(36), { ...wall, floorsSupported: 1.5 })).toThrow(RangeError);
-    expect(() => resolve(op(36), { ...wall, buildingWidth: -1 })).toThrow(/parede W1, abertura o1: buildingWidth/);
+    expect(() => resolve(op(36), { ...wall, buildingWidth: -1 })).toThrow(/Wall W1, opening o1: invalid buildingWidth/);
   });
 
   it('header da tabela não é deitado', () => {
@@ -215,7 +215,7 @@ describe('resolveOpeningHeader — parede não portante (R602.7.4)', () => {
   it('vale até RO de 96"; acima, Error pedindo o header da abertura', () => {
     expect(resolve(op(96), nonBearing)).toMatchObject({ flat: true });
     expect(() => resolve(op(96.5), nonBearing)).toThrow(
-      /parede W1, abertura o1: parede não portante com RO de 96\.5".*até 96".*header da abertura/,
+      /Wall W1, opening o1: non-bearing wall with a 96\.5" RO.*up to 96".*opening header/,
     );
     expect(resolve(op(120, { header: { section: '2x10', plies: 2 } }), nonBearing)).toMatchObject({
       source: 'project',
@@ -268,7 +268,7 @@ describe('resolveOpeningHeader — kings pela Tabela R602.7.5 (S12)', () => {
     const r = resolve(op(72, { header: H, kingStuds: 1 }));
     expect(r.kingStuds).toBe(1);
     expect(r.warnings.map((w) => w.code)).toEqual(['HEADER_KINGS_BELOW_TABLE']);
-    expect(r.warnings[0]!.message).toMatch(/parede W1, abertura o1: 1 king.*R602\.7\.5 pede 2.*72".*120 mph.*B/);
+    expect(r.warnings[0]!.message).toMatch(/Wall W1, opening o1: 1 king.*R602\.7\.5 asks for 2.*72".*120 mph.*B/);
   });
 
   it('avisos de jacks vêm antes dos de kings', () => {
@@ -300,16 +300,16 @@ describe('resolveOpeningHeader — kings pela Tabela R602.7.5 (S12)', () => {
   it("fora da tabela (vento ≥ 140 B, RO > 18') sem kingStuds → Error; com kingStuds, o projeto manda", () => {
     const windy = { ...config, building: { ...config.building!, windSpeed: 140 } };
     expect(() => resolve(op(36, { header: H }), wall, windy)).toThrow(
-      /parede W1, abertura o1: kings fora da tabela \(vento 140 mph.*engenheiro; informe kingStuds/,
+      /Wall W1, opening o1: king studs outside the table \(140 mph.*engineer; set kingStuds/,
     );
     expect(kings(op(36, { header: H, kingStuds: 2 }), wall, windy)).toEqual({ kingStuds: 2, codes: [] });
-    expect(() => resolve(op(220, { header: H }))).toThrow(/vão 220" acima da última linha/);
+    expect(() => resolve(op(220, { header: H }))).toThrow(/a 220" span is above the last row/);
   });
 
   it('kingStuds ou vento inválidos → RangeError com parede e abertura', () => {
-    expect(() => resolve(op(36, { header: H, kingStuds: 0 }))).toThrow(/parede W1, abertura o1: kingStuds/);
+    expect(() => resolve(op(36, { header: H, kingStuds: 0 }))).toThrow(/Wall W1, opening o1: kingStuds/);
     const bad = { ...config, building: { ...config.building!, windSpeed: -5 } };
-    expect(() => resolve(op(36, { header: H }), wall, bad)).toThrow(/parede W1, abertura o1: windSpeed/);
+    expect(() => resolve(op(36, { header: H }), wall, bad)).toThrow(/Wall W1, opening o1: invalid windSpeed/);
   });
 
   it('tabelas injetadas por { headers, kings }; a lista de headers continua aceita', () => {

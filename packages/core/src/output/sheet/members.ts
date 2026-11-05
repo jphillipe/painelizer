@@ -203,8 +203,8 @@ export function fieldCutMark(cut: FieldCut, panel: Panel, scale: number, toPx: T
   );
   if (host === undefined) {
     throw new RangeError(
-      `panelSvg: painel ${panel.id}: corte na obra da abertura ${cut.openingId} ` +
-        `(x=${cut.x}, ${cut.length}") não cai em nenhuma peça ${cut.role}`,
+      `panelSvg: panel ${panel.id}: field cut of opening ${cut.openingId} ` +
+        `(x=${cut.x}, ${cut.length}") does not fall on any ${cut.role} piece`,
     );
   }
   const box = memberBox(host);

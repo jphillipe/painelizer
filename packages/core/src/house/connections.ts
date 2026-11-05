@@ -94,7 +94,7 @@ export function findConnections(
   tolerance: number = DEFAULT_TOLERANCE,
 ): WallConnections[] {
   if (!Number.isFinite(tolerance) || tolerance < 0) {
-    throw new RangeError(`findConnections: tolerance deve ser ≥ 0 (recebido ${tolerance})`);
+    throw new RangeError(`findConnections: tolerance must be ≥ 0 (got ${tolerance})`);
   }
   const axes = walls.map(axisOf);
   const seen = new Set<string>();

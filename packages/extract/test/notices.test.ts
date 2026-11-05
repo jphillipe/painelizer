@@ -54,6 +54,6 @@ describe('legacyNotice — avisos gravados como texto antes da S26', () => {
 
   it('noticeText de um aviso lido do legado volta ao formato de texto com o código novo', () => {
     const n = legacyNotice('extração ALTURA_PADRAO: 3 abertura(s) sem altura');
-    expect(noticeText(n)).toBe('extração DEFAULT_HEADER_HEIGHT: 3 abertura(s) sem altura');
+    expect(noticeText(n)).toBe('extraction DEFAULT_HEADER_HEIGHT: 3 abertura(s) sem altura');
   });
 });

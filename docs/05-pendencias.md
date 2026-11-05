@@ -345,9 +345,7 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   abertura e do vão do ladder do T — S31 (a S36 revê junto com as fileiras por altura, P44).
 
 ## Novas (abertas em 2026-11-04, S34 — folha em inglês)
-- [ ] **P51 — Idioma padrão da folha e da planta.** As folhas de fabricação e a planta de painéis saem em português
-  desde a S5; a fábrica (EUA) não disse em que idioma quer recebê-las (pergunta do Checkpoint 2). — hipótese:
-  **português** é o padrão até a fábrica responder; inglês existe como opção (`locale: "en"` no arquivo do projeto,
-  `--locale en` no CLI, "Sheet language" nas configurações do projeto no app). Se a fábrica escolher inglês, troca-se
-  só `DEFAULT_SHEET_LOCALE` em `core/src/output/sheet/strings.ts` (e os snapshots em português passam a ser os de
-  `locale: 'pt'` explícito) — S34.
+- [x] **P51 — Idioma da folha e da planta.** — **Resposta (2026-11-05, humano):** **inglês, sempre**, e tudo o que o
+  usuário vê no software também (folhas, planta, avisos e erros do motor, CLI, relatório da leitura). O português e a
+  opção de idioma da S34 (`locale`, `--locale`, "Sheet language") saíram; a chave `locale` de arquivos gravados entre
+  a S34 e esta resposta é aceita e ignorada. Comentários de código e `docs/` continuam em português.

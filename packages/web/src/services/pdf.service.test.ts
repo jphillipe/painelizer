@@ -30,7 +30,7 @@ describe('PDF das folhas (M9)', () => {
     const first = doc.getPage(0);
     expect(first.getWidth()).toBe(LETTER.width);
     expect(first.getHeight()).toBe(LETTER.height);
-    expect(doc.getTitle()).toContain('Casa 28x40');
+    expect(doc.getTitle()).toContain('House 28x40');
     expect(toBase64(bytes).startsWith('JVBERi0')).toBe(true);
   }, 60_000);
 

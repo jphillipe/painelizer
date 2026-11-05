@@ -32,7 +32,7 @@ describe('persist: sessão do editor', () => {
   it('sessão sai do estado (texto do draft, origem, dirty, leitura) e volta igual', () => {
     const s = editorReducer(editorReducer(initialEditorState, { type: 'load', text: EXAMPLES[1]!.text, source: 'sample' }), { type: 'removeWall', wallId: 'W05' });
     const session = sessionFromState(s, reading, NOW);
-    expect(session).toMatchObject({ version: 1, savedAt: NOW, name: 'Casa 28x40 (visão)', source: 'sample', dirty: true });
+    expect(session).toMatchObject({ version: 1, savedAt: NOW, name: 'House 28x40 (overview)', source: 'sample', dirty: true });
     const storage = new MemoryStorage();
     expect(saveSession(storage, session!)).toBe('full');
     const back = loadSession(storage);

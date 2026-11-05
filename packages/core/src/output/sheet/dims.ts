@@ -25,7 +25,7 @@ const CHAIN_MIN_SPACING = 11;
 export function openingDims(o: PanelOpening, panel: Panel, toPx: ToPx, toPy: ToPy, S: SheetStrings): string[] {
   const OPENING_DIM = S.openingDim;
   if (!(o.width > 0) || !(o.height > 0) || !Number.isFinite(o.top)) {
-    throw new RangeError(`panelSvg: painel ${panel.id}: abertura ${o.id} com RO inválido (${o.width} × ${o.height}, topo ${o.top})`);
+    throw new RangeError(`panelSvg: panel ${panel.id}: opening ${o.id} has an invalid RO (${o.width} × ${o.height}, top ${o.top})`);
   }
   const out: string[] = [];
   const base = o.top - o.height;

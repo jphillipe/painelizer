@@ -276,11 +276,11 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
   it('sem header possível: Error com parede, abertura e motivo', () => {
     const { building: _b, ...noBuilding } = iConfig;
     const { floorsSupported: _f, ...noFloors } = iWall;
-    expect(() => panelizeWall(iWall, noBuilding)).toThrow(/parede W-window-irc, abertura win1: .*config\.building/);
-    expect(() => panelizeWall(noFloors, iConfig)).toThrow(/parede W-window-irc, abertura win1: .*floorsSupported/);
+    expect(() => panelizeWall(iWall, noBuilding)).toThrow(/Wall W-window-irc, opening win1: .*config\.building/);
+    expect(() => panelizeWall(noFloors, iConfig)).toThrow(/Wall W-window-irc, opening win1: .*floorsSupported/);
     // 2 pavimentos, RO de 11': nenhum header de madeira serrada atende em parede 2x6
     const wide = { ...iWall, floorsSupported: 2, openings: [{ ...iWall.openings[0]!, offset: 6, roughWidth: 132 }] };
-    expect(() => panelizeWall(wide, iConfig)).toThrow(/parede W-window-irc, abertura win1: header fora da tabela/);
+    expect(() => panelizeWall(wide, iConfig)).toThrow(/Wall W-window-irc, opening win1: header outside the table/);
   });
 
   it('parede não portante sem header do projeto: peça deitada R602.7.4, 1 jack, sem cripples acima (20 peças)', () => {
@@ -358,7 +358,7 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
       expect(auto.members).toEqual(asked.members);
       expect(auto.warnings.map((w) => w.code)).toEqual(['HEADER_JACKS_BELOW_TABLE', 'HEADER_JACKS_BELOW_TABLE']);
       // S26: a hipótese sai do texto (não vai para a serra) e vira campo.
-      expect(auto.warnings[0]!.message).toMatch(/win1: 1 jack por lado em vez de 2 — só 6" até o RO de door1$/);
+      expect(auto.warnings[0]!.message).toMatch(/win1: 1 jack stud per side instead of 2 — only 6" to the RO of door1$/);
       expect(auto.warnings[0]).toMatchObject({
         wallId: 'W-window-irc',
         openingId: 'win1',
@@ -368,7 +368,7 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
     });
 
     it('RO a 4" (menos que jack + king + jack): RangeError', () => {
-      expect(() => panelizeWall(fWall(64), fConfig, FAKE)).toThrow(/win1 e door1: 4" .*mínimo/);
+      expect(() => panelizeWall(fWall(64), fConfig, FAKE)).toThrow(/win1 and door1: 4" .*minimum/);
     });
   });
 });
@@ -426,19 +426,19 @@ describe('panelizeWall — studs extras do projeto (S12)', () => {
     const touching = panelizeWall({ ...wWall, extraStuds: [{ x: 43.5 }] }, wConfig);
     expect(touching.members.some((m) => m.x === 43.5 && m.role === 'stud')).toBe(true);
     expect(() => panelizeWall({ ...wWall, extraStuds: [{ x: 44 }] }, wConfig)).toThrow(
-      /parede W-window, extraStuds\[0\]: stud em x=44 cai na zona de abertura \[45, 87\]/,
+      /Wall W-window, extraStuds\[0\]: stud at x=44 falls in the opening zone \[45, 87\]/,
     );
-    expect(() => panelizeWall({ ...wWall, extraStuds: [{ x: 42, count: 3 }] }, wConfig)).toThrow(/x=45 cai na zona/);
+    expect(() => panelizeWall({ ...wWall, extraStuds: [{ x: 42, count: 3 }] }, wConfig)).toThrow(/x=45 falls in the opening zone/);
   });
 
   it('extra fora da parede ou com count inválido: RangeError com a parede e o índice', () => {
     expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 143 }] }, config)).toThrow(
-      /parede W-plain, extraStuds\[0\].*saem da parede de 144"/,
+      /Wall W-plain, extraStuds\[0\].*run past the 144" wall/,
     );
-    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 141, count: 3 }] }, config)).toThrow(/3 stud\(s\) a partir de x=141 saem/);
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 141, count: 3 }] }, config)).toThrow(/3 stud\(s\) from x=141 run past/);
     expect(() => panelizeWall({ ...wall, extraStuds: [{ x: -1 }] }, config)).toThrow(RangeError);
     expect(() => panelizeWall({ ...wall, extraStuds: [{ x: 10 }, { x: 20, count: 0 }] }, config)).toThrow(/extraStuds\[1\]: count/);
-    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: NaN }] }, config)).toThrow(/x deve ser número finito/);
+    expect(() => panelizeWall({ ...wall, extraStuds: [{ x: NaN }] }, config)).toThrow(/x must be a finite number/);
   });
 
   it('dois extras que se sobrepõem entre si ficam os dois e a validação avisa STUDS_OVERLAP', () => {

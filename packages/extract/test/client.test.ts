@@ -159,11 +159,11 @@ describe('extractWalls com cliente falso', () => {
     expect(result.problems).toEqual([]);
     // P30: porta e janela a 8 1/4" na S2 — 1 jack por lado nas duas, com aviso para o revisor
     expect(result.warnings.map(noticeText).map((w) => w.slice(0, 40))).toEqual([
-      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
-      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: parede',
+      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: Wall S',
+      '1-S2-P1 HEADER_JACKS_BELOW_TABLE: Wall S',
     ]);
     expect(result.project['name']).toBe('26 Ringgold St');
-    expect(result.report).toContain('# Extração — 26 Ringgold St');
+    expect(result.report).toContain('# Extraction — 26 Ringgold St');
     expect(result.model).toBe('claude-opus-5-5');
     expect(result.usage).toEqual({ inputTokens: 1200, outputTokens: 800 });
     expect(result.pagesSent).toEqual([{ name: 'planta.pdf', pages: [1, 2] }]);
@@ -178,14 +178,14 @@ describe('extractWalls com cliente falso', () => {
         content: [],
       }),
     );
-    await expect(extractWalls({ pdf: await makePdf(), pages: [1] }, { client })).rejects.toThrow(/recusou a extração: não posso/);
+    await expect(extractWalls({ pdf: await makePdf(), pages: [1] }, { client })).rejects.toThrow(/refused the extraction: não posso/);
   });
 
   it('corte por max_tokens vira ExtractError com o texto cru', async () => {
     const { client } = fakeClient(fakeMessage({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"proj', citations: null }] }));
     const err = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as ExtractError).message).toContain('128000 tokens');
+    expect((err as ExtractError).message).toContain('128000 output tokens');
     expect((err as ExtractError).rawText).toBe('{"proj');
   });
 
@@ -193,7 +193,7 @@ describe('extractWalls com cliente falso', () => {
     const { client } = fakeClient(fakeMessage({ content: [{ type: 'text', text: 'não dá', citations: null }] }));
     const err = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as ExtractError).message).toMatch(/não é JSON/);
+    expect((err as ExtractError).message).toMatch(/is not JSON/);
     expect((err as ExtractError).rawText).toBe('não dá');
   });
 
@@ -201,7 +201,7 @@ describe('extractWalls com cliente falso', () => {
     const { client } = fakeClient(fakeMessage({ content: [{ type: 'text', text: '{"projectName":"x"}', citations: null }] }));
     const err = await extractWalls({ pdf: await makePdf(), pages: [1] }, { client }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as ExtractError).message).toMatch(/fora do schema: level/);
+    expect((err as ExtractError).message).toMatch(/does not match the schema: level/);
     expect((err as ExtractError).rawText).toBe('{"projectName":"x"}');
   });
 });

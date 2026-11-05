@@ -16,7 +16,7 @@
 import type { Exposure } from '../config';
 import { EPS } from '../eps';
 import { parseFeetInches } from '../units';
-import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
+import { EngineError, engineerReasonText, type EngineerReason } from '../messages';
 import type { RequiresEngineer } from './headers';
 import { tableErrors } from './tableJson';
 import rawIrcKings from '../data/irc-kings.json';
@@ -73,7 +73,7 @@ export function kingsFor(query: KingQuery, table: KingTable = ircKings()): KingC
   if (!Number.isFinite(windSpeed) || windSpeed <= 0) throw new EngineError('VALUE_INVALID', {}, { field: 'windSpeed', value: windSpeed });
   if (!['B', 'C', 'D'].includes(exposure)) throw new EngineError('VALUE_INVALID', {}, { field: 'exposure', value: String(exposure) });
 
-  const engineer = (detail: EngineerReason): KingChoice => ({ requiresEngineer: true, reason: engineerReasonPt(detail), detail });
+  const engineer = (detail: EngineerReason): KingChoice => ({ requiresEngineer: true, reason: engineerReasonText(detail), detail });
 
   const cols = table.columns
     .map((_c, i) => i)
@@ -111,57 +111,57 @@ const EXPOSURES: readonly unknown[] = ['B', 'C', 'D'];
 export function validateKingTable(json: unknown): string[] {
   const { errors, err, isObj, keys } = tableErrors();
 
-  if (!isObj(json) || !isObj(json.table)) return ['raiz: esperado { table: {...} }'];
+  if (!isObj(json) || !isObj(json.table)) return ['root: expected { table: {...} }'];
   const t = json.table;
   const tp = 'table';
   keys(tp, t, ['id', 'columns', 'rows']);
-  if (typeof t.id !== 'string' || t.id === '') err(`${tp}.id`, 'esperado texto não vazio');
+  if (typeof t.id !== 'string' || t.id === '') err(`${tp}.id`, 'expected non-empty text');
 
-  const columns = Array.isArray(t.columns) ? t.columns : (err(`${tp}.columns`, 'esperado lista'), []);
-  if (columns.length === 0) err(`${tp}.columns`, 'nenhuma coluna');
+  const columns = Array.isArray(t.columns) ? t.columns : (err(`${tp}.columns`, 'expected a list'), []);
+  if (columns.length === 0) err(`${tp}.columns`, 'no columns');
   columns.forEach((c, ci) => {
     const cp = `${tp}.columns[${ci}]`;
-    if (!isObj(c)) return err(cp, 'esperado objeto');
+    if (!isObj(c)) return err(cp, 'expected an object');
     keys(cp, c, ['covers']);
-    const covers = Array.isArray(c.covers) ? c.covers : (err(`${cp}.covers`, 'esperado lista'), []);
-    if (covers.length === 0) err(`${cp}.covers`, 'coluna sem condição de vento');
+    const covers = Array.isArray(c.covers) ? c.covers : (err(`${cp}.covers`, 'expected a list'), []);
+    if (covers.length === 0) err(`${cp}.covers`, 'column with no wind condition');
     covers.forEach((w, wi) => {
       const wp = `${cp}.covers[${wi}]`;
-      if (!isObj(w)) return err(wp, 'esperado objeto');
+      if (!isObj(w)) return err(wp, 'expected an object');
       keys(wp, w, ['exposure', 'below', 'upTo']);
-      if (!EXPOSURES.includes(w.exposure)) err(`${wp}.exposure`, 'esperado "B", "C" ou "D"');
+      if (!EXPOSURES.includes(w.exposure)) err(`${wp}.exposure`, 'expected "B", "C" or "D"');
       const hasBelow = w.below !== undefined;
       const hasUpTo = w.upTo !== undefined;
-      if (hasBelow === hasUpTo) err(wp, 'esperado exatamente um de below / upTo');
+      if (hasBelow === hasUpTo) err(wp, 'expected exactly one of below / upTo');
       for (const [k, v] of [
         ['below', w.below],
         ['upTo', w.upTo],
       ] as const) {
-        if (v !== undefined && (typeof v !== 'number' || !(v > 0))) err(`${wp}.${k}`, 'esperado mph > 0');
+        if (v !== undefined && (typeof v !== 'number' || !(v > 0))) err(`${wp}.${k}`, 'expected mph > 0');
       }
     });
   });
 
-  const rows = Array.isArray(t.rows) ? t.rows : (err(`${tp}.rows`, 'esperado lista'), []);
-  if (rows.length === 0) err(`${tp}.rows`, 'nenhuma linha');
+  const rows = Array.isArray(t.rows) ? t.rows : (err(`${tp}.rows`, 'expected a list'), []);
+  if (rows.length === 0) err(`${tp}.rows`, 'no rows');
   let prevSpan = 0;
   rows.forEach((r, ri) => {
     const rp = `${tp}.rows[${ri}]`;
-    if (!isObj(r)) return err(rp, 'esperado objeto');
+    if (!isObj(r)) return err(rp, 'expected an object');
     keys(rp, r, ['maxSpan', 'kings']);
     if (typeof r.maxSpan !== 'string' || !SPAN_FORMAT.test(r.maxSpan)) {
-      err(`${rp}.maxSpan`, `esperado pés como "4'", veio ${JSON.stringify(r.maxSpan)}`);
+      err(`${rp}.maxSpan`, `expected feet like "4'", got ${JSON.stringify(r.maxSpan)}`);
     } else {
       const span = parseFeetInches(r.maxSpan);
-      if (span <= prevSpan) err(`${rp}.maxSpan`, 'vãos devem crescer linha a linha');
+      if (span <= prevSpan) err(`${rp}.maxSpan`, 'spans must grow row by row');
       prevSpan = span;
     }
-    if (!Array.isArray(r.kings)) return err(`${rp}.kings`, 'esperado lista');
+    if (!Array.isArray(r.kings)) return err(`${rp}.kings`, 'expected a list');
     if (r.kings.length !== columns.length) {
-      err(`${rp}.kings`, `${r.kings.length} valores para ${columns.length} colunas`);
+      err(`${rp}.kings`, `${r.kings.length} values for ${columns.length} columns`);
     }
     r.kings.forEach((k, ki) => {
-      if (!Number.isInteger(k) || (k as number) < 1) err(`${rp}.kings[${ki}]`, `inteiro ≥ 1, veio ${JSON.stringify(k)}`);
+      if (!Number.isInteger(k) || (k as number) < 1) err(`${rp}.kings[${ki}]`, `expected a whole number ≥ 1, got ${JSON.stringify(k)}`);
     });
   });
   return errors;
@@ -170,7 +170,7 @@ export function validateKingTable(json: unknown): string[] {
 /** Converte o JSON digitado para polegadas. @throws RangeError com todos os erros de estrutura. */
 export function loadKingTable(json: unknown): KingTable {
   const errors = validateKingTable(json);
-  if (errors.length > 0) throw new RangeError(`tabela de kings inválida:\n${errors.join('\n')}`);
+  if (errors.length > 0) throw new RangeError(`invalid king stud table:\n${errors.join('\n')}`);
   type Raw = {
     id: string;
     columns: { covers: WindCondition[] }[];

@@ -52,22 +52,16 @@ describe('parseArgs', () => {
     expect(parseArgs(['build', '-h'])).toEqual({ command: 'help' });
   });
 
-  it('--locale pt|en, com espaço ou =', () => {
-    expect(parseArgs(['build', 'p.json', '--out', 'd', '--locale', 'en'])).toEqual({ command: 'build', input: 'p.json', out: 'd', locale: 'en' });
-    expect(parseArgs(['build', '--locale=pt', 'p.json', '--out', 'd'])).toEqual({ command: 'build', input: 'p.json', out: 'd', locale: 'pt' });
-  });
-
   it.each([
-    [['build', 'p.json', '--out', 'd', '--locale'], /--locale exige pt ou en/],
-    [['build', 'p.json', '--out', 'd', '--locale', 'es'], /--locale exige pt ou en/],
-    [['build', 'p.json', '--out', 'd', '--locale=EN'], /--locale exige pt ou en/],
-    [['fly'], /comando desconhecido: "fly"/],
-    [['build'], /informe o arquivo/],
-    [['build', 'p.json'], /informe --out/],
-    [['build', 'p.json', '--out'], /--out exige um diretório/],
-    [['build', 'p.json', '--out', '--x'], /--out exige um diretório/],
-    [['build', 'p.json', '--out', 'd', '--verbose'], /opção desconhecida: "--verbose"/],
-    [['build', 'p.json', 'q.json', '--out', 'd'], /argumento inesperado: "q.json"/],
+    // --locale saiu com a P51: folhas e planta são sempre em inglês.
+    [['build', 'p.json', '--out', 'd', '--locale', 'en'], /unknown option: "--locale"/],
+    [['fly'], /unknown command: "fly"/],
+    [['build'], /missing the <project\.json> file/],
+    [['build', 'p.json'], /missing --out/],
+    [['build', 'p.json', '--out'], /--out requires a directory/],
+    [['build', 'p.json', '--out', '--x'], /--out requires a directory/],
+    [['build', 'p.json', '--out', 'd', '--verbose'], /unknown option: "--verbose"/],
+    [['build', 'p.json', 'q.json', '--out', 'd'], /unexpected argument: "q.json"/],
   ])('uso incorreto lança UsageError (%j)', (argv, message) => {
     expect(() => parseArgs(argv)).toThrow(UsageError);
     expect(() => parseArgs(argv)).toThrow(message);
@@ -80,7 +74,7 @@ describe('run (I/O em memória)', () => {
   it('uso incorreto: código 2 e ajuda no stderr', () => {
     const m = memoryIo();
     expect(run(['build'], m.io)).toBe(2);
-    expect(m.err[0]).toMatch(/^erro: informe o arquivo/);
+    expect(m.err[0]).toMatch(/^error: missing the <project\.json> file/);
     expect(m.err.join('\n')).toContain(USAGE);
     expect(m.written.size).toBe(0);
   });
@@ -94,13 +88,13 @@ describe('run (I/O em memória)', () => {
   it('arquivo inexistente: código 1', () => {
     const m = memoryIo();
     expect(run(['build', 'nao-existe.json', '--out', 'saida'], m.io)).toBe(1);
-    expect(m.err[0]).toMatch(/não foi possível ler .*nao-existe\.json/);
+    expect(m.err[0]).toMatch(/could not read .*nao-existe\.json/);
   });
 
   it('projeto inválido: código 1 com o caminho do campo', () => {
     const m = memoryIo({ 'p.json': '{"config":{},"walls":[]}' });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(1);
-    expect(m.err).toEqual(['erro: p.json.config.studSpacing: esperado medida (número ou texto), recebido nada']);
+    expect(m.err).toEqual(['error: p.json.config.studSpacing: expected a measurement (number or text), got nothing']);
     expect(m.written.size).toBe(0);
   });
 
@@ -112,8 +106,8 @@ describe('run (I/O em memória)', () => {
     );
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(1);
-    expect(m.err[0]).toBe('erro: 1 problema(s) ao gerar os painéis — nenhum arquivo gravado');
-    expect(m.err[1]).toMatch(/^ {2}- parede W01: /);
+    expect(m.err[0]).toBe('error: 1 problem(s) generating the panels — no files written');
+    expect(m.err[1]).toMatch(/^ {2}- Wall W01: /);
     expect(m.written.size).toBe(0);
     expect(m.dirs).toEqual([]);
   });
@@ -137,7 +131,7 @@ describe('run (I/O em memória)', () => {
     ]);
     expect(m.dirs[0]).toBe(outDir);
     expect(m.dirs).toContain(join(outDir, 'panels'));
-    expect(m.out[0]).toBe(`7 painel(is), 134 peças → ${outDir}`);
+    expect(m.out[0]).toBe(`7 panel(s), 134 pieces → ${outDir}`);
     expect(m.out.slice(1)).toEqual([
       '  cutlist.csv',
       '  bom.csv',
@@ -154,20 +148,16 @@ describe('run (I/O em memória)', () => {
     expect(m.err).toEqual([]);
   });
 
-  it('--locale en: folhas e planta em inglês, por cima do locale do arquivo; CSVs iguais', () => {
-    const pt = memoryIo({ 'p.json': exampleText });
-    expect(run(['build', 'p.json', '--out', 'saida'], pt.io)).toBe(0);
-    const en = memoryIo({ 'p.json': JSON.stringify({ ...JSON.parse(exampleText), locale: 'pt' }) });
-    expect(run(['build', 'p.json', '--out', 'saida', '--locale', 'en'], en.io)).toBe(0);
+  it('folhas e planta em inglês; o "locale" legado (S34) no arquivo é ignorado', () => {
+    const plain = memoryIo({ 'p.json': exampleText });
+    expect(run(['build', 'p.json', '--out', 'saida'], plain.io)).toBe(0);
+    const legacy = memoryIo({ 'p.json': JSON.stringify({ ...JSON.parse(exampleText), locale: 'pt' }) });
+    expect(run(['build', 'p.json', '--out', 'saida'], legacy.io)).toBe(0);
     const outDir = resolve('saida');
-    expect(en.written.get(join(outDir, 'plan.svg'))).toContain(' walls · ');
-    expect(en.written.get(join(outDir, 'panels', '1-W01-P1.svg'))).toContain('>Pieces</text>');
-    expect(pt.written.get(join(outDir, 'panels', '1-W01-P1.svg'))).toContain('>Peças</text>');
-    for (const csv of ['cutlist.csv', 'bom.csv', 'panels.csv']) {
-      expect(en.written.get(join(outDir, csv))).toBe(pt.written.get(join(outDir, csv)));
-    }
-    // O resumo do CLI continua em português (é a língua do operador, não da folha).
-    expect(en.out[0]).toBe(pt.out[0]);
+    expect(plain.written.get(join(outDir, 'plan.svg'))).toContain(' walls · ');
+    expect(plain.written.get(join(outDir, 'panels', '1-W01-P1.svg'))).toContain('>Pieces</text>');
+    expect([...legacy.written]).toEqual([...plain.written]);
+    expect(legacy.out).toEqual(plain.out);
   });
 
   it('avisos do core vão para o stderr sem mudar o código de saída', () => {
@@ -176,7 +166,7 @@ describe('run (I/O em memória)', () => {
     const m = memoryIo({ 'p.json': JSON.stringify(project) });
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(0);
     expect(m.err).toHaveLength(6);
-    expect(m.err[0]).toMatch(/^aviso 1-W01-P1 STUD_LENGTH_MISMATCH: /);
+    expect(m.err[0]).toMatch(/^warning 1-W01-P1 STUD_LENGTH_MISMATCH: /);
   });
 
   it('cwd explícito resolve entrada e saída relativas', () => {
@@ -195,7 +185,7 @@ describe('run (I/O em memória)', () => {
       throw new Error('EACCES');
     };
     expect(run(['build', 'p.json', '--out', 'saida'], m.io)).toBe(1);
-    expect(m.err[0]).toMatch(/não foi possível gravar em .*saida: EACCES/);
+    expect(m.err[0]).toMatch(/could not write to .*saida: EACCES/);
   });
 });
 
@@ -224,7 +214,7 @@ describe('ponta a ponta (disco)', () => {
     expect(readdirSync(join(outDir, 'panels')).sort()).toEqual(['1-W01-P1.svg', '1-W02-P1.svg', '1-W03-P1.svg', '1-W04-P1.svg', '1-W05-P1.svg', '1-W06-P1.svg', '1-W07-P1.svg']);
     expect(readFileSync(join(outDir, 'cutlist.csv'), 'utf8')).toContain('1-W04-P1,plates,2x4,126,"126""",3');
     expect(readFileSync(join(outDir, 'panels', '1-W02-P1.svg'), 'utf8')).toContain(`>15'-9 1/4&quot;</text>`); // W02 encosta no canto: 192 − 2.75
-    expect(readFileSync(join(outDir, 'plan.svg'), 'utf8')).toContain('>casa-exemplo</text>');
+    expect(readFileSync(join(outDir, 'plan.svg'), 'utf8')).toContain('>sample-house</text>');
   });
 
   it('processo real: tsx src/cli.ts build ... --out ...', () => {
@@ -237,11 +227,11 @@ describe('ponta a ponta (disco)', () => {
     });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
-    expect(r.stdout.split('\n')[0]).toBe(`7 painel(is), 134 peças → ${outDir}`);
+    expect(r.stdout.split('\n')[0]).toBe(`7 panel(s), 134 pieces → ${outDir}`);
     expect(existsSync(join(outDir, 'panels', '1-W01-P1.svg'))).toBe(true);
 
     const bad = spawnSync(process.execPath, [tsxCli, join(PKG, 'src', 'cli.ts'), 'build'], { cwd: PKG, encoding: 'utf8' });
     expect(bad.status).toBe(2);
-    expect(bad.stderr).toMatch(/^erro: informe o arquivo/);
+    expect(bad.stderr).toMatch(/^error: missing the <project\.json> file/);
   });
 });

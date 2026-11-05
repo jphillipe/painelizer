@@ -10,7 +10,7 @@
  * - `plan.svg` — planta de painéis (só na casa em planta, S16);
  * - `panels/<id>.svg` — folha de fabricação de cada painel (S17): cabeçalho com `name`, `date` e `revision` do
  *   projeto, elevação cotada, lista de peças, peso, cortes na obra e avisos. Abre e imprime no navegador.
- * - Folhas e planta no idioma de `project.locale` (S34; ausente = português, hipótese P51). CSVs não mudam.
+ * - Folhas e planta sempre em inglês (P51 resolvida).
  *
  * Cada parede (solta ou em planta) vira os painéis de `splitWall` (S15), com ids `{level}-{wallId}-P{n}` (S16):
  * `1-W01-P1` quando cabe em `config.panel.maxLength`; `1-W01-P1`, `1-W01-P2`… quando não.
@@ -74,9 +74,9 @@ export interface BuildProblem extends EngineNotice {
   stage: 'plan' | 'wall' | 'bom' | 'files';
 }
 
-const STAGE_PREFIX: Record<BuildProblem['stage'], string> = { plan: 'planta: ', wall: '', bom: 'lista de material: ', files: '' };
+const STAGE_PREFIX: Record<BuildProblem['stage'], string> = { plan: 'plan: ', wall: '', bom: 'bill of materials: ', files: '' };
 
-/** A linha do CLI: prefixo da etapa + a frase em português. */
+/** A linha do CLI: prefixo da etapa + a frase (em inglês). */
 export function problemText(p: BuildProblem): string {
   return `${STAGE_PREFIX[p.stage]}${p.message}`;
 }
@@ -85,8 +85,8 @@ export function problemText(p: BuildProblem): string {
 export function problemOf(e: unknown, stage: BuildProblem['stage'], wallId?: string): BuildProblem {
   if (e instanceof EngineError) return { ...noticeOf(wallId === undefined ? e : e.at({ wallId })), stage };
   if (e instanceof RangeError) {
-    const prefix = wallId === undefined ? '' : `parede ${wallId}`;
-    const message = prefix === '' || e.message.startsWith(prefix) ? e.message : `${prefix}: ${e.message}`;
+    const prefix = wallId === undefined ? '' : `Wall ${wallId}`;
+    const message = prefix === '' || e.message.toLowerCase().startsWith(prefix.toLowerCase()) ? e.message : `${prefix}: ${e.message}`;
     return { code: 'ENGINE_INTERNAL', message, ...(wallId === undefined ? {} : { wallId }), stage };
   }
   throw e;
@@ -121,7 +121,7 @@ export function panelizeProject(project: Project): {
     if (clash !== undefined) {
       problems.push({
         code: 'PANEL_FILE_CLASH',
-        message: `painéis "${clash}" e "${panel.id}" gerariam o mesmo arquivo panels/${name}`,
+        message: `panels "${clash}" and "${panel.id}" would produce the same file panels/${name}`,
         wallId: panel.wallId,
         params: { first: clash, second: panel.id, file: `panels/${name}` },
         stage: 'files',
@@ -250,7 +250,6 @@ export function buildProject(project: Project): BuildResult {
         project: project.name,
         ...(project.date === undefined ? {} : { date: project.date }),
         ...(project.revision === undefined ? {} : { revision: project.revision }),
-        ...(project.locale === undefined ? {} : { locale: project.locale }),
       }),
     });
   }
@@ -260,7 +259,7 @@ export function buildProject(project: Project): BuildResult {
     { path: 'bom.csv', content: bomCsv(bom) },
     ...(cost === undefined ? [] : [{ path: 'cost.csv', content: costCsv(cost) }]),
     { path: 'panels.csv', content: panelsCsv(panels) },
-    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name, ...(project.locale === undefined ? {} : { locale: project.locale }) }) }]),
+    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
   );
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));

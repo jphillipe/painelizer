@@ -48,19 +48,19 @@ describe('kingsFor — escolha', () => {
   it('nunca extrapola: vento fora das colunas ou exposição D → requiresEngineer', () => {
     expect(kingsFor({ span: ft(3), windSpeed: 150 }, FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/vento 150 mph, exposição B/),
+      reason: expect.stringMatching(/150 mph, exposure B/),
     });
     expect(kingsFor({ span: ft(3), windSpeed: 120, exposure: 'C' }, FAKE)).toMatchObject({ requiresEngineer: true });
     expect(kingsFor({ span: ft(3), windSpeed: 50, exposure: 'D' }, FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/exposição D/),
+      reason: expect.stringMatching(/exposure D/),
     });
   });
 
   it('nunca extrapola: vão acima da última linha → requiresEngineer', () => {
     expect(kingsFor({ span: ft(9) + 0.01, windSpeed: 100 }, FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/vão 108\.01" acima da última linha/),
+      reason: expect.stringMatching(/a 108\.01" span is above the last row/),
     });
   });
 
@@ -91,27 +91,27 @@ describe('validateKingTable / loadKingTable', () => {
 
   it('aponta o caminho do erro de digitação', () => {
     expect(validateKingTable(mutated((j) => (j.table.rows[1]!.kings = [2])))).toEqual([
-      'table.rows[1].kings: 1 valores para 2 colunas',
+      'table.rows[1].kings: 1 values for 2 columns',
     ]);
     expect(validateKingTable(mutated((j) => (j.table.rows[1]!.maxSpan = "4'-6")))).toEqual([
-      expect.stringMatching(/table\.rows\[1\]\.maxSpan: esperado pés como "4'"/),
+      expect.stringMatching(/table\.rows\[1\]\.maxSpan: expected feet like "4'"/),
     ]);
     expect(validateKingTable(mutated((j) => (j.table.rows[2]!.maxSpan = "5'")))).toEqual([
-      'table.rows[2].maxSpan: vãos devem crescer linha a linha',
+      'table.rows[2].maxSpan: spans must grow row by row',
     ]);
     expect(validateKingTable(mutated((j) => (j.table.rows[0]!.kings = [0, 1])))).toEqual([
-      'table.rows[0].kings[0]: inteiro ≥ 1, veio 0',
+      'table.rows[0].kings[0]: expected a whole number ≥ 1, got 0',
     ]);
     expect(validateKingTable(mutated((j) => (j.table.columns[1]!.covers = [{ exposure: 'B' }] as never)))).toEqual([
-      'table.columns[1].covers[0]: esperado exatamente um de below / upTo',
+      'table.columns[1].covers[0]: expected exactly one of below / upTo',
     ]);
     expect(validateKingTable(mutated((j) => ((j.table.columns[0] as { extra?: number }).extra = 1)))).toEqual([
-      'table.columns[0]: campo desconhecido "extra"',
+      'table.columns[0]: unknown field "extra"',
     ]);
-    expect(validateKingTable({ tables: [] })).toEqual(['raiz: esperado { table: {...} }']);
+    expect(validateKingTable({ tables: [] })).toEqual(['root: expected { table: {...} }']);
   });
 
   it('loadKingTable lança RangeError com todos os erros', () => {
-    expect(() => loadKingTable(mutated((j) => (j.table.rows = [])))).toThrow(/tabela de kings inválida:\ntable\.rows: nenhuma linha/);
+    expect(() => loadKingTable(mutated((j) => (j.table.rows = [])))).toThrow(/invalid king stud table:\ntable\.rows: no rows/);
   });
 });

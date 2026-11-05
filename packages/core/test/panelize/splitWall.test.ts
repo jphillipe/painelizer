@@ -105,15 +105,15 @@ describe('splitWall — abertura deslocada por tolerância (P40)', () => {
   };
 
   it('a porta sai em 245 da parede e o aviso OPENING_NUDGED fica no painel dela', () => {
-    expect(() => panelizeWall(wall, config)).toThrow(/sai da parede de 280/);
+    expect(() => panelizeWall(wall, config)).toThrow(/runs past the 280" wall/);
     const panels = splitWall(wall, config);
     const last = panels[panels.length - 1]!;
     expect(last.openings!.map((o) => o.x + last.wallOffset!)).toEqual([245]);
     expect(last.warnings[0]).toEqual({
       code: 'OPENING_NUDGED',
       message:
-        'parede I12, abertura U3: deslocada 0.375" para a esquerda (borda do RO de 245.375 para 245) — tocava o fim ' +
-        'da parede; confira a leitura',
+        'Wall I12, opening U3: moved 0.375" to the left (RO edge from 245.375 to 245) — it touched the end ' +
+        'of the wall; check the reading',
       wallId: 'I12',
       openingId: 'U3',
       params: { distance: 0.375, direction: 'left', from: 245.375, to: 245, touched: 'end' },
@@ -130,7 +130,7 @@ describe('splitWall — parede de um painel só', () => {
     expect(rest).toEqual([]);
     expect(panel).toEqual({ ...panelizeWall(wall, plain.config), id: '1-W-plain-P1', level: 1, wallOffset: 0, weightLb: 226.4 });
     expect(splitWall({ ...wall, level: 3 }, plain.config)[0]).toMatchObject({ id: '3-W-plain-P1', level: 3 });
-    expect(() => splitWall({ ...wall, level: 1.5 }, plain.config)).toThrow(/parede W-plain: level deve ser inteiro ≥ 1 \(recebido 1\.5\)/);
+    expect(() => splitWall({ ...wall, level: 1.5 }, plain.config)).toThrow(/Wall W-plain: level must be a whole number ≥ 1 \(got 1\.5\)/);
   });
 
   it('config.panel inválido é RangeError', () => {
@@ -176,11 +176,11 @@ describe('splitWall — peso (P15)', () => {
     expect(panels.map((p) => p.length)).toEqual([240, 240]);
     expect(panels[0]!.warnings).toEqual([]);
     expect(panels[1]!.warnings.map((w) => w.code)).toEqual(['PANEL_OVERWEIGHT']);
-    expect(panels[1]!.warnings[0]!.message).toMatch(new RegExp(`painel 1-W-480-P2: peso estimado de ${p2!.weightLb} lb passa do máximo de ${limit} lb`));
+    expect(panels[1]!.warnings[0]!.message).toMatch(new RegExp(`Panel 1-W-480-P2: estimated weight ${p2!.weightLb} lb is over the ${limit} lb limit`));
   });
 
   it('sem como caber no peso: RangeError', () => {
-    expect(() => splitWall(wall240, { ...config, panel: { maxLength: 240, maxWeight: 10, module: 48, lap: 48, minLap: 24 } })).toThrow(/não há como dividir 240"/);
+    expect(() => splitWall(wall240, { ...config, panel: { maxLength: 240, maxWeight: 10, module: 48, lap: 48, minLap: 24 } })).toThrow(/cannot split 240"/);
   });
 });
 

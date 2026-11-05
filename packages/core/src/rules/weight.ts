@@ -23,13 +23,13 @@ export const ENGINEERED_PCF: number = lumber.engineeredPcf;
 export function poundsPerFoot(section: Section): number {
   if (isLumberSection(section)) return POUNDS_PER_FOOT[section];
   const e = parseEngineeredSection(section);
-  if (e === undefined) throw new RangeError(`peso: seção desconhecida (${String(section)})`);
+  if (e === undefined) throw new RangeError(`weight: unknown section (${String(section)})`);
   return ((e.width * e.depth) / 144) * ENGINEERED_PCF;
 }
 
 /** Peso de um member, lb (plies contam). */
 export function memberWeightLb(m: { section: Section; length: number; plies?: number }): number {
-  if (!Number.isFinite(m.length) || m.length < 0) throw new RangeError(`peso: comprimento inválido (${m.length})`);
+  if (!Number.isFinite(m.length) || m.length < 0) throw new RangeError(`weight: invalid length (${m.length})`);
   return (m.length / 12) * poundsPerFoot(m.section) * pieceCount(m);
 }
 

@@ -52,7 +52,7 @@ export function parseEngineeredSection(
 
 /** Monta a string canônica de uma seção engenheirada. */
 export function engineeredSection(material: EngineeredMaterial, width: number, depth: number): EngineeredSection {
-  if (!(width > 0) || !(depth > 0)) throw new RangeError(`seção ${material} com dimensão inválida (${width}x${depth})`);
+  if (!(width > 0) || !(depth > 0)) throw new RangeError(`invalid ${material} section (${width}x${depth})`);
   return `${material} ${width}x${depth}` as EngineeredSection;
 }
 
@@ -60,7 +60,7 @@ export function engineeredSection(material: EngineeredMaterial, width: number, d
 export function sectionDepth(section: Section): number {
   if (isLumberSection(section)) return SECTION_DEPTH[section];
   const e = parseEngineeredSection(section);
-  if (e === undefined) throw new RangeError(`seção desconhecida (${String(section)})`);
+  if (e === undefined) throw new RangeError(`unknown section (${String(section)})`);
   return e.depth;
 }
 
@@ -68,7 +68,7 @@ export function sectionDepth(section: Section): number {
 export function sectionThickness(section: Section): number {
   if (isLumberSection(section)) return NOMINAL_2X_THICKNESS;
   const e = parseEngineeredSection(section);
-  if (e === undefined) throw new RangeError(`seção desconhecida (${String(section)})`);
+  if (e === undefined) throw new RangeError(`unknown section (${String(section)})`);
   return e.width;
 }
 

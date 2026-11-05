@@ -93,7 +93,7 @@ describe('duplicata descartada vira aviso (B8)', () => {
     });
     expect(preview.pagesSent).toEqual([{ name: 'arch.pdf', pages: [1] }]);
     expect(preview.duplicates).toEqual([{ source: 0, name: 'LS-copy.pdf', page: 1, sheet: 'A-101', kept: { source: 1, name: 'arch.pdf', page: 1 } }]);
-    expect(preview.warnings.map(noticeText).some((w) => w.startsWith('extração SHEET_DUPLICATE: 1 cópia(s)') && w.includes('LS-copy.pdf p.1'))).toBe(true);
+    expect(preview.warnings.map(noticeText).some((w) => w.startsWith('extraction SHEET_DUPLICATE: 1 sheet cop(ies)') && w.includes('LS-copy.pdf p.1'))).toBe(true);
   });
 });
 
@@ -103,7 +103,7 @@ describe('conjunto sem carimbo: as primeiras páginas vão, sem recortes (B8)', 
     const auto = await previewExtraction({ sources: [{ kind: 'pdf', name: 'scan.pdf', data: blank }] });
     expect(auto.pagesSent).toEqual([{ name: 'scan.pdf', pages: [1, 2, 3] }]);
     expect(auto.tiles.count).toBe(0);
-    expect(auto.warnings.map(noticeText).some((w) => w.startsWith('extração NO_TITLE_BLOCK:'))).toBe(true);
+    expect(auto.warnings.map(noticeText).some((w) => w.startsWith('extraction NO_TITLE_BLOCK:'))).toBe(true);
     const asked = await previewExtraction({ sources: [{ kind: 'pdf', name: 'scan.pdf', data: blank, pages: [2] }] });
     expect(asked.tiles.count).toBe(1);
     expect(asked.warnings).toEqual([]);
@@ -144,18 +144,18 @@ describe('stop_reason: todos tratados (B4)', () => {
   it('max_tokens no teto: não manda aumentar, manda menos folhas ou effort', async () => {
     const err = await run({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"proj', citations: null }] });
     expect(err).toBeInstanceOf(ExtractError);
-    expect((err as Error).message).toContain('128000 tokens de saída');
-    expect((err as Error).message).toContain('já é o máximo');
-    expect((err as Error).message).toContain('mande menos folhas ou baixe o effort');
-    expect((err as Error).message).not.toMatch(/aumente/);
+    expect((err as Error).message).toContain('128000 output tokens');
+    expect((err as Error).message).toContain('already the maximum');
+    expect((err as Error).message).toContain('send fewer sheets or lower the effort');
+    expect((err as Error).message).not.toMatch(/increase/);
     expect((err as ExtractError).rawText).toBe('{"proj');
   });
 
   it.each([
-    ['model_context_window_exceeded', /janela de contexto/],
+    ['model_context_window_exceeded', /context window/],
     ['pause_turn', /pause_turn/],
     ['tool_use', /tool_use/],
-    [null, /sem motivo de parada/],
+    [null, /no stop reason/],
   ])('%s vira ExtractError com mensagem própria (não um JSON.parse genérico)', async (reason, re) => {
     const err = await run({ stop_reason: reason });
     expect(err).toBeInstanceOf(ExtractError);

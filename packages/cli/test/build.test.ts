@@ -74,41 +74,31 @@ describe('buildProject', () => {
 
   it('folha de fabricação (S17): nome, date e revision do projeto no cabeçalho; sem date/revision, sem carimbo', () => {
     const svg = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
-    expect(svg).toContain('text-anchor="end">casa-exemplo</text>');
-    expect(svg).toContain('>data 2026-10-14 · rev. A</text>');
-    expect(svg).toContain('>parede W07 · pavimento 1 · 2x6 externa portante · ');
-    expect(svg).toContain('>Peso estimado: ');
-    expect(svg).toContain('>peitoril ');
+    expect(svg).toContain('text-anchor="end">sample-house</text>');
+    expect(svg).toContain('>date 2026-10-14 · rev. A</text>');
+    expect(svg).toContain('>wall W07 · level 1 · 2x6 exterior bearing · ');
+    expect(svg).toContain('>Estimated weight: ');
+    expect(svg).toContain('>sill height ');
     // W01 atravessa o canto em (0,0) indo para +x com a casa a +y: vista de fora.
     const w01 = result.files.find((f) => f.path === 'panels/1-W01-P1.svg')!.content;
-    expect(w01).toContain('>Vista de fora — face externa voltada para o observador; ');
+    expect(w01).toContain('>Viewed from outside — exterior face toward the viewer; ');
     const p = example();
     delete p.date;
     delete p.revision;
     const bare = buildProject(p).files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
     expect(bare).not.toContain('class="stamp"');
-    expect(bare).toContain('text-anchor="end">casa-exemplo</text>');
+    expect(bare).toContain('text-anchor="end">sample-house</text>');
   });
 
-  it('locale (S34): folhas e planta no idioma do projeto; sem locale = português; o resto da saída igual', () => {
-    const en = example();
-    en.locale = 'en';
-    const r = buildProject(en);
-    const sheet = r.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
+  it('folhas e planta sempre em inglês (P51)', () => {
+    const sheet = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
     expect(sheet).toContain('>Pieces</text>');
     expect(sheet).toContain('· door</text>');
     expect(sheet).not.toContain('peças');
-    const plan = r.files.find((f) => f.path === 'plan.svg')!.content;
+    const plan = result.files.find((f) => f.path === 'plan.svg')!.content;
     expect(plan).toContain(' · wall W01</title>');
     expect(plan).toContain(' walls · 7 panels · ');
     expect(plan).not.toContain('parede');
-    // Sem locale e com 'pt': byte a byte iguais; CSVs, painéis e BOM não dependem do idioma.
-    const pt = example();
-    pt.locale = 'pt';
-    expect(buildProject(pt).files).toEqual(result.files);
-    expect(r.files.filter((f) => f.path.endsWith('.csv'))).toEqual(result.files.filter((f) => f.path.endsWith('.csv')));
-    expect(r.panels).toEqual(result.panels);
-    expect(r.bom).toEqual(result.bom);
   });
 
   it('W07: janela e porta com king compartilhado — 24 peças, como o fixture wall-144-window-door', () => {
@@ -121,7 +111,7 @@ describe('buildProject', () => {
     expect(csv).toContain('1-W07-P1,jackStud,2x6,81,"81""",4');
     expect(csv).toContain('1-W07-P1,header,2x10,41,"41""",2');
     const svg = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
-    expect(svg).toContain('>cortar na obra 38&quot;</text>');
+    expect(svg).toContain('>field cut 38&quot;</text>');
     expect(svg).toContain('<title>header 2x10 × 41&quot; (2 plies) [project] — ');
   });
 
@@ -156,10 +146,10 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(2);
-    expect(error!.problems[0]!.message).toMatch(/^parede W05, abertura J1: .*config\.building/);
+    expect(error!.problems[0]!.message).toMatch(/^Wall W05, opening J1: .*config\.building/);
     // S26: código e ids estruturados, sem ler o português.
     expect(error!.problems[0]).toMatchObject({ code: 'HEADER_DATA_MISSING', wallId: 'W05', openingId: 'J1', params: { missing: 'building' }, stage: 'wall' });
-    expect(error!.problems[1]!.message).toMatch(/^parede W06, abertura J2: /);
+    expect(error!.problems[1]!.message).toMatch(/^Wall W06, opening J2: /);
   });
 
   it('parede interna portante sem pavimento acima não está na R602.7(2): pede engenheiro ou header do projeto', () => {
@@ -167,7 +157,7 @@ describe('buildProject', () => {
     const w03 = p.house!.walls.find((w) => w.id === 'W03')!;
     w03.floorsSupported = 0;
     w03.openings.push({ id: 'P9', type: 'door', offset: 40, roughWidth: 38, roughHeight: 82.5 });
-    expect(() => buildProject(p)).toThrow(/parede W03, abertura P9: header fora da tabela \(0 pavimento/);
+    expect(() => buildProject(p)).toThrow(/Wall W03, opening P9: header outside the table \(0 floor/);
     w03.openings[0]!.header = { section: '2x6', plies: 2 };
     expect(buildProject(p).panels.find((x) => x.id === '1-W03-P1')!.members.some((m) => m.role === 'header')).toBe(true);
   });
@@ -199,7 +189,7 @@ describe('buildProject', () => {
     }
     expect(error).toBeInstanceOf(BuildError);
     expect(error!.problems).toHaveLength(1);
-    expect(error!.problems[0]!.message).toMatch(/^parede W01: aberturas J8 e J9: 4" entre os RO/);
+    expect(error!.problems[0]!.message).toMatch(/^Wall W01: openings J8 and J9: 4" between the ROs/);
     expect(error!.problems[0]).toMatchObject({ code: 'OPENINGS_TOO_CLOSE', wallId: 'W01', openingId: 'J9', params: { prevId: 'J8', gap: 4 } });
 
     // Sem a abertura o projeto gera: a W99 (240") cabe num painel e as plates são emendadas sobre stud (P14),
@@ -258,7 +248,7 @@ describe('buildProject', () => {
       { ...w, id: 'W/1' },
       { ...w, id: 'W_1', start: { x: 0, y: 900 }, end: { x: 144, y: 900 }, ends: {} },
     ];
-    expect(() => buildProject(p)).toThrow(/"1-W\/1-P1" e "1-W_1-P1" gerariam o mesmo arquivo panels\/1-W_1-P1\.svg/);
+    expect(() => buildProject(p)).toThrow(/"1-W\/1-P1" and "1-W_1-P1" would produce the same file panels\/1-W_1-P1\.svg/);
   });
 
   describe('casa em planta (S13)', () => {
@@ -302,7 +292,7 @@ describe('buildProject', () => {
       } catch (e) {
         error = e as BuildError;
       }
-      expect(error!.problems.map(problemText)).toEqual([expect.stringMatching(/^planta: paredes W02 e X se cruzam em \(0, 50\)/)]);
+      expect(error!.problems.map(problemText)).toEqual([expect.stringMatching(/^plan: Walls W02 and X cross at \(0, 50\)/)]);
       expect(error!.problems[0]).toMatchObject({ code: 'WALLS_CROSS', wallId: 'W02', alsoWalls: ['X'], params: { otherWallId: 'X', x: 0, y: 50 }, stage: 'plan' });
     });
 
@@ -310,7 +300,7 @@ describe('buildProject', () => {
       const p = example();
       const w02 = p.house!.walls.find((w) => w.id === 'W02')!;
       w02.openings.push({ id: 'J9', type: 'window', offset: 80, roughWidth: 36, roughHeight: 48, header: { section: '2x10', plies: 2 } });
-      expect(() => buildProject(p)).toThrow(/^parede W02, abertura J9: a parede W03 encosta em T em x=93.25/);
+      expect(() => buildProject(p)).toThrow(/^Wall W02, opening J9: wall W03 meets it in a tee at x=93.25/);
       w02.openings[0]!.offset = 100; // zona [97, 139] no eixo → [94.25, 136.25] no painel; faixa do T 91.5–95
       const { warnings } = buildProject(p);
       expect(warnings).toEqual([{ panelId: '1-W02-P1', warning: expect.objectContaining({ code: 'OPENING_AT_TEE' }) }]);
@@ -333,8 +323,8 @@ describe('buildProject', () => {
     it('plan.svg: planta de painéis com o nome do projeto, as 7 paredes e a seta do norte do projeto (S16)', () => {
       const plan = result.files.find((f) => f.path === 'plan.svg')!.content;
       expect(plan.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
-      expect(plan).toContain('>casa-exemplo</text>');
-      expect(plan).toContain('>7 paredes · 7 painéis · ');
+      expect(plan).toContain('>sample-house</text>');
+      expect(plan).toContain('>7 walls · 7 panels · ');
       expect(plan.match(/<rect class="wall /g)).toHaveLength(7);
       expect(plan).toContain('>1-W01-P1</text>');
       expect(plan).toContain('<g class="north" transform="rotate(0 ');

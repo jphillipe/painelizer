@@ -88,19 +88,19 @@ export function evaluateReading(out: ExtractionOutput, truth: ReadingTruth): Eva
 
   const shortfalls: string[] = [];
   for (const t of tags) {
-    if (t.found < t.expected) shortfalls.push(`tag ${t.tag}: ${t.found} de ${t.expected} encontradas`);
-    if (t.positioned < t.found) shortfalls.push(`tag ${t.tag}: ${t.found - t.positioned} sem posição`);
+    if (t.found < t.expected) shortfalls.push(`tag ${t.tag}: ${t.found} of ${t.expected} found`);
+    if (t.positioned < t.found) shortfalls.push(`tag ${t.tag}: ${t.found - t.positioned} with no position`);
   }
   if (truth.untaggedOpeningsMin !== undefined && untagged < truth.untaggedOpeningsMin) {
-    shortfalls.push(`vãos sem tag: ${untagged} de pelo menos ${truth.untaggedOpeningsMin}`);
+    shortfalls.push(`untagged openings: ${untagged} of at least ${truth.untaggedOpeningsMin}`);
   }
   if (truth.interiorDoorsMin !== undefined && interiorDoors.length < truth.interiorDoorsMin) {
-    shortfalls.push(`portas em paredes internas: ${interiorDoors.length} de pelo menos ${truth.interiorDoorsMin}`);
+    shortfalls.push(`doors in interior walls: ${interiorDoors.length} of at least ${truth.interiorDoorsMin}`);
   }
   if (truth.roomsMin !== undefined && out.rooms.length < truth.roomsMin) {
-    shortfalls.push(`cômodos listados: ${out.rooms.length} de pelo menos ${truth.roomsMin}`);
+    shortfalls.push(`rooms listed: ${out.rooms.length} of at least ${truth.roomsMin}`);
   }
-  if (roomsWithout.length > 0) shortfalls.push(`cômodos sem porta: ${roomsWithout.join(', ')}`);
+  if (roomsWithout.length > 0) shortfalls.push(`rooms with no door: ${roomsWithout.join(', ')}`);
 
   return {
     name: truth.name,
@@ -130,22 +130,22 @@ const pct = (x: number): string => `${Math.round(x * 100)} %`;
 export function formatEvalReport(r: EvalReport, label?: string): string {
   const lines: string[] = [];
   lines.push(`# ${label ?? r.name}`);
-  lines.push(`paredes: ${r.walls.total} (${r.walls.interior} internas)`);
+  lines.push(`walls: ${r.walls.total} (${r.walls.interior} interior)`);
   lines.push(
-    `aberturas: ${r.openings.total} · em paredes internas ${r.openings.interior} (${r.openings.interiorPositioned} com posição) · sem tag ${r.openings.untagged}`,
+    `openings: ${r.openings.total} · in interior walls ${r.openings.interior} (${r.openings.interiorPositioned} with position) · untagged ${r.openings.untagged}`,
   );
   lines.push(
-    `posição: cota ${r.openings.bySource.dimension} · regra ${r.openings.bySource.rule} · escala ${r.openings.bySource.scaled} · sem posição ${r.openings.bySource.none}` +
+    `position: dimension ${r.openings.bySource.dimension} · rule ${r.openings.bySource.rule} · scaled ${r.openings.bySource.scaled} · none ${r.openings.bySource.none}` +
       (r.openings.unplaced.length > 0 ? ` (${r.openings.unplaced.join(', ')})` : ''),
   );
-  lines.push(`confiança: média ${r.openings.confidence.mean.toFixed(2)} · mínima ${r.openings.confidence.min.toFixed(2)} · abaixo de 0,7: ${r.openings.confidence.below07}`);
-  lines.push(`tags de porta: ${pct(r.tagCoverage)} — ${r.tags.map((t) => `${t.tag} ${t.found}/${t.expected}${t.positioned < t.found ? ` (${t.positioned} posicionadas)` : ''}`).join(' · ')}`);
-  lines.push(`cômodos: ${r.rooms.total}${r.rooms.expectedMin === undefined ? '' : ` (esperados ≥ ${r.rooms.expectedMin})`} · sem porta: ${r.rooms.withoutDoor.length}`);
+  lines.push(`confidence: mean ${r.openings.confidence.mean.toFixed(2)} · min ${r.openings.confidence.min.toFixed(2)} · below 0.7: ${r.openings.confidence.below07}`);
+  lines.push(`door tags: ${pct(r.tagCoverage)} — ${r.tags.map((t) => `${t.tag} ${t.found}/${t.expected}${t.positioned < t.found ? ` (${t.positioned} positioned)` : ''}`).join(' · ')}`);
+  lines.push(`rooms: ${r.rooms.total}${r.rooms.expectedMin === undefined ? '' : ` (expected ≥ ${r.rooms.expectedMin})`} · with no door: ${r.rooms.withoutDoor.length}`);
   const warn = Object.entries(r.warnings)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${k} ${v}`)
     .join(' · ');
-  lines.push(`avisos: ${warn === '' ? 'nenhum' : warn} · problemas: ${r.problems} · notas: ${r.notes}`);
-  lines.push(r.shortfalls.length === 0 ? 'faltas: nenhuma' : `faltas:\n${r.shortfalls.map((s) => `  - ${s}`).join('\n')}`);
+  lines.push(`warnings: ${warn === '' ? 'none' : warn} · problems: ${r.problems} · notes: ${r.notes}`);
+  lines.push(r.shortfalls.length === 0 ? 'shortfalls: none' : `shortfalls:\n${r.shortfalls.map((s) => `  - ${s}`).join('\n')}`);
   return lines.join('\n');
 }

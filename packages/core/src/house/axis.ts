@@ -75,6 +75,6 @@ export function pointAt(a: Axis, s: number): Point {
 
 /** Cruzamento das retas de dois eixos perpendiculares. */
 export function crossing(a: Axis, b: Axis): Point {
-  if (a.dir === b.dir) throw new RangeError(`paredes ${a.id} e ${b.id} são paralelas; não se cruzam`);
+  if (a.dir === b.dir) throw new RangeError(`walls ${a.id} and ${b.id} are parallel; they do not cross`);
   return a.dir === 'x' ? { x: b.start.x, y: a.start.y } : { x: a.start.x, y: b.start.y };
 }

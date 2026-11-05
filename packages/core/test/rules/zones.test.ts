@@ -88,7 +88,7 @@ describe('mergeOpeningZones', () => {
     // 9": zonas só se tocam; um king, 1.5" de folga à direita dele
     expect(mergeOpeningZones([a, b(53)], 1.5).kings).toEqual([15.5, 47, 80]);
     expect(mergeOpeningZones([a, b(53 + 1 / 64)], 1.5).zones).toHaveLength(2);
-    expect(() => mergeOpeningZones([a, b(51)], 1.5)).toThrow(/\(mínimo 7\.5"\)/);
+    expect(() => mergeOpeningZones([a, b(51)], 1.5)).toThrow(/\(minimum 7\.5"\)/);
   });
 
   it.each([
@@ -97,7 +97,7 @@ describe('mergeOpeningZones', () => {
     ['RO sobrepostos', 40],
   ])('RO vizinhos sem espaço para jack + king + jack: %s → RangeError', (_label, offset) => {
     expect(() => mergeOpeningZones([w('a', 20), w('b', offset)], 1.5)).toThrow(
-      /aberturas a e b: .*\(mínimo 4\.5"\)/,
+      /Openings a and b: .*\(minimum 4\.5"\)/,
     );
   });
 
@@ -111,7 +111,7 @@ describe('mergeOpeningZones', () => {
     const b = w('b', 48.5, 24);
 
     it('sem fit: 1 + 2 + 1 = 6" não cabe em 4.5" → RangeError', () => {
-      expect(() => mergeOpeningZones([a, b], 1.5)).toThrow(/aberturas a e b: 4\.5" .*\(mínimo 6"\)/);
+      expect(() => mergeOpeningZones([a, b], 1.5)).toThrow(/Openings a and b: 4\.5" .*\(minimum 6"\)/);
     });
 
     it('com fit: 1 king compartilhado colado ao jack de a, kings externos de a continuam 2', () => {
@@ -129,7 +129,7 @@ describe('mergeOpeningZones', () => {
     });
 
     it('com fit e menos que jack + king + jack: RangeError', () => {
-      expect(() => mergeOpeningZones([a, { ...b, offset: 47 }], 1.5, { fit: true })).toThrow(/3" .*\(mínimo 6"\); nem 1 jack \+ 1 king \+ 1 jack \(4\.5"\) cabe/);
+      expect(() => mergeOpeningZones([a, { ...b, offset: 47 }], 1.5, { fit: true })).toThrow(/3" .*\(minimum 6"\); not even 1 jack \+ 1 king \+ 1 jack \(4\.5"\) fits/);
     });
   });
 });

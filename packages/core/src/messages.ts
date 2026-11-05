@@ -1,8 +1,8 @@
 /**
  * Códigos das mensagens do motor (S26). Avisos (`Warning`) e erros (`EngineError`) saem com código, ids de
- * parede/abertura e parâmetros; a frase em português (CLI, folha) é montada aqui a partir deles — os sites do
- * motor não escrevem texto. Quem mostra em outro idioma (o app) monta a sua frase com os mesmos parâmetros e
- * nunca precisa ler o português.
+ * parede/abertura e parâmetros; a frase em inglês (CLI, folha, "Details" do app) é montada aqui a partir deles — os
+ * sites do motor não escrevem texto. O app monta a sua própria frase com os mesmos parâmetros
+ * (`web/lib/messages.en.ts`). Todo texto que chega ao usuário é em inglês (P51 resolvida).
  *
  * Hipóteses (`P30`, `P39`, `P40`…) vão em `Warning.hypothesis`, fora da frase: a folha não leva "hipótese" para
  * a serra; o CLI acrescenta quando imprime.
@@ -104,7 +104,7 @@ export interface MessageWhere {
 
 /**
  * Motivo de "exige engenheiro" das tabelas de header (R602.7(1)/(2)) e de kings (R602.7.5), estruturado: as
- * tabelas devolvem isto, e `engineerReasonPt` é a única frase.
+ * tabelas devolvem isto, e `engineerReasonText` é a única frase.
  */
 export type EngineerReason =
   | { why: 'noTable'; exterior: boolean }
@@ -114,20 +114,20 @@ export type EngineerReason =
   | { why: 'wind'; windSpeed: number; exposure: string; table: string }
   | { why: 'kingSpan'; span: number; table: string };
 
-export function engineerReasonPt(r: EngineerReason): string {
+export function engineerReasonText(r: EngineerReason): string {
   switch (r.why) {
     case 'noTable':
-      return `sem tabela de header para parede ${r.exterior ? 'externa' : 'interna'}`;
+      return `no header table for ${r.exterior ? 'exterior' : 'interior'} walls`;
     case 'width':
-      return `largura ${r.width}"${r.snow === undefined ? '' : ` com neve ${r.snow} psf`} fora da tabela ${r.table}`;
+      return `building width ${r.width}"${r.snow === undefined ? '' : ` with ${r.snow} psf snow`} is outside table ${r.table}`;
     case 'floors':
-      return `${r.floors} pavimento(s)${r.floorSpan ? ` (${r.floorSpan})` : ''} sem grupo na tabela ${r.table}`;
+      return `${r.floors} floor(s)${r.floorSpan ? ` (${r.floorSpan} span)` : ''} not in table ${r.table}`;
     case 'span':
-      return `vão ${r.span}" acima de todos os headers da tabela ${r.table}${r.wallSection === undefined ? '' : ` que cabem em parede ${r.wallSection}`}`;
+      return `a ${r.span}" span is above every header in table ${r.table}${r.wallSection === undefined ? '' : ` that fits a ${r.wallSection} wall`}`;
     case 'wind':
-      return `vento ${r.windSpeed} mph, exposição ${r.exposure}, fora da tabela ${r.table}`;
+      return `${r.windSpeed} mph, exposure ${r.exposure}, is outside table ${r.table}`;
     case 'kingSpan':
-      return `vão ${r.span}" acima da última linha da tabela ${r.table}`;
+      return `a ${r.span}" span is above the last row of table ${r.table}`;
   }
 }
 
@@ -137,21 +137,30 @@ export function engineerParams(r: EngineerReason): MessageParams {
 }
 
 function reasonFromParams(p: MessageParams): string {
-  return engineerReasonPt(p as unknown as EngineerReason);
+  return engineerReasonText(p as unknown as EngineerReason);
 }
 
-/** "parede W01, abertura J1" / "parede W01" / "abertura J1" / "". */
-export function locusPt(w: MessageWhere): string {
+/** "wall W01, opening J1" / "wall W01" / "opening J1" / "" (para o meio da frase, em minúscula). */
+export function locus(w: MessageWhere): string {
   const parts: string[] = [];
-  if (w.wallId !== undefined) parts.push(`parede ${w.wallId}`);
-  if (w.openingId !== undefined) parts.push(`abertura ${w.openingId}`);
+  if (w.wallId !== undefined) parts.push(`wall ${w.wallId}`);
+  if (w.openingId !== undefined) parts.push(`opening ${w.openingId}`);
   return parts.join(', ');
 }
 
-/** `locus: corpo`, ou só o corpo sem locus. */
+/** Maiúscula na primeira palavra, se ela for uma palavra comum; nome de campo (`groundSnowLoad`, `config.x`) fica como é. */
+const capitalize = (t: string): string => (/^[a-z]+(?![\w.[])/.test(t) ? t.charAt(0).toUpperCase() + t.slice(1) : t);
+
+/** "Wall W01, opening J1: …" / "Wall W01: …" / "Opening J1: …" / o corpo com maiúscula. */
 function at(w: MessageWhere, body: string): string {
-  const l = locusPt(w);
-  return l === '' ? body : `${l}: ${body}`;
+  const l = locus(w);
+  return l === '' ? capitalize(body) : `${capitalize(l)}: ${body}`;
+}
+
+/** "Wall W01, opening J1, " antes de um caminho (`extraStuds[0]`), ou nada. */
+function lead(w: MessageWhere): string {
+  const l = locus(w);
+  return l === '' ? '' : `${capitalize(l)}, `;
 }
 
 const inch = (n: ParamValue | undefined): string => `${String(n)}"`;
@@ -159,236 +168,53 @@ const list = (v: ParamValue | undefined): string => (Array.isArray(v) ? v.join('
 
 type Template = (p: MessageParams, w: MessageWhere) => string;
 
-const WARNING_PT: Record<WarningCode, Template> = {
+/** Avisos, montados só de código + parâmetros. As frases acompanham as da tela (`web/lib/messages.en.ts`, S26). */
+const WARNING: Record<WarningCode, Template> = {
   STUD_LENGTH_MISMATCH: (p, w) =>
     at(
-      { wallId: w.wallId },
-      `altura ${inch(p.height)} menos 3 plates de ${inch(p.plateThickness)} exige stud de ${inch(p.studLength)}, que não é ` +
-        `nenhum dos pré-cortes de config.studLength (${((p.precuts ?? []) as readonly number[]).map((x) => `${x}"`).join(', ')})`,
-    ),
-  HEADER_JACKS_BELOW_TABLE: (p, w) =>
-    p.reason === 'neighbor'
-      ? at(w, `1 jack por lado em vez de ${p.wanted} — só ${inch(p.gap)} até o RO de ${p.neighborId}`)
-      : at(w, `${p.jacks} jack(s) por lado, mas a tabela ${p.table} pede ${p.tableJacks} para o header ${p.plies}-${p.section} com vão de ${inch(p.span)}`),
-  HEADER_KINGS_BELOW_TABLE: (p, w) =>
-    p.reason === 'shared'
-      ? `parede ${w.wallId}, aberturas ${p.prevId} e ${w.openingId}: ${p.used} king(s) compartilhado(s) em vez de ${p.wanted} — só ${inch(p.gap)} entre os RO`
-      : at(
-          w,
-          `${p.kings} king(s) por lado, mas a tabela ${p.table} pede ${p.tableKings} para vão de ${inch(p.span)} com vento de ` +
-            `${p.windSpeed} mph, exposição ${p.exposure}`,
-        ),
-  OPENING_NUDGED: (p, w) =>
-    at(
-      w,
-      `deslocada ${inch(p.distance)} para a ${p.direction === 'left' ? 'esquerda' : 'direita'} (borda do RO de ${p.from} para ${p.to}) — ` +
-        `tocava ${p.touched === 'start' ? 'o início da parede' : p.touched === 'end' ? 'o fim da parede' : `a parede ${p.teeWallId ?? '?'} em T`}; confira a leitura`,
-    ),
-  WIND_SPEED_MISSING: (_p, w) =>
-    at(w, 'parede externa sem config.building.windSpeed — kings pela Tabela R602.7.5 não conferidos; o painel sai com 1 king por lado'),
-  SPECIES_NOT_IN_TABLE: (p, w) =>
-    at(w, `header pela tabela ${p.table}, que é de SPF No. 2; o projeto especifica ${p.species} — conferir o vão com a tabela da espécie ou usar o header schedule do projeto`),
-  DOOR_RO_HEIGHT_MISMATCH: (p, w) =>
-    at({ openingId: w.openingId }, `RO da porta com ${inch(p.roughHeight)} de altura (medido do subfloor) não bate com a base do header em ${inch(p.headerBase)}`),
-  OPENING_AT_TEE: (p, w) =>
-    at(
-      { wallId: w.wallId },
-      `a parede ${p.teeWallId} encosta em T em x=${p.x} (faixa ${p.lo}–${p.hi}), na zona da(s) abertura(s) ${list(p.openingIds)} [${p.start}, ${p.end}] — ` +
-        'kings/jacks e o ladder blocking disputam o lugar; afaste a abertura ou a parede',
-    ),
-  OPENING_NEAR_CORNER: (p, w) =>
-    at(w, `king a ${inch(p.gap)} do ${p.end === 'start' ? 'início' : 'fim'} da parede — não cabe o stud de ponta (mínimo ${inch(p.min)}); encoste a abertura no canto ou afaste-a`),
-  STUDS_OVERLAP: (p, w) =>
-    at({ wallId: w.wallId }, `${p.aRole} em x=${p.aX} e ${p.bRole} em x=${p.bX} se sobrepõem em ${inch(p.overlap)} — a fábrica decide se dobra o stud ou omite a marca`),
-  STUD_HEIGHT_ABOVE_LIMIT: (p, w) =>
-    at(
-      { wallId: w.wallId },
-      `stud de ${inch(p.studLength)} passa do máximo de ${inch(p.limit)} para parede ${p.bearing ? 'portante' : 'não portante'} ${p.section} (Tabela R602.3(5)) — exige projeto estrutural`,
-    ),
-  PANEL_OVERWEIGHT: (p) =>
-    `painel ${p.panelId}: peso estimado de ${p.weight} lb passa do máximo de ${p.max} lb (config.panel.maxWeight) e não há quebra que resolva — confira com a fábrica`,
-};
-
-const ERROR_PT: Record<EngineErrorCode, Template> = {
-  WALL_POINT_NOT_FINITE: (p, w) => at(w, `${p.end} deve ter x e y finitos (recebido ${p.x}, ${p.y})`),
-  WALL_ZERO_LENGTH: (p, w) => at(w, `start e end coincidem (${p.x}, ${p.y})`),
-  WALL_OFF_AXIS: (p, w) => at(w, `fora dos eixos da planta (de ${p.x0}, ${p.y0} a ${p.x1}, ${p.y1}) — só paredes paralelas a x ou a y`),
-  WALL_DUPLICATE_ID: (_p, w) => at(w, 'id duplicado'),
-  WALL_END_TWO_JOINTS: (p, w) =>
-    at(w, `ponta ${p.end} ligada a duas paredes (${p.first} e ${p.second}) — três pontas no mesmo ponto ou canto e T no mesmo lugar`),
-  WALLS_CROSS: (p, w) => `paredes ${w.wallId} e ${p.otherWallId} se cruzam em (${p.x}, ${p.y}) — divida uma delas no cruzamento`,
-  WALLS_OVERLAP: (p, w) => `paredes ${w.wallId} e ${p.otherWallId} se sobrepõem em ${inch(p.overlap)} — é a mesma parede duas vezes?`,
-  CORNER_ENDS_CONFLICT: (p, w) =>
-    `paredes ${w.wallId} (${p.end}) e ${p.otherWallId} (${p.otherEnd}): as duas declaram ends "${p.rule}" no mesmo canto`,
-  PLATE_NO_LENGTH: (p, w) => at(w, `plate sem comprimento (${inch(p.length)}) — as paredes das pontas ocupam tudo`),
-  OPENING_OFF_PLATE: (p, w) =>
-    at(w, `RO de ${inch(p.from)} a ${inch(p.to)} do start não cabe na plate (de ${inch(p.s0)} a ${inch(p.s1)} do start)`),
-
-  OPENING_TAG_UNKNOWN: (p, w) => at(w, `tag "${p.tag}" não está em config.openingTypes`),
-  OPENING_TYPE_MISSING: (_p, w) => at(w, 'sem type nem tag no catálogo'),
-  OPENING_SIZE_MISSING: (_p, w) => at(w, 'sem roughWidth/roughHeight e sem tag no catálogo'),
-  OPENING_POSITION_MISSING: (_p, w) => at(w, 'sem offset nem center'),
-  HEADER_MARK_UNKNOWN: (p, w) => at(w, `marca "${p.mark}" não está em config.headerSchedule`),
-  OPENING_NOT_FINITE: (_p, w) => at(w, 'medidas devem ser números finitos'),
-  OPENING_SIZE_INVALID: (_p, w) => at(w, 'RO deve ter largura e altura > 0'),
-  OPENING_OUT_OF_WALL: (p, w) => at(w, `zona [${p.start}, ${p.end}] (RO com kings e jacks) sai da parede de ${inch(p.length)}`),
-  OPENINGS_TOO_CLOSE: (p, w) =>
-    `${w.wallId === undefined ? '' : `parede ${w.wallId}: `}aberturas ${p.prevId} e ${w.openingId}: ${inch(p.gap)} entre os RO não comportam jacks e king ` +
-    `compartilhado (mínimo ${inch(p.needed)})` +
-    (p.fit === true ? `; nem 1 jack + 1 king + 1 jack (${inch(p.min3)}) cabe — confira a posição e o RO das duas` : ''),
-  HEADER_ABOVE_TOP_PLATE: (p, w) =>
-    at(w, `header ${p.section} com base em ${inch(p.base)} vai até ${inch(p.top)}, acima da top plate (${inch(p.topPlate)})`),
-  HEADER_NO_ROOM_FOR_JACK: (p, w) =>
-    at(w, `base do header em ${inch(p.base)} não deixa espaço para jack sobre a bottom plate (topo em ${inch(p.plateTop)})`),
-  SILL_NO_ROOM: (p, w) =>
-    at(w, `base do RO em ${inch(p.roBase)} não deixa espaço para o sill${p.double === true ? ' duplo' : ''} sobre a bottom plate (topo em ${inch(p.plateTop)})`),
-
-  HEADER_SECTION_UNKNOWN: (p, w) => at(w, `header.section desconhecida (${p.section})`),
-  HEADER_TOO_THICK: (p, w) =>
-    at(w, `header do projeto com ${p.plies} plies de ${p.section} (${inch(p.thickness)}) não cabe em parede ${p.wallSection} (${inch(p.depth)})`),
-  FLAT_HEADER_SPAN: (p, w) =>
-    at(w, `parede não portante com RO de ${inch(p.span)} — a peça deitada (R602.7.4) vale até ${inch(p.max)}; informe o header da abertura`),
-  FLAT_HEADER_GAP: (p, w) =>
-    at(
-      w,
-      `peça deitada (R602.7.4) com topo em ${inch(p.top)} fica a ${inch(p.gap)} da top plate (${inch(p.topPlate)}), acima do limite de ${inch(p.max)}; ` +
-        'informe o header da abertura',
-    ),
-  HEADER_DATA_MISSING: (p, w) =>
-    at(
-      w,
-      `parede portante sem header no projeto e sem ${p.missing === 'building' ? 'config.building (neve e largura da edificação)' : 'wall.floorsSupported (pavimentos acima da parede)'} — ` +
-        'não dá para escolher o header pela tabela; informe o dado ou o header da abertura',
-    ),
-  HEADER_OUT_OF_TABLE: (p, w) => at(w, `header fora da tabela (${reasonFromParams(p)}) — exige engenheiro; informe o header da abertura`),
-  HEADER_TABLE_NOT_APPLICABLE: (_p, w) => at(w, 'tabela de headers não se aplica'),
-  KINGS_OUT_OF_TABLE: (p, w) => at(w, `kings fora da tabela (${reasonFromParams(p)}) — exige engenheiro; informe kingStuds na abertura`),
-  SNOW_LOAD_REQUIRED: (_p, w) => at(w, 'groundSnowLoad é obrigatório em parede externa portante'),
-
-  CORNER_STUD_OFF_PLATE: (p, w) => at(w, `stud de canto em x=${p.x} não cabe na plate de ${inch(p.length)}`),
-  TEE_IN_OPENING: (p, w) => at(w, `a parede ${p.teeWallId} encosta em T em x=${p.x} (faixa ${p.lo}–${p.hi}), dentro do RO [${p.from}, ${p.to}]`),
-  TEE_WITHOUT_STUD: (p, w) => at(w, `faixa do T ${p.lo}–${p.hi} sem stud vizinho de um dos lados — não há onde apoiar o ladder`),
-  EXTRA_STUD_INVALID: (p, w) =>
-    `${locusPt(w)}, extraStuds[${p.index}]: ${p.field === 'x' ? 'x deve ser número finito' : 'count deve ser inteiro ≥ 1'} (recebido ${p.value})`,
-  EXTRA_STUD_OUT_OF_WALL: (p, w) => `${locusPt(w)}, extraStuds[${p.index}]: ${p.count} stud(s) a partir de x=${p.x} saem da parede de ${inch(p.length)}`,
-  EXTRA_STUD_IN_OPENING: (p, w) =>
-    `${locusPt(w)}, extraStuds[${p.index}]: stud em x=${p.x} cai na zona de abertura [${p.start}, ${p.end}] — studs extras ficam fora de kings, jacks e RO`,
-
-  CANNOT_SPLIT: (p, w) =>
-    `${w.wallId === undefined ? 'parede' : `parede ${w.wallId}`}: não há como dividir ${inch(p.length)} em painéis de até ${inch(p.maxLength)}` +
-    `${p.maxWeight === undefined ? '' : ` / ${p.maxWeight} lb`} — nenhum stud de layout livre (fora de abertura, T, canto e studs extras) entre x=${p.from} e x=${p.to}`,
-  PANEL_BREAK_INVALID: (p, w) =>
-    at(
-      { wallId: w.wallId },
-      `quebra de painel em x=${p.at} (panelBreaks): ` +
-        (p.reason === 'order'
-          ? 'as quebras devem estar em ordem crescente e sem repetição'
-          : p.reason === 'end'
-            ? `a menos de ${inch(p.min)} da ponta da parede (${inch(p.length)}) — o par de studs da junta não cabe ao lado do stud de ponta ou do canto`
-            : p.reason === 'mark'
-              ? `não é o centro de um stud de layout (marcas a cada ${inch(p.spacing)} da marca 0)`
-              : p.reason === 'opening'
-                ? `cai na zona da(s) abertura(s) ${list(p.openingIds)} [${p.start}, ${p.end}]`
-                : p.reason === 'tee'
-                  ? `cai na faixa do T${p.teeWallId === undefined ? '' : ` da parede ${p.teeWallId}`} (${p.lo}–${p.hi})`
-                  : `o par de studs da junta encosta em ${p.role} em x=${p.memberX}`),
-    ),
-  PANEL_TOO_LONG: (p, w) =>
-    at(
-      { wallId: w.wallId },
-      `painel de x=${p.from} a x=${p.to} (${inch(p.length)}) passa do máximo de ${inch(p.maxLength)} (config.panel.maxLength) — acrescente uma quebra em panelBreaks`,
-    ),
-  LAP_NO_ROOM: (p, w) =>
-    at(
-      { wallId: w.wallId },
-      `lap da double top após a quebra em x=${p.at}: ` +
-        (p.blocker === undefined
-          ? `o painel seguinte acaba em x=${p.limit} e nem o mínimo de ${inch(p.minLap)} cabe`
-          : `${p.blocker === 'header' ? `o header em x=${p.blockerX}` : `a faixa do T${p.teeWallId === undefined ? '' : ` da parede ${p.teeWallId}`}`} ocupa ${p.lo}–${p.hi} e não há marca livre até x=${p.limit}`),
-    ),
-  SPLICE_NO_STUD: (p, w) =>
-    `${w.wallId ?? ''}: ${p.role} de ${inch(p.memberLength)}: não há stud entre x=${p.from} e x=${p.to} para emendar a plate com defasagem de ${inch(p.min)} das outras emendas (estoque máximo ${inch(p.maxStock)})`,
-  PANEL_MIN_LAP_ABOVE_LAP: (p) => `config.panel.minLap (${p.minLap}) maior que lap (${p.lap})`,
-  PRECUTS_EMPTY: () => 'config.studLength: lista de pré-cortes vazia',
-  STOCK_EMPTY: (p) => `${p.scope}: lista de comprimentos comerciais vazia`,
-  STOCK_INVALID: (p) => `${p.scope}: comprimento comercial inválido (${p.value})`,
-  PRICE_INVALID: (p) =>
-    `config.prices[${p.index}] (${p.section}): ${p.reason === 'duplicate' ? 'preço repetido para a mesma seção e comprimento' : p.reason === 'length' ? `comprimento inválido (${p.value})` : `preço inválido (${p.value}); esperado número ≥ 0`}`,
-  PIECE_OVER_STOCK: (p) => `bom: peça de ${inch(p.length)} não cabe em nenhum comprimento comercial (máx. ${inch(p.max)})`,
-
-  VALUE_NOT_POSITIVE: (p, w) => at(w, `${p.field} deve ser > 0 (recebido ${p.value})`),
-  VALUE_NOT_COUNT: (p, w) => at(w, `${p.field} deve ser inteiro ≥ 1 (recebido ${p.value})`),
-  VALUE_INVALID: (p, w) => at(w, `${p.field} ${p.field === 'exposure' ? 'inválida' : 'inválido'} (${p.value})`),
-  CONFIG_INVALID: (p) => `${p.field} inválido (${p.value}); esperado ${p.expected === 'weight' ? 'peso em lb > 0' : 'medida > 0'}`,
-};
-
-export function warningMessagePt(code: WarningCode, params: MessageParams, where: MessageWhere = {}): string {
-  return WARNING_PT[code](params, where);
-}
-
-export function engineErrorMessagePt(code: EngineErrorCode, params: MessageParams, where: MessageWhere = {}): string {
-  return ERROR_PT[code](params, where);
-}
-
-/** "Wall W01, opening J1: …" / "Wall W01: …" / "Opening J1: …" / o corpo com maiúscula. */
-function atEn(w: MessageWhere, body: string): string {
-  const parts: string[] = [];
-  if (w.wallId !== undefined) parts.push(`Wall ${w.wallId}`);
-  if (w.openingId !== undefined) parts.push(parts.length === 0 ? `Opening ${w.openingId}` : `opening ${w.openingId}`);
-  if (parts.length === 0) return body.charAt(0).toUpperCase() + body.slice(1);
-  return `${parts.join(', ')}: ${body}`;
-}
-
-/**
- * Avisos em inglês para a folha com `locale: 'en'` (S34), montados só de código + parâmetros, como os em
- * português. As frases acompanham as da tela (`web/lib/messages.en.ts`, S26).
- */
-const WARNING_EN: Record<WarningCode, Template> = {
-  STUD_LENGTH_MISMATCH: (p, w) =>
-    atEn(
       { wallId: w.wallId },
       `wall height ${inch(p.height)} minus 3 plates of ${inch(p.plateThickness)} needs a ${inch(p.studLength)} stud, which is ` +
         `not one of the precut lengths (${((p.precuts ?? []) as readonly number[]).map((x) => `${x}"`).join(', ')})`,
     ),
   HEADER_JACKS_BELOW_TABLE: (p, w) =>
     p.reason === 'neighbor'
-      ? atEn(w, `1 jack stud per side instead of ${p.wanted} — only ${inch(p.gap)} to the RO of ${p.neighborId}`)
-      : atEn(w, `${p.jacks} jack stud(s) per side, but table ${p.table} asks for ${p.tableJacks} for a ${p.plies}-${p.section} header over ${inch(p.span)}`),
+      ? at(w, `1 jack stud per side instead of ${p.wanted} — only ${inch(p.gap)} to the RO of ${p.neighborId}`)
+      : at(w, `${p.jacks} jack stud(s) per side, but table ${p.table} asks for ${p.tableJacks} for a ${p.plies}-${p.section} header over ${inch(p.span)}`),
   HEADER_KINGS_BELOW_TABLE: (p, w) =>
     p.reason === 'shared'
-      ? atEn(
+      ? at(
           { wallId: w.wallId },
           `openings ${p.prevId} and ${w.openingId}: ${p.used} shared king stud(s) instead of ${p.wanted} — only ${inch(p.gap)} between the ROs`,
         )
-      : atEn(
+      : at(
           w,
           `${p.kings} king stud(s) per side, but table ${p.table} asks for ${p.tableKings} for a ${inch(p.span)} span at ` +
             `${p.windSpeed} mph, exposure ${p.exposure}`,
         ),
   OPENING_NUDGED: (p, w) =>
-    atEn(
+    at(
       w,
       `moved ${inch(p.distance)} to the ${p.direction === 'left' ? 'left' : 'right'} (RO edge from ${p.from} to ${p.to}) — it touched ` +
         `${p.touched === 'start' ? 'the start of the wall' : p.touched === 'end' ? 'the end of the wall' : `wall ${p.teeWallId ?? '?'} at a tee`}; check the reading`,
     ),
   WIND_SPEED_MISSING: (_p, w) =>
-    atEn(w, 'exterior wall without a wind speed — king studs not checked against table R602.7.5; the panel uses 1 king per side'),
+    at(w, 'exterior wall without a wind speed — king studs not checked against table R602.7.5; the panel uses 1 king per side'),
   SPECIES_NOT_IN_TABLE: (p, w) =>
-    atEn(w, `header from table ${p.table}, which is for SPF No. 2; the project specifies ${p.species} — check the span for that species or use the project header schedule`),
+    at(w, `header from table ${p.table}, which is for SPF No. 2; the project specifies ${p.species} — check the span for that species or use the project header schedule`),
   DOOR_RO_HEIGHT_MISMATCH: (p, w) =>
-    atEn({ openingId: w.openingId }, `door RO ${inch(p.roughHeight)} tall (from the subfloor) does not match the header base at ${inch(p.headerBase)}`),
+    at({ openingId: w.openingId }, `door RO ${inch(p.roughHeight)} tall (from the subfloor) does not match the header base at ${inch(p.headerBase)}`),
   OPENING_AT_TEE: (p, w) =>
-    atEn(
+    at(
       { wallId: w.wallId },
       `wall ${p.teeWallId} meets it in a tee at x=${p.x} (strip ${p.lo}–${p.hi}), in the zone of opening(s) ${list(p.openingIds)} [${p.start}, ${p.end}] — ` +
         'king/jack studs and the ladder blocking want the same spot; move the opening or the wall',
     ),
   OPENING_NEAR_CORNER: (p, w) =>
-    atEn(w, `king stud ${inch(p.gap)} from the ${p.end === 'start' ? 'start' : 'end'} of the wall — the end stud does not fit (minimum ${inch(p.min)}); move the opening to the corner or away from it`),
+    at(w, `king stud ${inch(p.gap)} from the ${p.end === 'start' ? 'start' : 'end'} of the wall — the end stud does not fit (minimum ${inch(p.min)}); move the opening to the corner or away from it`),
   STUDS_OVERLAP: (p, w) =>
-    atEn({ wallId: w.wallId }, `${p.aRole} at x=${p.aX} and ${p.bRole} at x=${p.bX} overlap by ${inch(p.overlap)} — the shop decides whether to double the stud or skip the mark`),
+    at({ wallId: w.wallId }, `${p.aRole} at x=${p.aX} and ${p.bRole} at x=${p.bX} overlap by ${inch(p.overlap)} — the shop decides whether to double the stud or skip the mark`),
   STUD_HEIGHT_ABOVE_LIMIT: (p, w) =>
-    atEn(
+    at(
       { wallId: w.wallId },
       `${inch(p.studLength)} studs exceed the ${inch(p.limit)} limit for a ${p.bearing ? 'bearing' : 'non-bearing'} ${p.section} wall (table R602.3(5)) — needs a structural design`,
     ),
@@ -396,14 +222,145 @@ const WARNING_EN: Record<WarningCode, Template> = {
     `Panel ${p.panelId}: estimated weight ${p.weight} lb is over the ${p.max} lb limit (config.panel.maxWeight) and no break fixes it — check with the shop`,
 };
 
-/** A frase em inglês de um aviso (folha com `locale: 'en'`, S34). */
-export function warningMessageEn(code: WarningCode, params: MessageParams, where: MessageWhere = {}): string {
-  return WARNING_EN[code](params, where);
+const ERROR: Record<EngineErrorCode, Template> = {
+  WALL_POINT_NOT_FINITE: (p, w) => at(w, `${p.end} needs finite x and y (got ${p.x}, ${p.y})`),
+  WALL_ZERO_LENGTH: (p, w) => at(w, `start and end are the same point (${p.x}, ${p.y})`),
+  WALL_OFF_AXIS: (p, w) =>
+    at(w, `not parallel to the plan axes (from ${p.x0}, ${p.y0} to ${p.x1}, ${p.y1}) — walls must run along x or y`),
+  WALL_DUPLICATE_ID: (_p, w) => at(w, 'duplicate wall id'),
+  WALL_END_TWO_JOINTS: (p, w) =>
+    at(w, `the ${p.end} end meets two walls (${p.first} and ${p.second}) — three ends at one point, or a corner and a tee at the same spot`),
+  WALLS_CROSS: (p, w) => `Walls ${w.wallId} and ${p.otherWallId} cross at (${p.x}, ${p.y}) — split one of them at the crossing`,
+  WALLS_OVERLAP: (p, w) => `Walls ${w.wallId} and ${p.otherWallId} overlap by ${inch(p.overlap)} — is it the same wall twice?`,
+  CORNER_ENDS_CONFLICT: (p, w) =>
+    `Walls ${w.wallId} (${p.end}) and ${p.otherWallId} (${p.otherEnd}) both declare ends "${p.rule}" at the same corner`,
+  PLATE_NO_LENGTH: (p, w) => at(w, `the plate has no length (${inch(p.length)}) — the walls at its ends take it all`),
+  OPENING_OFF_PLATE: (p, w) =>
+    at(w, `the RO from ${inch(p.from)} to ${inch(p.to)} from start does not fit on the plate (${inch(p.s0)} to ${inch(p.s1)} from start)`),
+
+  OPENING_TAG_UNKNOWN: (p, w) => at(w, `tag "${p.tag}" is not in config.openingTypes`),
+  OPENING_TYPE_MISSING: (_p, w) => at(w, 'no type and no tag in the opening schedule'),
+  OPENING_SIZE_MISSING: (_p, w) => at(w, 'no roughWidth/roughHeight and no tag in the opening schedule'),
+  OPENING_POSITION_MISSING: (_p, w) => at(w, 'no offset or center'),
+  HEADER_MARK_UNKNOWN: (p, w) => at(w, `mark "${p.mark}" is not in config.headerSchedule`),
+  OPENING_NOT_FINITE: (_p, w) => at(w, 'measurements must be finite numbers'),
+  OPENING_SIZE_INVALID: (_p, w) => at(w, 'the RO needs a width and a height > 0'),
+  OPENING_OUT_OF_WALL: (p, w) =>
+    at(w, `zone [${p.start}, ${p.end}] (RO with king and jack studs) runs past the ${inch(p.length)} wall`),
+  OPENINGS_TOO_CLOSE: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `openings ${p.prevId} and ${w.openingId}: ${inch(p.gap)} between the ROs is not enough for jack studs and a shared king ` +
+        `(minimum ${inch(p.needed)})` +
+        (p.fit === true ? `; not even 1 jack + 1 king + 1 jack (${inch(p.min3)}) fits — check the position and RO of both` : ''),
+    ),
+  HEADER_ABOVE_TOP_PLATE: (p, w) =>
+    at(w, `${p.section} header based at ${inch(p.base)} reaches ${inch(p.top)}, above the top plate (${inch(p.topPlate)})`),
+  HEADER_NO_ROOM_FOR_JACK: (p, w) =>
+    at(w, `header base at ${inch(p.base)} leaves no room for a jack stud on the bottom plate (top at ${inch(p.plateTop)})`),
+  SILL_NO_ROOM: (p, w) =>
+    at(w, `RO base at ${inch(p.roBase)} leaves no room for the ${p.double === true ? 'double ' : ''}sill on the bottom plate (top at ${inch(p.plateTop)})`),
+
+  HEADER_SECTION_UNKNOWN: (p, w) => at(w, `unknown header.section (${p.section})`),
+  HEADER_TOO_THICK: (p, w) =>
+    at(w, `project header with ${p.plies} plies of ${p.section} (${inch(p.thickness)}) does not fit a ${p.wallSection} wall (${inch(p.depth)})`),
+  FLAT_HEADER_SPAN: (p, w) =>
+    at(w, `non-bearing wall with a ${inch(p.span)} RO — a flat header (R602.7.4) only covers up to ${inch(p.max)}; specify the opening header`),
+  FLAT_HEADER_GAP: (p, w) =>
+    at(
+      w,
+      `flat header (R602.7.4) with its top at ${inch(p.top)} sits ${inch(p.gap)} below the top plate (${inch(p.topPlate)}), over the ${inch(p.max)} limit; ` +
+        'specify the opening header',
+    ),
+  HEADER_DATA_MISSING: (p, w) =>
+    at(
+      w,
+      `bearing wall with no header in the project and no ${p.missing === 'building' ? 'config.building (snow load and building width)' : 'wall.floorsSupported (floors above the wall)'} — ` +
+        'the header cannot be picked from the table; provide the data or the opening header',
+    ),
+  HEADER_OUT_OF_TABLE: (p, w) => at(w, `header outside the table (${reasonFromParams(p)}) — needs an engineer; specify the opening header`),
+  HEADER_TABLE_NOT_APPLICABLE: (_p, w) => at(w, 'the header table does not apply'),
+  KINGS_OUT_OF_TABLE: (p, w) => at(w, `king studs outside the table (${reasonFromParams(p)}) — needs an engineer; set kingStuds on the opening`),
+  SNOW_LOAD_REQUIRED: (_p, w) => at(w, 'groundSnowLoad is required for an exterior bearing wall'),
+
+  CORNER_STUD_OFF_PLATE: (p, w) => at(w, `corner stud at x=${p.x} does not fit on the ${inch(p.length)} plate`),
+  TEE_IN_OPENING: (p, w) =>
+    at(w, `wall ${p.teeWallId} meets it in a tee at x=${p.x} (strip ${p.lo}–${p.hi}), inside the RO [${p.from}, ${p.to}]`),
+  TEE_WITHOUT_STUD: (p, w) => at(w, `tee strip ${p.lo}–${p.hi} has no neighboring stud on one side — nowhere to hold the ladder`),
+  EXTRA_STUD_INVALID: (p, w) =>
+    `${lead(w)}extraStuds[${p.index}]: ${p.field === 'x' ? 'x must be a finite number' : 'count must be a whole number ≥ 1'} (got ${p.value})`,
+  EXTRA_STUD_OUT_OF_WALL: (p, w) =>
+    `${lead(w)}extraStuds[${p.index}]: ${p.count} stud(s) from x=${p.x} run past the ${inch(p.length)} wall`,
+  EXTRA_STUD_IN_OPENING: (p, w) =>
+    `${lead(w)}extraStuds[${p.index}]: stud at x=${p.x} falls in the opening zone [${p.start}, ${p.end}] — extra studs stay clear of kings, jacks and the RO`,
+
+  CANNOT_SPLIT: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `cannot split ${inch(p.length)} into panels of at most ${inch(p.maxLength)}${p.maxWeight === undefined ? '' : ` / ${p.maxWeight} lb`} — ` +
+        `no free layout stud (clear of openings, tees, corners and extra studs) between x=${p.from} and x=${p.to}`,
+    ),
+  PANEL_BREAK_INVALID: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `panel break at x=${p.at} (panelBreaks): ` +
+        (p.reason === 'order'
+          ? 'breaks must be in increasing order with no repeats'
+          : p.reason === 'end'
+            ? `closer than ${inch(p.min)} to the end of the wall (${inch(p.length)}) — the joint studs do not fit next to the end stud or corner`
+            : p.reason === 'mark'
+              ? `not the center of a layout stud (marks every ${inch(p.spacing)} from mark 0)`
+              : p.reason === 'opening'
+                ? `falls in the zone of opening(s) ${list(p.openingIds)} [${p.start}, ${p.end}]`
+                : p.reason === 'tee'
+                  ? `falls in the tee strip${p.teeWallId === undefined ? '' : ` of wall ${p.teeWallId}`} (${p.lo}–${p.hi})`
+                  : `the joint studs touch the ${p.role} at x=${p.memberX}`),
+    ),
+  PANEL_TOO_LONG: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `panel from x=${p.from} to x=${p.to} (${inch(p.length)}) is over the ${inch(p.maxLength)} limit (config.panel.maxLength) — add a break in panelBreaks`,
+    ),
+  LAP_NO_ROOM: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `double top plate lap after the break at x=${p.at}: ` +
+        (p.blocker === undefined
+          ? `the next panel ends at x=${p.limit} and not even the ${inch(p.minLap)} minimum fits`
+          : `${p.blocker === 'header' ? `the header at x=${p.blockerX}` : `the tee strip${p.teeWallId === undefined ? '' : ` of wall ${p.teeWallId}`}`} takes ${p.lo}–${p.hi} and there is no free mark up to x=${p.limit}`),
+    ),
+  SPLICE_NO_STUD: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `${p.role} of ${inch(p.memberLength)}: no stud between x=${p.from} and x=${p.to} to splice the plate ${inch(p.min)} away from the other splices (longest stock ${inch(p.maxStock)})`,
+    ),
+  PANEL_MIN_LAP_ABOVE_LAP: (p) => `config.panel.minLap (${p.minLap}) is larger than lap (${p.lap})`,
+  PRECUTS_EMPTY: () => 'config.studLength: the precut list is empty',
+  STOCK_EMPTY: (p) => `${p.scope}: the stock length list is empty`,
+  STOCK_INVALID: (p) => `${p.scope}: invalid stock length (${p.value})`,
+  PRICE_INVALID: (p) =>
+    `config.prices[${p.index}] (${p.section}): ${p.reason === 'duplicate' ? 'the same section and length is priced twice' : p.reason === 'length' ? `invalid length (${p.value})` : `invalid price (${p.value}); expected a number ≥ 0`}`,
+  PIECE_OVER_STOCK: (p) => `bom: a ${inch(p.length)} piece is longer than any stock length (longest ${inch(p.max)})`,
+
+  VALUE_NOT_POSITIVE: (p, w) => at(w, `${p.field} must be > 0 (got ${p.value})`),
+  VALUE_NOT_COUNT: (p, w) => at(w, `${p.field} must be a whole number ≥ 1 (got ${p.value})`),
+  VALUE_INVALID: (p, w) => at(w, `invalid ${p.field} (${p.value})`),
+  CONFIG_INVALID: (p) => `invalid ${p.field} (${p.value}); expected ${p.expected === 'weight' ? 'a weight in lb > 0' : 'a measurement > 0'}`,
+};
+
+/** A frase de um aviso. */
+export function warningMessage(code: WarningCode, params: MessageParams, where: MessageWhere = {}): string {
+  return WARNING[code](params, where);
+}
+
+/** A frase de um erro do motor. */
+export function engineErrorMessage(code: EngineErrorCode, params: MessageParams, where: MessageWhere = {}): string {
+  return ERROR[code](params, where);
 }
 
 /**
- * Erro do motor com código: o que o projeto pede e não dá para enquadrar. `message` é a frase em português
- * (CLI); quem traduz lê `code`, `wallId`, `openingId` e `params`. Estende `RangeError` (que é `Error`) para
+ * Erro do motor com código: o que o projeto pede e não dá para enquadrar. `message` é a frase em inglês
+ * (CLI); quem monta outra frase lê `code`, `wallId`, `openingId` e `params`. Estende `RangeError` (que é `Error`) para
  * quem já tratava `RangeError` como "projeto inválido" continuar tratando.
  */
 export class EngineError extends RangeError {
@@ -414,7 +371,7 @@ export class EngineError extends RangeError {
   readonly params: MessageParams;
 
   constructor(code: EngineErrorCode, where: MessageWhere = {}, params: MessageParams = {}) {
-    super(engineErrorMessagePt(code, params, where));
+    super(engineErrorMessage(code, params, where));
     this.name = 'EngineError';
     this.code = code;
     this.wallId = where.wallId;
@@ -438,7 +395,7 @@ export class EngineError extends RangeError {
 }
 
 /**
- * Aviso de validação. Nunca interrompe a geração. `message` é a frase em português montada de `code` +
+ * Aviso de validação. Nunca interrompe a geração. `message` é a frase em inglês montada de `code` +
  * `params` (vai para a folha e o CLI); `hypothesis` fica fora da frase.
  */
 export interface Warning {
@@ -450,9 +407,9 @@ export interface Warning {
   hypothesis?: HypothesisId;
 }
 
-/** Monta um `Warning` com a frase em português. */
+/** Monta um `Warning` com a frase. */
 export function warning(code: WarningCode, where: MessageWhere, params: MessageParams, hypothesis?: HypothesisId): Warning {
-  const w: Warning = { code, message: warningMessagePt(code, params, where), params };
+  const w: Warning = { code, message: warningMessage(code, params, where), params };
   if (where.wallId !== undefined) w.wallId = where.wallId;
   if (where.openingId !== undefined) w.openingId = where.openingId;
   if (hypothesis !== undefined) w.hypothesis = hypothesis;
@@ -462,7 +419,7 @@ export function warning(code: WarningCode, where: MessageWhere, params: MessageP
 /** Forma serializável de avisos e erros do motor, como trafegam para a tela (S26). */
 export interface EngineNotice {
   code: string;
-  /** Frase original em português (detalhe). */
+  /** Frase do motor, em inglês (detalhe). */
   message: string;
   wallId?: string;
   openingId?: string;

@@ -45,6 +45,7 @@ Depois do texto posicionado de um PDF podem vir **recortes**: imagens em alta re
 - Dados estruturais (neve no solo, vento e exposição, espécie da madeira) das notas gerais do estrutural (S-0xx) ou da análise de código; largura da edificação pela planta ou pelo estrutural. Sem a nota, null.
 - Confiança: 1.0 quando a cota está explícita e a conta é direta; 0.7–0.9 quando precisou interpretar (qual cota é de qual parede, conversão de face para eixo); abaixo de 0.7 quando chutou ou faltou cota. Seja honesto: o revisor confia no número.
 - Ids curtos e estáveis: externas pela orientação (\`N1\`, \`S1\`, \`S2\`, \`E1\`, \`W1\`), internas \`I1\`, \`I2\`…; aberturas \`<parede>-<tag ou tipo><n>\`.
+- Todo texto livre do JSON (\`notes\`, \`evidence\`, \`origin\`, \`description\`, \`rooms[].note\` e qualquer outra frase) vai em inglês; cotas, tags e nomes copiados do desenho ficam como estão.
 
 ## Aberturas internas e sem cota
 - Todo símbolo de porta (folha com arco de giro, porta de correr ou de bolso, vão com linhas de batente) é uma abertura da parede em que está, com tag ou sem. Sem tag: \`type: "door"\`, com \`roughWidth\` quando a planta cota o vão, ou a tag do tipo do schedule quando a largura desenhada só cabe num tipo; senão RO null e uma nota.
@@ -126,7 +127,7 @@ const toBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('bas
  */
 export function buildUserContent(input: PromptInput): Anthropic.ContentBlockParam[] {
   if (input.pdfs.length === 0 && (input.images?.length ?? 0) === 0) {
-    throw new RangeError('buildUserContent: nenhum PDF nem imagem');
+    throw new RangeError('buildUserContent: no PDF or image');
   }
   const blocks: Anthropic.ContentBlockParam[] = [];
   for (const doc of input.pdfs) {

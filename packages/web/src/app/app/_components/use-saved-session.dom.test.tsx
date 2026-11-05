@@ -37,7 +37,7 @@ describe('useSavedSession (M10)', () => {
     first.unmount();
 
     const second = renderHook(() => useSavedSession(initialEditorState, undefined, undefined, onResume));
-    expect(second.result.current.saved?.name).toBe('Casa 28x40 (visão)');
+    expect(second.result.current.saved?.name).toBe('House 28x40 (overview)');
     act(() => second.result.current.resume());
     expect(onResume).toHaveBeenCalledTimes(1);
     expect(onResume.mock.calls[0]![0].text).toContain('"walls"');

@@ -21,7 +21,7 @@ import type { HeaderTableId } from '../opening';
 import { NOMINAL_2X_THICKNESS, SECTION_DEPTH, sectionDepth, type LumberSection, type WallSection } from '../sections';
 import type { FloorSpan } from '../wall';
 import { parseFeetInches } from '../units';
-import { EngineError, engineerReasonPt, type EngineerReason } from '../messages';
+import { EngineError, engineerReasonText, type EngineerReason } from '../messages';
 import { tableErrors } from './tableJson';
 import rawIrcHeaders from '../data/irc-headers.json';
 
@@ -123,7 +123,7 @@ export function headerFor(query: HeaderQuery, tables: readonly HeaderTable[] = i
     throw new EngineError('VALUE_INVALID', {}, { field: 'groundSnowLoad', value: groundSnowLoad });
   }
 
-  const engineer = (detail: EngineerReason): HeaderChoice => ({ requiresEngineer: true, reason: engineerReasonPt(detail), detail });
+  const engineer = (detail: EngineerReason): HeaderChoice => ({ requiresEngineer: true, reason: engineerReasonText(detail), detail });
   const table = tables.find((t) => t.exterior === exterior);
   if (!table) return engineer({ why: 'noTable', exterior });
 
@@ -206,84 +206,84 @@ export function validateHeaderTables(json: unknown): string[] {
   const { errors, err, isObj, keys } = tableErrors();
   const posInt = (v: unknown) => Number.isInteger(v) && (v as number) >= 1;
 
-  if (!isObj(json) || !Array.isArray(json.tables)) return ['raiz: esperado { tables: [...] }'];
+  if (!isObj(json) || !Array.isArray(json.tables)) return ['root: expected { tables: [...] }'];
   const seenExterior = new Set<boolean>();
   json.tables.forEach((t, ti) => {
     const tp = `tables[${ti}]`;
-    if (!isObj(t)) return err(tp, 'esperado objeto');
+    if (!isObj(t)) return err(tp, 'expected an object');
     keys(tp, t, ['id', 'exterior', 'columns', 'groups']);
-    if (typeof t.id !== 'string' || t.id === '') err(`${tp}.id`, 'esperado texto não vazio');
-    if (typeof t.exterior !== 'boolean') err(`${tp}.exterior`, 'esperado true/false');
-    else if (seenExterior.has(t.exterior)) err(`${tp}.exterior`, 'duas tabelas para o mesmo tipo de parede');
+    if (typeof t.id !== 'string' || t.id === '') err(`${tp}.id`, 'expected non-empty text');
+    if (typeof t.exterior !== 'boolean') err(`${tp}.exterior`, 'expected true/false');
+    else if (seenExterior.has(t.exterior)) err(`${tp}.exterior`, 'two tables for the same kind of wall');
     else seenExterior.add(t.exterior);
 
-    const columns = Array.isArray(t.columns) ? t.columns : (err(`${tp}.columns`, 'esperado lista'), []);
+    const columns = Array.isArray(t.columns) ? t.columns : (err(`${tp}.columns`, 'expected a list'), []);
     const seenCols = new Set<string>();
     columns.forEach((c, ci) => {
       const cp = `${tp}.columns[${ci}]`;
-      if (!isObj(c)) return err(cp, 'esperado objeto');
+      if (!isObj(c)) return err(cp, 'expected an object');
       keys(cp, c, ['groundSnowLoad', 'buildingWidth']);
       if (typeof c.buildingWidth !== 'string' || !WIDTH_FORMAT.test(c.buildingWidth)) {
-        err(`${cp}.buildingWidth`, `esperado pés como "12'", veio ${JSON.stringify(c.buildingWidth)}`);
+        err(`${cp}.buildingWidth`, `expected feet like "12'", got ${JSON.stringify(c.buildingWidth)}`);
       }
       if (t.exterior === true) {
         if (typeof c.groundSnowLoad !== 'number' || !(c.groundSnowLoad > 0)) {
-          err(`${cp}.groundSnowLoad`, 'tabela externa: esperado psf > 0');
+          err(`${cp}.groundSnowLoad`, 'exterior table: expected psf > 0');
         }
       } else if (c.groundSnowLoad !== undefined) {
-        err(`${cp}.groundSnowLoad`, 'tabela interna não tem neve');
+        err(`${cp}.groundSnowLoad`, 'interior table has no snow load');
       }
       const key = `${c.groundSnowLoad}|${c.buildingWidth}`;
-      if (seenCols.has(key)) err(cp, 'coluna repetida');
+      if (seenCols.has(key)) err(cp, 'duplicate column');
       seenCols.add(key);
     });
 
-    const groups = Array.isArray(t.groups) ? t.groups : (err(`${tp}.groups`, 'esperado lista'), []);
+    const groups = Array.isArray(t.groups) ? t.groups : (err(`${tp}.groups`, 'expected a list'), []);
     const seenGroups = new Set<string>();
     groups.forEach((g, gi) => {
       const gp = `${tp}.groups[${gi}]`;
-      if (!isObj(g)) return err(gp, 'esperado objeto');
+      if (!isObj(g)) return err(gp, 'expected an object');
       keys(gp, g, ['supports', 'headers']);
       const s = g.supports;
-      if (!isObj(s)) err(`${gp}.supports`, 'esperado objeto');
+      if (!isObj(s)) err(`${gp}.supports`, 'expected an object');
       else {
         keys(`${gp}.supports`, s, ['floors', 'floorSpan']);
-        if (!Number.isInteger(s.floors) || (s.floors as number) < 0) err(`${gp}.supports.floors`, 'esperado inteiro ≥ 0');
+        if (!Number.isInteger(s.floors) || (s.floors as number) < 0) err(`${gp}.supports.floors`, 'expected a whole number ≥ 0');
         if (s.floorSpan !== undefined && !FLOOR_SPANS.includes(s.floorSpan)) {
-          err(`${gp}.supports.floorSpan`, `esperado "center" ou "clear"`);
+          err(`${gp}.supports.floorSpan`, `expected "center" or "clear"`);
         }
-        if (s.floors === 0 && s.floorSpan !== undefined) err(`${gp}.supports.floorSpan`, 'sem pavimento não tem floorSpan');
+        if (s.floors === 0 && s.floorSpan !== undefined) err(`${gp}.supports.floorSpan`, 'no floors means no floorSpan');
         const key = `${s.floors}|${s.floorSpan}`;
-        if (seenGroups.has(key)) err(`${gp}.supports`, 'grupo repetido');
+        if (seenGroups.has(key)) err(`${gp}.supports`, 'duplicate group');
         seenGroups.add(key);
       }
 
-      const headers = Array.isArray(g.headers) ? g.headers : (err(`${gp}.headers`, 'esperado lista'), []);
+      const headers = Array.isArray(g.headers) ? g.headers : (err(`${gp}.headers`, 'expected a list'), []);
       const seenRows = new Set<string>();
       headers.forEach((h, hi) => {
         const hp = `${gp}.headers[${hi}]`;
-        if (!isObj(h)) return err(hp, 'esperado objeto');
+        if (!isObj(h)) return err(hp, 'expected an object');
         keys(hp, h, ['plies', 'section', 'cells']);
-        if (!posInt(h.plies)) err(`${hp}.plies`, 'esperado inteiro ≥ 1');
+        if (!posInt(h.plies)) err(`${hp}.plies`, 'expected a whole number ≥ 1');
         if (typeof h.section !== 'string' || !(h.section in SECTION_DEPTH)) {
-          err(`${hp}.section`, `seção desconhecida ${JSON.stringify(h.section)}`);
+          err(`${hp}.section`, `unknown section ${JSON.stringify(h.section)}`);
         }
         const key = `${h.plies}-${h.section}`;
-        if (seenRows.has(key)) err(hp, `linha ${key} repetida`);
+        if (seenRows.has(key)) err(hp, `duplicate row ${key}`);
         seenRows.add(key);
-        if (!Array.isArray(h.cells)) return err(`${hp}.cells`, 'esperado lista');
+        if (!Array.isArray(h.cells)) return err(`${hp}.cells`, 'expected a list');
         if (h.cells.length !== columns.length) {
-          err(`${hp}.cells`, `${h.cells.length} células para ${columns.length} colunas`);
+          err(`${hp}.cells`, `${h.cells.length} cells for ${columns.length} columns`);
         }
         h.cells.forEach((cell, ci) => {
           const cp = `${hp}.cells[${ci}]`;
           if (cell === null) return;
-          if (!Array.isArray(cell) || cell.length !== 2) return err(cp, 'esperado [vão, NJ] ou null');
+          if (!Array.isArray(cell) || cell.length !== 2) return err(cp, 'expected [span, NJ] or null');
           const [spanText, nj] = cell as unknown[];
           const m = typeof spanText === 'string' ? SPAN_FORMAT.exec(spanText) : null;
-          if (!m || Number(m[1]) >= 12) err(cp, `vão como "3'-6", veio ${JSON.stringify(spanText)}`);
-          else if (parseFeetInches(spanText as string) <= 0) err(cp, 'vão zero');
-          if (!posInt(nj)) err(cp, `NJ inteiro ≥ 1, veio ${JSON.stringify(nj)}`);
+          if (!m || Number(m[1]) >= 12) err(cp, `span like "3'-6", got ${JSON.stringify(spanText)}`);
+          else if (parseFeetInches(spanText as string) <= 0) err(cp, 'zero span');
+          if (!posInt(nj)) err(cp, `NJ must be a whole number ≥ 1, got ${JSON.stringify(nj)}`);
         });
       });
     });
@@ -294,7 +294,7 @@ export function validateHeaderTables(json: unknown): string[] {
 /** Converte o JSON digitado para polegadas. @throws RangeError com todos os erros de estrutura. */
 export function loadHeaderTables(json: unknown): HeaderTable[] {
   const errors = validateHeaderTables(json);
-  if (errors.length > 0) throw new RangeError(`tabela de headers inválida:\n${errors.join('\n')}`);
+  if (errors.length > 0) throw new RangeError(`invalid header table:\n${errors.join('\n')}`);
   type Raw = {
     id: string;
     exterior: boolean;

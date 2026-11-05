@@ -24,7 +24,7 @@ export const LENGTH_TOLERANCE = LENGTH_EPS;
 export function matchPrecut(length: number, precuts: readonly number[]): number | undefined {
   let match: number | undefined;
   for (const p of precuts) {
-    if (!Number.isFinite(p) || p <= 0) throw new RangeError(`pré-corte inválido (${p})`);
+    if (!Number.isFinite(p) || p <= 0) throw new RangeError(`invalid precut (${p})`);
     if (match === undefined && Math.abs(length - p) < LENGTH_TOLERANCE) match = p;
   }
   return match;

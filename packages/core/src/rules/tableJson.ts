@@ -18,7 +18,7 @@ export function tableErrors(): TableErrors {
   };
   const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
   const keys = (path: string, o: Record<string, unknown>, allowed: string[]): void => {
-    for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `campo desconhecido "${k}"`);
+    for (const k of Object.keys(o)) if (!k.startsWith('$') && !allowed.includes(k)) err(path, `unknown field "${k}"`);
   };
   return { errors, err, isObj, keys };
 }

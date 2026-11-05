@@ -35,6 +35,6 @@ describe('lapEnd (hipótese P23)', () => {
   });
 
   it('obstáculo até o limite: erro nomeando o obstáculo', () => {
-    expect(() => lapEnd(100, 155, cfg, [{ lo: 120, hi: 150, kind: 'tee' as const }], marks)).toThrow(/a faixa do T ocupa 120–150/);
+    expect(() => lapEnd(100, 155, cfg, [{ lo: 120, hi: 150, kind: 'tee' as const }], marks)).toThrow(/the tee strip takes 120–150/);
   });
 });

@@ -29,7 +29,6 @@ import {
   type OpeningType,
   type Point,
   type PriceEntry,
-  type SheetLocale,
   type TeeStyle,
   type WallSection,
 } from 'core';
@@ -55,7 +54,7 @@ import {
 } from 'cli/schema';
 import type { z } from 'zod';
 
-export type { CornerStyle, DoorFrame, EndRule, Exposure, FloorSpan, OpeningType, Point, SheetLocale, TeeStyle, WallSection };
+export type { CornerStyle, DoorFrame, EndRule, Exposure, FloorSpan, OpeningType, Point, TeeStyle, WallSection };
 export type Species = LumberSpecies;
 /** Seção de header como o arquivo escreve: `"2x10"`, `"LVL 1.75x9.25"` ou objeto com medidas em polegadas. */
 export type HeaderSectionDraft = string | { material: 'LVL' | 'PSL'; width: number; depth: number };
@@ -178,8 +177,6 @@ export interface ProjectDraft {
   name?: string;
   date?: string;
   revision?: string;
-  /** Idioma das folhas e da planta (S34); ausente = o padrão do motor (português, P51). */
-  locale?: SheetLocale;
   northAngle?: number;
   config: DraftConfig;
   walls: DraftWall[];
@@ -244,7 +241,6 @@ export function draftFromJson(raw: unknown): DraftLoad {
     name: r.field(rootShape.name, raw['name'], 'name'),
     date: r.field(rootShape.date, raw['date'], 'date'),
     revision: r.field(rootShape.revision, raw['revision'], 'revision'),
-    locale: r.field(rootShape.locale, raw['locale'], 'locale'),
     northAngle: r.field(rootShape.northAngle, raw['northAngle'], 'northAngle'),
     config,
     walls,
@@ -579,7 +575,6 @@ export function jsonFromDraft(d: ProjectDraft): Record<string, unknown> {
     name: d.name,
     date: d.date,
     revision: d.revision,
-    locale: d.locale,
     northAngle: d.northAngle,
     config: configJson(d.config),
     walls: d.walls.map(wallJson),

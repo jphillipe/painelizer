@@ -88,7 +88,7 @@ export function blocksBetween(verticals: readonly Member[], opts: BlockRowOption
  * @throws RangeError limite não positivo
  */
 export function fireBlockRows(cavity: number, limit: number, plateThickness: number, thickness: number): number[] {
-  if (!Number.isFinite(limit) || limit <= 0) throw new RangeError(`fireBlockAt deve ser > 0 (recebido ${limit})`);
+  if (!Number.isFinite(limit) || limit <= 0) throw new RangeError(`fireBlockAt must be > 0 (got ${limit})`);
   if (cavity <= limit + EPS) return [];
   let n = 1;
   while ((cavity - n * thickness) / (n + 1) > limit + EPS) n++;

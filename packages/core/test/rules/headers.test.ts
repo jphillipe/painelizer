@@ -55,7 +55,7 @@ describe('headerFor — escolha', () => {
   it('vão acima de todos os headers → requiresEngineer', () => {
     expect(headerFor(q(ft(14) + 1), FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/acima de todos os headers/),
+      reason: expect.stringMatching(/above every header/),
     });
   });
 
@@ -124,8 +124,8 @@ describe('headerFor — coluna', () => {
   });
 
   it.each([
-    ['neve acima da última coluna', { groundSnowLoad: 41 }, /neve 41 psf/],
-    ['largura acima da última coluna', { buildingWidth: ft(30) + 1 }, /largura 361"/],
+    ['neve acima da última coluna', { groundSnowLoad: 41 }, /with 41 psf snow/],
+    ['largura acima da última coluna', { buildingWidth: ft(30) + 1 }, /building width 361"/],
   ])('%s → requiresEngineer', (_, extra, reason) => {
     expect(headerFor(q(ft(2), extra), FAKE)).toMatchObject({ requiresEngineer: true, reason: expect.stringMatching(reason) });
   });
@@ -162,7 +162,7 @@ describe('headerFor — pavimentos', () => {
   it('número de pavimentos sem grupo na tabela → requiresEngineer', () => {
     expect(headerFor(q(ft(2), { floorsSupported: 2 }), FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/2 pavimento/),
+      reason: expect.stringMatching(/2 floor\(s\)/),
     });
   });
 });
@@ -172,7 +172,7 @@ describe('headerFor — espessura da parede', () => {
     expect(headerFor(q(ft(9), { wallSection: '2x6' }), FAKE)).toMatchObject({ section: '2x10', plies: 3 });
     expect(headerFor(q(ft(9), { wallSection: '2x4' }), FAKE)).toMatchObject({
       requiresEngineer: true,
-      reason: expect.stringMatching(/cabem em parede 2x4/),
+      reason: expect.stringMatching(/that fits a 2x4 wall/),
     });
   });
 
@@ -223,7 +223,7 @@ describe('headerFor — parede interna e não portante', () => {
     const onlyExterior = FAKE.filter((t) => t.exterior);
     expect(headerFor(int(ft(3)), onlyExterior)).toMatchObject({
       requiresEngineer: true,
-      reason: 'sem tabela de header para parede interna',
+      reason: 'no header table for interior walls',
     });
   });
 });
@@ -275,44 +275,44 @@ describe('loadHeaderTables / validateHeaderTables', () => {
   const row0 = (j: Json) => j.tables[0]!.groups[0]!.headers[0]!;
 
   it.each<[string, (j: Json) => void, RegExp]>([
-    ['vão sem apóstrofo (como no livro)', (j) => (row0(j).cells[0] = ['3-6', 1]), /cells\[0\]: vão como/],
-    ['polegadas ≥ 12', (j) => (row0(j).cells[1] = ["3'-12", 1]), /cells\[1\]: vão como/],
-    ['vão zero', (j) => (row0(j).cells[1] = ["0'-0", 1]), /vão zero/],
-    ['NJ 0', (j) => (row0(j).cells[2] = ["3'-0", 0]), /cells\[2\]: NJ inteiro/],
-    ['célula sem NJ', (j) => ((row0(j).cells as unknown[])[0] = ["3'-0"]), /esperado \[vão, NJ\]/],
-    ['célula a menos', (j) => row0(j).cells.pop(), /headers\[0\]\.cells: 3 células para 4 colunas/],
-    ['seção desconhecida', (j) => (row0(j).section = '2x5'), /seção desconhecida "2x5"/],
-    ['plies 0', (j) => (row0(j).plies = 0), /plies: esperado inteiro/],
-    ['campo com erro de digitação', (j) => Object.assign(row0(j), { plie: 2 }), /campo desconhecido "plie"/],
-    ['linha repetida', (j) => j.tables[0]!.groups[0]!.headers.push(row0(j)), /linha 1-2x8 repetida/],
+    ['vão sem apóstrofo (como no livro)', (j) => (row0(j).cells[0] = ['3-6', 1]), /cells\[0\]: span like/],
+    ['polegadas ≥ 12', (j) => (row0(j).cells[1] = ["3'-12", 1]), /cells\[1\]: span like/],
+    ['vão zero', (j) => (row0(j).cells[1] = ["0'-0", 1]), /zero span/],
+    ['NJ 0', (j) => (row0(j).cells[2] = ["3'-0", 0]), /cells\[2\]: NJ must be a whole number/],
+    ['célula sem NJ', (j) => ((row0(j).cells as unknown[])[0] = ["3'-0"]), /expected \[span, NJ\]/],
+    ['célula a menos', (j) => row0(j).cells.pop(), /headers\[0\]\.cells: 3 cells for 4 columns/],
+    ['seção desconhecida', (j) => (row0(j).section = '2x5'), /unknown section "2x5"/],
+    ['plies 0', (j) => (row0(j).plies = 0), /plies: expected a whole number/],
+    ['campo com erro de digitação', (j) => Object.assign(row0(j), { plie: 2 }), /unknown field "plie"/],
+    ['linha repetida', (j) => j.tables[0]!.groups[0]!.headers.push(row0(j)), /duplicate row 1-2x8/],
     [
       'grupo repetido',
       (j) => j.tables[0]!.groups.push(j.tables[0]!.groups[1]!),
-      /groups\[3\]\.supports: grupo repetido/,
+      /groups\[3\]\.supports: duplicate group/,
     ],
     [
       'floorSpan sem pavimento',
       (j) => Object.assign(j.tables[0]!.groups[0]!.supports, { floorSpan: 'center' }),
-      /sem pavimento não tem floorSpan/,
+      /no floors means no floorSpan/,
     ],
     [
       'floorSpan inválido',
       (j) => Object.assign(j.tables[0]!.groups[1]!.supports, { floorSpan: 'centre' }),
-      /floorSpan: esperado "center" ou "clear"/,
+      /floorSpan: expected "center" or "clear"/,
     ],
     [
       'coluna externa sem neve',
       (j) => delete (j.tables[0]!.columns[0] as { groundSnowLoad?: number }).groundSnowLoad,
-      /columns\[0\]\.groundSnowLoad: tabela externa/,
+      /columns\[0\]\.groundSnowLoad: exterior table/,
     ],
     [
       'coluna interna com neve',
       (j) => Object.assign(j.tables[1]!.columns[0]!, { groundSnowLoad: 30 }),
-      /tabela interna não tem neve/,
+      /interior table has no snow load/,
     ],
-    ['largura sem pés', (j) => (j.tables[0]!.columns[0]!.buildingWidth = '12'), /buildingWidth: esperado pés/],
-    ['coluna repetida', (j) => (j.tables[0]!.columns[1]!.buildingWidth = "10'"), /columns\[1\]: coluna repetida/],
-    ['duas tabelas externas', (j) => (j.tables[1]!.exterior = true), /duas tabelas para o mesmo tipo/],
+    ['largura sem pés', (j) => (j.tables[0]!.columns[0]!.buildingWidth = '12'), /buildingWidth: expected feet/],
+    ['coluna repetida', (j) => (j.tables[0]!.columns[1]!.buildingWidth = "10'"), /columns\[1\]: duplicate column/],
+    ['duas tabelas externas', (j) => (j.tables[1]!.exterior = true), /two tables for the same kind/],
   ])('%s', (_, mutate, message) => {
     expect(broken(mutate).join('\n')).toMatch(message);
   });
@@ -323,21 +323,21 @@ describe('loadHeaderTables / validateHeaderTables', () => {
       j.tables[1]!.groups[1]!.headers[0]!.cells[1] = ["2'-0", 0];
     });
     expect(errors).toEqual([
-      `tables[0].groups[0].headers[0].cells[0]: vão como "3'-6", veio "3-6"`,
-      'tables[1].groups[1].headers[0].cells[1]: NJ inteiro ≥ 1, veio 0',
+      `tables[0].groups[0].headers[0].cells[0]: span like "3'-6", got "3-6"`,
+      'tables[1].groups[1].headers[0].cells[1]: NJ must be a whole number ≥ 1, got 0',
     ]);
   });
 
   it('raiz inválida', () => {
-    expect(validateHeaderTables(null)).toEqual(['raiz: esperado { tables: [...] }']);
-    expect(validateHeaderTables({ tables: {} })).toEqual(['raiz: esperado { tables: [...] }']);
+    expect(validateHeaderTables(null)).toEqual(['root: expected { tables: [...] }']);
+    expect(validateHeaderTables({ tables: {} })).toEqual(['root: expected { tables: [...] }']);
   });
 
   it('loadHeaderTables lança RangeError com a lista de erros', () => {
     const j = fakeHeaderJson();
     row0(j).cells[0] = ['3-6', 1];
     expect(() => loadHeaderTables(j)).toThrow(RangeError);
-    expect(() => loadHeaderTables(j)).toThrow(/cells\[0\]: vão como/);
+    expect(() => loadHeaderTables(j)).toThrow(/cells\[0\]: span like/);
   });
 });
 

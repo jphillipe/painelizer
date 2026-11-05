@@ -2,9 +2,11 @@
  * Comando `extract` (S19): planta em PDF → JSON de entrada do CLI para revisão humana.
  *
  * Uso: `extract <planta.pdf> --out <dir> [--pages 3,15] [--dry-run | --response <resposta.json>] …`
- * Grava em <dir>: `projeto.json` (entrada do `panelizer build`), `extracao.json` (resposta do modelo),
- * `revisao.md` (relatório com confiança, evidência e o que revisar), `paginas/<n>.txt` (texto posicionado
- * enviado) e, no `--dry-run`, `recortes/` (as imagens em alta resolução das plantas que iriam à API). Sem
+ * Grava em <dir>: `project.json` (entrada do `panelizer build`), `extraction.json` (resposta do modelo),
+ * `review.md` (relatório com confiança, evidência e o que revisar), `pages/<n>.txt` (texto posicionado
+ * enviado) e, no `--dry-run`, `tiles/` e `request.json` (as imagens em alta resolução das plantas que iriam à API
+ * e o resumo do pedido). Nomes de arquivo e textos em inglês; o texto posicionado e as legendas dos recortes
+ * seguem o que vai ao modelo. Sem
  * `--dry-run`/`--response` chama a API, que precisa de `ANTHROPIC_API_KEY`.
  *
  * Único módulo do pacote que toca `node:fs` (junto com `bin/` e `cli.ts`), por uma `Io` injetável.
@@ -21,43 +23,43 @@ import { pageKey } from './select';
 import { RESPONSE_SCHEMA } from './prompt';
 import type { TileOptions } from './tiles';
 
-export const USAGE = `extract — planta em PDF → JSON de paredes do panelizer, para revisão
+export const USAGE = `extract — PDF drawings → panelizer wall JSON, for review
 
-Uso:
-  extract <planta.pdf> --out <dir> [opções]
+Usage:
+  extract <drawings.pdf> --out <dir> [options]
 
-Gera em <dir>:
-  projeto.json       entrada do \`panelizer build\` (revisar antes de rodar)
-  extracao.json      resposta do modelo: paredes, aberturas, tipos, confiança e evidência
-  revisao.md         relatório: o que foi lido, de onde, e o que revisar
-  paginas/<n>.txt    texto posicionado de cada página enviada
-  recortes/          (só --dry-run) recortes em alta resolução das plantas, como vão à API
+Writes to <dir>:
+  project.json       input for \`panelizer build\` (review before running it)
+  extraction.json    the model's response: walls, openings, types, confidence and evidence
+  review.md          report: what was read, from where, and what to review
+  pages/<n>.txt      positioned text of each page sent
+  tiles/             (--dry-run only) high-resolution tiles of the floor plans, as sent to the API
 
-Opções:
-  --out <dir>            diretório de saída (obrigatório; criado se não existir)
-  --pages 3,15           páginas (1-based) a enviar; sem isto, as folhas úteis pelo carimbo (planta, schedules, estrutural…)
-  --level <n>            pavimento a extrair (dica ao modelo)
-  --name <texto>         nome do projeto (dica ao modelo)
-  --hint <texto>         observação livre para o modelo ("ignore a garagem")
-  --date <texto>         carimbo das folhas (vai para projeto.json)
-  --revision <texto>     idem
-  --wall-height <medida> altura da parede (subfloor ao topo da double top) quando os desenhos não trazem cortes
-  --header-height <med> base do header (topo do RO) do subfloor quando o projeto não dá; sem isto, 82 1/2" (P2)
-  --sill-height <medida> peitoril das janelas do subfloor quando as elevações não dão
-  --snow <psf>           carga de neve no solo, --width <medida> largura da edificação, --wind <mph>,
-  --exposure <B|C|D>     dados do estrutural que o conjunto de arquiteto não traz (só onde a IA não leu)
-  --floors <n>           pavimentos acima das paredes portantes; --floor-span <center|clear> apoio do piso
-  --model <id>           modelo (default claude-opus-5-5)
-  --effort <nível>       low | medium | high (default) | xhigh | max
-  --max-tokens <n>       limite de saída (default 128000, o máximo; o raciocínio conta)
-  --no-tiles             sem recortes em alta resolução das plantas (default: até 6 por planta, 16 por leitura)
-  --max-tiles <n>        teto de recortes por página de planta
-  --tiles-dpi <n>        resolução alvo dos recortes (default 200; o teto por página costuma mandar)
-  --dry-run              não chama a API: grava paginas/, recortes/ e pedido.json e para
-  --response <arquivo>   não chama a API: pós-processa uma resposta gravada (JSON do modelo)
-  -h, --help             esta ajuda
+Options:
+  --out <dir>            output directory (required; created if missing)
+  --pages 3,15           pages (1-based) to send; without it, the useful sheets by title block (plan, schedules, structural…)
+  --level <n>            level to extract (hint to the model)
+  --name <text>          project name (hint to the model)
+  --hint <text>          free-form note to the model ("ignore the garage")
+  --date <text>          sheet stamp (goes into project.json)
+  --revision <text>      same
+  --wall-height <size>   wall height (subfloor to top of double top plate) when the drawings have no sections
+  --header-height <size> header bottom (top of RO) above subfloor when the project does not give it; default 82 1/2" (P2)
+  --sill-height <size>   window sill height above subfloor when the elevations do not give it
+  --snow <psf>           ground snow load, --width <size> building width, --wind <mph>,
+  --exposure <B|C|D>     structural data the architectural set does not carry (only where the AI did not read it)
+  --floors <n>           floors above the bearing walls; --floor-span <center|clear> floor support
+  --model <id>           model (default claude-opus-5-5)
+  --effort <level>       low | medium | high (default) | xhigh | max
+  --max-tokens <n>       output limit (default 128000, the maximum; thinking counts)
+  --no-tiles             no high-resolution tiles of the floor plans (default: up to 6 per plan, 16 per reading)
+  --max-tiles <n>        tile cap per floor plan page
+  --tiles-dpi <n>        target tile resolution (default 200; the per-page cap usually wins)
+  --dry-run              does not call the API: writes pages/, tiles/ and request.json and stops
+  --response <file>      does not call the API: post-processes a recorded response (model JSON)
+  -h, --help             this help
 
-Precisa de ANTHROPIC_API_KEY no ambiente para chamar a API (não com --dry-run nem --response).
+Needs ANTHROPIC_API_KEY in the environment to call the API (not with --dry-run or --response).
 `;
 
 export interface Io {
@@ -125,13 +127,13 @@ const EFFORTS: readonly Effort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 function takeValue(argv: readonly string[], i: number, flag: string): string {
   const v = argv[i + 1];
-  if (v === undefined || v.startsWith('-')) throw new UsageError(`${flag} exige um valor`);
+  if (v === undefined || v.startsWith('-')) throw new UsageError(`${flag} requires a value`);
   return v;
 }
 
 function int(v: string, flag: string): number {
   const n = Number(v);
-  if (!Number.isInteger(n) || n < 1) throw new UsageError(`${flag}: esperado inteiro ≥ 1, recebido "${v}"`);
+  if (!Number.isInteger(n) || n < 1) throw new UsageError(`${flag}: expected a whole number ≥ 1, got "${v}"`);
   return n;
 }
 
@@ -140,7 +142,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   let input: string | undefined;
   const args: Omit<ExtractArgs, 'command' | 'input' | 'out'> & { out?: string } = { dryRun: false, tiles: true };
   const tileOptions = (): Partial<TileOptions> => {
-    if (args.tiles === false) throw new UsageError('--no-tiles não combina com --max-tiles / --tiles-dpi');
+    if (args.tiles === false) throw new UsageError('--no-tiles cannot be combined with --max-tiles / --tiles-dpi');
     if (args.tiles === true) args.tiles = {};
     return args.tiles;
   };
@@ -178,28 +180,28 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
         break;
       case '--snow':
         args.snow = Number(value());
-        if (!Number.isFinite(args.snow) || args.snow <= 0) throw new UsageError('--snow: esperado psf > 0');
+        if (!Number.isFinite(args.snow) || args.snow <= 0) throw new UsageError('--snow: expected psf > 0');
         break;
       case '--width':
         args.width = value();
         break;
       case '--wind':
         args.wind = Number(value());
-        if (!Number.isFinite(args.wind) || args.wind <= 0) throw new UsageError('--wind: esperado mph > 0');
+        if (!Number.isFinite(args.wind) || args.wind <= 0) throw new UsageError('--wind: expected mph > 0');
         break;
       case '--exposure': {
         const e = value();
-        if (e !== 'B' && e !== 'C' && e !== 'D') throw new UsageError('--exposure: esperado B, C ou D');
+        if (e !== 'B' && e !== 'C' && e !== 'D') throw new UsageError('--exposure: expected B, C or D');
         args.exposure = e;
         break;
       }
       case '--floors':
         args.floors = Number(value());
-        if (!Number.isInteger(args.floors) || args.floors < 0) throw new UsageError('--floors: esperado inteiro ≥ 0');
+        if (!Number.isInteger(args.floors) || args.floors < 0) throw new UsageError('--floors: expected a whole number ≥ 0');
         break;
       case '--floor-span': {
         const s = value();
-        if (s !== 'center' && s !== 'clear') throw new UsageError('--floor-span: esperado center ou clear');
+        if (s !== 'center' && s !== 'clear') throw new UsageError('--floor-span: expected center or clear');
         args.floorSpan = s;
         break;
       }
@@ -220,7 +222,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
         break;
       case '--effort': {
         const e = value();
-        if (!(EFFORTS as readonly string[]).includes(e)) throw new UsageError(`--effort: esperado um de ${EFFORTS.join(', ')}`);
+        if (!(EFFORTS as readonly string[]).includes(e)) throw new UsageError(`--effort: expected one of ${EFFORTS.join(', ')}`);
         args.effort = e as Effort;
         break;
       }
@@ -228,7 +230,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
         args.maxTokens = int(value(), '--max-tokens');
         break;
       case '--no-tiles':
-        if (typeof args.tiles === 'object') throw new UsageError('--no-tiles não combina com --max-tiles / --tiles-dpi');
+        if (typeof args.tiles === 'object') throw new UsageError('--no-tiles cannot be combined with --max-tiles / --tiles-dpi');
         args.tiles = false;
         break;
       case '--max-tiles':
@@ -244,14 +246,14 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
         args.response = value();
         break;
       default:
-        if (a.startsWith('-')) throw new UsageError(`opção desconhecida: "${a}"`);
-        if (input !== undefined) throw new UsageError(`argumento inesperado: "${a}"`);
+        if (a.startsWith('-')) throw new UsageError(`unknown option: "${a}"`);
+        if (input !== undefined) throw new UsageError(`unexpected argument: "${a}"`);
         input = a;
     }
   }
-  if (input === undefined) throw new UsageError('informe o arquivo <planta.pdf>');
-  if (args.out === undefined || args.out === '') throw new UsageError('informe --out <dir>');
-  if (args.dryRun && args.response !== undefined) throw new UsageError('--dry-run e --response não combinam');
+  if (input === undefined) throw new UsageError('missing the <drawings.pdf> file');
+  if (args.out === undefined || args.out === '') throw new UsageError('missing --out <dir>');
+  if (args.dryRun && args.response !== undefined) throw new UsageError('--dry-run and --response cannot be combined');
   const { out, ...rest } = args;
   return { command: 'extract', input, out, ...rest };
 }
@@ -276,7 +278,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
   try {
     args = parseArgs(argv);
   } catch (e) {
-    io.stderr(`erro: ${(e as Error).message}`);
+    io.stderr(`error: ${(e as Error).message}`);
     io.stderr('');
     io.stderr(USAGE);
     return 2;
@@ -303,7 +305,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
   try {
     pdf = io.readFile(inputPath);
   } catch (e) {
-    io.stderr(`erro: não foi possível ler ${inputPath}: ${(e as Error).message}`);
+    io.stderr(`error: could not read ${inputPath}: ${(e as Error).message}`);
     return 1;
   }
 
@@ -311,25 +313,25 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
     // Páginas: explícitas ou pelo carimbo (planta, schedules, estrutural, elevações e cortes; `select.ts`).
     let pages = args.pages;
     if (pages === undefined) {
-      const name = inputPath.split(/[\\/]/).pop() ?? 'planta.pdf';
+      const name = inputPath.split(/[\\/]/).pop() ?? 'drawings.pdf';
       const selection = await selectPages([{ kind: 'pdf', name, data: pdf }], args.level);
       pages = selection.pages[0] ?? [];
       if (pages.length === 0) {
-        io.stderr('erro: nenhuma folha útil reconhecida pelo carimbo; informe --pages');
+        io.stderr('error: no useful sheet recognized by title block; use --pages');
         return 1;
       }
       const label = (p: number) => {
         const info = selection.sheets.get(pageKey(0, p));
         return `${p}=${info?.sheet ?? '?'}`;
       };
-      io.stdout(`páginas pelo carimbo: ${pages.map(label).join(' ')}`);
-      for (const w of selectionWarnings(selection)) io.stderr(`aviso: ${noticeText(w)}`);
+      io.stdout(`pages by title block: ${pages.map(label).join(' ')}`);
+      for (const w of selectionWarnings(selection)) io.stderr(`warning: ${noticeText(w)}`);
     }
 
     io.mkdir(outDir);
     const opened = await openPdf(pdf);
     try {
-      for (const p of pages) write(`paginas/${p}.txt`, formatPageText(await opened.pageText(p)) + '\n');
+      for (const p of pages) write(`pages/${p}.txt`, formatPageText(await opened.pageText(p)) + '\n');
     } finally {
       await opened.close();
     }
@@ -356,7 +358,7 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
       for (const input of pdfs) {
         for (const t of input.tiles ?? []) {
           const ext = t.tile.mediaType === 'image/png' ? 'png' : 'jpg';
-          const file = `recortes/p${t.page}-l${t.tile.row}c${t.tile.col}.${ext}`;
+          const file = `tiles/p${t.page}-r${t.tile.row}c${t.tile.col}.${ext}`;
           writeBinary(file, t.tile.data);
           written.push({
             file,
@@ -387,55 +389,55 @@ export async function run(argv: readonly string[], io: Io = nodeIo, cwd: string 
         content_blocks: (params.messages[0]?.content as unknown[]).map((b) => (b as { type: string }).type),
         schema: RESPONSE_SCHEMA,
       };
-      write('pedido.json', JSON.stringify(summary, null, 2) + '\n');
-      for (const w of tileWarnings) io.stderr(`aviso: ${noticeText(w)}`);
+      write('request.json', JSON.stringify(summary, null, 2) + '\n');
+      for (const w of tileWarnings) io.stderr(`warning: ${noticeText(w)}`);
       io.stdout(
-        `dry-run: ${pages.length} página(s), ${tiles.count} recorte(s) → ${outDir} (paginas/${tiles.count > 0 ? ', recortes/' : ''}, pedido.json); nada enviado`,
+        `dry-run: ${pages.length} page(s), ${tiles.count} tile(s) → ${outDir} (pages/${tiles.count > 0 ? ', tiles/' : ''}, request.json); nothing sent`,
       );
       return 0;
     } else if (args.response !== undefined) {
       const text = Buffer.from(io.readFile(resolve(cwd, args.response))).toString('utf8');
-      result = finish(JSON.parse(text), convert, `gravado:${args.response}`, { inputTokens: 0, outputTokens: 0 });
+      result = finish(JSON.parse(text), convert, `recorded:${args.response}`, { inputTokens: 0, outputTokens: 0 });
     } else {
       result = await deps.extract(req, opts);
     }
 
-    write('projeto.json', JSON.stringify(result.project, null, 2) + '\n');
-    write('extracao.json', JSON.stringify(result.output, null, 2) + '\n');
-    write('revisao.md', result.report);
+    write('project.json', JSON.stringify(result.project, null, 2) + '\n');
+    write('extraction.json', JSON.stringify(result.output, null, 2) + '\n');
+    write('review.md', result.report);
 
     const openings = result.output.walls.reduce((n, w) => n + w.openings.length, 0);
     const tilesSent = result.tilesSent.reduce((n, t) => n + t.tiles, 0);
     io.stdout(
-      `${result.output.walls.length} parede(s), ${openings} abertura(s) → ${outDir} ` +
-        `(${result.model}; ${result.usage.inputTokens} tokens de entrada, ${result.usage.outputTokens} de saída${tilesSent > 0 ? `; ${tilesSent} recorte(s)` : ''})`,
+      `${result.output.walls.length} wall(s), ${openings} opening(s) → ${outDir} ` +
+        `(${result.model}; ${result.usage.inputTokens} input tokens, ${result.usage.outputTokens} output${tilesSent > 0 ? `; ${tilesSent} tile(s)` : ''})`,
     );
-    for (const w of result.warnings) io.stderr(`aviso: ${noticeText(w)}`);
-    for (const p of result.problems) io.stderr(`problema: ${noticeText(p)}`);
-    if (result.problems.length > 0) io.stderr('projeto.json precisa de ajuste antes do `panelizer build`; ver revisao.md');
+    for (const w of result.warnings) io.stderr(`warning: ${noticeText(w)}`);
+    for (const p of result.problems) io.stderr(`problem: ${noticeText(p)}`);
+    if (result.problems.length > 0) io.stderr('project.json needs fixing before `panelizer build`; see review.md');
     return 0;
   } catch (e) {
     if (e instanceof ExtractError) {
-      io.stderr(`erro: ${e.message}`);
+      io.stderr(`error: ${e.message}`);
       if (e.rawText !== undefined) {
-        write('resposta-bruta.txt', e.rawText);
-        io.stderr(`  texto cru em ${join(outDir, 'resposta-bruta.txt')}`);
+        write('raw-response.txt', e.rawText);
+        io.stderr(`  raw text in ${join(outDir, 'raw-response.txt')}`);
       }
       return 1;
     }
     if (e instanceof Anthropic.AuthenticationError) {
-      io.stderr('erro: a API recusou a credencial — defina ANTHROPIC_API_KEY, ou use --dry-run / --response');
+      io.stderr('error: the API rejected the credential — set ANTHROPIC_API_KEY, or use --dry-run / --response');
       return 1;
     }
     if (e instanceof Anthropic.APIError) {
-      io.stderr(`erro da API (${e.status ?? '?'}): ${e.message}`);
+      io.stderr(`API error (${e.status ?? '?'}): ${e.message}`);
       return 1;
     }
     if (e instanceof RangeError || e instanceof SyntaxError) {
-      io.stderr(`erro: ${e.message}`);
+      io.stderr(`error: ${e.message}`);
       return 1;
     }
-    io.stderr(`erro inesperado: ${(e as Error).stack ?? String(e)}`);
+    io.stderr(`unexpected error: ${(e as Error).stack ?? String(e)}`);
     return 1;
   }
 }

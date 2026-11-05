@@ -67,12 +67,12 @@ describe('ida e volta pelo parser do CLI', () => {
     const draft = load(EXAMPLES[0]!.text);
     expect(draft.config.studLength).toEqual([92.625, 104.625]);
     expect(draft.config.headerHeight).toBe(82.5);
-    expect(draft.extra?.['$comment']).toMatch(/^Exemplo de entrada/);
+    expect(draft.extra?.['$comment']).toMatch(/^CLI input example/);
     const json = jsonFromDraft(draft);
     expect(Object.keys(json)).toEqual(['name', 'date', 'revision', 'northAngle', 'config', 'walls', '$comment']);
     const ringgold = load(EXAMPLES[2]!.text);
-    expect(ringgold.walls[0]?.extra?.['$comment']).toMatch(/^Parede norte/);
-    expect((jsonFromDraft(ringgold)['walls'] as Record<string, unknown>[])[0]!['$comment']).toMatch(/^Parede norte/);
+    expect(ringgold.walls[0]?.extra?.['$comment']).toMatch(/^North wall/);
+    expect((jsonFromDraft(ringgold)['walls'] as Record<string, unknown>[])[0]!['$comment']).toMatch(/^North wall/);
   });
 
   it('chave desconhecida numa abertura e wallType na parede sobrevivem', () => {
@@ -94,20 +94,16 @@ describe('ida e volta pelo parser do CLI', () => {
 describe('leitura tolerante', () => {
   const base = { name: 'x', config: { studSpacing: 16, studLength: [92.625] } };
 
-  it('locale (S34): pt/en vão e voltam no arquivo (depois de revision) e chegam ao build; outro valor é problem e sai', () => {
-    const ok = draftFromJson({ ...base, revision: 'B', locale: 'en', walls: [] });
-    if (!ok.ok) throw new Error('should open');
-    expect(ok.problems).toEqual([]);
-    expect(ok.draft.locale).toBe('en');
-    expect(Object.keys(jsonFromDraft(ok.draft))).toEqual(['name', 'revision', 'locale', 'config', 'walls']);
-    const withWall = load(JSON.stringify({ ...JSON.parse(EXAMPLES[0]!.text), locale: 'en' }));
-    expect(parseProject(textFromDraft(withWall), 'p').locale).toBe('en');
-    expect(parseProject(textFromDraft(load(EXAMPLES[0]!.text)), 'p')).not.toHaveProperty('locale');
-    const bad = draftFromJson({ ...base, locale: 'es', walls: [] });
-    if (!bad.ok) throw new Error('should open');
-    expect(bad.problems.map((p) => p.path)).toEqual(['locale']);
-    expect(bad.problems[0]?.text).toMatch(/pt, en/);
-    expect(bad.draft).not.toHaveProperty('locale');
+  it('locale legado (S34; P51: folhas sempre em inglês): o arquivo abre sem problem e a chave não volta', () => {
+    for (const locale of ['pt', 'en', 'es']) {
+      const ok = draftFromJson({ ...base, revision: 'B', locale, walls: [] });
+      if (!ok.ok) throw new Error('should open');
+      expect(ok.problems).toEqual([]);
+      expect(ok.draft).not.toHaveProperty('locale');
+      expect(Object.keys(jsonFromDraft(ok.draft))).toEqual(['name', 'revision', 'config', 'walls']);
+    }
+    const withWall = load(JSON.stringify({ ...JSON.parse(EXAMPLES[0]!.text), locale: 'pt' }));
+    expect(textFromDraft(withWall)).toBe(textFromDraft(load(EXAMPLES[0]!.text)));
   });
 
   it('JSON inválido ou walls que não é lista: não abre', () => {
@@ -179,7 +175,7 @@ describe('leitura tolerante', () => {
     const text = JSON.stringify({ ...base, walls: [{ id: 'W1', length: 96, height: 97.125, section: '2x4', exterior: false, bearing: false, heigth: 97, openings: [] }] });
     const draft = load(text);
     expect(draft.walls[0]?.extra).toEqual({ heigth: 97 });
-    expect(() => parseProject(textFromDraft(draft), 'p')).toThrow(/^p\.walls\[0\]\.heigth: chave desconhecida/);
+    expect(() => parseProject(textFromDraft(draft), 'p')).toThrow(/^p\.walls\[0\]\.heigth: unknown key/);
   });
 
   it('seção de header engenheirada em objeto e em texto', () => {

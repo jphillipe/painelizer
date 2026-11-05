@@ -44,8 +44,8 @@
  * Folha de fabricação (S17): `date` e `revision` na raiz (texto livre) vão para o cabeçalho de cada folha, junto
  * com `name`. A folha nunca lê o relógio — sem `date` sai sem data.
  *
- * Idioma (S34): `locale` na raiz (`"pt"` ou `"en"`) escolhe as frases das folhas e da planta; ausente = o padrão
- * do core (`pt`, hipótese P51). `--locale` no CLI passa por cima do arquivo.
+ * Idioma: folhas e planta sempre em inglês (P51 resolvida). O `locale` na raiz que a S34 gravava ainda é aceito
+ * pelo schema e ignorado.
  *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
@@ -58,7 +58,7 @@
  * daqui só se chama `resolveOpenings`, que transforma a forma de catálogo das aberturas em `Opening`.
  */
 
-import { EngineError, resolveOpenings, type Config, type House, type OpeningSpec, type SheetLocale, type Wall } from 'core';
+import { EngineError, resolveOpenings, type Config, type House, type OpeningSpec, type Wall } from 'core';
 import { projectFileSchema, readMeasure, type FieldIssueParams } from './schema';
 
 export interface Project {
@@ -66,8 +66,6 @@ export interface Project {
   /** Data e revisão das folhas de fabricação (S17), como texto livre na raiz do arquivo. Ausentes = sem carimbo. */
   date?: string;
   revision?: string;
-  /** Idioma das folhas e da planta (S34). Ausente = `DEFAULT_SHEET_LOCALE` do core. */
-  locale?: SheetLocale;
   /** Inclui o estoque (`config.stockLengths`), venha ele de `config` ou da raiz do arquivo. */
   config: Config;
   /** Paredes soltas (formato por comprimento). Vazio quando o projeto vem em planta (`house`). */
@@ -77,8 +75,8 @@ export interface Project {
 }
 
 /**
- * Arquivo de projeto inválido. `path`: o campo (`projeto.walls[2].openings[0].center`); `detail`: o que está errado,
- * em português. Quando o motivo vem do core (catálogo de aberturas), `engine` é o erro com código (S26); quando vem
+ * Arquivo de projeto inválido. `path`: o campo (`project.walls[2].openings[0].center`); `detail`: o que está errado,
+ * em inglês. Quando o motivo vem do core (catálogo de aberturas), `engine` é o erro com código (S26); quando vem
  * do schema, `field` traz a regra quebrada e o valor recebido (S28.2).
  */
 export class ProjectError extends Error {
@@ -106,18 +104,18 @@ export class ProjectError extends Error {
 }
 
 /** Converte o texto do arquivo em `Project` validado. */
-export function parseProject(text: string, source = 'projeto'): Project {
+export function parseProject(text: string, source = 'project'): Project {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    throw new ProjectError(source, `JSON inválido — ${(e as Error).message}`, undefined, 'json');
+    throw new ProjectError(source, `invalid JSON — ${(e as Error).message}`, undefined, 'json');
   }
   return projectFrom(raw, source);
 }
 
 /** Valida pelo schema (a primeira issue vira `ProjectError`) e resolve as aberturas de cada parede pelo catálogo. */
-export function projectFrom(raw: unknown, source = 'projeto'): Project {
+export function projectFrom(raw: unknown, source = 'project'): Project {
   const parsed = projectFileSchema.safeParse(raw);
   if (!parsed.success) {
     const issue = parsed.error.issues[0]!;
@@ -128,7 +126,6 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   const project: Project = { name: file.name ?? source, config, walls: [] };
   if (file.date !== undefined) project.date = file.date;
   if (file.revision !== undefined) project.revision = file.revision;
-  if (file.locale !== undefined) project.locale = file.locale;
   const resolve = (openings: OpeningSpec[], wallId: string, i: number) => {
     try {
       return resolveOpenings(openings, config, wallId);
@@ -156,7 +153,7 @@ export function measure(v: unknown, path: string): number {
   return n;
 }
 
-/** `projeto` + `['walls', 2, 'openings', 0, 'center']` → `projeto.walls[2].openings[0].center`. */
+/** `project` + `['walls', 2, 'openings', 0, 'center']` → `project.walls[2].openings[0].center`. */
 function pathText(source: string, path: readonly PropertyKey[]): string {
   return path.reduce<string>((p, k) => (typeof k === 'number' ? `${p}[${k}]` : `${p}.${String(k)}`), source);
 }

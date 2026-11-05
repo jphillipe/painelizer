@@ -252,6 +252,6 @@ function count(n: number, field: string, where: { wallId: string; openingId: str
 /** Erro das tabelas (número inválido, neve faltando) com a parede e a abertura de quem perguntou. */
 function rewrap(e: unknown, where: { wallId: string; openingId: string }): unknown {
   if (e instanceof EngineError) return e.at(where);
-  if (e instanceof RangeError) return new RangeError(`parede ${where.wallId}, abertura ${where.openingId}: ${e.message}`);
+  if (e instanceof RangeError) return new RangeError(`Wall ${where.wallId}, opening ${where.openingId}: ${e.message}`);
   return e;
 }

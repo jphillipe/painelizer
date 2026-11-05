@@ -102,14 +102,14 @@ describe('resolveOpening — catálogo', () => {
   });
 
   it.each([
-    [{ id: 'x', tag: 'W9', center: 10 }, /abertura x: tag "W9" não está em config.openingTypes/],
-    [{ id: 'x', tag: 'W1', center: 10, headerMark: 'HDR9' }, /marca "HDR9" não está em config.headerSchedule/],
-    [{ id: 'x', offset: 10, roughWidth: 36, roughHeight: 48 }, /sem type nem tag/],
-    [{ id: 'x', type: 'window' as const, offset: 10 }, /sem roughWidth\/roughHeight e sem tag/],
-    [{ id: 'x', tag: 'W1' }, /sem offset nem center/],
+    [{ id: 'x', tag: 'W9', center: 10 }, /opening x: tag "W9" is not in config.openingTypes/],
+    [{ id: 'x', tag: 'W1', center: 10, headerMark: 'HDR9' }, /mark "HDR9" is not in config.headerSchedule/],
+    [{ id: 'x', offset: 10, roughWidth: 36, roughHeight: 48 }, /no type and no tag/],
+    [{ id: 'x', type: 'window' as const, offset: 10 }, /no roughWidth\/roughHeight and no tag/],
+    [{ id: 'x', tag: 'W1' }, /no offset or center/],
   ])('erro com parede no prefixo: %j', (spec, re) => {
     expect(() => resolveOpening(spec, catalog, 'W1')).toThrow(re);
-    expect(() => resolveOpening(spec, catalog, 'W1')).toThrow(/^parede W1, /);
+    expect(() => resolveOpening(spec, catalog, 'W1')).toThrow(/^Wall W1, /);
   });
 
   it('medida não positiva lança RangeError', () => {

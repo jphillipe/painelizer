@@ -1,6 +1,6 @@
 /**
- * Avisos e problemas da leitura (S26): código em inglês, ids e parâmetros, como os do motor. A frase em português
- * continua em `message` (CLI, `revisao.md`); o app monta a sua a partir do código. Módulo puro (sem pdfjs nem
+ * Avisos e problemas da leitura (S26): código em inglês, ids e parâmetros, como os do motor. A frase (em inglês)
+ * continua em `message` (CLI, `review.md`); o app monta a sua a partir do código. Módulo puro (sem pdfjs nem
  * SDK): o app importa no navegador por `extract/notices`.
  *
  * Arquivos gravados antes da S26 (`$panelizer.reading` de um `.panelizer.json`, sessão do navegador) trazem os
@@ -75,7 +75,7 @@ export interface ReadingNotice extends EngineNotice {
   stage?: 'plan' | 'wall' | 'bom' | 'files';
 }
 
-/** Aviso da leitura com a frase em português. */
+/** Aviso da leitura com a frase (em inglês). */
 export function extractionNotice(
   code: ExtractWarningCode,
   message: string,
@@ -85,23 +85,23 @@ export function extractionNotice(
   return { source: 'extraction', code, message, ...where, params };
 }
 
-const STAGE_PREFIX: Record<NonNullable<ReadingNotice['stage']>, string> = { plan: 'planta: ', wall: '', bom: 'lista de material: ', files: '' };
+const STAGE_PREFIX: Record<NonNullable<ReadingNotice['stage']>, string> = { plan: 'plan: ', wall: '', bom: 'bill of materials: ', files: '' };
 
 /**
- * A linha de texto (CLI, `revisao.md`, `pedido.json`): `extração CODE: …`, `<painel> CODE: … (hipótese P30)`,
- * `parser: …`, `motor: …`, `altura: …`.
+ * A linha de texto (CLI, `review.md`): `extraction CODE: …`, `<painel> CODE: … (hypothesis P30)`,
+ * `parser: …`, `engine: …`, `height: …`. O formato antigo, em português, só é lido por `legacyNotice`.
  */
 export function noticeText(n: ReadingNotice): string {
   switch (n.source) {
     case 'extraction':
-      return `extração ${n.code}: ${n.message}`;
+      return `extraction ${n.code}: ${n.message}`;
     case 'engine':
-      if (n.panelId !== undefined) return `${n.panelId} ${n.code}: ${n.message}${n.hypothesis === undefined ? '' : ` (hipótese ${n.hypothesis})`}`;
-      return `motor: ${STAGE_PREFIX[n.stage ?? 'wall']}${n.message}`;
+      if (n.panelId !== undefined) return `${n.panelId} ${n.code}: ${n.message}${n.hypothesis === undefined ? '' : ` (hypothesis ${n.hypothesis})`}`;
+      return `engine: ${STAGE_PREFIX[n.stage ?? 'wall']}${n.message}`;
     case 'parser':
       return `parser: ${n.message}`;
     case 'project':
-      return `altura: ${n.message}`;
+      return `height: ${n.message}`;
   }
 }
 

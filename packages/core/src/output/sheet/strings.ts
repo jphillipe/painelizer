@@ -1,33 +1,20 @@
 /**
  * Textos da folha do painel e da planta (S28.1 → S34), num lugar só: cabeçalho, vista, cotas, lista de peças,
- * cortes na obra, legenda, avisos e os `<title>` da planta. Dois idiomas: `'pt'` (padrão — a folha de antes da
- * S34, byte a byte) e `'en'`. O idioma padrão é pergunta à fábrica (hipótese P51): se ela escolher inglês, troca-se
- * só `DEFAULT_SHEET_LOCALE`.
+ * cortes na obra, legenda, avisos e os `<title>` da planta. Sempre em inglês (P51 resolvida: a fábrica quer a folha
+ * e a planta em inglês; o português da S34 saiu).
  *
- * Termos técnicos em inglês seguem `docs/02-framing.md` (stud, king, jack, header, sill, cripple, RO, plate…) e
- * não mudam de um idioma para o outro; só a frase em volta muda. Puro: nada aqui lê relógio, ambiente ou rede.
+ * Termos técnicos seguem `docs/02-framing.md` (stud, king, jack, header, sill, cripple, RO, plate…). Puro: nada
+ * aqui lê relógio, ambiente ou rede.
  */
 
-import { warningMessageEn, type Warning } from '../../messages';
+import { warningMessage, type Warning } from '../../messages';
 import type { FieldCut, MemberRole, Panel, PanelOpening } from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import type { CutRole } from '../cutlist';
 
-/** Idioma da folha e da planta. */
-export type SheetLocale = 'pt' | 'en';
-
-export const SHEET_LOCALES: readonly SheetLocale[] = ['pt', 'en'];
-
-/** Idioma quando o projeto não diz (hipótese P51: português até a fábrica responder). */
-export const DEFAULT_SHEET_LOCALE: SheetLocale = 'pt';
-
-export function isSheetLocale(v: unknown): v is SheetLocale {
-  return v === 'pt' || v === 'en';
-}
-
 type FacingInput = { exterior?: boolean; facing?: Panel['facing'] };
 
-/** Todas as frases da folha e da planta num idioma. */
+/** Todas as frases da folha e da planta. */
 export interface SheetStrings {
   /** Nome de cada papel na lista de peças, com a letra da legenda. */
   cutRoleName: Readonly<Record<CutRole, string>>;
@@ -86,7 +73,7 @@ export interface SheetStrings {
   };
 }
 
-/** Nome legível de um papel de peça (cortes na obra). Igual nos dois idiomas: são os termos da fábrica. */
+/** Nome legível de um papel de peça (cortes na obra): os termos da fábrica. */
 export function roleName(role: MemberRole): string {
   switch (role) {
     case 'bottomPlate':
@@ -99,97 +86,6 @@ export function roleName(role: MemberRole): string {
       return role;
   }
 }
-
-const PT: SheetStrings = {
-  cutRoleName: {
-    plates: 'plate',
-    stud: 'stud',
-    kingStud: 'king (K)',
-    jackStud: 'jack (J)',
-    header: 'header (H)',
-    sill: 'sill (S)',
-    cripple: 'cripple (C)',
-    block: 'bloco (B)',
-  },
-  legend:
-    `K king · J jack · C cripple · H header · S sill · B bloco · hachura vermelha = cortar na obra · ` +
-    `rodapé: marcas de layout e centro de cada peça vertical a partir de x=0`,
-  infoLine(panel, pieces, weightLb) {
-    const kind = [panel.exterior ? 'externa' : 'interna', panel.bearing ? 'portante' : 'não portante'];
-    return [
-      `parede ${panel.wallId}`,
-      `pavimento ${panel.level}`,
-      [panel.section, ...kind].join(' '),
-      `${formatFeetInches(panel.length)} × ${formatFeetInches(panel.height)}`,
-      `${pieces} peças`,
-      `${weightLb} lb`,
-    ].join(' · ');
-  },
-  stampLine(date, revision) {
-    const stamp: string[] = [];
-    if (date !== undefined) stamp.push(`data ${date}`);
-    if (revision !== undefined) stamp.push(`rev. ${revision}`);
-    return stamp.join(' · ');
-  },
-  viewNote(panel) {
-    if (panel.exterior === true) {
-      return panel.facing === 'interior'
-        ? 'Vista de dentro — face externa no verso; início da parede (x=0) à esquerda (hipótese P24: a elevação ' +
-            'segue o sentido start→end da planta)'
-        : 'Vista de fora — face externa voltada para o observador; início da parede (x=0) à esquerda (hipótese P24)';
-    }
-    if (panel.exterior === false) return 'Parede interna — início da parede (x=0) à esquerda';
-    return 'Início da parede (x=0) à esquerda';
-  },
-  faceNote(panel) {
-    if (panel.exterior === true) {
-      return panel.facing === 'interior' ? 'face externa no verso (vista de dentro)' : 'face externa (vista de fora)';
-    }
-    if (panel.exterior === false) return 'parede interna';
-    return 'início → fim';
-  },
-  overhangLabel: (overhang) => `avanço ${formatInches(overhang)}`,
-  openingLabel: (o) => `${o.id} · ${o.type === 'door' ? 'porta' : 'janela'}`,
-  openingDim: {
-    width: (w) => `RO ${formatInches(w)}`,
-    sill: (base) => `peitoril ${formatInches(base)}`,
-    height: (h) => `RO ${formatInches(h)}`,
-    header: (top) => `header ${formatInches(top)}`,
-    door: (h, top, flush) =>
-      flush
-        ? `RO ${formatInches(h)} = header ${formatInches(top)}`
-        : `RO ${formatInches(h)} · header ${formatInches(top)}`,
-  },
-  pieceList: {
-    title: 'Peças',
-    qty: 'qtd',
-    role: 'peça',
-    section: 'seção',
-    feet: 'pés-pol',
-    inches: 'pol',
-    total: 'peças a cortar',
-    weight: (lb) => `Peso estimado: ${lb} lb`,
-    weightNote: 'madeira sem sheathing (hipótese P8)',
-    fieldCuts: 'Cortar na obra',
-  },
-  fieldCutLabel: (cut) => `cortar na obra ${formatInches(cut.length)}`,
-  fieldCutTitle: (cut) => `${PT.fieldCutLabel(cut)} — ${cut.role}, abertura ${cut.openingId}, x=${formatInches(cut.x)}`,
-  fieldCutItem: (cut) =>
-    `${roleName(cut.role)} ${formatInches(cut.length)} de x=${formatInches(cut.x)} a ${formatInches(cut.x + cut.length)} (${cut.openingId})`,
-  warning: (w) => w.message,
-  plan: {
-    title: 'Planta de painéis',
-    summary: (walls, panels, width, depth) =>
-      `${walls} paredes · ${panels} painéis · ${formatFeetInches(width)} × ${formatFeetInches(depth)} (faces externas)`,
-    wallTitle: (wallId, section, plateLength, n) =>
-      `${wallId} ${section} · plate ${formatFeetInches(plateLength)} · ${n} ${n === 1 ? 'painel' : 'painéis'}`,
-    openingTitle: (id, type, roughWidth, wallId) =>
-      `${id} ${type === 'window' ? 'janela' : 'porta'} · RO ${formatInches(roughWidth)} · parede ${wallId}`,
-    jointTitle: (left, right) => `junta ${left} | ${right}`,
-    panelTitle: (panelId, length, wallId) => `${panelId} · ${formatFeetInches(length)} · parede ${wallId}`,
-    northTitle: (angle) => `norte: ${angle}° do +y da planta, sentido horário`,
-  },
-};
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
@@ -271,11 +167,15 @@ const EN: SheetStrings = {
   fieldCutTitle: (cut) => `${EN.fieldCutLabel(cut)} — ${cut.role}, opening ${cut.openingId}, x=${formatInches(cut.x)}`,
   fieldCutItem: (cut) =>
     `${roleName(cut.role)} ${formatInches(cut.length)} from x=${formatInches(cut.x)} to ${formatInches(cut.x + cut.length)} (${cut.openingId})`,
+  // Com parâmetros, a frase sai de código + parâmetros (vale também para um `message` guardado antes de P51);
+  // sem eles (aviso montado à mão), o `message` como veio.
   warning: (w) =>
-    warningMessageEn(w.code, w.params ?? {}, {
-      ...(w.wallId === undefined ? {} : { wallId: w.wallId }),
-      ...(w.openingId === undefined ? {} : { openingId: w.openingId }),
-    }),
+    w.params === undefined
+      ? w.message
+      : warningMessage(w.code, w.params, {
+          ...(w.wallId === undefined ? {} : { wallId: w.wallId }),
+          ...(w.openingId === undefined ? {} : { openingId: w.openingId }),
+        }),
   plan: {
     title: 'Panel plan',
     summary: (walls, panels, width, depth) =>
@@ -291,21 +191,12 @@ const EN: SheetStrings = {
   },
 };
 
-const STRINGS: Readonly<Record<SheetLocale, SheetStrings>> = { pt: PT, en: EN };
-
-/**
- * As frases de um idioma. Ausente = `DEFAULT_SHEET_LOCALE`.
- *
- * @throws RangeError idioma fora de `SHEET_LOCALES` (quem chama de JavaScript sem tipos)
- */
-export function sheetStrings(locale: SheetLocale = DEFAULT_SHEET_LOCALE): SheetStrings {
-  if (!isSheetLocale(locale)) {
-    throw new RangeError(`locale inválido (${String(locale)}); esperado ${SHEET_LOCALES.join(' ou ')}`);
-  }
-  return STRINGS[locale];
+/** As frases da folha e da planta. */
+export function sheetStrings(): SheetStrings {
+  return EN;
 }
 
-/** Linha da vista no cabeçalho (hipótese P24), no idioma pedido. */
-export function viewNote(panel: FacingInput, locale: SheetLocale = DEFAULT_SHEET_LOCALE): string {
-  return sheetStrings(locale).viewNote(panel);
+/** Linha da vista no cabeçalho (hipótese P24). */
+export function viewNote(panel: FacingInput): string {
+  return EN.viewNote(panel);
 }

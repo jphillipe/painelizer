@@ -78,7 +78,7 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(tags(p1, /<line/g)).toHaveLength(2);
     expect(svg).toContain(`<text class="opening-id" x="${px(toPx(187))}" y="${px(toPy(0))}" font-size="7"`);
     // J2 na W02 (vertical, start (480,0), offset 72): vão de 11 × 72 px e o traço no eixo x=480.
-    const j2 = svg.slice(svg.indexOf('<title>J2 janela'), svg.indexOf('</g>', svg.indexOf('<title>J2 janela')));
+    const j2 = svg.slice(svg.indexOf('<title>J2 window'), svg.indexOf('</g>', svg.indexOf('<title>J2 window')));
     expect(tags(j2, /<line/g)).toHaveLength(3);
     expect(j2).toContain(`<line x1="${px(toPx(480))}" y1="${px(toPy(72))}" x2="${px(toPx(480))}" y2="${px(toPy(108))}" stroke-width="0.75"/>`);
     expect(svg).toContain(`<text class="opening-id" x="${px(toPx(480))}" y="${px(toPy(90))}" font-size="7" fill="#333" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${px(toPx(480))} ${px(toPy(90))})">J2</text>`);
@@ -156,9 +156,9 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(() => housePlanSvg(house, panels, { margin: -1 })).toThrow(RangeError);
     expect(() => housePlanSvg({ ...house, northAngle: Number.NaN }, panels)).toThrow(/northAngle/);
     const noPlan: Panel[] = panels.map(({ plan, ...p }) => p);
-    expect(() => housePlanSvg(house, noPlan)).toThrow(/painel 1-W01-P1 sem plan/);
-    expect(() => housePlanSvg(house, [{ ...panels[0]!, wallId: 'X' }])).toThrow(/parede X, que não está na casa/);
-    expect(() => housePlanSvg(house, panels.filter((p) => p.wallId !== 'W05'))).toThrow(/parede W05 sem painéis/);
+    expect(() => housePlanSvg(house, noPlan)).toThrow(/panel 1-W01-P1 has no plan/);
+    expect(() => housePlanSvg(house, [{ ...panels[0]!, wallId: 'X' }])).toThrow(/wall X, which is not in the house/);
+    expect(() => housePlanSvg(house, panels.filter((p) => p.wallId !== 'W05'))).toThrow(/wall W05 has no panels/);
   });
 });
 

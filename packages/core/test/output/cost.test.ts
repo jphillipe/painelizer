@@ -65,19 +65,19 @@ describe('costOf (S31)', () => {
   });
 
   it('preço negativo, comprimento inválido ou entrada repetida é erro', () => {
-    expect(() => costOf(bom, [{ section: '2x4', length: 96, price: -1 }])).toThrow(/preço inválido/);
-    expect(() => costOf(bom, [{ section: '2x4', length: 0, price: 1 }])).toThrow(/comprimento inválido/);
+    expect(() => costOf(bom, [{ section: '2x4', length: 96, price: -1 }])).toThrow(/invalid price/);
+    expect(() => costOf(bom, [{ section: '2x4', length: 0, price: 1 }])).toThrow(/invalid length/);
     expect(() =>
       costOf(bom, [
         { section: '2x4', length: 96, price: 1 },
         { section: '2x4', length: 96, price: 2 },
       ]),
-    ).toThrow(/repetido/);
+    ).toThrow(/priced twice/);
     expect(() =>
       costOf(bom, [
         { section: '2x6', perFoot: 1 },
         { section: '2x6', perFoot: 2 },
       ]),
-    ).toThrow(/repetido/);
+    ).toThrow(/priced twice/);
   });
 });

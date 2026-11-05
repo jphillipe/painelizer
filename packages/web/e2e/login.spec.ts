@@ -34,7 +34,7 @@ test.describe('login (Supabase local)', () => {
     await signIn(page, ACCOUNTS.outsider.email, TEST_PASSWORD);
     await expect(page).toHaveURL(/\/app(\?|$)/);
     await page.goto('/app/projects');
-    await expect(page.getByRole('link', { name: /Casa 28x40/ })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /House 28x40/ })).toHaveCount(0);
   });
 });
 

@@ -2,7 +2,7 @@
 
 Gerado por `pnpm hipoteses` em 2026-11-05. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
 
-**40 hipóteses em vigor**, 11 pendências respondidas.
+**39 hipóteses em vigor**, 12 pendências respondidas.
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
@@ -45,7 +45,6 @@ Gerado por `pnpm hipoteses` em 2026-11-05. Não edite à mão: a fonte é `05-pe
 | P48 | Pregação (texto da folha) | esses valores como `config.nailing` default, impressos na folha com "validar com engenheiro"; nunca geometria | — |
 | P49 | Encaixe painel-painel na mesma parede | stud duplo na junta (S15) e chapa terminando no painel; lap só na double top (P23) | — |
 | P50 | Altura e forma do fire blocking | `config.fireBlockAt` = 120" sobre a cavidade `height − 3·plates`; o menor número de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma no meio da cavidade até 241.5"); bloco deitado da seção da parede em todo vão ≥ 1.5" entre peças de altura inteira, fora das zonas de abertura e do vão do ladder do T | `packages/core/src/config.ts:117`, `packages/core/src/panel.ts:83`, `packages/core/src/panelize/panelizeWall.ts:26`, `packages/core/src/panelize/panelizeWall.ts:263`, `packages/core/src/rules/blocking.ts:11` (+2) |
-| P51 | Idioma padrão da folha e da planta | **português** é o padrão até a fábrica responder; inglês existe como opção (`locale: "en"` no arquivo do projeto, `--locale en` no CLI, "Sheet language" nas configurações do projeto no app). Se a fábrica escolher inglês, troca-se só `DEFAULT_SHEET_LOCALE` em `core/src/output/sheet/strings.ts` (e os snapshots em português passam a ser os de `locale: 'pt'` explícito) | `packages/cli/src/build.ts:13`, `packages/cli/src/project.ts:48`, `packages/cli/src/schema.ts:654`, `packages/core/src/output/planSvg.ts:37`, `packages/core/src/output/sheet/strings.ts:21` (+4) |
 
 ## Respondidas
 
@@ -60,3 +59,4 @@ Gerado por `pnpm hipoteses` em 2026-11-05. Não edite à mão: a fonte é `05-pe
 - P12 — DXF disponível?
 - P13 — "Praticamente junto" ao jack
 - P14 — Emenda de plate em painel > 16'
+- P51 — Idioma da folha e da planta

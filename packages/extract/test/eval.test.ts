@@ -22,9 +22,9 @@ describe('evaluateReading — medida de uma leitura contra a verdade', () => {
     expect(r.tags.find((t) => t.tag === 'U2')).toEqual({ tag: 'U2', expected: 9, found: 1, positioned: 1 });
     expect(r.tags.find((t) => t.tag === '1')).toEqual({ tag: '1', expected: 4, found: 1, positioned: 1 });
     expect(r.tagCoverage).toBeCloseTo(2 / 15, 6);
-    expect(r.shortfalls).toContain('tag U2: 1 de 9 encontradas');
-    expect(r.shortfalls).toContain('portas em paredes internas: 1 de pelo menos 11');
-    expect(r.shortfalls).toContain('cômodos listados: 0 de pelo menos 15');
+    expect(r.shortfalls).toContain('tag U2: 1 of 9 found');
+    expect(r.shortfalls).toContain('doors in interior walls: 1 of at least 11');
+    expect(r.shortfalls).toContain('rooms listed: 0 of at least 15');
     expect(r.problems).toBe(0);
     expect(r.warnings['HEADER_JACKS_BELOW_TABLE']).toBe(2);
   });
@@ -56,12 +56,12 @@ describe('evaluateReading — medida de uma leitura contra a verdade', () => {
     expect(r.openings.bySource).toMatchObject({ rule: 1, scaled: 1, none: 1 });
     expect(r.openings.unplaced).toEqual(['I1-U1-1']);
     expect(r.openings.untagged).toBe(1);
-    expect(r.shortfalls).toEqual(['tag U1: 1 sem posição']);
+    expect(r.shortfalls).toEqual(['tag U1: 1 with no position']);
     const text = formatEvalReport(r, 'depois.json');
     expect(text.split('\n')[0]).toBe('# depois.json');
-    expect(text).toContain('tags de porta: 100 %');
-    expect(text).toContain('escala 1');
-    expect(text).toContain('faltas:\n  - tag U1: 1 sem posição');
+    expect(text).toContain('door tags: 100 %');
+    expect(text).toContain('scaled 1');
+    expect(text).toContain('shortfalls:\n  - tag U1: 1 with no position');
   });
 
   it('relatório é estável (mesma entrada, mesmo texto)', () => {

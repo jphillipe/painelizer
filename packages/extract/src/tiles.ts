@@ -137,7 +137,7 @@ export function planTiles(
   opts: Pick<TileOptions, 'overlap' | 'maxPerPage'>,
   maxTiles: number = opts.maxPerPage,
 ): TileGrid {
-  if (!(page.width > 0 && page.height > 0)) throw new RangeError(`planTiles: página ${page.width}×${page.height} pt`);
+  if (!(page.width > 0 && page.height > 0)) throw new RangeError(`planTiles: page ${page.width}×${page.height} pt`);
   if (!(targetDpi > 0)) throw new RangeError(`planTiles: dpi ${targetDpi}`);
   const limit = Math.max(1, Math.floor(maxTiles));
   const sTarget = targetDpi / 72;
@@ -158,7 +158,7 @@ export function planTiles(
     if (bestForN.sMax >= TARGET_TOLERANCE * sTarget) reached = bestForN;
   }
   const chosen = reached ?? best;
-  if (chosen === undefined) throw new RangeError('planTiles: nenhuma grade');
+  if (chosen === undefined) throw new RangeError('planTiles: no grid');
   const scale = Math.min(sTarget, chosen.sMax);
   const tiles: TileRect[] = [];
   chosen.grid.forEach((line, r) =>

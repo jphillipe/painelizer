@@ -24,7 +24,6 @@ import {
   engineeredSection,
   parseEngineeredSection,
   parseFeetInches,
-  SHEET_LOCALES,
   type Building,
   type Config,
   type CornerStyle,
@@ -45,7 +44,6 @@ import {
   type PriceEntry,
   type Point,
   type Section,
-  type SheetLocale,
   type StudSpacing,
   type TeeStyle,
   type Wall,
@@ -145,7 +143,7 @@ export function readField<S extends z.ZodType>(
 }
 
 export function show(v: unknown): string {
-  if (v === undefined) return 'nada';
+  if (v === undefined) return 'nothing';
   const s = JSON.stringify(v) ?? String(v);
   return s.length > 40 ? `${s.slice(0, 37)}...` : s;
 }
@@ -177,17 +175,17 @@ function leaf<T>(read: (v: unknown) => T | Fail) {
   });
 }
 
-const objectFail = (v: unknown) => new Fail({ rule: 'object', received: v }, `esperado objeto, recebido ${show(v)}`);
+const objectFail = (v: unknown) => new Fail({ rule: 'object', received: v }, `expected an object, got ${show(v)}`);
 
 function readText(v: unknown): string | Fail {
   if (typeof v !== 'string' || v.trim() === '')
-    return new Fail({ rule: 'text', received: v }, `esperado texto não vazio, recebido ${show(v)}`);
+    return new Fail({ rule: 'text', received: v }, `expected non-empty text, got ${show(v)}`);
   return v;
 }
 
 function readBoolean(v: unknown): boolean | Fail {
   if (typeof v !== 'boolean')
-    return new Fail({ rule: 'boolean', received: v }, `esperado true/false, recebido ${show(v)}`);
+    return new Fail({ rule: 'boolean', received: v }, `expected true/false, got ${show(v)}`);
   return v;
 }
 
@@ -196,7 +194,7 @@ function readOneOf<T extends string>(allowed: readonly T[]) {
     if (typeof v !== 'string' || !(allowed as readonly string[]).includes(v)) {
       return new Fail(
         { rule: 'oneOf', received: v, allowed },
-        `esperado um de ${allowed.join(', ')}, recebido ${show(v)}`,
+        `expected one of ${allowed.join(', ')}, got ${show(v)}`,
       );
     }
     return v as T;
@@ -206,8 +204,8 @@ function readOneOf<T extends string>(allowed: readonly T[]) {
 /** Medida ≥ 0 em polegadas: número decimal ou texto pés-pol-fração. */
 export function readMeasure(v: unknown): number | Fail {
   if (typeof v === 'number') {
-    if (!Number.isFinite(v)) return new Fail({ rule: 'measure', received: v }, `medida inválida ${show(v)}`);
-    if (v < 0) return new Fail({ rule: 'nonNegative', received: v }, `medida inválida ${show(v)}`);
+    if (!Number.isFinite(v)) return new Fail({ rule: 'measure', received: v }, `invalid measurement ${show(v)}`);
+    if (v < 0) return new Fail({ rule: 'nonNegative', received: v }, `invalid measurement ${show(v)}`);
     return v;
   }
   if (typeof v === 'string') {
@@ -216,11 +214,11 @@ export function readMeasure(v: unknown): number | Fail {
     } catch {
       return new Fail(
         { rule: 'measure', received: v },
-        `medida inválida ${show(v)} (use polegadas ou pés-pol, ex.: 12'-0")`,
+        `invalid measurement ${show(v)} (use inches or feet-inches, e.g. 12'-0")`,
       );
     }
   }
-  return new Fail({ rule: 'measure', received: v }, `esperado medida (número ou texto), recebido ${show(v)}`);
+  return new Fail({ rule: 'measure', received: v }, `expected a measurement (number or text), got ${show(v)}`);
 }
 
 /** Medida com sinal (`layoutOrigin`, coordenadas de planta): número, ou texto pés-pol com `-` opcional na frente. */
@@ -236,7 +234,7 @@ function readSigned(v: unknown): number | Fail {
 function readPositive(v: unknown): number | Fail {
   const n = readMeasure(v);
   if (n instanceof Fail) return n;
-  if (n <= 0) return new Fail({ rule: 'positive', received: v }, `esperado medida > 0, recebido ${show(v)}`);
+  if (n <= 0) return new Fail({ rule: 'positive', received: v }, `expected a measurement > 0, got ${show(v)}`);
   return n;
 }
 
@@ -244,7 +242,7 @@ function readStudSpacing(v: unknown): StudSpacing | Fail {
   const n = readPositive(v);
   if (n instanceof Fail) return n;
   if (n !== 16 && n !== 24)
-    return new Fail({ rule: 'studSpacing', received: v }, `esperado 16 ou 24 (polegadas), recebido ${show(v)}`);
+    return new Fail({ rule: 'studSpacing', received: v }, `expected 16 or 24 (inches), got ${show(v)}`);
   return n;
 }
 
@@ -258,7 +256,7 @@ function readNumber(what: string, min?: number, exclusive = false) {
         received: v,
         ...(min === undefined ? {} : { min, exclusive }),
       };
-      return new Fail(params, `esperado ${what}, recebido ${show(v)}`);
+      return new Fail(params, `expected ${what}, got ${show(v)}`);
     }
     return v;
   };
@@ -267,7 +265,7 @@ function readNumber(what: string, min?: number, exclusive = false) {
 function readInteger(min: number) {
   return (v: unknown): number | Fail => {
     if (typeof v !== 'number' || !Number.isInteger(v) || v < min) {
-      return new Fail({ rule: 'integer', received: v, min }, `esperado inteiro ≥ ${min}, recebido ${show(v)}`);
+      return new Fail({ rule: 'integer', received: v, min }, `expected a whole number ≥ ${min}, got ${show(v)}`);
     }
     return v;
   };
@@ -282,11 +280,11 @@ export const studSpacing = leaf(readStudSpacing);
 /** Inteiro ≥ 1 (plies, kings, jacks, pavimento, studs extras). */
 export const count = leaf(readInteger(1));
 const floorsSupported = leaf(readInteger(0));
-const psf = leaf(readNumber('carga em psf (número ≥ 0)', 0));
-const mph = leaf(readNumber('velocidade de vento em mph (número > 0)', 0, true));
-const lb = leaf(readNumber('peso em lb (número > 0)', 0, true));
-const degrees = leaf(readNumber('ângulo em graus'));
-const money = leaf(readNumber('preço (número ≥ 0)', 0));
+const psf = leaf(readNumber('a load in psf (number ≥ 0)', 0));
+const mph = leaf(readNumber('a wind speed in mph (number > 0)', 0, true));
+const lb = leaf(readNumber('a weight in lb (number > 0)', 0, true));
+const degrees = leaf(readNumber('an angle in degrees'));
+const money = leaf(readNumber('a price (number ≥ 0)', 0));
 
 function oneOf<T extends string>(allowed: readonly T[]) {
   return leaf(readOneOf(allowed));
@@ -305,7 +303,7 @@ const END_RULES: readonly EndRule[] = ['through', 'butt'];
 
 // ---- nós --------------------------------------------------------------------
 
-const UNKNOWN_KEY = 'chave desconhecida — confira a grafia; comentário vai em chave com $ (ex.: "$comment")';
+const UNKNOWN_KEY = 'unknown key — check the spelling; comments go in a key starting with $ (e.g. "$comment")';
 
 /**
  * Objeto strict: as chaves de `shape`; `$…` passam sem ser lidas; qualquer outra é erro (com a frase de `removed`
@@ -335,10 +333,10 @@ function node<S extends z.core.$ZodLooseShape>(shape: S, removed: Readonly<Recor
 }
 
 /** Lista de `item`; `notList` é a frase quando não é lista (e quando está vazia, com `nonEmpty`). */
-function list<S extends z.ZodType>(item: S, notList = 'esperado array', nonEmpty = false) {
+function list<S extends z.ZodType>(item: S, notList = 'expected an array', nonEmpty = false) {
   return z.unknown().transform((v, ctx): z.output<S>[] => {
     if (!Array.isArray(v)) {
-      report(ctx, new Fail({ rule: 'list', received: v }, `${notList}, recebido ${show(v)}`));
+      report(ctx, new Fail({ rule: 'list', received: v }, `${notList}, got ${show(v)}`));
       return z.NEVER;
     }
     if (nonEmpty && v.length === 0) {
@@ -367,7 +365,7 @@ function record<S extends z.ZodType>(item: S) {
     let ok = true;
     for (const [key, value] of Object.entries(v)) {
       if (key.trim() === '') {
-        report(ctx, new Fail({ rule: 'emptyKey' }, 'chave vazia'));
+        report(ctx, new Fail({ rule: 'emptyKey' }, 'empty key'));
         ok = false;
         continue;
       }
@@ -380,7 +378,7 @@ function record<S extends z.ZodType>(item: S) {
 }
 
 /** Comprimentos comerciais: lista não vazia de medidas > 0. */
-export const stockLengths = list(positiveMeasure, 'esperado array não vazio de medidas', true);
+export const stockLengths = list(positiveMeasure, 'expected a non-empty array of measurements', true);
 
 /** Pré-cortes de stud: lista não vazia de medidas > 0, ou uma medida só (vira lista de um). */
 export const precuts = z.unknown().transform((v, ctx): number[] => {
@@ -389,7 +387,7 @@ export const precuts = z.unknown().transform((v, ctx): number[] => {
     return r === undefined ? z.NEVER : [r.value];
   }
   if (v.length === 0) {
-    report(ctx, new Fail({ rule: 'nonEmptyList', received: v }, 'esperado ao menos um pré-corte'));
+    report(ctx, new Fail({ rule: 'nonEmptyList', received: v }, 'expected at least one precut length'));
     return z.NEVER;
   }
   return sub(ctx, list(positiveMeasure), v)?.value ?? z.NEVER;
@@ -415,8 +413,8 @@ export const headerSection = z.unknown().transform((v, ctx): Section => {
     ctx,
     new Fail(
       { rule: 'headerSection', received: v },
-      `esperado um de ${LUMBER_SECTIONS.join(', ')}, "LVL <esp>x<prof>", "PSL <esp>x<prof>" ou ` +
-        `{ material, width, depth }, recebido ${show(v)}`,
+      `expected one of ${LUMBER_SECTIONS.join(', ')}, "LVL <thickness>x<depth>", "PSL <thickness>x<depth>" or ` +
+        `{ material, width, depth }, got ${show(v)}`,
     ),
   );
   return z.NEVER;
@@ -440,7 +438,7 @@ export const panelShape = {
 };
 const panelNode = node(panelShape).transform((p, ctx): PanelConfig => {
   if (p.minLap > p.lap) {
-    report(ctx, new Fail({ rule: 'project', received: p.minLap }, `${p.minLap} maior que lap (${p.lap})`), ['minLap']);
+    report(ctx, new Fail({ rule: 'project', received: p.minLap }, `${p.minLap} is greater than lap (${p.lap})`), ['minLap']);
     return z.NEVER;
   }
   return p;
@@ -495,7 +493,7 @@ export const prices = z.unknown().transform((v, ctx): PriceEntry[] => {
       (q) => q.section === p.section && ('perFoot' in q ? 'perFoot' in p : !('perFoot' in p) && Math.abs(q.length - p.length) < 1 / 128),
     );
     if (dup) {
-      report(ctx, new Fail({ rule: 'project', received: item }, 'preço repetido para a mesma seção e comprimento'), [i]);
+      report(ctx, new Fail({ rule: 'project', received: item }, 'duplicate price for the same section and length'), [i]);
       ok = false;
       return;
     }
@@ -507,7 +505,7 @@ export const prices = z.unknown().transform((v, ctx): PriceEntry[] => {
 const REMOVED_CONFIG: Readonly<Record<string, string>> = Object.fromEntries(
   ['defaultHeaderSection', 'defaultHeaderPlies'].map((k) => [
     k,
-    'campo removido na S9.3 — parede não portante leva peça deitada (R602.7.4); header específico vai em openings[].header',
+    'field removed — a non-bearing wall gets a flat member (R602.7.4); a specific header goes in openings[].header',
   ]),
 );
 
@@ -589,7 +587,7 @@ export const planWallShape = {
   ends: node(endsShape).optional(),
 };
 
-const derived = (key: string) => `parede em planta não leva ${key} — o core deriva da planta (start/end)`;
+const derived = (key: string) => `a plan wall does not take ${key} — the engine derives it from the plan (start/end)`;
 const looseWallNode = node(looseWallShape);
 const planWallNode = node(planWallShape, { length: derived('length'), layoutOrigin: derived('layoutOrigin') });
 
@@ -605,11 +603,11 @@ type WallsFile = { format: 'loose'; walls: LooseWallFile[] } | { format: 'plan';
 
 const walls = z.unknown().transform((v, ctx): WallsFile => {
   if (!Array.isArray(v)) {
-    report(ctx, new Fail({ rule: 'list', received: v }, `esperado array de paredes, recebido ${show(v)}`));
+    report(ctx, new Fail({ rule: 'list', received: v }, `expected an array of walls, got ${show(v)}`));
     return z.NEVER;
   }
   if (v.length === 0) {
-    report(ctx, new Fail({ rule: 'nonEmptyList', received: v }, 'nenhuma parede'));
+    report(ctx, new Fail({ rule: 'nonEmptyList', received: v }, 'no walls'));
     return z.NEVER;
   }
   const inPlan = v.map(isPlanWallInput);
@@ -620,7 +618,7 @@ const walls = z.unknown().transform((v, ctx): WallsFile => {
       ctx,
       new Fail(
         { rule: 'project' },
-        'paredes em planta (start/end) e soltas (length) no mesmo arquivo — use um formato só',
+        'plan walls (start/end) and loose walls (length) in the same file — use only one format',
       ),
       [first],
     );
@@ -634,7 +632,7 @@ const walls = z.unknown().transform((v, ctx): WallsFile => {
   const ids = new Set<string>();
   for (const w of parsed.walls) {
     if (ids.has(w.id)) {
-      report(ctx, new Fail({ rule: 'project', received: w.id }, `id duplicado "${w.id}"`));
+      report(ctx, new Fail({ rule: 'project', received: w.id }, `duplicate id "${w.id}"`));
       return z.NEVER;
     }
     ids.add(w.id);
@@ -651,8 +649,8 @@ export const rootShape = {
   /** Data e revisão das folhas de fabricação (S17), texto livre. */
   date: text.optional(),
   revision: text.optional(),
-  /** Idioma das folhas e da planta (S34): `pt` ou `en`. Ausente = o padrão do core (`pt`, hipótese P51). */
-  locale: oneOf(SHEET_LOCALES).optional(),
+  /** Chave legada gravada pela S34 (`pt` ou `en`): aceita e ignorada — folhas e planta são sempre em inglês (P51). */
+  locale: oneOf(['pt', 'en'] as const).optional(),
   /** Seta do norte da planta (S16), graus; só em projeto em planta. */
   northAngle: degrees.optional(),
   config: node(configShape, REMOVED_CONFIG),
@@ -666,7 +664,6 @@ export type ProjectFile = {
   name?: string;
   date?: string;
   revision?: string;
-  locale?: SheetLocale;
   config: Config;
 } & ({ format: 'loose'; walls: LooseWallFile[] } | { format: 'plan'; walls: PlanWallFile[]; northAngle?: number });
 
@@ -674,7 +671,7 @@ export const projectFileSchema = node(rootShape).transform((p, ctx): ProjectFile
   let config: Config = p.config;
   if (p.stockLengths !== undefined) {
     if (config.stockLengths !== undefined) {
-      report(ctx, new Fail({ rule: 'project' }, 'informe o estoque só uma vez (aqui ou em config.stockLengths)'), [
+      report(ctx, new Fail({ rule: 'project' }, 'give the stock lengths only once (here or in config.stockLengths)'), [
         'stockLengths',
       ]);
       return z.NEVER;
@@ -682,10 +679,10 @@ export const projectFileSchema = node(rootShape).transform((p, ctx): ProjectFile
     config = { ...config, stockLengths: p.stockLengths };
   }
   if (p.northAngle !== undefined && p.walls.format !== 'plan') {
-    report(ctx, new Fail({ rule: 'project' }, 'só vale em projeto em planta (paredes com start/end)'), ['northAngle']);
+    report(ctx, new Fail({ rule: 'project' }, 'only valid in a plan project (walls with start/end)'), ['northAngle']);
     return z.NEVER;
   }
-  const head = compact({ name: p.name, date: p.date, revision: p.revision, locale: p.locale });
+  const head = compact({ name: p.name, date: p.date, revision: p.revision });
   if (p.walls.format === 'loose') return { ...head, config, format: 'loose', walls: p.walls.walls };
   return { ...head, config, format: 'plan', walls: p.walls.walls, ...compact({ northAngle: p.northAngle }) };
 });

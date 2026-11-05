@@ -61,17 +61,17 @@ export function layoutStuds(
     !Number.isFinite(studThickness) ||
     !Number.isFinite(origin)
   ) {
-    throw new RangeError('layoutStuds: argumentos devem ser números finitos');
+    throw new RangeError('layoutStuds: arguments must be finite numbers');
   }
   if (spacing <= 0) {
-    throw new RangeError(`layoutStuds: spacing deve ser > 0 (recebido ${spacing})`);
+    throw new RangeError(`layoutStuds: spacing must be > 0 (got ${spacing})`);
   }
   if (studThickness <= 0) {
-    throw new RangeError(`layoutStuds: studThickness deve ser > 0 (recebido ${studThickness})`);
+    throw new RangeError(`layoutStuds: studThickness must be > 0 (got ${studThickness})`);
   }
   if (length < studThickness) {
     throw new RangeError(
-      `layoutStuds: parede de ${length}" não comporta um stud de ${studThickness}"`,
+      `layoutStuds: a ${length}" wall does not fit a ${studThickness}" stud`,
     );
   }
 

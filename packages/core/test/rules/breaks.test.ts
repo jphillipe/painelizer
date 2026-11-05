@@ -109,8 +109,8 @@ describe('chooseBreaks (hipótese P35: equilibrado, módulo de 48 preferido)', (
   });
 
   it('sem candidato ao alcance: RangeError com a parede e o trecho', () => {
-    expect(() => choose(480, [])).toThrow(/parede W: não há como dividir 480" em painéis de até 240".*entre x=0 e x=240/);
-    expect(() => choose(600, [100, 200])).toThrow(/entre x=200 e x=440/);
+    expect(() => choose(480, [])).toThrow(/Wall W: cannot split 480" into panels of at most 240".*between x=0 and x=240/);
+    expect(() => choose(600, [100, 200])).toThrow(/between x=200 and x=440/);
   });
 });
 
@@ -191,13 +191,13 @@ describe('forcedBreaks (S29: lista completa do revisor)', () => {
       start: 165,
       end: 209,
     });
-    expect(() => forced([192, 320])).toThrow(/parede W: quebra de painel em x=192 \(panelBreaks\): cai na zona da\(s\) abertura\(s\) P1 \[165, 209\]/);
+    expect(() => forced([192, 320])).toThrow(/Wall W: panel break at x=192 \(panelBreaks\): falls in the zone of opening\(s\) P1 \[165, 209\]/);
   });
 
   it('trecho acima de maxLength: PANEL_TOO_LONG com o trecho', () => {
     expect(codeOf(() => forced([]))).toEqual({ code: 'PANEL_TOO_LONG', from: 0, to: 480, length: 480, maxLength: 240 });
     expect(codeOf(() => forced([224]))).toMatchObject({ code: 'PANEL_TOO_LONG', from: 224, to: 480, length: 256 });
-    expect(() => forced([224])).toThrow(/painel de x=224 a x=480 \(256"\) passa do máximo de 240"/);
+    expect(() => forced([224])).toThrow(/panel from x=224 to x=480 \(256"\) is over the 240" limit/);
   });
 
   it('não finita: VALUE_INVALID', () => {

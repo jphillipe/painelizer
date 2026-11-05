@@ -100,7 +100,7 @@ describe('panelizeHouse — fixtures', () => {
     expect(panels.filter((p) => p.wallId === 'W05').map((p) => p.plan)).toEqual(
       panelizeHouse(house, house28x40.config).panels.filter((p) => p.wallId === 'W05').map((p) => p.plan),
     );
-    expect(() => panelizeHouse({ walls: walls.map((w) => ({ ...w, level: 0 })) }, house28x40.config)).toThrow(/level deve ser inteiro ≥ 1/);
+    expect(() => panelizeHouse({ walls: walls.map((w) => ({ ...w, level: 0 })) }, house28x40.config)).toThrow(/level must be a whole number ≥ 1/);
   });
 });
 
@@ -124,12 +124,12 @@ describe('panelizeHouse — T e aberturas', () => {
   it('faixa do T na zona (kings/jacks) avisa OPENING_AT_TEE no painel da parede atravessada', () => {
     const { panels } = panelizeHouse(houseWith(100), config);
     expect(panels[0]!.warnings.map((w) => w.code)).toEqual(['OPENING_AT_TEE']);
-    expect(panels[0]!.warnings[0]!.message).toMatch(/parede W1: a parede W2 encosta em T em x=96 \(faixa 94.25–97.75\), na zona da\(s\) abertura\(s\) J1 \[97, 139\]/);
+    expect(panels[0]!.warnings[0]!.message).toMatch(/Wall W1: wall W2 meets it in a tee at x=96 \(strip 94.25–97.75\), in the zone of opening\(s\) J1 \[97, 139\]/);
     expect(panels[1]!.warnings).toEqual([]);
   });
 
   it('faixa do T dentro do RO é erro', () => {
-    expect(() => panelizeHouse(houseWith(90), config)).toThrow(/parede W1, abertura J1: a parede W2 encosta em T em x=96 \(faixa 94.25–97.75\), dentro do RO \[90, 126\]/);
+    expect(() => panelizeHouse(houseWith(90), config)).toThrow(/Wall W1, opening J1: wall W2 meets it in a tee at x=96 \(strip 94.25–97.75\), inside the RO \[90, 126\]/);
   });
 
   it('faixa do T fora da zona não avisa; encostar na zona não conta', () => {
@@ -173,7 +173,7 @@ describe('panelizeHouse — T e aberturas', () => {
   });
 
   it('erros da planta sobem como RangeError com os ids', () => {
-    expect(() => panelizeHouse({ walls: [{ ...base, id: 'A', start: { x: 0, y: 0 }, end: { x: 10, y: 10 }, openings: [] }] }, config)).toThrow(/parede A: fora dos eixos/);
+    expect(() => panelizeHouse({ walls: [{ ...base, id: 'A', start: { x: 0, y: 0 }, end: { x: 10, y: 10 }, openings: [] }] }, config)).toThrow(/Wall A: not parallel to the plan axes/);
   });
 });
 
@@ -207,6 +207,6 @@ describe('panelizeHouse — quebras forçadas na planta (S29)', () => {
   });
 
   it('erro em x do painel quando a medida do start não cai numa marca', () => {
-    expect(() => panelizeHouse(house([240]), config)).toThrow(/parede W1: quebra de painel em x=242\.75 \(panelBreaks\): não é o centro de um stud de layout/);
+    expect(() => panelizeHouse(house([240]), config)).toThrow(/Wall W1: panel break at x=242\.75 \(panelBreaks\): not the center of a layout stud/);
   });
 });

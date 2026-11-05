@@ -103,13 +103,6 @@ describe('edição de projeto e config', () => {
     expect(s.dirty).toBe(true);
   });
 
-  it('updateProject: idioma da folha (S34) grava e "default" apaga a chave', () => {
-    const en = run(loaded(), { type: 'updateProject', patch: { locale: 'en' } });
-    expect(draftOf(en).locale).toBe('en');
-    const back = run(en, { type: 'updateProject', patch: { locale: undefined } });
-    expect('locale' in draftOf(back)).toBe(false);
-  });
-
   it('updateBuilding cria, altera e remove o bloco', () => {
     const s = run(loaded(), { type: 'updateBuilding', patch: { windSpeed: 140 } });
     expect(draftOf(s).config.building).toMatchObject({ groundSnowLoad: 50, windSpeed: 140 });

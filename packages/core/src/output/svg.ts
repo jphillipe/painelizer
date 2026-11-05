@@ -23,8 +23,7 @@
  *   quando dois centros ficam a menos de 11 px), legenda das letras e avisos.
  * - Margem direita: lista de peças da `cutList` (qtd, papel, seção, pés-pol, polegadas), peso estimado
  *   (`weightLb`; madeira sem sheathing, P8) e cortes na obra.
- * - Idioma (S34): `opts.locale` escolhe as frases de `sheet/strings.ts` (`'pt'` padrão, `'en'`); o desenho é o
- *   mesmo nos dois.
+ * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
  * - Saída determinística: mesma entrada → mesma string.
  */
 
@@ -35,20 +34,12 @@ import { TITLE_HEIGHT, sheetHeader } from './sheet/header';
 import { FIELD_CUT_HATCH, fieldCutMark, memberLabels, memberRect, overhang } from './sheet/members';
 import { LIST_WIDTH, pieceList } from './sheet/pieceList';
 import { FONT, LABEL, MUTED, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
-import { sheetStrings, type SheetLocale, type SheetStrings } from './sheet/strings';
+import { sheetStrings, type SheetStrings } from './sheet/strings';
 
 export { verticalCenters } from './sheet/dims';
 export { memberBox, SHORT_LABEL, type MemberBox } from './sheet/members';
 export { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
-export {
-  DEFAULT_SHEET_LOCALE,
-  isSheetLocale,
-  SHEET_LOCALES,
-  sheetStrings,
-  viewNote,
-  type SheetLocale,
-  type SheetStrings,
-} from './sheet/strings';
+export { sheetStrings, viewNote, type SheetStrings } from './sheet/strings';
 
 export interface PanelSvgOptions {
   /** Pixels por polegada. Padrão 4. */
@@ -63,11 +54,6 @@ export interface PanelSvgOptions {
   date?: string;
   /** Revisão da folha, como texto (S17). Ausente = sem revisão. */
   revision?: string;
-  /**
-   * Idioma dos textos da folha (S34). Ausente = `DEFAULT_SHEET_LOCALE` (`'pt'`, hipótese P51). Desenho, cotas e
-   * números não mudam; só as frases.
-   */
-  locale?: SheetLocale;
 }
 
 const DIM_LEFT_WIDTH = 56;
@@ -86,16 +72,16 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const scale = opts.scale ?? 4;
   const studSpacing = opts.studSpacing ?? 16;
   const margin = opts.margin ?? 24;
-  const S = sheetStrings(opts.locale);
+  const S = sheetStrings();
 
   if (!Number.isFinite(scale) || scale <= 0) {
-    throw new RangeError(`panelSvg: scale inválido (${scale}); esperado número > 0`);
+    throw new RangeError(`panelSvg: invalid scale (${scale}); expected a number > 0`);
   }
   if (!Number.isFinite(studSpacing) || studSpacing <= 0) {
-    throw new RangeError(`panelSvg: studSpacing inválido (${studSpacing}); esperado número > 0`);
+    throw new RangeError(`panelSvg: invalid studSpacing (${studSpacing}); expected a number > 0`);
   }
   if (!Number.isFinite(margin) || margin < 0) {
-    throw new RangeError(`panelSvg: margin inválido (${margin}); esperado número ≥ 0`);
+    throw new RangeError(`panelSvg: invalid margin (${margin}); expected a number ≥ 0`);
   }
   if (
     !Number.isFinite(panel.length) ||
@@ -104,7 +90,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
     panel.height <= 0
   ) {
     throw new RangeError(
-      `panelSvg: painel ${panel.id} com dimensões inválidas (${panel.length} × ${panel.height})`,
+      `panelSvg: panel ${panel.id} has invalid dimensions (${panel.length} × ${panel.height})`,
     );
   }
 

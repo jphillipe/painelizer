@@ -220,7 +220,7 @@ describe('panelSvg — corte na obra', () => {
       ...doorPanel,
       fieldCuts: [{ role: 'bottomPlate', openingId: 'x', x: 100, length: 38 }],
     };
-    expect(() => panelSvg(broken)).toThrow(/abertura x .* bottomPlate/);
+    expect(() => panelSvg(broken)).toThrow(/opening x .* bottomPlate/);
   });
 
   it('snapshot da porta em test/__snapshots__/wall-120-door.svg', async () => {

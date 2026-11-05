@@ -43,7 +43,7 @@
       "sillHeight": null,
       "roughWidth": "3' - 2\"",
       "roughHeight": "6' - 10 1/2\"",
-      "description": "porta 1, WD/GLASS, batente metálico, 45 min (A-800)",
+      "description": "door 1, WD/GLASS, hollow metal frame, 45 min (A-800)",
       "confidence": 0.9,
       "evidence": "A-800 door schedule: 1 SINGLE 36\" X 80\" WD/GLASS METAL 45 MINUTES FIRE RATED; RO da hipótese P29"
     },
@@ -56,7 +56,7 @@
       "sillHeight": "1' - 11 3/4\"",
       "roughWidth": "4' - 10 1/2\"",
       "roughHeight": "6' - 0 1/2\"",
-      "description": "par de janelas tipo A (vinyl casement c/ transom), A-800",
+      "description": "pair of type A windows (vinyl casement with transom), A-800",
       "confidence": 0.7,
       "evidence": "A-800 window legend tipo A 2'-5\" x 6'-0\" em par; peitoril 2'-0\" na A-200 menos piso; RO da hipótese P28"
     },
@@ -69,7 +69,7 @@
       "sillHeight": null,
       "roughWidth": null,
       "roughHeight": null,
-      "description": "porta U2, WD (A-800)",
+      "description": "door U2, WD (A-800)",
       "confidence": 1,
       "evidence": "A-800 door schedule: U2 SINGLE 36\" X 80\" WD WD 3'-0\" 6'-8\""
     }

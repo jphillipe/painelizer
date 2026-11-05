@@ -86,10 +86,10 @@ describe('layoutPlates — laps e cortes da double top plate (S14, R602.3.2)', (
 
   it('rejeita lap negativo, extend e recess juntos, corte fora da peça, cortes sobrepostos e peça consumida', () => {
     expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { start: { extend: -1 } })).toThrow(RangeError);
-    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { end: { extend: 2, recess: 2 } })).toThrow(/extend e recess/);
-    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 95, width: 10 }] })).toThrow(/sai da double top/);
-    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 10, width: 10 }, { x: 15, width: 10 }] })).toThrow(/sobrepõe/);
-    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 0, width: 100 }] })).toThrow(/inteira/);
-    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { start: { recess: 60 }, end: { recess: 60 } })).toThrow(/sem comprimento/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { end: { extend: 2, recess: 2 } })).toThrow(/both extend and recess/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 95, width: 10 }] })).toThrow(/runs off the double top/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 10, width: 10 }, { x: 15, width: 10 }] })).toThrow(/overlaps the previous cut/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { cuts: [{ x: 0, width: 100 }] })).toThrow(/whole double top plate/);
+    expect(() => layoutPlates(100, 97.125, '2x4', 1.5, { start: { recess: 60 }, end: { recess: 60 } })).toThrow(/has no length/);
   });
 });

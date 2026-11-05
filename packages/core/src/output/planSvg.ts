@@ -15,7 +15,7 @@
  *   fora (o lado oposto ao centro da planta) e o id da parede, do lado de dentro, no meio da plate.
  * - Cotas externas totais (faces externas) embaixo e à esquerda; seta do norte no canto superior direito quando
  *   `house.northAngle` existe (graus, do +y da planta no sentido horário).
- * - Idioma (S34): `opts.locale` escolhe as frases de `sheet/strings.ts` (`'pt'` padrão, `'en'`).
+ * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
  * - Saída determinística: mesma entrada → mesma string.
  */
 
@@ -25,17 +25,15 @@ import type { Point } from '../wall';
 import type { House, HouseWall } from '../house/types';
 import { formatFeetInches } from '../units';
 import { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
-import { sheetStrings, type SheetLocale, type SheetStrings } from './sheet/strings';
+import { sheetStrings, type SheetStrings } from './sheet/strings';
 
 export interface PlanSvgOptions {
   /** Pixels por polegada. Padrão 2. */
   scale?: number;
   /** Margem externa em px. Padrão 24. */
   margin?: number;
-  /** Título no topo. Padrão "Planta de painéis" ("Panel plan" em inglês). */
+  /** Título no topo. Padrão "Panel plan". */
   title?: string;
-  /** Idioma dos textos (S34). Ausente = `DEFAULT_SHEET_LOCALE` (`'pt'`, hipótese P51). */
-  locale?: SheetLocale;
 }
 
 const FILL_EXTERIOR = '#d9c9a8';
@@ -76,16 +74,16 @@ interface WallGeom {
 export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanSvgOptions = {}): string {
   const scale = opts.scale ?? 2;
   const margin = opts.margin ?? 24;
-  const S = sheetStrings(opts.locale);
+  const S = sheetStrings();
   const title = opts.title ?? S.plan.title;
   if (!Number.isFinite(scale) || scale <= 0) {
-    throw new RangeError(`housePlanSvg: scale inválido (${scale}); esperado número > 0`);
+    throw new RangeError(`housePlanSvg: invalid scale (${scale}); expected a number > 0`);
   }
   if (!Number.isFinite(margin) || margin < 0) {
-    throw new RangeError(`housePlanSvg: margin inválido (${margin}); esperado número ≥ 0`);
+    throw new RangeError(`housePlanSvg: invalid margin (${margin}); expected a number ≥ 0`);
   }
   if (house.northAngle !== undefined && !Number.isFinite(house.northAngle)) {
-    throw new RangeError(`housePlanSvg: northAngle inválido (${house.northAngle}); esperado graus finitos`);
+    throw new RangeError(`housePlanSvg: invalid northAngle (${house.northAngle}); expected finite degrees`);
   }
 
   const walls = wallGeoms(house, panels);
@@ -203,10 +201,10 @@ function wallGeoms(house: House, panels: readonly Panel[]): WallGeom[] {
   const byWall = new Map<string, Panel[]>();
   for (const p of panels) {
     if (p.plan === undefined) {
-      throw new RangeError(`housePlanSvg: painel ${p.id} sem plan — use os painéis de panelizeHouse`);
+      throw new RangeError(`housePlanSvg: panel ${p.id} has no plan — use the panels from panelizeHouse`);
     }
     if (!ids.has(p.wallId)) {
-      throw new RangeError(`housePlanSvg: painel ${p.id} é da parede ${p.wallId}, que não está na casa`);
+      throw new RangeError(`housePlanSvg: panel ${p.id} belongs to wall ${p.wallId}, which is not in the house`);
     }
     const list = byWall.get(p.wallId) ?? [];
     list.push(p);
@@ -214,7 +212,7 @@ function wallGeoms(house: House, panels: readonly Panel[]): WallGeom[] {
   }
   return house.walls.map((wall) => {
     const own = [...(byWall.get(wall.id) ?? [])].sort((a, b) => a.wallOffset - b.wallOffset);
-    if (own.length === 0) throw new RangeError(`housePlanSvg: parede ${wall.id} sem painéis`);
+    if (own.length === 0) throw new RangeError(`housePlanSvg: wall ${wall.id} has no panels`);
     const dx = wall.end.x - wall.start.x;
     const dy = wall.end.y - wall.start.y;
     const dir = dx !== 0 ? 'x' : 'y';

@@ -58,6 +58,6 @@ describe('splicePlates (P14)', () => {
       ...whole,
       members: whole.members.filter((m) => m.role !== 'stud' || m.x === 0 || m.x === 238.5),
     };
-    expect(() => splicePlates(bare, [192], cfg)).toThrow(/topPlate de 240".*não há stud/);
+    expect(() => splicePlates(bare, [192], cfg)).toThrow(/topPlate of 240".*no stud between/);
   });
 });

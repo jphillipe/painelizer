@@ -133,7 +133,7 @@ export async function openPdf(data: Uint8Array): Promise<PdfFile> {
   const { doc, close } = await open(data);
   const getPage = async (page: number) => {
     if (!Number.isInteger(page) || page < 1 || page > doc.numPages) {
-      throw new ExtractInputError('PAGE_OUT_OF_RANGE', `página ${page} fora do PDF (${doc.numPages} páginas)`, { page, pages: doc.numPages });
+      throw new ExtractInputError('PAGE_OUT_OF_RANGE', `page ${page} is outside the PDF (${doc.numPages} pages)`, { page, pages: doc.numPages });
     }
     return doc.getPage(page);
   };
@@ -319,11 +319,11 @@ function titleAboveNumber(items: readonly Placed[], number: Placed): string {
 
 /** Novo PDF só com as páginas pedidas (1-based, na ordem dada). */
 export async function subsetPdf(data: Uint8Array, pages: readonly number[]): Promise<Uint8Array> {
-  if (pages.length === 0) throw new RangeError('subsetPdf: nenhuma página pedida');
+  if (pages.length === 0) throw new RangeError('subsetPdf: no pages requested');
   const src = await PDFDocument.load(data);
   const n = src.getPageCount();
   for (const p of pages) {
-    if (!Number.isInteger(p) || p < 1 || p > n) throw new ExtractInputError('PAGE_OUT_OF_RANGE', `página ${p} fora do PDF (${n} páginas)`, { page: p, pages: n });
+    if (!Number.isInteger(p) || p < 1 || p > n) throw new ExtractInputError('PAGE_OUT_OF_RANGE', `page ${p} is outside the PDF (${n} pages)`, { page: p, pages: n });
   }
   const out = await PDFDocument.create();
   const copied = await out.copyPages(

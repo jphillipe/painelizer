@@ -58,17 +58,17 @@ export function layoutPlates(
   opts: PlateOptions = {},
 ): PlateMember[] {
   if (!Number.isFinite(length) || !Number.isFinite(height) || !Number.isFinite(plateThickness)) {
-    throw new RangeError('layoutPlates: argumentos devem ser números finitos');
+    throw new RangeError('layoutPlates: arguments must be finite numbers');
   }
   if (length <= 0) {
-    throw new RangeError(`layoutPlates: length deve ser > 0 (recebido ${length})`);
+    throw new RangeError(`layoutPlates: length must be > 0 (got ${length})`);
   }
   if (plateThickness <= 0) {
-    throw new RangeError(`layoutPlates: plateThickness deve ser > 0 (recebido ${plateThickness})`);
+    throw new RangeError(`layoutPlates: plateThickness must be > 0 (got ${plateThickness})`);
   }
   if (height <= 3 * plateThickness) {
     throw new RangeError(
-      `layoutPlates: altura ${height}" não comporta 3 plates de ${plateThickness}" mais um stud`,
+      `layoutPlates: a ${height}" height does not fit 3 plates of ${plateThickness}" plus a stud`,
     );
   }
 
@@ -93,7 +93,7 @@ function doubleTopPieces(length: number, opts: PlateOptions): { x: number; lengt
   const x0 = 0 - lap('start', opts.start);
   const x1 = length + lap('end', opts.end);
   if (x1 - x0 <= EPS) {
-    throw new RangeError(`layoutPlates: double top plate sem comprimento (de ${x0}" a ${x1}")`);
+    throw new RangeError(`layoutPlates: double top plate has no length (from ${x0}" to ${x1}")`);
   }
 
   const cuts = [...(opts.cuts ?? [])].sort((a, b) => a.x - b.x);
@@ -101,7 +101,7 @@ function doubleTopPieces(length: number, opts: PlateOptions): { x: number; lengt
   let cursor = x0;
   for (const [i, c] of cuts.entries()) {
     if (!Number.isFinite(c.x) || !Number.isFinite(c.width) || c.width <= 0) {
-      throw new RangeError(`layoutPlates: cuts[${i}] inválido (x=${c.x}, width=${c.width})`);
+      throw new RangeError(`layoutPlates: invalid cuts[${i}] (x=${c.x}, width=${c.width})`);
     }
     const lo = c.x;
     const hi = c.x + c.width;
@@ -109,18 +109,18 @@ function doubleTopPieces(length: number, opts: PlateOptions): { x: number; lengt
     if (hi <= x0 + EPS || lo >= x1 - EPS) continue;
     if (lo < x0 - EPS || hi > x1 + EPS) {
       throw new RangeError(
-        `layoutPlates: cuts[${i}] de ${lo}" a ${hi}" sai da double top plate (de ${x0}" a ${x1}")`,
+        `layoutPlates: cuts[${i}] from ${lo}" to ${hi}" runs off the double top plate (from ${x0}" to ${x1}")`,
       );
     }
     if (lo < cursor - EPS) {
-      throw new RangeError(`layoutPlates: cuts[${i}] de ${lo}" a ${hi}" sobrepõe o corte anterior`);
+      throw new RangeError(`layoutPlates: cuts[${i}] from ${lo}" to ${hi}" overlaps the previous cut`);
     }
     if (lo - cursor > EPS) pieces.push({ x: cursor, length: lo - cursor });
     cursor = Math.max(cursor, hi);
   }
   if (x1 - cursor > EPS) pieces.push({ x: cursor, length: x1 - cursor });
   if (pieces.length === 0) {
-    throw new RangeError('layoutPlates: os cortes consumiram a double top plate inteira');
+    throw new RangeError('layoutPlates: the cuts take up the whole double top plate');
   }
   return pieces;
 }
@@ -131,10 +131,10 @@ function lap(end: 'start' | 'end', e: PlateEndLap | undefined): number {
   const extend = e.extend ?? 0;
   const recess = e.recess ?? 0;
   if (!Number.isFinite(extend) || extend < 0 || !Number.isFinite(recess) || recess < 0) {
-    throw new RangeError(`layoutPlates: ${end} com lap inválido (extend=${extend}, recess=${recess})`);
+    throw new RangeError(`layoutPlates: invalid lap at ${end} (extend=${extend}, recess=${recess})`);
   }
   if (extend > EPS && recess > EPS) {
-    throw new RangeError(`layoutPlates: ${end} com extend e recess ao mesmo tempo`);
+    throw new RangeError(`layoutPlates: ${end} has both extend and recess`);
   }
   return extend - recess;
 }

@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="894" height="700.5" viewBox="0 0 894 700.5" font-family="Helvetica, Arial, sans-serif">
 <rect width="894" height="700.5" fill="#ffffff"/>
 <text x="24" y="42" font-size="18" font-weight="bold" fill="#000">W-door</text>
-<text class="info" x="24" y="58" font-size="12" fill="#333">parede W-door · pavimento 1 · 2x6 externa portante · 10'-0&quot; × 8'-1 1/8&quot; · 17 peças · 234.3 lb</text>
-<text class="view" x="24" y="72" font-size="11" fill="#333">Vista de fora — face externa voltada para o observador; início da parede (x=0) à esquerda (hipótese P24)</text>
+<text class="info" x="24" y="58" font-size="12" fill="#333">wall W-door · level 1 · 2x6 exterior bearing · 10'-0&quot; × 8'-1 1/8&quot; · 17 pieces · 234.3 lb</text>
+<text class="view" x="24" y="72" font-size="11" fill="#333">Viewed from outside — exterior face toward the viewer; start of wall (x=0) on the left (hypothesis P24)</text>
 <rect x="80" y="84" width="480" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
 <g class="members" stroke="#5a4632" stroke-width="1">
 <rect class="member bottomPlate" x="80" y="466.5" width="480" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 120&quot; — x=0&quot; y=0&quot;</title></rect>
@@ -30,8 +30,8 @@
 <text class="label kingStud" x="401" y="106">K</text>
 </g>
 <defs><pattern id="field-cut-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#c0392b" stroke-width="2"/></pattern></defs>
-<rect class="field-cut" x="240" y="466.5" width="152" height="6" fill="url(#field-cut-hatch)" stroke="#c0392b" stroke-width="1" stroke-dasharray="3 2"><title>cortar na obra 38&quot; — bottomPlate, abertura door1, x=40&quot;</title></rect>
-<text x="316" y="462.5" font-size="10" fill="#c0392b" text-anchor="middle">cortar na obra 38&quot;</text>
+<rect class="field-cut" x="240" y="466.5" width="152" height="6" fill="url(#field-cut-hatch)" stroke="#c0392b" stroke-width="1" stroke-dasharray="3 2"><title>field cut 38&quot; — bottomPlate, opening door1, x=40&quot;</title></rect>
+<text x="316" y="462.5" font-size="10" fill="#c0392b" text-anchor="middle">field cut 38&quot;</text>
 <g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
 <line x1="240" y1="142.5" x2="240" y2="182.5"/>
 <line x1="392" y1="142.5" x2="392" y2="182.5"/>
@@ -40,7 +40,7 @@
 <line x1="389" y1="181.5" x2="395" y2="175.5"/>
 </g>
 <text x="316" y="174.5" font-size="12" fill="#1f4e79" text-anchor="middle">RO 38&quot;</text>
-<text class="opening-id" x="316" y="190.5" font-size="10" fill="#666" text-anchor="middle">door1 · porta</text>
+<text class="opening-id" x="316" y="190.5" font-size="10" fill="#666" text-anchor="middle">door1 · door</text>
 <g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
 <line x1="392" y1="142.5" x2="368" y2="142.5"/>
 <line x1="392" y1="472.5" x2="368" y2="472.5"/>
@@ -49,7 +49,7 @@
 <line x1="369" y1="475.5" x2="375" y2="469.5"/>
 </g>
 <text x="368" y="307.5" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 368 307.5)">RO 82 1/2&quot; = header 82 1/2&quot;</text>
-<text class="face" x="320" y="81" font-size="10" fill="#666" text-anchor="middle">face externa (vista de fora)</text>
+<text class="face" x="320" y="81" font-size="10" fill="#666" text-anchor="middle">exterior face (viewed from outside)</text>
 <g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
 <line x1="80" y1="472.5" x2="80" y2="504.5"/>
 <line x1="560" y1="472.5" x2="560" y2="504.5"/>
@@ -118,8 +118,8 @@
 <text class="chain-label row-0" x="560" y="564.5" transform="rotate(-90 560 564.5)">119 1/4&quot;</text>
 </g>
 <g class="pieces" font-size="11" fill="#000">
-<text x="588" y="96" font-size="12" font-weight="bold">Peças</text>
-<g font-size="9" fill="#666"><text x="606" y="111" text-anchor="end">qtd</text><text x="614" y="111">peça</text><text x="684" y="111">seção</text><text x="818" y="111" text-anchor="end">pés-pol</text><text x="870" y="111" text-anchor="end">pol</text></g>
+<text x="588" y="96" font-size="12" font-weight="bold">Pieces</text>
+<g font-size="9" fill="#666"><text x="606" y="111" text-anchor="end">qty</text><text x="614" y="111">piece</text><text x="684" y="111">size</text><text x="818" y="111" text-anchor="end">ft-in</text><text x="870" y="111" text-anchor="end">in</text></g>
 <line x1="588" y1="114" x2="870" y2="114" stroke="#666" stroke-width="0.5"/>
 <g class="piece plates"><text x="606" y="124" text-anchor="end">3</text><text x="614" y="124">plate</text><text x="684" y="124">2x6</text><text x="818" y="124" text-anchor="end">10'-0&quot;</text><text x="870" y="124" text-anchor="end">120&quot;</text></g>
 <g class="piece stud"><text x="606" y="137" text-anchor="end">6</text><text x="614" y="137">stud</text><text x="684" y="137">2x6</text><text x="818" y="137" text-anchor="end">7'-8 5/8&quot;</text><text x="870" y="137" text-anchor="end">92 5/8&quot;</text></g>
@@ -129,11 +129,11 @@
 <g class="piece cripple"><text x="606" y="189" text-anchor="end">2</text><text x="614" y="189">cripple (C)</text><text x="684" y="189">2x6</text><text x="818" y="189" text-anchor="end">2 3/8&quot;</text><text x="870" y="189" text-anchor="end">2 3/8&quot;</text></g>
 <line x1="588" y1="193" x2="870" y2="193" stroke="#666" stroke-width="0.5"/>
 <text x="606" y="202" text-anchor="end" font-weight="bold">17</text>
-<text x="614" y="202" font-weight="bold">peças a cortar</text>
-<text class="weight" x="588" y="221">Peso estimado: 234.3 lb</text>
-<text x="588" y="232" font-size="9" fill="#666">madeira sem sheathing (hipótese P8)</text>
-<text x="588" y="251" font-weight="bold" fill="#c0392b">Cortar na obra</text>
-<text class="field-cut-item" x="588" y="264" fill="#c0392b">bottom plate 38&quot; de x=40&quot; a 78&quot; (door1)</text>
+<text x="614" y="202" font-weight="bold">pieces to cut</text>
+<text class="weight" x="588" y="221">Estimated weight: 234.3 lb</text>
+<text x="588" y="232" font-size="9" fill="#666">lumber only, no sheathing (hypothesis P8)</text>
+<text x="588" y="251" font-weight="bold" fill="#c0392b">Field cuts</text>
+<text class="field-cut-item" x="588" y="264" fill="#c0392b">bottom plate 38&quot; from x=40&quot; to 78&quot; (door1)</text>
 </g>
-<text class="legend" x="24" y="670.5" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B bloco · hachura vermelha = cortar na obra · rodapé: marcas de layout e centro de cada peça vertical a partir de x=0</text>
+<text class="legend" x="24" y="670.5" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0</text>
 </svg>

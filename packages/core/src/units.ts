@@ -20,17 +20,17 @@ const PATTERN =
  */
 export function parseFeetInches(s: string): number {
   const m = PATTERN.exec(s);
-  if (!m) throw new RangeError(`Medida inválida: "${s}"`);
+  if (!m) throw new RangeError(`Invalid measurement: "${s}"`);
   const [, feet, whole, num, den] = m;
   if (feet === undefined && whole === undefined && num === undefined) {
-    throw new RangeError(`Medida inválida: "${s}"`);
+    throw new RangeError(`Invalid measurement: "${s}"`);
   }
   let inches = 0;
   if (feet !== undefined) inches += Number(feet) * 12;
   if (whole !== undefined) inches += Number(whole);
   if (num !== undefined && den !== undefined) {
     const d = Number(den);
-    if (d === 0) throw new RangeError(`Medida inválida: "${s}"`);
+    if (d === 0) throw new RangeError(`Invalid measurement: "${s}"`);
     inches += Number(num) / d;
   }
   return inches;
@@ -60,7 +60,7 @@ export function formatInches(n: number): string {
 }
 
 function decompose(n: number): { sign: '' | '-'; feet: number; whole: number; num: number; den: number } {
-  if (!Number.isFinite(n)) throw new RangeError(`Medida inválida: ${n}`);
+  if (!Number.isFinite(n)) throw new RangeError(`Invalid measurement: ${n}`);
   const sixteenths = Math.round(Math.abs(n) * DENOMINATOR);
   // Sinal só quando sobra algo depois do arredondamento (−0.01 é `0"`, não `-0"`).
   const sign = n < 0 && sixteenths > 0 ? '-' : '';

@@ -17,10 +17,10 @@ function project(overrides: Record<string, unknown> = {}, wall: Record<string, u
 
 describe('schema strict (S28.2)', () => {
   it.each([
-    [project({ nome: 'x' }), /^projeto\.nome: chave desconhecida/],
+    [project({ nome: 'x' }), /^projeto\.nome: unknown key/],
     [
       project({ config: { studSpacing: 16, studLength: 92.625, studSpace: 16 } }),
-      /^projeto\.config\.studSpace: chave desconhecida/,
+      /^projeto\.config\.studSpace: unknown key/,
     ],
     [
       project({
@@ -30,31 +30,31 @@ describe('schema strict (S28.2)', () => {
           building: { groundSnowLoad: 30, buildingWidth: 300, wind: 120 },
         },
       }),
-      /^projeto\.config\.building\.wind: chave desconhecida/,
+      /^projeto\.config\.building\.wind: unknown key/,
     ],
     [
       project({ config: { studSpacing: 16, studLength: 92.625, panel: { maxLenght: 200 } } }),
-      /^projeto\.config\.panel\.maxLenght: chave desconhecida/,
+      /^projeto\.config\.panel\.maxLenght: unknown key/,
     ],
-    [project({}, { heigth: 97.125 }), /^projeto\.walls\[0\]\.heigth: chave desconhecida/],
+    [project({}, { heigth: 97.125 }), /^projeto\.walls\[0\]\.heigth: unknown key/],
     [
       project({}, { openings: [{ ...opening, doubleSilOver: true }] }),
-      /^projeto\.walls\[0\]\.openings\[0\]\.doubleSilOver: chave desconhecida/,
+      /^projeto\.walls\[0\]\.openings\[0\]\.doubleSilOver: unknown key/,
     ],
     [
       project({}, { openings: [{ ...opening, header: { section: '2x10', plies: 2, kings: 2 } }] }),
-      /header\.kings: chave desconhecida/,
+      /header\.kings: unknown key/,
     ],
-    [project({}, { extraStuds: [{ x: 40, n: 2 }] }), /^projeto\.walls\[0\]\.extraStuds\[0\]\.n: chave desconhecida/],
-  ])('chave desconhecida é erro com o caminho dela (%#)', (raw, message) => {
+    [project({}, { extraStuds: [{ x: 40, n: 2 }] }), /^projeto\.walls\[0\]\.extraStuds\[0\]\.n: unknown key/],
+  ])('unknown key é erro com o caminho dela (%#)', (raw, message) => {
     expect(() => projectFrom(raw, 'projeto')).toThrow(ProjectError);
     expect(() => projectFrom(raw, 'projeto')).toThrow(message);
   });
 
-  it('chave desconhecida vem antes do campo que ela deveria ser (erro de grafia aponta a grafia)', () => {
+  it('unknown key vem antes do campo que ela deveria ser (erro de grafia aponta a grafia)', () => {
     const { height: _h, ...noHeight } = loose;
     expect(() => projectFrom({ ...project(), walls: [{ ...noHeight, heigth: 97.125 }] }, 'p')).toThrow(
-      /^p\.walls\[0\]\.heigth: chave desconhecida/,
+      /^p\.walls\[0\]\.heigth: unknown key/,
     );
   });
 
@@ -89,7 +89,7 @@ describe('schema strict (S28.2)', () => {
       issues: [
         {
           path: [],
-          message: `esperado 16 ou 24 (polegadas), recebido "16'"`,
+          message: `expected 16 or 24 (inches), got "16'"`,
           params: { rule: 'studSpacing', received: `16'` },
         },
       ],
@@ -116,15 +116,15 @@ describe('schema strict (S28.2)', () => {
   });
 });
 
-describe('locale (S34)', () => {
-  it('pt ou en na raiz; ausente = sem locale (o core usa o padrão)', () => {
-    expect(projectFrom(project({ locale: 'en' }), 'p').locale).toBe('en');
-    expect(projectFrom(project({ locale: 'pt' }), 'p').locale).toBe('pt');
-    expect(projectFrom(project(), 'p')).not.toHaveProperty('locale');
+describe('locale legado (S34; P51: folhas sempre em inglês)', () => {
+  it('pt ou en na raiz ainda é aceito e ignorado', () => {
+    expect(projectFrom(project({ locale: 'en' }), 'p')).toEqual(projectFrom(project(), 'p'));
+    expect(projectFrom(project({ locale: 'pt' }), 'p')).toEqual(projectFrom(project(), 'p'));
+    expect(projectFrom(project({ locale: 'pt' }), 'p')).not.toHaveProperty('locale');
   });
 
   it('outro valor é erro oneOf com os aceitos', () => {
-    expect(() => projectFrom(project({ locale: 'es' }), 'p')).toThrow(/^p.locale: esperado um de pt, en, recebido "es"/);
+    expect(() => projectFrom(project({ locale: 'es' }), 'p')).toThrow(/^p.locale: expected one of pt, en, got "es"/);
     const r = projectFileSchema.safeParse(project({ locale: 'EN' }));
     expect(r.success).toBe(false);
     expect((r.error!.issues[0] as { params?: unknown }).params).toEqual({ rule: 'oneOf', received: 'EN', allowed: ['pt', 'en'] });
@@ -160,15 +160,15 @@ describe('fireBlockAt e prices (S31)', () => {
   });
 
   it.each([
-    [{ prices: [{ section: '2x4', length: 96, price: -1 }] }, 'p.config.prices[0].price: esperado preço'],
+    [{ prices: [{ section: '2x4', length: 96, price: -1 }] }, 'p.config.prices[0].price: expected a price'],
     [{ prices: [{ section: '2x4', price: 1 }] }, 'p.config.prices[0].length'],
-    [{ prices: [{ section: '2x4', perFoot: 1, length: 96 }] }, 'p.config.prices[0].length: chave desconhecida'],
+    [{ prices: [{ section: '2x4', perFoot: 1, length: 96 }] }, 'p.config.prices[0].length: unknown key'],
     [{ prices: [{ section: '2x5', perFoot: 1 }] }, 'p.config.prices[0].section'],
     [
       { prices: [{ section: '2x4', length: 96, price: 1 }, { section: '2x4', length: "8'", price: 2 }] },
-      'p.config.prices[1]: preço repetido',
+      'p.config.prices[1]: duplicate price',
     ],
-    [{ prices: { '2x4': 1 } }, 'p.config.prices: esperado array'],
+    [{ prices: { '2x4': 1 } }, 'p.config.prices: expected an array'],
   ])('prices inválido aponta o campo (%#)', (extra, message) => {
     expect(() => projectFrom(cfg(extra), 'p')).toThrow(message);
   });

@@ -54,7 +54,7 @@ describe('findConnections — canto', () => {
   it('as duas declarando o mesmo papel no mesmo canto é erro', () => {
     expect(() =>
       findConnections([wall('A', [0, 0], [0, 60], { ends: { start: 'through' } }), wall('B', [0, 0], [200, 0], { ends: { start: 'through' } })]),
-    ).toThrow(/A \(start\) e B \(start\): as duas declaram ends "through"/);
+    ).toThrow(/A \(start\) and B \(start\) both declare ends "through"/);
   });
 
   it('ends de uma ponta livre não interfere', () => {
@@ -162,16 +162,16 @@ describe('findConnections — T e livre', () => {
 describe('findConnections — erros', () => {
   it('paredes que se cruzam', () => {
     expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [100, -50], [100, 50])])).toThrow(
-      /paredes A e B se cruzam em \(100, 0\)/,
+      /Walls A and B cross at \(100, 0\)/,
     );
   });
 
   it('paredes colineares ou lado a lado que se sobrepõem', () => {
-    expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [150, 0], [300, 0])])).toThrow(/A e B se sobrepõem em 50"/);
+    expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [150, 0], [300, 0])])).toThrow(/A and B overlap by 50"/);
     // Colineares ponta a ponta: duas paredes livres em sequência, não é erro.
     expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [200, 0], [300, 0])])).not.toThrow();
     // Paralelas lado a lado, corpos sobrepostos (eixos a 2" com 5.5" de espessura) também.
-    expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [0, 2], [200, 2])])).toThrow(/se sobrepõem/);
+    expect(() => findConnections([wall('A', [0, 0], [200, 0]), wall('B', [0, 2], [200, 2])])).toThrow(/overlap by/);
   });
 
   it('paralelas afastadas ou colineares com vão não são erro', () => {
@@ -182,10 +182,10 @@ describe('findConnections — erros', () => {
   it('três pontas no mesmo ponto', () => {
     expect(() =>
       findConnections([wall('A', [0, 0], [100, 0]), wall('B', [0, 0], [0, 100]), wall('C', [0, 0], [-100, 0])]),
-    ).toThrow(/parede B: ponta start ligada a duas paredes \(A e C\)/);
+    ).toThrow(/Wall B: the start end meets two walls \(A and C\)/);
     expect(() =>
       findConnections([wall('A', [0, 0], [100, 0]), wall('B', [0, 0], [0, 100]), wall('C', [0, 0], [0, -100])]),
-    ).toThrow(/ponta start ligada a duas paredes/);
+    ).toThrow(/the start end meets two walls/);
   });
 
   it('canto e T no mesmo lugar', () => {
@@ -194,12 +194,12 @@ describe('findConnections — erros', () => {
     ).not.toThrow(); // cruz: dois tees em A
     expect(() =>
       findConnections([wall('A', [0, 0], [100, 0]), wall('B', [0, 0], [0, 100]), wall('C', [-50, 0], [50, 0])]),
-    ).toThrow(/se sobrepõem/);
+    ).toThrow(/overlap by/);
   });
 
   it('id duplicado, parede diagonal e comprimento zero', () => {
-    expect(() => findConnections([wall('A', [0, 0], [100, 0]), wall('A', [0, 50], [100, 50])])).toThrow(/parede A: id duplicado/);
-    expect(() => findConnections([wall('A', [0, 0], [100, 100])])).toThrow(/fora dos eixos/);
-    expect(() => findConnections([wall('A', [0, 0], [0, 0])])).toThrow(/coincidem/);
+    expect(() => findConnections([wall('A', [0, 0], [100, 0]), wall('A', [0, 50], [100, 50])])).toThrow(/Wall A: duplicate wall id/);
+    expect(() => findConnections([wall('A', [0, 0], [100, 100])])).toThrow(/not parallel to the plan axes/);
+    expect(() => findConnections([wall('A', [0, 0], [0, 0])])).toThrow(/start and end are the same point/);
   });
 });

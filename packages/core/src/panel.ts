@@ -109,7 +109,7 @@ export function labelOf(m: Member): string | undefined {
 export function pieceCount(member: Member | { plies?: number }): number {
   const plies = ('plies' in member ? member.plies : undefined) ?? 1;
   if (!isCount(plies)) {
-    throw new RangeError(`cutList: plies inválido (${plies}); esperado inteiro ≥ 1`);
+    throw new RangeError(`cutList: invalid plies (${plies}); expected a whole number ≥ 1`);
   }
   return plies;
 }

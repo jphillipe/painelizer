@@ -9,7 +9,7 @@ describe('panels.service.generate', () => {
   it('casa-exemplo: 7 painéis, arquivos de lista e folhas, sem avisos', () => {
     const r = generate(exampleText('casa-exemplo') as string);
     if (!r.ok) throw new Error(r.problems.join('\n'));
-    expect(r.projectName).toBe('casa-exemplo');
+    expect(r.projectName).toBe('sample-house');
     expect(r.panels).toHaveLength(7);
     expect(r.files.map((f) => f.path).slice(0, 4)).toEqual(['cutlist.csv', 'bom.csv', 'panels.csv', 'plan.svg']);
     expect(r.files.filter((f) => f.path.startsWith('panels/'))).toHaveLength(7);

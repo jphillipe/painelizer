@@ -24,9 +24,9 @@ describe('axisOf', () => {
   });
 
   it('diagonal, comprimento zero ou coordenada não finita lançam RangeError com o id', () => {
-    expect(() => axisOf(wall('D', [0, 0], [10, 10]))).toThrow(/parede D: fora dos eixos/);
-    expect(() => axisOf(wall('Z', [3, 3], [3, 3]))).toThrow(/parede Z: start e end coincidem/);
-    expect(() => axisOf(wall('N', [0, 0], [NaN, 0]))).toThrow(/parede N: end/);
+    expect(() => axisOf(wall('D', [0, 0], [10, 10]))).toThrow(/Wall D: not parallel to the plan axes/);
+    expect(() => axisOf(wall('Z', [3, 3], [3, 3]))).toThrow(/Wall Z: start and end are the same point/);
+    expect(() => axisOf(wall('N', [0, 0], [NaN, 0]))).toThrow(/Wall N: end/);
   });
 });
 

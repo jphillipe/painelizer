@@ -141,7 +141,7 @@ describe('frameWalls — erros', () => {
         }),
       ],
     };
-    expect(() => frameWalls(house)).toThrow(/parede W2, abertura j: RO de 1" a 37" do start não cabe na plate \(de 2.75" a 120"/);
+    expect(() => frameWalls(house)).toThrow(/Wall W2, opening j: the RO from 1" to 37" from start does not fit on the plate \(2.75" to 120"/);
   });
 
   it('plate sem comprimento (parede curta entre duas que atravessam)', () => {
@@ -152,11 +152,11 @@ describe('frameWalls — erros', () => {
         wall('C', [0, 0], [5, 0], { section: '2x4' }),
       ],
     };
-    expect(() => frameWalls(house)).toThrow(/parede C: plate sem comprimento/);
+    expect(() => frameWalls(house)).toThrow(/Wall C: the plate has no length/);
   });
 
   it('propaga os erros de findConnections', () => {
-    expect(() => frameWalls({ walls: [wall('A', [0, 0], [200, 0]), wall('B', [100, -50], [100, 50])] })).toThrow(/se cruzam/);
+    expect(() => frameWalls({ walls: [wall('A', [0, 0], [200, 0]), wall('B', [100, -50], [100, 50])] })).toThrow(/cross at/);
   });
 });
 

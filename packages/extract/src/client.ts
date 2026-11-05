@@ -213,7 +213,7 @@ export function normalizeSources(req: ExtractRequest): ExtractSource[] {
     out.push({ kind: 'pdf', name: 'planta.pdf', data: req.pdf, ...(req.pages === undefined ? {} : { pages: req.pages }) });
   }
   for (const s of req.sources ?? []) out.push(s);
-  if (out.length === 0) throw new ExtractInputError('NO_SOURCES', 'extractWalls: informe ao menos um PDF ou imagem');
+  if (out.length === 0) throw new ExtractInputError('NO_SOURCES', 'extractWalls: provide at least one PDF or image');
   return out;
 }
 
@@ -446,7 +446,7 @@ async function prepareOpened(
     if (pages.length === 0) {
       // Seleção automática que não achou nada útil neste arquivo (capa, detalhes): ele fica de fora.
       if (s.pages === undefined) continue;
-      throw new ExtractInputError('NO_PAGES_REQUESTED', `${s.name}: nenhuma página pedida`, { file: s.name });
+      throw new ExtractInputError('NO_PAGES_REQUESTED', `${s.name}: no pages requested`, { file: s.name });
     }
     // Conjunto sem carimbo (fallback): as primeiras páginas vão como planta, mas sem recorte — a capa e a
     // implantação gastavam o orçamento. Quem pede as páginas ganha os recortes.
@@ -472,7 +472,7 @@ async function prepareOpened(
     sent.push({ source: i, name: s.name, pages });
   }
   if (pdfs.length === 0 && images.length === 0) {
-    throw new ExtractInputError('NO_USEFUL_SHEETS', 'nenhuma folha útil reconhecida nos arquivos (planta, schedule, elevação, corte, estrutura); informe as páginas');
+    throw new ExtractInputError('NO_USEFUL_SHEETS', 'no useful sheet recognized in the files (plan, schedule, elevation, section, structural); enter the pages');
   }
   const baseEncodedBytes = pdfs.reduce((n, p) => n + base64Size(p.pdf.byteLength), 0) + images.reduce((n, im) => n + base64Size(im.data.byteLength), 0);
 
@@ -605,9 +605,9 @@ async function fitTiles(prepared: Prepared, signal: AbortSignal | undefined): Pr
     warnings.push(
       extractionNotice(
         'TILES_DROPPED',
-        `${removed.length} recorte(s) em alta resolução ficaram fora para a requisição caber em ` +
-          `${mb(API_REQUEST_LIMIT)} MB: ${removed.slice(0, 8).join(', ')}${removed.length > 8 ? '…' : ''} — a leitura das portas internas ` +
-          'nessas regiões pode perder detalhe; mande menos folhas ou informe as páginas',
+        `${removed.length} high-resolution tile(s) left out so the request fits in ` +
+          `${mb(API_REQUEST_LIMIT)} MB: ${removed.slice(0, 8).join(', ')}${removed.length > 8 ? '…' : ''} — the reading of interior doors ` +
+          'in those areas may lose detail; send fewer sheets or enter the pages',
         {},
         { count: removed.length, limitMb: Number(mb(API_REQUEST_LIMIT)), tiles: removed.slice(0, 8) },
       ),
@@ -623,8 +623,8 @@ export async function buildRequest(req: ExtractRequest, opts: ExtractOptions = {
     if (prepared.baseEncodedBytes > API_REQUEST_LIMIT) {
       throw new ExtractInputError(
         'REQUEST_TOO_LARGE',
-        `as folhas escolhidas somam ${mb(prepared.baseEncodedBytes)} MB codificados, acima do limite de ${mb(API_REQUEST_LIMIT)} MB da API; ` +
-          'mande menos arquivos ou informe as páginas',
+        `the selected sheets add up to ${mb(prepared.baseEncodedBytes)} MB encoded, above the API limit of ${mb(API_REQUEST_LIMIT)} MB; ` +
+          'send fewer files or enter the pages',
         { mb: Number(mb(prepared.baseEncodedBytes)), limitMb: Number(mb(API_REQUEST_LIMIT)) },
       );
     }
@@ -701,7 +701,7 @@ export async function extractWalls(req: ExtractRequest, opts: ExtractOptions = {
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    throw new ExtractError(`a resposta não é JSON: ${(e as Error).message}`, text, { code: 'RESPONSE_NOT_JSON' });
+    throw new ExtractError(`the response is not JSON: ${(e as Error).message}`, text, { code: 'RESPONSE_NOT_JSON' });
   }
   const done = finish(raw, req.convert, response.model, usageOf(response.usage));
   return {
@@ -736,27 +736,27 @@ function checkStop(response: Anthropic.Message, maxTokens: number, text: string)
       return;
     case 'refusal': {
       const why = response.stop_details?.type === 'refusal' ? response.stop_details.explanation : undefined;
-      throw new ExtractError(`o modelo recusou a extração${why ? `: ${why}` : ''}`, text, { code: 'MODEL_REFUSED', params: why ? { why } : {} });
+      throw new ExtractError(`the model refused the extraction${why ? `: ${why}` : ''}`, text, { code: 'MODEL_REFUSED', params: why ? { why } : {} });
     }
     case 'max_tokens':
       // O raciocínio conta no teto; 128 000 já é o máximo do streaming, então aumentar não é saída.
       throw new ExtractError(
-        `resposta cortada em ${maxTokens} tokens de saída (o raciocínio conta no teto${maxTokens >= DEFAULT_MAX_TOKENS ? ', que já é o máximo' : ''}); ` +
-          'mande menos folhas ou baixe o effort',
+        `response cut off at ${maxTokens} output tokens (thinking counts toward the limit${maxTokens >= DEFAULT_MAX_TOKENS ? ', which is already the maximum' : ''}); ` +
+          'send fewer sheets or lower the effort',
         text,
         { code: 'OUTPUT_TRUNCATED', params: { maxTokens, atMax: maxTokens >= DEFAULT_MAX_TOKENS } },
       );
     case 'model_context_window_exceeded':
-      throw new ExtractError('as folhas passaram da janela de contexto do modelo; mande menos folhas ou informe as páginas', text, { code: 'CONTEXT_EXCEEDED' });
+      throw new ExtractError('the sheets exceeded the model context window; send fewer sheets or enter the pages', text, { code: 'CONTEXT_EXCEEDED' });
     case 'pause_turn':
-      throw new ExtractError('a API pausou a resposta (pause_turn) antes do fim; tente de novo', text, { code: 'PAUSE_TURN' });
+      throw new ExtractError('the API paused the response (pause_turn) before the end; try again', text, { code: 'PAUSE_TURN' });
     case 'tool_use':
-      throw new ExtractError('o modelo pediu uma ferramenta que esta chamada não oferece (tool_use); tente de novo', text, { code: 'TOOL_USE' });
+      throw new ExtractError('the model asked for a tool this call does not offer (tool_use); try again', text, { code: 'TOOL_USE' });
     case null:
-      throw new ExtractError('a resposta terminou sem motivo de parada (stop_reason vazio); tente de novo', text, { code: 'NO_STOP_REASON' });
+      throw new ExtractError('the response ended with no stop reason (empty stop_reason); try again', text, { code: 'NO_STOP_REASON' });
     default: {
       const unknown: never = reason;
-      throw new ExtractError(`a resposta parou por um motivo desconhecido (${String(unknown)})`, text, { code: 'UNKNOWN_STOP_REASON', params: { reason: String(unknown) } });
+      throw new ExtractError(`the response stopped for an unknown reason (${String(unknown)})`, text, { code: 'UNKNOWN_STOP_REASON', params: { reason: String(unknown) } });
     }
   }
 }
@@ -768,9 +768,9 @@ export function droppedWarning(dropped: readonly DroppedPage[]): ReadingNotice[]
   return [
     extractionNotice(
       'SHEETS_DROPPED',
-      `${dropped.length} folha(s) útil(eis) ficaram fora do orçamento de ${AUTO_PAGE_BUDGET} páginas / ` +
-        `${AUTO_BYTE_BUDGET / (1024 * 1024)} MB: ${sheets.join(', ')}${dropped.length > 12 ? '…' : ''} — para incluí-las, mande menos ` +
-        'arquivos ou informe as páginas',
+      `${dropped.length} useful sheet(s) left out of the budget of ${AUTO_PAGE_BUDGET} pages / ` +
+        `${AUTO_BYTE_BUDGET / (1024 * 1024)} MB: ${sheets.join(', ')}${dropped.length > 12 ? '…' : ''} — to include them, send fewer ` +
+        'files or enter the pages',
       {},
       { count: dropped.length, pageBudget: AUTO_PAGE_BUDGET, mbBudget: AUTO_BYTE_BUDGET / (1024 * 1024), sheets },
     ),
@@ -783,13 +783,13 @@ export function selectionWarnings(sel: Pick<PageSelection, 'dropped' | 'duplicat
   if (sel.duplicates.length > 0) {
     const list = sel.duplicates
       .slice(0, 8)
-      .map((d) => `${d.sheet} de ${d.name} p.${d.page} (foi a de ${d.kept.name} p.${d.kept.page})`)
+      .map((d) => `${d.sheet} from ${d.name} p.${d.page} (kept the one from ${d.kept.name} p.${d.kept.page})`)
       .join(', ');
     out.push(
       extractionNotice(
         'SHEET_DUPLICATE',
-        `${sel.duplicates.length} cópia(s) de folha ficaram fora porque a mesma folha já vai por outra ` +
-          `página: ${list}${sel.duplicates.length > 8 ? '…' : ''} — se a cópia é outra revisão, informe as páginas`,
+        `${sel.duplicates.length} sheet cop(ies) left out because the same sheet is already sent from another ` +
+          `page: ${list}${sel.duplicates.length > 8 ? '…' : ''} — if the copy is a different revision, enter the pages`,
         {},
         { count: sel.duplicates.length, sheets: sel.duplicates.slice(0, 8).map((d) => d.sheet) },
       ),
@@ -799,8 +799,8 @@ export function selectionWarnings(sel: Pick<PageSelection, 'dropped' | 'duplicat
     out.push(
       extractionNotice(
         'NO_TITLE_BLOCK',
-        `nenhum número de folha reconhecido nos carimbos; foram as primeiras ${MAX_AUTO_PAGES} página(s) de ` +
-          'cada PDF como planta, sem recortes em alta resolução — informe as páginas da planta para recortá-las',
+        `no sheet number recognized in the title blocks; sent the first ${MAX_AUTO_PAGES} page(s) of ` +
+          'each PDF as the plan, without high-resolution tiles — enter the plan pages to get them tiled',
         {},
         { pages: MAX_AUTO_PAGES },
       ),
@@ -819,7 +819,7 @@ export function finish(
   const parsed = ExtractionOutput.safeParse(raw);
   if (!parsed.success) {
     const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`);
-    throw new ExtractError(`resposta fora do schema: ${issues.join('; ')}`, JSON.stringify(raw), { code: 'SCHEMA_MISMATCH', params: { issues } });
+    throw new ExtractError(`response does not match the schema: ${issues.join('; ')}`, JSON.stringify(raw), { code: 'SCHEMA_MISMATCH', params: { issues } });
   }
   const output = parsed.data;
   const converted = convert(output, convertOpts);

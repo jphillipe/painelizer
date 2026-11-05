@@ -1,6 +1,6 @@
 {
-  "$comment": "Checkpoint 3 — a casa 28x40 de docs/00-visao.md (mesma entrada do fixture test/fixtures/house-28x40.json do core, só com nome, data, revisão e norte para o cabeçalho das folhas). Gerado em 2026-10-14; se o fixture mudar, regenerar este arquivo a partir dele.",
-  "name": "Casa 28x40 (visão)",
+  "$comment": "Checkpoint 3 — the 28x40 house from docs/00-visao.md (same input as the core fixture test/fixtures/house-28x40.json, only with name, date, revision and north for the sheet title block). Generated on 2026-10-14; if the fixture changes, regenerate this file from it.",
+  "name": "House 28x40 (overview)",
   "date": "2026-10-14",
   "revision": "A",
   "northAngle": 0,

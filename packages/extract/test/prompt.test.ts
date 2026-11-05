@@ -28,6 +28,10 @@ describe('SYSTEM_PROMPT — convenções do CLI e do framing', () => {
     expect(SYSTEM_PROMPT).toContain('Não escolher header, jacks ou kings');
   });
 
+  it('pede o texto livre do JSON (notes, evidence…) em inglês', () => {
+    expect(SYSTEM_PROMPT).toMatch(/Todo texto livre do JSON \(`notes`, `evidence`.*\) vai em inglês/);
+  });
+
   it('define a escala de confiança e fala de imagens sem texto posicionado', () => {
     expect(SYSTEM_PROMPT).toContain('0.7–0.9');
     expect(SYSTEM_PROMPT).toContain('imagem sem texto posicionado');

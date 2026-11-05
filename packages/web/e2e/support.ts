@@ -14,7 +14,7 @@ export { ACCOUNTS, TEST_PASSWORD };
 export const STORAGE_STATE = 'e2e/.auth/admin.json';
 
 /** O sample "House 28×40" (5 paredes, 12 painéis): pequeno, sem leitura da IA, com planta. */
-export const SAMPLE = { button: /House 28×40/, name: 'Casa 28x40 (visão)', walls: 5, panels: 12 } as const;
+export const SAMPLE = { button: /House 28×40/, name: 'House 28x40 (overview)', walls: 5, panels: 12 } as const;
 
 /** `/app` → clica o cartão do sample → editor aberto (passo 02). */
 export async function openSample(page: Page): Promise<void> {

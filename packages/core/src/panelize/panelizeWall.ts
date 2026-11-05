@@ -268,7 +268,7 @@ export function framePanel(
   // Aberturas como ficam no painel (S17): o topo do RO é a base do header montado.
   const panelOpenings: PanelOpening[] = openings.map((o, i) => {
     const header = framings[i]!.members.find((m) => m.role === 'header');
-    if (header === undefined) throw new RangeError(`parede ${wall.id}, abertura ${o.id}: abertura sem header`);
+    if (header === undefined) throw new RangeError(`Wall ${wall.id}, opening ${o.id}: opening has no header`);
     return { id: o.id, type: o.type, x: o.offset, width: o.roughWidth, top: header.y, height: o.roughHeight };
   });
 

@@ -3,35 +3,34 @@
  * grava os arquivos. Este é o único módulo do repositório (junto com `bin/`)
  * que toca `node:fs`.
  *
- * Uso: `panelizer build <projeto.json> --out <dir> [--locale pt|en]`
+ * Uso: `panelizer build <project.json> --out <dir>`
  * Códigos de saída: 0 ok; 1 erro de projeto/geração; 2 uso incorreto.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { isSheetLocale, piecesOf, SHEET_LOCALES, type SheetLocale } from 'core';
+import { piecesOf } from 'core';
 import { buildProject, BuildError, problemText, type BuildResult } from './build';
 import { parseProject, ProjectError } from './project';
 
-export const USAGE = `panelizer — motor de painelização de paredes
+export const USAGE = `panelizer — wall panelization engine
 
-Uso:
-  panelizer build <projeto.json> --out <dir> [--locale pt|en]
+Usage:
+  panelizer build <project.json> --out <dir>
 
-Gera em <dir>:
-  cutlist.csv        lista de corte de todos os painéis
-  bom.csv            lista de material consolidada
-  panels.csv         um painel por linha: parede, pavimento, posição, dimensões, peças, peso, avisos
-  plan.svg           planta de painéis (vista de cima, só para projeto em planta)
-  panels/<id>.svg    folha de fabricação de cada painel ({pavimento}-{parede}-P{n}): cabeçalho
-                     (nome, date e revision do projeto), elevação cotada, lista de peças, peso,
-                     cortes na obra e avisos — abra e imprima no navegador
+Writes to <dir>:
+  cutlist.csv        cut list for all panels
+  bom.csv            consolidated bill of materials
+  cost.csv           cost estimate: BOM × config.prices (only when the project has prices)
+  panels.csv         one panel per line: wall, level, position, size, pieces, weight, warnings
+  plan.svg           panel plan (top view; plan projects only)
+  panels/<id>.svg    shop sheet for each panel ({level}-{wall}-P{n}): title block
+                     (project name, date and revision), dimensioned elevation, piece list, weight,
+                     field cuts and warnings — open and print in the browser
 
-Opções:
-  --out <dir>      diretório de saída (obrigatório; criado se não existir)
-  --locale pt|en   idioma das folhas e da planta; passa por cima do "locale" do projeto
-                   (sem os dois: português)
-  -h, --help       esta ajuda
+Options:
+  --out <dir>   output directory (required; created if missing)
+  -h, --help    this help
 `;
 
 /** Superfície de I/O injetável para testar sem tocar o disco. */
@@ -61,8 +60,6 @@ export interface BuildArgs {
   command: 'build';
   input: string;
   out: string;
-  /** `--locale`: idioma das folhas e da planta, por cima do `locale` do arquivo (S34). */
-  locale?: SheetLocale;
 }
 
 export type ParsedArgs = BuildArgs | { command: 'help' };
@@ -77,34 +74,29 @@ export class UsageError extends Error {
 export function parseArgs(argv: readonly string[]): ParsedArgs {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) return { command: 'help' };
   const [command, ...rest] = argv;
-  if (command !== 'build') throw new UsageError(`comando desconhecido: "${command}"`);
+  if (command !== 'build') throw new UsageError(`unknown command: "${command}"`);
 
   let input: string | undefined;
   let out: string | undefined;
-  let locale: SheetLocale | undefined;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i] as string;
     if (a === '--out' || a === '-o') {
       const v = rest[++i];
-      if (v === undefined || v.startsWith('-')) throw new UsageError('--out exige um diretório');
+      if (v === undefined || v.startsWith('-')) throw new UsageError('--out requires a directory');
       out = v;
     } else if (a.startsWith('--out=')) {
       out = a.slice('--out='.length);
-    } else if (a === '--locale' || a.startsWith('--locale=')) {
-      const v = a === '--locale' ? rest[++i] : a.slice('--locale='.length);
-      if (!isSheetLocale(v)) throw new UsageError(`--locale exige ${SHEET_LOCALES.join(' ou ')}`);
-      locale = v;
     } else if (a.startsWith('-')) {
-      throw new UsageError(`opção desconhecida: "${a}"`);
+      throw new UsageError(`unknown option: "${a}"`);
     } else if (input === undefined) {
       input = a;
     } else {
-      throw new UsageError(`argumento inesperado: "${a}"`);
+      throw new UsageError(`unexpected argument: "${a}"`);
     }
   }
-  if (input === undefined) throw new UsageError('informe o arquivo <projeto.json>');
-  if (out === undefined || out === '') throw new UsageError('informe --out <dir>');
-  return { command: 'build', input, out, ...(locale === undefined ? {} : { locale }) };
+  if (input === undefined) throw new UsageError('missing the <project.json> file');
+  if (out === undefined || out === '') throw new UsageError('missing --out <dir>');
+  return { command: 'build', input, out };
 }
 
 /**
@@ -116,7 +108,7 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
   try {
     args = parseArgs(argv);
   } catch (e) {
-    io.stderr(`erro: ${(e as Error).message}`);
+    io.stderr(`error: ${(e as Error).message}`);
     io.stderr('');
     io.stderr(USAGE);
     return 2;
@@ -133,26 +125,24 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
   try {
     text = io.readFile(inputPath);
   } catch (e) {
-    io.stderr(`erro: não foi possível ler ${inputPath}: ${(e as Error).message}`);
+    io.stderr(`error: could not read ${inputPath}: ${(e as Error).message}`);
     return 1;
   }
 
   let result: BuildResult;
   try {
-    const project = parseProject(text, args.input);
-    if (args.locale !== undefined) project.locale = args.locale;
-    result = buildProject(project);
+    result = buildProject(parseProject(text, args.input));
   } catch (e) {
     if (e instanceof BuildError) {
-      io.stderr(`erro: ${e.problems.length} problema(s) ao gerar os painéis — nenhum arquivo gravado`);
+      io.stderr(`error: ${e.problems.length} problem(s) generating the panels — no files written`);
       for (const p of e.problems) io.stderr(`  - ${problemText(p)}`);
       return 1;
     }
     if (e instanceof ProjectError) {
-      io.stderr(`erro: ${e.message}`);
+      io.stderr(`error: ${e.message}`);
       return 1;
     }
-    io.stderr(`erro inesperado: ${(e as Error).stack ?? String(e)}`);
+    io.stderr(`unexpected error: ${(e as Error).stack ?? String(e)}`);
     return 1;
   }
 
@@ -164,16 +154,16 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
       io.writeFile(target, f.content);
     }
   } catch (e) {
-    io.stderr(`erro: não foi possível gravar em ${outDir}: ${(e as Error).message}`);
+    io.stderr(`error: could not write to ${outDir}: ${(e as Error).message}`);
     return 1;
   }
 
   for (const { panelId, warning } of result.warnings) {
-    io.stderr(`aviso ${panelId} ${warning.code}: ${warning.message}${warning.hypothesis === undefined ? '' : ` (hipótese ${warning.hypothesis})`}`);
+    io.stderr(`warning ${panelId} ${warning.code}: ${warning.message}${warning.hypothesis === undefined ? '' : ` (hypothesis ${warning.hypothesis})`}`);
   }
   // Peças a cortar, como na folha e em panels.csv: header de n plies conta n (`piecesOf`).
   const pieces = result.panels.reduce((n, p) => n + piecesOf(p), 0);
-  io.stdout(`${result.panels.length} painel(is), ${pieces} peças → ${outDir}`);
+  io.stdout(`${result.panels.length} panel(s), ${pieces} pieces → ${outDir}`);
   for (const f of result.files) io.stdout(`  ${f.path}`);
   return 0;
 }

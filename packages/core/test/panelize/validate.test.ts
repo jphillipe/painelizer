@@ -54,7 +54,7 @@ describe('OPENING_NEAR_CORNER', () => {
     // RO [4, 40], zona [1, 43]: stud de ponta [0, 1.5] sobrepõe a zona e é removido
     const panel = panelizeWall(withWindow(4), config);
     expect(panel.warnings.map((w) => w.code)).toEqual(['OPENING_NEAR_CORNER']);
-    expect(panel.warnings[0]!.message).toMatch(/abertura win1: king a 1" do início/);
+    expect(panel.warnings[0]!.message).toMatch(/opening win1: king stud 1" from the start/);
     expect(panel.members.some((m) => m.role === 'stud' && m.x === 0)).toBe(false);
   });
 
@@ -70,7 +70,7 @@ describe('OPENING_NEAR_CORNER', () => {
 
   it('king a 1" do fim da parede: aviso', () => {
     // RO [104, 140], zona [101, 143]: folga 1 até 144
-    expect(messages(withWindow(104))).toEqual([expect.stringMatching(/king a 1" do fim/)]);
+    expect(messages(withWindow(104))).toEqual([expect.stringMatching(/king stud 1" from the end/)]);
   });
 
   it('2 kings: a folga é medida do king mais externo', () => {
@@ -85,7 +85,7 @@ describe('STUDS_OVERLAP', () => {
   it('parede de 129.5": stud da marca 128 (em 127.25) e fechamento 128 se sobrepõem em 0.75"', () => {
     const panel = panelizeWall({ ...wall, length: 129.5 }, config);
     expect(panel.warnings.map((w) => w.code)).toEqual(['STUDS_OVERLAP']);
-    expect(panel.warnings[0]!.message).toMatch(/stud em x=127\.25 e stud em x=128 se sobrepõem em 0\.75"/);
+    expect(panel.warnings[0]!.message).toMatch(/stud at x=127\.25 and stud at x=128 overlap by 0\.75"/);
   });
 
   it('parede de 130.25": stud da marca 128 encosta no fechamento 128.75 — sem aviso', () => {
@@ -113,7 +113,7 @@ describe('STUD_HEIGHT_ABOVE_LIMIT', () => {
     expect(heightCodes({ ...wall, height: heightFor(120) })).toEqual([]);
     const w = { ...wall, height: heightFor(120.5) };
     expect(heightCodes(w)).toEqual(['STUD_HEIGHT_ABOVE_LIMIT']);
-    expect(messages(w).find((m) => m.includes('R602.3(5)'))).toMatch(/stud de 120\.5" passa do máximo de 120" para parede portante 2x6/);
+    expect(messages(w).find((m) => m.includes('R602.3(5)'))).toMatch(/120\.5" studs exceed the 120" limit for a bearing 2x6 wall/);
   });
 
   it('não portante 2x4: limite 168"', () => {

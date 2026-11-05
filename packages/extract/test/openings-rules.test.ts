@@ -40,8 +40,8 @@ describe('posição estimada pela escala (scaled)', () => {
     const scaled = withOpening({ positionSource: 'scaled', confidence: 0.45 });
     const warnings = estimatedOpenings(scaled).map(noticeText);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toMatch(/^extração OPENING_ESTIMATED: parede I1, abertura I1-U2/);
-    expect(warnings[0]).toContain('confiança 0.45');
+    expect(warnings[0]).toMatch(/^extraction OPENING_ESTIMATED: Wall I1, opening I1-U2/);
+    expect(warnings[0]).toContain('confidence 0.45');
     const converted = convert(scaled);
     const i1 = (converted.project['walls'] as { id: string; openings: unknown[] }[]).find((w) => w.id === 'I1');
     expect(i1?.openings).toHaveLength(1);
@@ -55,15 +55,15 @@ describe('posição estimada pela escala (scaled)', () => {
   it('scaled sem posição nenhuma continua OPENING_UNPLACED (fora do projeto), não estimada', () => {
     const out = withOpening({ positionSource: 'scaled', center: null, offset: null });
     expect(estimatedOpenings(out)).toEqual([]);
-    expect(convert(out).warnings.map(noticeText).some((w) => w.includes('OPENING_UNPLACED: parede I1'))).toBe(true);
+    expect(convert(out).warnings.map(noticeText).some((w) => w.includes('OPENING_UNPLACED: Wall I1'))).toBe(true);
   });
 
   it('o relatório marca a estimada em "Revisar" e mostra a fonte na tabela de aberturas', () => {
     const out = withOpening({ positionSource: 'scaled', confidence: 0.4 });
     const report = reviewReport(out, convert(out));
-    expect(report).toContain('| id | parede | tag/tipo | eixo | fonte |');
+    expect(report).toContain('| id | wall | tag/type | center | source |');
     expect(report).toContain('| scaled |');
-    expect(report).toContain('abertura I1-U2 (I1): posição estimada pela escala');
+    expect(report).toContain('opening I1-U2 (I1): position scaled from the drawing');
   });
 });
 
@@ -78,8 +78,8 @@ describe('cômodos sem porta', () => {
     ]);
     const warnings = roomsWithoutDoors(out).map(noticeText);
     expect(warnings).toEqual([
-      'extração ROOM_WITHOUT_DOOR: Bathroom (pavimento 1): nenhuma porta encontrada — símbolo não visível; confira na planta e adicione a abertura na parede certa',
-      'extração ROOM_WITHOUT_DOOR: Vestibule: nenhuma porta encontrada; confira na planta e adicione a abertura na parede certa',
+      'extraction ROOM_WITHOUT_DOOR: Bathroom (level 1): no door found — símbolo não visível; check the plan and add the opening to the right wall',
+      'extraction ROOM_WITHOUT_DOOR: Vestibule: no door found; check the plan and add the opening to the right wall',
     ]);
     expect(convert(out).warnings.map(noticeText).filter((w) => w.includes('ROOM_WITHOUT_DOOR'))).toHaveLength(2);
   });
@@ -90,13 +90,13 @@ describe('cômodos sem porta', () => {
       { name: 'Closet', level: 1, doors: [], note: 'vão aberto' },
     ]);
     const report = reviewReport(out, convert(out));
-    expect(report).toContain('## Cômodos');
+    expect(report).toContain('## Rooms');
     expect(report).toContain('| Bedroom 2 | 1 | I1-U2 |  |');
-    expect(report).toContain('| Closet | 1 | **nenhuma** | vão aberto |');
-    expect(report).toContain('- cômodo Closet: sem porta');
+    expect(report).toContain('| Closet | 1 | **none** | vão aberto |');
+    expect(report).toContain('- room Closet: no door');
   });
 
   it('sem rooms o relatório não tem a seção', () => {
-    expect(reviewReport(base, convert(base))).not.toContain('## Cômodos');
+    expect(reviewReport(base, convert(base))).not.toContain('## Rooms');
   });
 });

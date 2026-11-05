@@ -102,7 +102,7 @@ describe('cornerStuds — canto California / three-stud (P5)', () => {
   });
 
   it('plate curta demais para o stud de canto é erro', () => {
-    expect(() => cornerStuds({ ...through(['start']), length: 6 }, config)).toThrow(/stud de canto em x=1.5 não cabe na plate de 6"/);
+    expect(() => cornerStuds({ ...through(['start']), length: 6 }, config)).toThrow(/corner stud at x=1.5 does not fit on the 6" plate/);
   });
 });
 
@@ -132,13 +132,13 @@ describe('teeStrips / teeConflicts', () => {
     const r = teeConflicts(wall, [strip], openings, plan.zones);
     expect(r.clear).toEqual([]);
     expect(r.warnings.map((w) => w.code)).toEqual(['OPENING_AT_TEE']);
-    expect(r.warnings[0]!.message).toMatch(/parede W1: a parede W2 encosta em T em x=96 \(faixa 94.25–97.75\), na zona da\(s\) abertura\(s\) J1 \[97, 139\]/);
+    expect(r.warnings[0]!.message).toMatch(/Wall W1: wall W2 meets it in a tee at x=96 \(strip 94.25–97.75\), in the zone of opening\(s\) J1 \[97, 139\]/);
   });
 
   it('faixa dentro do RO: erro', () => {
     const wall = wallWith(90);
     const { openings, plan } = planOpenings(wall, config);
-    expect(() => teeConflicts(wall, [strip], openings, plan.zones)).toThrow(/parede W1, abertura J1: a parede W2 encosta em T em x=96 \(faixa 94.25–97.75\), dentro do RO \[90, 126\]/);
+    expect(() => teeConflicts(wall, [strip], openings, plan.zones)).toThrow(/Wall W1, opening J1: wall W2 meets it in a tee at x=96 \(strip 94.25–97.75\), inside the RO \[90, 126\]/);
   });
 
   it('encostar na zona não conta', () => {
@@ -204,7 +204,7 @@ describe('ladderBlocks', () => {
   });
 
   it('faixa sem stud de um dos lados é erro', () => {
-    expect(() => ladderBlocks(wall, [{ lo: 70.25, hi: 73.75 }], [stud(0)], config)).toThrow(/sem stud vizinho/);
+    expect(() => ladderBlocks(wall, [{ lo: 70.25, hi: 73.75 }], [stud(0)], config)).toThrow(/no neighboring stud/);
   });
 });
 
