@@ -1417,65 +1417,101 @@ e capa com BOM, `getClaims()` no proxy (duas consultas de auth por action), unde
 
 ## Fase 8 — Pedidos da fábrica (prancha de 2026-10-28)
 
-Planejada em 2026-11-04 a partir da prancha e das mensagens do Nicolas Hernandez (`docs/14-prancha-fabrica.md`,
-plano aprovado pelo humano). **Ordem: depois da Fase 7** (`04-decisoes.md`, 2026-11-04; antes valia "S23 → Fase 8 → S24"): é o
-primeiro pedido direto da fábrica com conteúdo de framing e muda o que a folha mostra, logo o que o Checkpoint 2
-valida. Toda sessão desta fase toca regra de framing: abordagem em até 5 linhas e confirmação antes de código;
-fixtures confirmados antes de editar. Hipóteses em P44–P49.
+Planejada em 2026-11-04 a partir da prancha e das mensagens do Nicolas Hernandez (`docs/14-prancha-fabrica.md`).
+**Revista em 2026-11-05** para o estado do código depois da Fase 7 e da troca para inglês, e executada em sessões
+encadeadas **por delegação** (`04-decisoes.md`, 2026-11-05): o humano dispensou a confirmação de abordagem e de
+fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóteses em P44–P50.
 
-- [ ] **S35 — Wall types e numeração na planta (core + cli + extract + web).** `config.wallTypes?: Record<tag,
-  { section, exterior, bearing, description?, sheathing?: boolean | SheathingSpec, blocking?: BlockingPresetId[] }>`;
-  `wall.wallType?` resolve `section`/`exterior`/`bearing` ausentes (presentes e diferentes → aviso
-  `WALL_TYPE_MISMATCH`); o CLI aceita e valida (hoje ignora a chave); extract: `convert.ts` monta `config.wallTypes`
-  a partir de `out.wallTypes` (hoje só vai ao relatório); planta: rótulo `W01 · WT-1S` e legenda (externa/interna/
-  portante); folha: wall type no cabeçalho; web: o campo "Wall type" vira select do catálogo e o catálogo aparece no
-  dialog de configurações (leitura; edição na S29). Fixtures: `house-28x40` ganha `wallTypes` com members
-  inalterados; `casa-exemplo.json` e Ringgold com tags. Sem P nova: é dado do projeto, não hipótese de framing.
-- [ ] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | BlockingPresetId)[]`
-  com `BlockingRow = { y, from?, to?, kind, label? }` (y = centro do bloco, hipótese P44) e `config.blockingPresets`
-  com os usos da prancha (kitchen: base 34½–36, counter 54, upper 84; bath: toilet 12–18, grab/paper 36–42,
-  shower-valve 42, towel 48, shower-head 78–80 — um valor por uso); wall type pode trazer presets (S35).
-  `rules/blocking.ts`: fileira de `role: 'block'` (seção da parede, deitado) entre verticais consecutivas no
-  trecho `[from, to]`, reusando os spans de `ladderBlocks` generalizados em `blocksBetween`; vão dentro de RO ou
-  cruzando header/sill é pulado com aviso `BLOCKING_SKIPPED`; fire blocking automático quando a cavidade passa de
-  `config.fireBlockAt` (default 120", P11): fileira em `height/2`, substitui o aviso `FIRE_BLOCKING_REQUIRED` e
-  fecha o item do escopo v1. Folha: letra B, cota da altura ao subfloor, rótulo do uso. Cutlist e BOM já contam
-  `block`. Fixtures novos: `wall-144-kitchen` (3 fileiras com janela no meio); `house-tee` inalterado.
-  **Já feito na S31:** `rules/blocking.ts` com `blocksBetween` (o ladder já a usa), `ladderBays`, o fire blocking
-  automático (no meio da cavidade, P50 — não em `height/2`) e a saída do aviso; falta aqui o resto (fileiras por
-  altura, presets, `BLOCKING_SKIPPED`, folha). `FlatMember.blocking` é o campo a ampliar além de `'fire'`.
-- [ ] **S37 — Posts e cruzamento em + (regra de framing; P45, P46).** (a) `wall.posts?: [{ x, section: '4x4' |
-  '4x6' | '6x6', label?, base?: string, top?: string }]` → `role: 'post'` de altura inteira com largura real em x
-  (3.5/5.5); stud de layout que sobrepõe sai; `LumberSection` ganha 4x4/4x6/6x6 só para post; `lumber.json`
-  (4x4 ≈ 3.0, 4x6 ≈ 4.7, 6x6 ≈ 7.3 lb/pé a 35 pcf — P45) e estoque; BOM lista; folha desenha com rótulo e nota
-  "base: post base · topo: LUS" (texto do projeto). `extraStuds` continua para (2)/(3) 2x; P26 revista. (b) X:
-  `connections.ts` funde tees com o mesmo x nos dois lados numa `TeeJoint` com `sides: 2`; `corners.ts` gera um
-  corte da double top e um núcleo para a faixa (hipótese P46 = prancha: 2 studs contínuos = `backer`; com
-  `ladder`, blocos dos dois lados). Fixture `house-cross.json` (corredor cruzando); `perf.test.ts` do web deixa
-  de evitar o caso. **(b) já feito na S31** (fusão `sides: 2`, `house-cross`, `perf.test.ts`; ver P46 em vigor);
-  aqui fica só (a) e o que a fábrica responder na P46.
-- [ ] **S38 — Sheathing (regra de framing; P47, P48; entra no escopo v1).** `config.sheathing?: { thickness:
-  0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?: { corner?:
-  'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail: '8d', edge: 6, field: 12 } }`;
-  wall type ou parede liga/desliga (`sheathing: true | false | spec`). `rules/sheathing.ts`: chapas verticais a
-  partir da marca 0 do prédio (`layoutOrigin`), cortadas nas pontas do painel; emenda horizontal (parede mais alta
-  que a chapa) exige fileira de blocking (S36), gerada automaticamente; canto: a chapa da parede que **atravessa**
-  cobre o stud de ponta da que encosta (`+t_outra`, "plywood passando pelo canto"); T e X: chapa contínua na
-  parede atravessada; junta painel-painel: a chapa acaba no painel (P49 pergunta se a fábrica quer chapa
-  avançada); linha de piso: `floorTop` acima da double top (default 0; Matilda 12–24") e `floorBottom` abaixo da
-  bottom plate. `Panel.sheathing: { side, sheets: [{ x, y, w, h, cut? }], areaSqFt }`; BOM: "OSB/plywood 7/16
-  4×8 × N" (chapas inteiras, sem otimização de corte — backlog); peso com sheathing (P8 revista: ≈ 1.4 lb/pé²
-  para 7/16"); folha: contorno tracejado das chapas sobre o framing (a vista é de fora), nota de pregação (P48),
-  "validar com engenheiro" quando houver avanço na linha de piso. Fixtures: `wall-144-plain` e `house-corner-L`
-  com `sheathing` ligado (members inalterados; campo `sheathing` novo), confirmados antes.
-- [ ] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF).** Folha: bloco
-  "Conteúdo" abaixo do cabeçalho (`TITLE_HEIGHT` cresce) com wall type, pavimento, dimensões, aberturas, blocking
-  (fileiras e alturas), sheathing (lado, chapas, avanços), posts e conectores, ligação por ponta ("início: canto
-  com W02 — esta atravessa, plywood avança 5½""; "T com W05 em 72" — ladder"), pregação (`config.nailing`: junção
-  3× 3" @ 12" OC, chapa 8d @ 6"/12" — hipótese P48) e "▲ validar com engenheiro" nos itens com P. Planta:
-  símbolo L/T/X em cada ligação com a parede que atravessa marcada, legenda, wall type por parede. Web: Materials
-  com chapas. 3D fica no backlog. Snapshots regenerados; conferir visualmente `house-corner-L` e um painel com
-  blocking.
+**Regras da fase (valem para S35–S40):**
+
+1. Abordagem de framing e fixtures novos ficam "aprovados por delegação, revisar" em `04-decisoes.md`. Nenhuma
+   sessão pergunta nada: na dúvida, a hipótese já registrada ou a opção mais conservadora, com P nova em
+   `05-pendencias.md`.
+2. **Nenhum fixture existente muda um byte** (entrada nem `expected`). O que a versão anterior destes itens pedia
+   "em `house-28x40`/`wall-144-plain`/`house-corner-L`" vira **fixture novo**, cujo teste exige members idênticos
+   aos do original. Fixture novo leva no `$comment`: `not confirmed by the human — review`.
+3. **Os 10 snapshots não mudam em S35–S38**: tudo o que entra é opcional e desligado por padrão. Só a S39 os
+   regenera, com conferência visual por PNG.
+4. Tudo o que o usuário vê é em inglês (P51): frases da folha e da planta em `core/src/output/sheet/strings.ts`,
+   avisos e erros em `core/src/messages.ts`. O teste de palavras em português (`core/test/output/sheetText.test.ts`)
+   casa por substring: "internal"/"external" falham — usar "interior"/"exterior".
+5. Armadilhas conhecidas: (a) os fixtures do core carregam pelo schema estrito do CLI (`core/test/helpers/fixtures.ts`
+   → `projectFrom`): chave nova só carrega depois de entrar em `cli/src/schema.ts`, e os `Assert<Same<…>>` de lá
+   quebram a cada mudança de `Config`/`Wall`/`ExtraStud`; (b) código novo de aviso exige `WARNING_CODES` + tabela
+   `WARNING` (`messages.ts`), a contagem em `core/test/messages.test.ts` e a frase em `web/src/lib/messages.en.ts`;
+   (c) papel novo de peça quebra os mapas exaustivos de `sheet/members.ts` e `strings.ts` e precisa entrar em
+   `CUT_ROLE_ORDER` (`output/cutlist.ts`); (d) no web, chave nova em `configShape` deixa de ser "extra" e some se
+   `configFrom`/`configJson` (`lib/editor/draft.ts`) não a tratarem.
+6. Fim de cada sessão: item marcado aqui com resumo, decisões em `04`, `pnpm hipoteses` se mexeu em `05`,
+   `pnpm check` duas vezes e `pnpm --filter web build` verdes, commit sem push. A sessão não abre outra sessão nem
+   manda mensagem a outra sessão.
+
+- [ ] **S35 — Wall types e numeração na planta (core + cli + extract + web).** **Core**: `wallType?: string` em
+  `Wall`/`HouseWall`; `config.wallTypes?: Record<tag, { section?, exterior?, bearing?, description? }>` — tudo
+  opcional na entrada, porque a leitura da IA não traz `bearing` (`extract/src/schema.ts`, `WallTypeOut`) e o prompt
+  não muda (leitura paga); `rules/wallTypes.ts` (novo, com teste) resolve o que faltar na parede a partir do tipo, no
+  padrão de `rules/catalog.ts`; campo presente e diferente do tipo → aviso `WALL_TYPE_MISMATCH` (13 avisos; a parede
+  manda); tag fora do catálogo com dado faltando → erro com código; `Panel.wallType?` preenchido em `framePanel`.
+  **Folha**: wall type na linha de dados (`infoLine`); **planta**: rótulo `W01 · WT-1S`; só quando a parede tem
+  tipo. `panels.csv` ganha a coluna `wall_type`. **CLI**: `wallType` já é chave aceita e hoje é retirada em
+  `project.ts` — parar de retirar; `wallTypes` em `configShape`; type locks. **Extract**: `toProject` monta
+  `config.wallTypes` de `out.wallTypes` (hoje só vai ao relatório). **Web**: `draft.ts` trata `wallTypes`; "Wall
+  type" vira select do catálogo aceitando texto livre e perde o hint "not used by the engine"; tabela "Wall types"
+  no `catalog-editor.tsx`. **Fixture novo** `house-walltypes` (o `house-corner-L` com seção/externa/portante vindas
+  do tipo; members iguais aos do original). Exemplos do CLI (`casa-exemplo.json`, `ringgold-checkpoint.json`) com
+  tags, sem mudar contagens. Sem P nova: é dado do projeto.
+- [ ] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | presetId)[]` com
+  `BlockingRow = { y, from?, to?, label? }` (y = centro do bloco, hipótese P44) e `config.blockingPresets?` somado
+  aos embutidos da prancha (cozinha: base, bancada e armário superior; banheiro: vaso, barra/papeleira, válvula,
+  toalheiro e ducha — um valor por uso, tirado das faixas de `docs/14`; a sessão fixa os números e registra na P44);
+  wall type pode trazer presets (`wallTypes[tag].blocking`). `rules/blocking.ts` (da S31: `blocksBetween`,
+  `gapsBetween`, `fireBlockRows`, `fireBlocks`; `ladderBays` está em `rules/corners.ts`): fileiras por altura com
+  `blocksBetween`, `BlockingKind` ampliado além de `'fire'`; vão em zona de abertura ou no ladder é pulado com aviso
+  `BLOCKING_SKIPPED` (14 avisos); `whyNotBreak` (`rules/breaks.ts`) passa a liberar qualquer bloco com `blocking`
+  (cada painel gera a sua fileira; hoje só libera `'fire'`); `splitWall` reposiciona `from`/`to` por segmento.
+  **Folha**: letra B, cota da fileira ao subfloor e rótulo do uso (também para o bloco de fogo, pendente da S31).
+  **Web**: seção "Blocking" no inspetor da parede (presets e fileiras) e campo "Fire blocking above" nas
+  configurações (`fireBlockAt`, hoje sem campo). **CLI**: schema. **Fixture novo** `wall-144-kitchen` (3 fileiras
+  com janela no meio).
+- [ ] **S37 — Posts (regra de framing; P45).** `wall.posts?: [{ x, section: '4x4' | '4x6' | '6x6', label?, base?,
+  top? }]` → `role: 'post'`, altura da cavidade, largura real em x; a profundidade do post tem de ser a da parede
+  (senão erro com código; hipótese na P45); stud de layout sobreposto sai (mecanismo dos `extraStuds` em
+  `panelizeWall.ts`); post em zona de abertura, fora da parede ou sobre quebra de painel → erro; `splitWall`
+  reposiciona e não quebra dentro do post. `PostSection` separado de `LumberSection`; `lumber.json` com 4x4/4x6/6x6
+  (≈ 3.0 / 4.7 / 7.3 lb/pé a 35 pcf, P45); `verticalWidth` deixa de assumir 1.5"; cutlist e BOM listam; folha
+  desenha com rótulo e nota "base: … · top: …" (texto do projeto — conector não é geometria). `extraStuds` continua
+  para (2)/(3) 2x; P26 revista. **Web**: lista "Posts" no inspetor (como "Extra studs"). **CLI**: schema. **Fixture
+  novo** `wall-144-post`. O cruzamento em + já foi feito na S31 e não muda: a fábrica não respondeu a P46.
+- [ ] **S38 — Sheathing (regra de framing; P47, P48; P8 revista; entra no escopo v1).** `config.sheathing?:
+  { thickness: 0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?:
+  { corner?: 'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail, edge, field } }`, ligado
+  por config, wall type ou parede (`sheathing: true | false | spec`). **Desligado por padrão**: pesos e folhas de
+  hoje não mudam. `rules/sheathing.ts`: chapas verticais a partir da marca 0 do prédio (`layoutOrigin`), cortadas
+  nas pontas do painel; canto: a chapa da parede que **atravessa** cobre a ponta da que encosta (`+t_outra`, lido de
+  `wall.joints`); T e +: contínua na atravessada; junta painel-painel: acaba no painel (P49); parede mais alta que a
+  chapa: fileira de blocking na emenda (S36), gerada automaticamente; linha de piso: `floorTop` acima da double top
+  (default 0; Matilda 12–24") e `floorBottom` abaixo da bottom plate. `Panel.sheathing: { side, sheets: [{ x, y, w,
+  h, cut? }], areaSqFt }`; peso com chapa (≈ 1.4 lb/pé² para 7/16", P8 revista); BOM, `bom.csv` e aba Materials com
+  a linha de chapas inteiras (sem otimização de corte — backlog); folha: contorno tracejado das chapas, nota de
+  pregação (P48) e "engineer to verify" quando houver avanço na linha de piso. **Web**: seção "Sheathing" nas
+  configurações e liga/desliga por parede. **CLI**: schema. **Fixtures novos** `wall-144-sheathed` e
+  `house-corner-L-sheathed` (members iguais aos dos originais; campo `sheathing` novo).
+- [ ] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF, mas regenera os 10
+  snapshots).** `Panel` não conhece as ligações (vivem em `Wall.joints` e `WallFrame.connections`): `Panel.ends?` e
+  `Panel.tees?` (canto com quem, quem atravessa, T/+ em x) preenchidos em `framePanel`/`splitWall`. **Folha**:
+  bloco "Wall content" sob o cabeçalho (altura variável no lugar de `TITLE_HEIGHT = 60` de `sheet/header.ts`) com
+  wall type, level, dimensões, aberturas, blocking (fileiras e alturas), sheathing (lado, chapas, avanços), posts e
+  conectores, ligação por ponta ("start: corner with W02 — this wall runs through, sheathing overhangs 5 1/2""; "tee
+  with W05 at 72" — ladder"), pregação (`config.nailing`: junção 3× 3" @ 12" OC, chapa 8d @ 6"/12" — P48) e
+  "▲ engineer to verify" nos itens com hipótese. **Planta**: símbolo L/T/+ em cada ligação com a parede que
+  atravessa marcada, legenda (hoje não há) e wall type por parede. Snapshots regenerados (`vitest -u`) e conferidos
+  como PNG pelo Chrome headless: `house-corner-L`, a planta 28x40 e um painel com blocking. 3D fica no backlog.
+- [ ] **S40 — Fechamento da fase (web + docs; sem regra nova).** Tabela de preços no editor (`config.prices`, hoje só
+  pelo JSON) e o que tiver ficado sem campo nas sessões anteriores. Conferência no app sem Supabase (porta 3001):
+  um exemplo com wall types, blocking, post e sheathing → gerar → planta, folhas e Materials, com capturas em `out/`
+  (ignorado pelo git); `pnpm e2e` sem Supabase. `docs/14-prancha-fabrica.md` com o que foi entregue por pedido,
+  `01-escopo-v1.md`, `08-revisar.md`, e uma lista única "Fase 8 — revisar" (decisões por delegação, fixtures novos e
+  P novas) para o humano ler antes do push.
 
 Backlog da Fase 8 (sem sessão): `tee: 'u-block'` e espaçadores no 3-stud (só se a fábrica pedir), aproveitamento
 de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL do piso como item de lista.
