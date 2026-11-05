@@ -24,12 +24,16 @@
  * - Fileiras de blocking (S36): entre o desenho e a lista, a cota do subfloor ao centro de cada fileira (fogo e por
  *   altura) e o uso (`sheet/blocking.ts`); só quando o painel tem fileira.
  * - Margem direita: lista de peças da `cutList` (qtd, papel, seção, pés-pol, polegadas), peso estimado
- *   (`weightLb`; madeira sem sheathing, P8), posts com os conectores do projeto (S37, só com post) e cortes na obra.
+ *   (`weightLb`; madeira e, com chapa, o sheathing, P8), chapas (S38), posts com os conectores do projeto (S37, só com
+ *   post) e cortes na obra.
+ * - Sheathing (S38): o contorno tracejado de cada chapa da face desenhada (a exterior; a interior quando só ela leva
+ *   chapa) por cima das peças; o desenho abre espaço para o avanço no canto e na linha de piso. Só no painel com chapa:
+ *   sem ela, a folha sai byte a byte como antes.
  * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
  * - Saída determinística: mesma entrada → mesma string.
  */
 
-import { piecesOf, type Panel, type Warning } from '../panel';
+import { piecesOf, type Panel, type SheathingSheet, type Warning } from '../panel';
 import { formatFeetInches } from '../units';
 import { blockingColumnWidth, blockingDims, blockingRows } from './sheet/blocking';
 import { CHAIN_ROW, layoutMarksSvg, openingDims, studChain } from './sheet/dims';
@@ -100,12 +104,15 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   // Avanço da double top plate além do contorno (laps de canto e T, S14): o desenho abre espaço dos dois
   // lados e cota o avanço. Sem avanço, nada muda.
   const { left: overLeft, right: overRight } = overhang(panel);
-  const drawX0 = margin + DIM_LEFT_WIDTH + overLeft * scale;
+  // Chapas além do contorno (S38): canto e linha de piso. Sem sheathing, tudo 0.
+  const sheets = drawnSheets(panel);
+  const sheathPad = sheathingPad(panel, sheets);
+  const drawX0 = margin + DIM_LEFT_WIDTH + Math.max(overLeft, sheathPad.left) * scale;
   // Com avanço, a cota fica entre o cabeçalho e o topo do painel: o desenho desce `OVERHANG_DIM_GAP`.
-  const drawY0 = margin + TITLE_HEIGHT + (overLeft > 0 || overRight > 0 ? OVERHANG_DIM_GAP : 0);
+  const drawY0 = margin + TITLE_HEIGHT + (overLeft > 0 || overRight > 0 ? OVERHANG_DIM_GAP : 0) + sheathPad.top * scale;
   const drawW = panel.length * scale;
   const drawH = panel.height * scale;
-  const dimY = drawY0 + drawH + DIM_GAP;
+  const dimY = drawY0 + drawH + sheathPad.bottom * scale + DIM_GAP;
   const layoutY = dimY + LAYOUT_GAP;
   const chainY = layoutY + CHAIN_GAP;
 
@@ -119,7 +126,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
 
   // Fileiras de blocking (S36): coluna de cotas e rótulos entre o desenho e a lista; sem fileira, nada muda.
   const rows = blockingRows(panel);
-  const rightX = drawX0 + drawW + overRight * scale;
+  const rightX = drawX0 + drawW + Math.max(overRight, sheathPad.right) * scale;
   const listX = rightX + blockingColumnWidth(rows, S) + LIST_GAP;
   const list = pieceList(panel, listX, drawY0, S);
   const totalW = listX + LIST_WIDTH + margin;
@@ -152,6 +159,18 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(`<g class="labels" font-size="8" font-weight="bold" fill="${LABEL}" text-anchor="middle">`);
   out.push(...memberLabels(panel, scale, toPx, toPy));
   out.push('</g>');
+
+  // Chapas de sheathing (S38): contorno tracejado por cima das peças.
+  if (sheets.length > 0) {
+    out.push(`<g class="sheathing" fill="none" stroke="${SHEATHING_STROKE}" stroke-width="1.2" stroke-dasharray="8 4">`);
+    for (const p of sheets) {
+      out.push(
+        `<rect x="${px(toPx(p.x))}" y="${px(toPy(p.y + p.h))}" width="${px(p.w * scale)}" height="${px(p.h * scale)}">` +
+          `<title>${esc(S.sheathing.sheetTitle(p))}</title></rect>`,
+      );
+    }
+    out.push('</g>');
+  }
 
   // Cortes na obra, por cima das peças.
   if (panel.fieldCuts.length > 0) {
@@ -200,7 +219,8 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(list.svg);
 
   // Legenda e avisos.
-  const legend = panel.members.some((m) => m.role === 'post') ? S.legendWithPosts : S.legend;
+  const baseLegend = panel.members.some((m) => m.role === 'post') ? S.legendWithPosts : S.legend;
+  const legend = panel.sheathing === undefined ? baseLegend : `${baseLegend} · ${S.sheathing.legend}`;
   out.push(`<text class="legend" x="${px(margin)}" y="${px(legendY)}" font-size="9" fill="${MUTED}">${legend}</text>`);
   panel.warnings.forEach((w, i) => {
     out.push(warningLine(w, margin, warningsY + (i + 1) * WARNING_LINE, S));
@@ -208,6 +228,28 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
 
   out.push('</svg>');
   return out.join('\n');
+}
+
+/** Cor do contorno das chapas (S38). */
+const SHEATHING_STROKE = '#2a7f62';
+
+/** As chapas que a folha desenha: as da face exterior; as da interior quando só ela leva chapa (S38). */
+function drawnSheets(panel: Panel): SheathingSheet[] {
+  const s = panel.sheathing;
+  if (s === undefined) return [];
+  const face = s.sheets.some((p) => p.face === 'exterior') ? 'exterior' : 'interior';
+  return s.sheets.filter((p) => p.face === face);
+}
+
+/** Quanto as chapas desenhadas passam do contorno do painel, em polegadas (0 sem chapa). */
+function sheathingPad(panel: Panel, sheets: readonly SheathingSheet[]): { left: number; right: number; top: number; bottom: number } {
+  if (sheets.length === 0) return { left: 0, right: 0, top: 0, bottom: 0 };
+  return {
+    left: Math.max(0, -Math.min(...sheets.map((p) => p.x))),
+    right: Math.max(0, Math.max(...sheets.map((p) => p.x + p.w)) - panel.length),
+    top: Math.max(0, Math.max(...sheets.map((p) => p.y + p.h)) - panel.height),
+    bottom: Math.max(0, -Math.min(...sheets.map((p) => p.y))),
+  };
 }
 
 function warningLine(w: Warning, x: number, y: number, S: SheetStrings): string {

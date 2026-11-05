@@ -48,6 +48,11 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
   S15 (2026-10-13) feita com a tabela: SPF a ~35 pcf (2x4 1.28, 2x6 2.0, 2x8 2.64, 2x10 3.37, 2x12 4.1 lb/pé),
   LVL/PSL pela seção real a 42 pcf, só madeira (sem sheathing). `Panel.weightLb` vai para `panels.csv`; mudar é
   trocar o JSON e os pesos dos fixtures `wall-480-split`, `wall-240-spliced` e `house-28x40`.
+  **Revista na S38 (2026-11-05, por delegação; revisar):** hipótese: o painel com sheathing pesa também a chapa —
+  `sheathingPsfPerInch` = 3.2 lb/pé² por polegada de espessura em `lumber.json` (OSB ~38 pcf) → 1.4 lb/pé² para 7/16",
+  sobre a área instalada (sem os vãos das aberturas). Sem chapa, só a madeira, como antes (a folha mantém "lumber only,
+  no sheathing"). Pregos e isolamento continuam fora. Perguntas: a fábrica usa OSB ou plywood, e de que fornecedor
+  (o peso por pé² muda)? — S38.
 - [x] **P9 — Comprimentos comerciais em estoque.** — **Resposta (2026-10-01):** 2x4 e 2x6 em **8', 10', 12', 14' e
   16'**, mais os pré-cortes **92 5/8" e 104 5/8"**. — Impacto: default da BOM confirmado; falta incluir os
   pré-cortes — feito na S7.1. Preço por comprimento não informado (orçamento continua sem tabela).
@@ -350,14 +355,41 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   ou solta, e o avanço na linha de piso é regra da fábrica ou só do projeto? — hipótese: avança `t_outra` no canto
   pela parede que atravessa, presa ao painel; na junta painel-painel não avança; na linha de piso só quando o
   projeto pede (`config.sheathing.overhang.floorTop`, default 0); lado = face externa (`facing`) — S38.
+  **Em vigor desde a S38 (2026-11-05, por delegação; revisar):** hipótese: chapa 7/16" 48x96 de pé, bordas nas marcas
+  `layoutOrigin + k·48`, cortada nas pontas do painel; **no canto em L quem avança é a parede que ENCOSTA** (`+t_outra`,
+  `overhang.corner: 'auto'`), cobrindo a ponta da que atravessa — o texto acima dizia "pela parede que atravessa", mas a
+  plate da que atravessa já chega à face externa da outra (P21), então a chapa dela não tem onde avançar; é a da que
+  encosta (que para na face interna da outra) que passa a quina e começa na marca 0 do prédio (o `$comment` do
+  `house-corner-L` já contava a primeira chapa a partir da quina). A que atravessa não avança; no canto de dentro (L que
+  se abre para fora do prédio) o avanço vai na face interior. Presa ao painel. T e +: contínua na atravessada. Linha de
+  piso: `floorTop`/`floorBottom` (default 0) só na face exterior, com "engineer to verify" na folha; `config.sheathing`
+  liga as paredes externas (`walls: 'exterior'`; `'all'`/`'none'`), tipo e parede ligam/desligam uma a uma. Emenda
+  horizontal na cavidade: fileira de blocking com o centro na emenda (S36). Perguntas que ficam para a fábrica: é mesmo
+  a que encosta que leva o avanço? O avanço é `t_outra` ou `t_outra` + a espessura da chapa da outra (para cobrir a
+  borda dela)? A chapa avançada vai presa no painel (risco no transporte) ou solta, pregada na obra? — S38.
 - [ ] **P48 — Pregação (texto da folha).** Junção entre paredes 3× 3" nails ou screws @ 12" OC; chapa 8d @ 6" nas
   bordas e 12" no campo (prancha 12). — hipótese: esses valores como `config.nailing` default, impressos na folha
   com "validar com engenheiro"; nunca geometria — S38, S39.
+  **Em vigor desde a S38 (2026-11-05, por delegação; revisar), parte da chapa:** hipótese: `config.sheathing.nailing =
+  { nail: '8d', edge: 6, field: 12 }` por default, sobrescrito por tipo ou parede; a folha imprime "nailing: 8d @ 6"
+  edges, 12" field" na seção Sheathing com "engineer to verify (hypotheses P47, P48)". A pregação da junção entre
+  paredes (3× 3" @ 12" OC) fica para a S39 (`config.nailing`). — S38.
 - [ ] **P49 — Encaixe painel-painel na mesma parede.** A conclusão da prancha pede studs avançados/recuados para
   uma parede entrar na outra. No canto e no T o motor já faz (quem atravessa/encosta, P21). E na junta de dois
   painéis da mesma parede: stud duplo encostado (como hoje), stud recuado num lado, ou chapa avançada pregando no
   stud do vizinho? — hipótese: stud duplo na junta (S15) e chapa terminando no painel; lap só na double top
   (P23) — S38, S39.
+  **Em vigor desde a S38 (2026-11-05, por delegação; revisar), parte da chapa:** hipótese: a chapa acaba na ponta de
+  cada painel (a junta de painéis da mesma parede não avança nem recua); as quebras preferidas caem em marca múltipla de
+  48" (P6), logo a chapa termina inteira na junta na maioria dos casos. — S38.
+
+## Novas (abertas em 2026-11-05, S38 — sheathing)
+- [ ] **P52 — Sobra de altura da chapa e contagem de chapas.** A parede de 97 1/8" (3 plates + 92 5/8") com chapa 4x8
+  deixa 1 1/8" sem cobrir; com 4x9 sobram 10 7/8". O que a fábrica faz: tira de 1 1/8" no topo, chapa 4x9 descendo
+  sobre a rim (`floorBottom`), ou deixa o 1 1/8" sem chapa? E na compra: cada pedaço sai de uma chapa (como a madeira) ou
+  as tiras saem das sobras? — hipótese: fileiras de baixo para cima com a altura da chapa e a sobra em tira cortada no
+  topo, mesmo fina; na BOM uma chapa inteira por pedaço (sem aproveitamento de sobra, como a madeira — a sobra
+  informada é um teto); sem preço de chapa no orçamento até a tabela de preços do editor (S40) — S38.
 
 ## Novas (abertas em 2026-11-04, S31 — escopo v1 que faltava)
 - [ ] **P50 — Altura e forma do fire blocking.** A P11 diz que a fábrica coloca o bloqueio quando a cavidade passa de

@@ -14,12 +14,14 @@
  * - Campo presente na parede **e** no tipo com valores diferentes: a parede manda e sai um aviso
  *   `WALL_TYPE_MISMATCH` por campo (`wallTypeWarnings`, chamado nas validações do painel). `description` não entra.
  * - `blocking` (S36): o da parede (inclusive `[]`, que desliga); sem ele, o do tipo. Não compara nem avisa.
+ * - `sheathing` (S38): o da parede (inclusive `false`, que desliga); sem ele, o do tipo — inteiro, sem mistura.
  * - O catálogo é de entrada parcial: um tipo pode dar só seção e posição (a folha de partition types do arquiteto
  *   não diz se a parede é portante).
  */
 
 import type { Config } from '../config';
 import { EngineError, warning, type Warning } from '../messages';
+import type { SheathingSpec } from '../config';
 import type { BlockingEntry, Wall, WallTypeEntry, WallTypeField } from '../wall';
 
 /** Os campos que o tipo pode dar, na ordem em que os erros e avisos os citam. */
@@ -49,10 +51,10 @@ export function wallTypeOf<E extends TypeFields = WallTypeEntry>(
  * @throws EngineError `WALL_TYPE_UNKNOWN` (tag fora do catálogo e campo faltando) ou `WALL_FIELD_MISSING` (campo
  *                     que nem a parede nem o tipo dão)
  */
-export function resolveWallType<W extends WallTypeInput & { blocking?: BlockingEntry[] }>(
+export function resolveWallType<W extends WallTypeInput & { blocking?: BlockingEntry[]; sheathing?: boolean | SheathingSpec }>(
   wall: W,
   config: Pick<Config, 'wallTypes'>,
-): W & Pick<Wall, WallTypeField | 'blocking'> {
+): W & Pick<Wall, WallTypeField | 'blocking' | 'sheathing'> {
   const entry = wallTypeOf(wall, config);
   const section = wall.section ?? entry?.section;
   const exterior = wall.exterior ?? entry?.exterior;
@@ -68,7 +70,16 @@ export function resolveWallType<W extends WallTypeInput & { blocking?: BlockingE
   }
   // Blocking (S36): o da parede, mesmo `[]`; sem ele, o do tipo. Lista inteira, sem mistura nem aviso.
   const blocking = wall.blocking ?? entry?.blocking;
-  return { ...wall, section, exterior, bearing, ...(blocking === undefined ? {} : { blocking: [...blocking] }) };
+  // Sheathing (S38): o da parede, mesmo `false`; sem ele, o do tipo.
+  const sheathing = wall.sheathing ?? entry?.sheathing;
+  return {
+    ...wall,
+    section,
+    exterior,
+    bearing,
+    ...(blocking === undefined ? {} : { blocking: [...blocking] }),
+    ...(sheathing === undefined ? {} : { sheathing }),
+  };
 }
 
 /** Um campo que a parede e o tipo dão com valores diferentes. */

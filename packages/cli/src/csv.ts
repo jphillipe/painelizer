@@ -17,6 +17,7 @@ import {
   type BomLine,
   type Cost,
   type Panel,
+  type SheathingBomLine,
 } from 'core';
 
 export function csvCell(value: string | number): string {
@@ -57,8 +58,13 @@ export const BOM_HEADER = [
  * comprimento da peça, S12.5) ou `oversize` (peça serrada acima do maior comercial, que o motor não emendou —
  * S15). Pré-corte, engenheirado e oversize saem formatados só em polegadas (`92 5/8"`, como a fábrica os
  * chama); o comercial, em pés (`8'-0"`).
+ *
+ * Chapas de sheathing (S38) vêm depois da madeira, uma linha por chapa inteira: `section` = `sheathing 7/16"`,
+ * `stock_type` = `sheet`, `stock_length_in` = a altura da chapa, `stock_length` = `48" x 96"`, `qty` = chapas
+ * (uma por pedaço, sem aproveitamento de sobra), `cut_total_in`/`waste_in` vazios (a medida da chapa é área) e
+ * `waste_percent` pela área. Sem chapa, o arquivo sai como antes.
  */
-export function bomCsv(lines: readonly BomLine[]): string {
+export function bomCsv(lines: readonly BomLine[], sheathing: readonly SheathingBomLine[] = []): string {
   const rows: (string | number)[][] = [[...BOM_HEADER]];
   for (const l of lines) {
     rows.push([
@@ -70,6 +76,18 @@ export function bomCsv(lines: readonly BomLine[]): string {
       l.cutTotal,
       l.waste,
       l.wastePercent,
+    ]);
+  }
+  for (const s of sheathing) {
+    rows.push([
+      `sheathing ${formatInches(s.thickness)}`,
+      'sheet',
+      s.height,
+      `${formatInches(s.width)} x ${formatInches(s.height)}`,
+      s.qty,
+      '',
+      '',
+      s.wastePercent,
     ]);
   }
   return toCsv(rows);

@@ -56,6 +56,21 @@ export interface BomRow {
   cost?: number;
 }
 
+/** Linha de chapas de sheathing (S38): as linhas do fim de `bom.csv`, uma chapa inteira por pedaço (sem aproveitamento). */
+export interface SheathingRow {
+  /** Polegadas. */
+  thickness: number;
+  width: number;
+  height: number;
+  /** Chapas inteiras a comprar. */
+  qty: number;
+  /** Quantas são cortadas. */
+  cut: number;
+  /** Área instalada, pés². */
+  areaSqFt: number;
+  wastePercent: number;
+}
+
 /** Linha da lista de corte de um painel (`cutlist.csv`). */
 export interface CutRow {
   role: string;
@@ -72,6 +87,8 @@ export type GenerateResult =
       files: GeneratedFile[];
       warnings: Notice[];
       bom: BomRow[];
+      /** Chapas de sheathing (S38): só quando algum painel leva chapa. */
+      sheathing?: SheathingRow[];
       /** Orçamento (S31): só quando o projeto tem `config.prices`; o preço de cada linha vai no `bom`. */
       cost?: { total: number; unpriced: number };
       /** Por painel, na ordem dos painéis. */

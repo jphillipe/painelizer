@@ -5,6 +5,7 @@
  * - `Member.x` / `Member.y` = canto inferior esquerdo da peça.
  */
 
+import type { SheathingFace, SheathingNailing, SheathingSide } from './config';
 import { isCount } from './eps';
 import type { HeaderSource, OpeningType } from './opening';
 import type { PostSection, Section, WallSection } from './sections';
@@ -174,6 +175,47 @@ export interface PanelOpening {
  */
 export type PanelFacing = 'exterior' | 'interior';
 
+/**
+ * Uma chapa (ou pedaço de chapa) de sheathing no painel (S38): retângulo em x/y do painel (canto inferior esquerdo,
+ * como os members). `x` negativo ou `x + w > length` = avanço no canto; `y` negativo ou `y + h > height` = avanço na
+ * linha de piso.
+ */
+export interface SheathingSheet {
+  face: SheathingFace;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Não é a chapa inteira: cortada na largura, na altura ou com o vão de uma abertura recortado. */
+  cut?: true;
+}
+
+/** Avanço da chapa de uma face além do contorno do painel (S38): negativo = fica aquém. Polegadas. */
+export interface SheathingOverhangs {
+  start: number;
+  end: number;
+  top: number;
+  bottom: number;
+}
+
+/** Sheathing do painel (S38, hipóteses P47/P48): só no painel cuja parede leva chapa. */
+export interface PanelSheathing {
+  side: SheathingSide;
+  thickness: number;
+  /** A chapa inteira de que os pedaços saem. */
+  sheet: { width: number; height: number };
+  /** Pedaços, face exterior primeiro; em cada face da esquerda para a direita e de baixo para cima. */
+  sheets: SheathingSheet[];
+  /** Avanço de cada face com chapa. */
+  overhang: Partial<Record<SheathingFace, SheathingOverhangs>>;
+  /** Área instalada (todas as faces, sem os vãos das aberturas), pés², a 0.01. */
+  areaSqFt: number;
+  /** Peso da chapa, lb, a 0.1 (P8 revista: 3.2 lb/pé² por polegada de espessura → 1.4 para 7/16"). */
+  weightLb: number;
+  /** Pregação para a nota da folha (P48). */
+  nailing: SheathingNailing;
+}
+
 export interface Panel {
   /** `{level}-{wallId}-P{n}` (S16): pavimento, parede e ordem do painel de start para end, sempre com `-P1`. */
   id: string;
@@ -199,8 +241,10 @@ export interface Panel {
   layoutOrigin: number;
   /** x, na parede, onde este painel começa (S15); 0 no primeiro painel. */
   wallOffset: number;
-  /** Peso estimado da madeira, lb, sem sheathing (S15, hipótese P8). */
+  /** Peso estimado, lb: a madeira (S15, hipótese P8) e, com `sheathing`, a chapa (S38). */
   weightLb: number;
+  /** Chapas do painel (S38). Só quando a parede leva sheathing. */
+  sheathing?: PanelSheathing;
   /**
    * Pontas da plate deste painel em planta (S16): `start` é o x=0 do painel, `end` o `length`. Só na casa em
    * planta (`panelizeHouse`); parede solta não tem.

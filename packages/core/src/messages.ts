@@ -82,6 +82,8 @@ export const ENGINE_ERROR_CODES = [
   // blocking por altura (S36)
   'BLOCKING_PRESET_UNKNOWN',
   'BLOCKING_ROW_INVALID',
+  // sheathing (S38)
+  'SHEATHING_INVALID',
   // divisão em painéis, emendas, estoque
   'CANNOT_SPLIT',
   'PANEL_BREAK_INVALID',
@@ -360,6 +362,9 @@ const ERROR: Record<EngineErrorCode, Template> = {
       : p.field === 'range'
         ? `from ${p.from} to ${p.to} must be a range inside the ${inch(p.length)} wall`
         : `${p.field} must be a finite number (got ${p.value})`),
+
+  SHEATHING_INVALID: (p, w) =>
+    `${lead({ wallId: w.wallId })}sheathing: ${p.field} must be ${p.field === 'nailing.nail' ? 'a nail name' : p.field === 'overhang.corner' ? '"auto" or a measurement ≥ 0' : String(p.field).startsWith('overhang') ? 'a measurement ≥ 0' : 'a measurement > 0'} (got ${p.value})`,
 
   WALL_TYPE_UNKNOWN: (p, w) =>
     at({ wallId: w.wallId }, `wall type "${p.tag}" is not in config.wallTypes and the wall does not give ${wallFields(p.fields)}`),

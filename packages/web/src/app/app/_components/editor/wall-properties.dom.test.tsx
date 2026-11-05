@@ -78,3 +78,21 @@ describe('WallProperties — Posts (S37)', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'updateWall', wallId: 'W01', patch: { posts: undefined } });
   });
 });
+
+/** S38: liga/desliga o sheathing por parede (o select é testado pelo que mostra; a escolha, em lib/editor/sheathing). */
+describe('WallProperties — Sheathing (S38)', () => {
+  it('vazio segue o projeto: o seletor e a ajuda dizem o que vale', () => {
+    renderWall(wall());
+    expect(document.getElementById('w-W01-sheathing')?.textContent).toBe('From project (none)');
+    expect(screen.getByText('No sheathing — the project has none')).toBeTruthy();
+  });
+
+  it('ligado na parede e ajuste do arquivo ("Custom")', () => {
+    renderWall(wall({ sheathing: true }));
+    expect(document.getElementById('w-W01-sheathing')?.textContent).toBe('Sheathed');
+    cleanup();
+    renderWall(wall({ sheathing: { side: 'both' } }));
+    expect(document.getElementById('w-W01-sheathing')?.textContent).toBe('Custom (from the project file)');
+    expect(screen.getByText('Sheathed (set on this wall)')).toBeTruthy();
+  });
+});

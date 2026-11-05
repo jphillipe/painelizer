@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { splitWall, suggestSplit } from '@/lib/editor/wall-ops';
 import { missingWallFields, typeOfWall, wallTypeHint, wallTypeOptions } from '@/lib/editor/wall-types';
 import { POST_SECTION_OPTIONS, postHint } from '@/lib/editor/posts';
+import { sheathingStatus, wallSheathingChoice } from '@/lib/editor/sheathing';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput, WallTypeInput } from './fields';
 import { IssueCallout } from './issue-callout';
 
@@ -156,6 +157,7 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
           <Field id={`w-${id}-bw`} label={LABELS.width} hint="Only this wall (L-shaped house); empty = the project’s">
             <MeasureInput id={`w-${id}-bw`} value={wall.buildingWidth} positive placeholder="project" onCommit={(v) => set({ buildingWidth: v })} />
           </Field>
+          <SheathingField id={id} draft={draft} wall={wall} onChange={(sheathing) => set({ sheathing })} />
         </div>
       </Section>
 
@@ -244,6 +246,31 @@ function SplitControl({ draft, wallId, dispatch }: { draft: ProjectDraft; wallId
  * Quebras de painel da parede (S29), em x do arquivo (do `start` na planta). Automáticas até a primeira edição;
  * daí a lista inteira vai para `panelBreaks` e o motor usa exatamente ela. "Automatic" apaga o campo.
  */
+/** Liga/desliga a chapa nesta parede (S38); "segue" o tipo ou o projeto quando vazio. */
+function SheathingField({ id, draft, wall, onChange }: { id: string; draft: ProjectDraft; wall: DraftWall; onChange: (s: DraftWall['sheathing']) => void }) {
+  const choice = wallSheathingChoice(wall.sheathing);
+  const follow = sheathingStatus(draft, { ...wall, sheathing: undefined });
+  const options = [
+    { value: 'on', label: 'Sheathed' },
+    { value: 'off', label: 'No sheathing' },
+    ...(choice === 'custom' ? [{ value: 'custom', label: 'Custom (from the project file)' }] : []),
+  ];
+  return (
+    <Field id={`w-${id}-sheathing`} label="Sheathing" hint={sheathingStatus(draft, wall).text} className="col-span-2">
+      <EnumSelect
+        id={`w-${id}-sheathing`}
+        value={choice}
+        noneLabel={`${follow.source === 'type' ? 'From type' : 'From project'} (${follow.on ? 'sheathed' : 'none'})`}
+        options={options}
+        onChange={(v) => {
+          if (v === 'custom') return;
+          onChange(v === undefined ? undefined : v === 'on');
+        }}
+      />
+    </Field>
+  );
+}
+
 function PanelBreaksSection({ id, length, breaks, issue, onChange }: { id: string; length: number | undefined; breaks: ShownBreaks | undefined; issue: boolean; onChange: (list: number[] | undefined) => void }) {
   const list = breaks?.breaks ?? [];
   const manual = breaks?.manual === true;

@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatInchesOnly, formatMeasure } from '@/lib/editor/measure';
 import { cn } from '@/lib/utils';
-import type { BomRow, CutRow, PanelSummary } from '@/types/panels';
+import type { BomRow, CutRow, PanelSummary, SheathingRow } from '@/types/panels';
 
 export interface ResultMaterialsProps {
   bom: readonly BomRow[];
+  /** Chapas de sheathing (S38); ausente ou vazia = nenhum painel leva chapa. */
+  sheathing?: readonly SheathingRow[] | undefined;
   /** Orçamento (S31): presente quando o projeto tem `config.prices`; liga as colunas de preço. */
   cost?: { total: number; unpriced: number } | undefined;
   cutLists: readonly { panelId: string; lines: CutRow[] }[];
@@ -74,7 +76,7 @@ export const fmtMoney = (v: number): string => v.toLocaleString('en-US', { style
  * teto (sem otimização de corte, docs do core). Com `config.prices` (S31), colunas de preço unitário e custo, como o
  * `cost.csv`; linha sem preço na tabela mostra "—" e fica fora do total.
  */
-export function ResultMaterials({ bom, cost, cutLists, panels, onOpenSheet }: ResultMaterialsProps) {
+export function ResultMaterials({ bom, sheathing = [], cost, cutLists, panels, onOpenSheet }: ResultMaterialsProps) {
   const groups = useMemo(() => groupBySection(bom), [bom]);
   const totalQty = groups.reduce((n, g) => n + g.qty, 0);
   const totalFeet = groups.reduce((n, g) => n + g.feet, 0);
@@ -98,7 +100,11 @@ export function ResultMaterials({ bom, cost, cutLists, panels, onOpenSheet }: Re
           <Badge variant="secondary">{totalQty.toLocaleString('en-US')} pieces to buy</Badge>
           <Badge variant="secondary">{fmtFeet(totalFeet)} linear</Badge>
           <Badge variant="secondary">{wastePercent}% waste at most</Badge>
-          {totalWeight !== undefined ? <Badge variant="secondary">{Math.round(totalWeight).toLocaleString('en-US')} lb of lumber</Badge> : null}
+          {totalWeight !== undefined ? (
+            <Badge variant="secondary">
+              {Math.round(totalWeight).toLocaleString('en-US')} lb {sheathing.length > 0 ? 'of lumber and sheathing' : 'of lumber'}
+            </Badge>
+          ) : null}
           {cost !== undefined ? <Badge variant="secondary">{fmtMoney(cost.total)} lumber cost</Badge> : null}
           {cost !== undefined && cost.unpriced > 0 ? (
             <Badge variant="warning">
@@ -158,6 +164,8 @@ export function ResultMaterials({ bom, cost, cutLists, panels, onOpenSheet }: Re
           </Table>
         </div>
       </section>
+
+      {sheathing.length > 0 ? <SheathingTable rows={sheathing} priced={cost !== undefined} /> : null}
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -268,5 +276,59 @@ function GroupRows({ group, priced }: { group: SectionGroup; priced: boolean }) 
         ) : null}
       </TableRow>
     </>
+  );
+}
+
+/**
+ * Chapas de sheathing (S38): uma linha por chapa inteira (espessura × largura × altura), as mesmas do fim de `bom.csv`.
+ * Uma chapa por pedaço, sem aproveitamento de sobra (a tira cortada no topo também conta); sem preço por enquanto.
+ */
+function SheathingTable({ rows, priced }: { rows: readonly SheathingRow[]; priced: boolean }) {
+  return (
+    <section className="space-y-3" aria-label="Sheathing">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3>Sheathing</h3>
+        <p className="text-[13px] text-ink-2">
+          One full sheet per piece on the panels; no offcut reuse, so the count and the waste are upper bounds.
+          {priced ? ' Not in the cost total.' : ''}
+        </p>
+      </div>
+      <div className="overflow-auto rounded-md border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">Sheet</TableHead>
+              <TableHead scope="col">Thickness</TableHead>
+              <TableHead scope="col" className="text-right">
+                Sheets
+              </TableHead>
+              <TableHead scope="col" className="text-right">
+                Cut
+              </TableHead>
+              <TableHead scope="col" className="text-right">
+                Installed
+              </TableHead>
+              <TableHead scope="col" className="text-right">
+                Waste
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={`${r.thickness}|${r.width}|${r.height}`}>
+                <TableCell className="font-mono text-[13px]">
+                  {formatMeasure(r.width)} × {formatMeasure(r.height)}
+                </TableCell>
+                <TableCell className="font-mono text-[13px]">{formatInchesOnly(r.thickness)}</TableCell>
+                <TableCell className="text-right font-mono text-[13px] font-semibold">{r.qty.toLocaleString('en-US')}</TableCell>
+                <TableCell className="text-right font-mono text-[13px]">{r.cut.toLocaleString('en-US')}</TableCell>
+                <TableCell className="text-right font-mono text-[13px]">{r.areaSqFt.toLocaleString('en-US')} sq ft</TableCell>
+                <TableCell className="text-right font-mono text-[13px]">{r.wastePercent}%</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
   );
 }

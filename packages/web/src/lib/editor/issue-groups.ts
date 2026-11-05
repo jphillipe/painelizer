@@ -116,6 +116,7 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   POST_OVERLAP: 'Post on another full-height stud',
   BLOCKING_PRESET_UNKNOWN: 'Blocking preset not found',
   BLOCKING_ROW_INVALID: 'Blocking row outside the wall or between-plates range',
+  SHEATHING_INVALID: 'Sheathing setting out of range',
   PIECE_OVER_STOCK: 'Piece longer than any stock length',
   PANEL_FILE_CLASH: 'Two panels would write the same file',
   PROJECT_INVALID: 'Invalid value in the project file',

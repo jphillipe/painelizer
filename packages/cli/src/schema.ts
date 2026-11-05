@@ -49,6 +49,10 @@ import {
   type Post,
   type PostSection,
   type PriceEntry,
+  type SheathingConfig,
+  type SheathingSide,
+  type SheathingSpec,
+  type SheathingWalls,
   type Point,
   type Section,
   type StudSpacing,
@@ -499,6 +503,41 @@ export const blocking = z.unknown().transform((v, ctx): BlockingEntry[] => {
   return ok ? out : z.NEVER;
 });
 
+/** Lados com chapa (S38). */
+const SHEATHING_SIDES: readonly SheathingSide[] = ['exterior', 'interior', 'both'];
+/** Paredes que `config.sheathing` liga sozinho (S38). */
+const SHEATHING_WALLS: readonly SheathingWalls[] = ['exterior', 'all', 'none'];
+
+/** Chapa inteira (S38): largura ao longo da parede e altura. */
+export const sheathingSheetShape = { width: positiveMeasure.optional(), height: positiveMeasure.optional() };
+/** Avanço no canto (S38, P47): `"auto"` (a espessura da outra parede) ou medida ≥ 0. */
+export const cornerOverhang = z.unknown().transform((v, ctx): 'auto' | number => {
+  if (v === 'auto') return 'auto';
+  const r = sub(ctx, measure, v);
+  return r === undefined ? z.NEVER : r.value;
+});
+/** Avanços da chapa (S38, P47): canto, acima da double top e abaixo da bottom plate. */
+export const sheathingOverhangShape = { corner: cornerOverhang.optional(), floorTop: measure.optional(), floorBottom: measure.optional() };
+/** Pregação da chapa (S38, P48): texto da folha. */
+export const sheathingNailingShape = { nail: text.optional(), edge: positiveMeasure.optional(), field: positiveMeasure.optional() };
+/** Chapa de sheathing (S38): tudo opcional; o que faltar vem de `config.sheathing` e dos defaults do motor. */
+export const sheathingSpecShape = {
+  thickness: positiveMeasure.optional(),
+  sheet: node(sheathingSheetShape).optional(),
+  side: oneOf(SHEATHING_SIDES).optional(),
+  overhang: node(sheathingOverhangShape).optional(),
+  nailing: node(sheathingNailingShape).optional(),
+};
+/** `config.sheathing` (S38): a chapa do projeto e as paredes que ela liga (default: as externas). */
+export const sheathingConfigShape = { ...sheathingSpecShape, walls: oneOf(SHEATHING_WALLS).optional() };
+const sheathingSpecNode = node(sheathingSpecShape);
+/** Sheathing da parede ou do tipo (S38): `true`/`false` ou a chapa (que liga e ajusta). */
+export const wallSheathing = z.unknown().transform((v, ctx): boolean | SheathingSpec => {
+  if (typeof v === 'boolean') return v;
+  const r = sub(ctx, sheathingSpecNode, v);
+  return r === undefined ? z.NEVER : r.value;
+});
+
 /** Linha do catálogo de tipos de parede (S35): tudo opcional — o tipo dá o que a parede não disser. */
 export const wallTypeShape = {
   section: oneOf(WALL_SECTIONS).optional(),
@@ -507,6 +546,8 @@ export const wallTypeShape = {
   description: text.optional(),
   /** Fileiras de blocking do tipo (S36): valem na parede sem `blocking`. */
   blocking: blocking.optional(),
+  /** Sheathing do tipo (S38): vale na parede sem `sheathing`. */
+  sheathing: wallSheathing.optional(),
 };
 
 /** Seção de uma linha de preço: a de header (2x, LVL/PSL) ou a de post (S37: `4x4`, `4x6`, `6x6`). */
@@ -588,6 +629,7 @@ export const configShape = {
   wallTypes: record(node(wallTypeShape)).optional(),
   fireBlockAt: positiveMeasure.optional(),
   blockingPresets: record(node(blockingPresetShape)).optional(),
+  sheathing: node(sheathingConfigShape).optional(),
   prices: prices.optional(),
 };
 
@@ -653,6 +695,8 @@ export const wallShape = {
   wallType: text.optional(),
   /** Fileiras de blocking por altura (S36): presets e fileiras; ausente = as do tipo de parede. */
   blocking: blocking.optional(),
+  /** Sheathing (S38): `true`/`false` ou a chapa; ausente = a do tipo, senão a regra de `config.sheathing.walls`. */
+  sheathing: wallSheathing.optional(),
 };
 
 /** Parede solta: `length` e, opcionalmente, `layoutOrigin`. */
@@ -809,6 +853,9 @@ export type SchemaMatchesCore = [
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingRowShape>>>>, BlockingRow>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingPresetShape>>>>, BlockingPreset>>,
   Assert<Same<z.output<typeof blocking>, BlockingEntry[]>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof sheathingSpecShape>>>>, SheathingSpec>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof sheathingConfigShape>>>>, SheathingConfig>>,
+  Assert<Same<z.output<typeof wallSheathing>, boolean | SheathingSpec>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof pointShape>>>>, Point>>,
   Assert<Same<LooseWallFile, WallInput>>,
   Assert<Same<PlanWallFile, HouseWallInput>>,

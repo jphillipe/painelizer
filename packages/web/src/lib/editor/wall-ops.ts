@@ -230,6 +230,9 @@ export function joinWalls(d: ProjectDraft, aId: string, bId: string): WallOp {
     return { ok: false, reason: `${a.id} and ${b.id} differ in blocking; make them match first` };
   if ((a.blocking ?? []).some((e) => typeof e !== 'string' && (e.from !== undefined || e.to !== undefined)))
     return { ok: false, reason: `${a.id} has blocking rows with a from/to range; make them whole-wall first` };
+  // Sheathing (S38): a parede junta leva uma regra só.
+  if (JSON.stringify(a.sheathing) !== JSON.stringify(b.sheathing))
+    return { ok: false, reason: `${a.id} and ${b.id} differ in sheathing; make them match first` };
   // A primeira manda no sentido: a de fora dela é o start (ou o end) da parede junta.
   const start = farA === 'start' ? a.start : b[farB]!;
   const end = farA === 'start' ? b[farB]! : a.end;

@@ -3,6 +3,7 @@
  * início da parede (esquerda); y=0 na base da bottom plate.
  */
 
+import type { SheathingSpec } from './config';
 import type { Opening } from './opening';
 import type { PostSection, WallSection } from './sections';
 
@@ -110,6 +111,11 @@ export interface Wall {
    */
   blocking?: BlockingEntry[];
   /**
+   * Sheathing da parede (S38, P47): `true` liga com a chapa do projeto, `false` desliga, objeto liga e ajusta (por cima
+   * de `config.sheathing`). Ausente = o do tipo de parede, senão a regra de `config.sheathing.walls`.
+   */
+  sheathing?: boolean | SheathingSpec;
+  /**
    * Ligações desta parede com as vizinhas, em x do painel (S14). Derivadas pela planta (`frameWalls`);
    * ausente = parede solta. Definem as peças de canto e T e os laps da double top plate.
    */
@@ -131,6 +137,8 @@ export interface WallTypeEntry {
   description?: string;
   /** Fileiras de blocking do tipo (S36): valem na parede que não traz `blocking`. */
   blocking?: BlockingEntry[];
+  /** Sheathing do tipo (S38): vale na parede que não traz `sheathing`. */
+  sheathing?: boolean | SheathingSpec;
 }
 
 /**
@@ -148,6 +156,12 @@ export type EndJoint =
       through: boolean;
       otherThickness: number;
       wallId?: string;
+      /**
+       * Canto de dentro (S38): a outra parede sai para o lado de fora desta (o L se abre para fora do prédio). Só na
+       * parede externa com lado de fora conhecido (`WallFrame.outside`, hipótese P24); ausente = canto de fora.
+       * Decide em que face a chapa avança (`rules/sheathing.ts`).
+       */
+      concave?: true;
     }
   | {
       /** Esta parede encosta em T no interior da outra. */

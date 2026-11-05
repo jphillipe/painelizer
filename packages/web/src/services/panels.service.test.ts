@@ -138,3 +138,21 @@ describe('S26: nada em português na frase dos avisos dos exemplos', () => {
     }
   });
 });
+
+describe('panels.service.generate — sheathing (S38)', () => {
+  it('Generate: linha de chapas no resultado só com sheathing; peso dos painéis inclui a chapa', () => {
+    const raw = JSON.parse(exampleText('house-28x40') as string) as { config: Record<string, unknown> };
+    const plain = generate(JSON.stringify(raw));
+    expect(plain.ok && 'sheathing' in plain).toBe(false);
+    raw.config['sheathing'] = {};
+    const sheathed = generate(JSON.stringify(raw));
+    if (!sheathed.ok || !plain.ok) throw new Error('generate failed');
+    expect(sheathed.sheathing).toHaveLength(1);
+    expect(sheathed.sheathing![0]).toMatchObject({ thickness: 0.4375, width: 48, height: 96 });
+    expect(sheathed.sheathing![0]!.qty).toBeGreaterThan(0);
+    expect(sheathed.bom).toEqual(plain.bom);
+    const w = (r: typeof plain) => r.panels.reduce((n, p) => n + (p.weightLb ?? 0), 0);
+    expect(w(sheathed)).toBeGreaterThan(w(plain));
+    expect(sheathed.files.find((f) => f.path === 'bom.csv')!.content).toContain('sheathing 7/16');
+  });
+});

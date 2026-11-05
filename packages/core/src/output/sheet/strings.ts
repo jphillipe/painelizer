@@ -8,7 +8,8 @@
  */
 
 import { warningMessage, type Warning } from '../../messages';
-import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening, PostMember } from '../../panel';
+import type { SheathingFace } from '../../config';
+import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening, PanelSheathing, PostMember, SheathingOverhangs, SheathingSheet } from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import type { CutRole } from '../cutlist';
 
@@ -55,6 +56,8 @@ export interface SheetStrings {
     total: string;
     weight(lb: number): string;
     weightNote: string;
+    /** Nota do peso no painel com chapa (S38). */
+    weightNoteSheathed: string;
     fieldCuts: string;
   };
   /** Rótulo do corte na obra, sobre a peça. */
@@ -72,6 +75,21 @@ export interface SheetStrings {
     item(post: Pick<PostMember, 'section' | 'x' | 'label'>): string;
     connectors(post: Pick<PostMember, 'base' | 'top'>): string | undefined;
     note: readonly string[];
+  };
+  /**
+   * Sheathing do painel (S38): título, resumo, área e peso, pregação (P48), avanços (canto, linha de piso) e a nota da
+   * hipótese; legenda do contorno tracejado e `<title>` de cada chapa. Só no painel com chapa.
+   */
+  sheathing: {
+    title: string;
+    summary(s: PanelSheathing): string;
+    area(s: PanelSheathing): string;
+    nailing(s: PanelSheathing): string;
+    corner(face: SheathingFace, o: SheathingOverhangs, both: boolean): string | undefined;
+    floor(o: SheathingOverhangs): string | undefined;
+    note: readonly string[];
+    legend: string;
+    sheetTitle(sheet: SheathingSheet): string;
   };
   /** Texto do aviso no rodapé (depois do código). */
   warning(w: Warning): string;
@@ -107,6 +125,18 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 
 const LEGEND_LETTERS = 'K king · J jack · C cripple · H header · S sill · B block';
 const LEGEND_REST = 'red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0';
+
+const SIDE_NAME: Readonly<Record<PanelSheathing['side'], string>> = {
+  exterior: 'exterior face',
+  interior: 'interior face',
+  both: 'both faces',
+};
+
+/** "start 5 1/2\"" ou "start held back 5 1/2\"" (S38). */
+function cornerPart(end: 'start' | 'end', v: number): string | undefined {
+  if (Math.abs(v) < 1e-9) return undefined;
+  return v > 0 ? `${end} ${formatInches(v)}` : `${end} held back ${formatInches(-v)}`;
+}
 
 /** "P-01 · 4x6 at x=48\"" (S37). */
 function postItem(post: Pick<PostMember, 'section' | 'x' | 'label'>): string {
@@ -197,6 +227,7 @@ const EN: SheetStrings = {
     total: 'pieces to cut',
     weight: (lb) => `Estimated weight: ${lb} lb`,
     weightNote: 'lumber only, no sheathing (hypothesis P8)',
+    weightNoteSheathed: 'lumber and sheathing, no nails (hypothesis P8)',
     fieldCuts: 'Field cuts',
   },
   fieldCutLabel: (cut) => `field cut ${formatInches(cut.length)}`,
@@ -208,6 +239,33 @@ const EN: SheetStrings = {
     item: postItem,
     connectors: postConnectors,
     note: ['connectors as the project gives them, not in the piece list —', 'engineer to verify (hypothesis P45)'],
+  },
+  sheathing: {
+    title: 'Sheathing',
+    summary: (s) =>
+      `${formatInches(s.thickness)} ${SIDE_NAME[s.side]} · ${formatInches(s.sheet.width)} x ${formatInches(s.sheet.height)} sheets`,
+    area: (s) => {
+      const cut = s.sheets.filter((p) => p.cut === true).length;
+      return `${plural(s.sheets.length, 'piece', 'pieces')}${cut > 0 ? ` (${cut} cut)` : ''} · ${s.areaSqFt} sq ft · ${s.weightLb} lb`;
+    },
+    nailing: (s) =>
+      `nailing: ${s.nailing.nail} @ ${formatInches(s.nailing.edge)} edges, ${formatInches(s.nailing.field)} field`,
+    corner: (face, o, both) => {
+      const parts = [cornerPart('start', o.start), cornerPart('end', o.end)].filter((p) => p !== undefined);
+      if (parts.length === 0) return undefined;
+      return `corner overhang${both ? ` (${face})` : ''}: ${parts.join(' · ')}`;
+    },
+    floor: (o) => {
+      const parts = [
+        ...(o.top > 1e-9 ? [`${formatInches(o.top)} above the double top`] : []),
+        ...(o.bottom > 1e-9 ? [`${formatInches(o.bottom)} below the bottom plate`] : []),
+      ];
+      return parts.length === 0 ? undefined : `floor line: ${parts.join(', ')} — engineer to verify`;
+    },
+    note: ['sheets from layout mark 0, cut at the panel ends; nailing and', 'overhangs — engineer to verify (hypotheses P47, P48)'],
+    legend: 'dashed green = sheathing sheet',
+    sheetTitle: (p) =>
+      `sheathing ${p.face} ${formatInches(p.w)} x ${formatInches(p.h)} at x=${formatInches(p.x)}, y=${formatInches(p.y)}${p.cut === true ? ' (cut)' : ''}`,
   },
   // Com parâmetros, a frase sai de código + parâmetros (vale também para um `message` guardado antes de P51);
   // sem eles (aviso montado à mão), o `message` como veio.

@@ -117,6 +117,23 @@
   abertura, sobre stud extra/de canto/de encosto ou outro post: erro com código. Nunca é candidato a quebra (peça na
   faixa da junta); quebra forçada sobre ele é `PANEL_BREAK_INVALID`. Conectores (`base`, `top`) e a viga LVL apoiada
   são texto do projeto na folha — não são peças nem entram na lista. Peso a 35 pcf (2.98 / 4.68 / 7.35 lb/pé).
+- Sheathing (S38, hipóteses P47, P48, P49, P52; `rules/sheathing.ts`): desligado por padrão. Liga por
+  `config.sheathing` (as paredes de `walls`: default as externas), pelo tipo (`wallTypes[tag].sheathing`) ou pela parede
+  (`sheathing: true | false | { … }`; a parede manda, depois o tipo, depois o projeto). Default: OSB 7/16" 48x96 de pé
+  na face exterior, 8d @ 6" bordas / 12" campo. Chapas verticais com as bordas nas marcas `layoutOrigin + k·48` (as
+  mesmas em que os studs são centrados: a emenda vertical cai no centro de um stud), cortadas nas pontas da área
+  coberta; fileiras de baixo para cima com a altura da chapa, a sobra vira tira cortada no topo (P52: 1 1/8" na parede
+  de 97 1/8" com 4x8). **Canto em L**: na face do ângulo de fora, a parede que **encosta** avança a chapa `t_outra`
+  (`overhang.corner: 'auto'`, ou um número) sobre a ponta da que atravessa — é assim que a primeira chapa começa na
+  quina do prédio (a marca 0, `layoutOrigin = −t_outra`); a que atravessa não avança (a plate dela já chega à face
+  externa da outra). No canto de dentro (`EndJoint.concave`, parede externa com lado de fora conhecido, P24) o ângulo
+  de fora é a face interior. **T e +**: a chapa da atravessada é contínua; a que encosta acaba na plate. **Junta de
+  painéis**: a chapa acaba no painel (P49). **Linha de piso**: `floorTop` acima da double top e `floorBottom` abaixo
+  da bottom plate, só na face exterior; a folha pede "engineer to verify". **Emenda horizontal** dentro da cavidade:
+  fileira de blocking por altura (`blocking: 'backing'`, uso "Sheathing joint") com o centro na emenda; sobre a bottom
+  plate, sobre as top plates ou fora da parede não pede bloco. `Panel.sheathing`: pedaços (`{ face, x, y, w, h, cut? }`
+  em x/y do painel), avanços por face, área instalada (sem o RO), peso (3.2 lb/pé² por polegada → 1.4 para 7/16", P8) e
+  a pregação (texto da folha, nunca geometria). Pedaço todo dentro de um RO sai; com vão recortado, `cut`.
 - Cripples abaixo do sill nos studs de layout que caem inteiros dentro do RO, exceto o colado ao jack ou o que
   o invade (ex.: RO em 48 com jack em 46.5–48: o stud da marca 48, em 47.25–48.75, invade o jack e sai) ou a até
   2" de folga livre dele — confirmado pela fábrica (P3, P13).

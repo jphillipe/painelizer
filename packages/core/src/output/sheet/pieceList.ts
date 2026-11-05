@@ -1,6 +1,7 @@
 /**
  * Lista de peças na margem direita da folha (S17): da `cutList`, com comprimento em pés-pol e em polegadas;
- * depois o peso estimado (madeira sem sheathing, P8), os posts com os conectores do projeto (S37) e os cortes na obra.
+ * depois o peso estimado (madeira e, com chapa, o sheathing — P8), as chapas (S38, só no painel com sheathing), os posts
+ * com os conectores do projeto (S37) e os cortes na obra.
  */
 
 import type { Panel } from '../../panel';
@@ -75,7 +76,36 @@ export function pieceList(panel: Panel, x: number, y0: number, S: SheetStrings):
   y += LIST_ROW + 6;
   out.push(`<text class="weight" x="${px(x)}" y="${px(y)}">${PIECE_LIST.weight(panel.weightLb)}</text>`);
   y += LIST_ROW - 2;
-  out.push(`<text x="${px(x)}" y="${px(y)}" font-size="9" fill="${MUTED}">${PIECE_LIST.weightNote}</text>`);
+  const weightNote = panel.sheathing === undefined ? PIECE_LIST.weightNote : PIECE_LIST.weightNoteSheathed;
+  out.push(`<text x="${px(x)}" y="${px(y)}" font-size="9" fill="${MUTED}">${weightNote}</text>`);
+
+  // Sheathing (S38): resumo, área e peso, pregação (P48), avanços e a nota. Só no painel com chapa.
+  const sh = panel.sheathing;
+  if (sh !== undefined) {
+    y += LIST_ROW + 6;
+    out.push(`<text x="${px(x)}" y="${px(y)}" font-weight="bold">${S.sheathing.title}</text>`);
+    const both = sh.side === 'both';
+    const lines = [
+      S.sheathing.summary(sh),
+      S.sheathing.area(sh),
+      S.sheathing.nailing(sh),
+      ...(['exterior', 'interior'] as const).flatMap((face) => {
+        const o = sh.overhang[face];
+        return o === undefined ? [] : [S.sheathing.corner(face, o, both)];
+      }),
+      ...(sh.overhang.exterior === undefined ? [] : [S.sheathing.floor(sh.overhang.exterior)]),
+    ].filter((l): l is string => l !== undefined);
+    for (const text of lines) {
+      for (const line of wrapText(text, POST_LINE_CHARS)) {
+        y += LIST_ROW - 1;
+        out.push(`<text class="sheathing-item" x="${px(x)}" y="${px(y)}" font-size="10">${esc(line)}</text>`);
+      }
+    }
+    for (const line of S.sheathing.note) {
+      y += LIST_ROW - 2;
+      out.push(`<text x="${px(x)}" y="${px(y)}" font-size="9" fill="${MUTED}">${esc(line)}</text>`);
+    }
+  }
 
   // Posts (S37): o que o projeto diz de cada post (rótulo, seção, x, conectores). Só no painel com post.
   const posts = panel.members.filter((m) => m.role === 'post');

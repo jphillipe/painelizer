@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Member, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
-import { bom, stockLengthFor } from '../../src/output/bom';
+import { bom, sheathingBom, stockLengthFor } from '../../src/output/bom';
 import { DEFAULT_STOCK_LENGTHS } from '../../src/types';
 import plainJson from '../fixtures/wall-144-plain.json';
 import windowJson from '../fixtures/wall-144-window.json';
@@ -157,5 +157,40 @@ describe('bom', () => {
       wastePercent: 0,
     });
     expect(lines.filter((l) => l.kind !== 'oversize').map((l) => [l.stockLength, l.qty])).toEqual([[92.625, 16]]);
+  });
+});
+
+describe('sheathingBom (S38)', () => {
+  const sheathed = (extra: Partial<Wall> = {}) =>
+    panelizeWall({ ...plain.wall, sheathing: true, ...extra }, { ...plain.config });
+
+  it('sem chapa: lista vazia; a BOM da madeira não muda com a chapa', () => {
+    expect(sheathingBom([plainPanel])).toEqual([]);
+    expect(bom([sheathed()], DEFAULT_STOCK_LENGTHS, plain.config.studLength)).toEqual(
+      bom([plainPanel], DEFAULT_STOCK_LENGTHS, plain.config.studLength),
+    );
+  });
+
+  it('uma chapa inteira por pedaço (sem aproveitamento), sobra pela área', () => {
+    // 3 chapas 48x96 inteiras + 3 tiras de 1 1/8" no topo = 6 chapas; instalado 97.13 pés².
+    const [line] = sheathingBom([sheathed(), sheathed()]);
+    expect(line).toEqual({
+      thickness: 0.4375,
+      width: 48,
+      height: 96,
+      qty: 12,
+      cut: 6,
+      areaSqFt: 194.26,
+      wastePercent: Math.round(((12 * 48 * 96 - 2 * 97.13 * 144) / (12 * 48 * 96)) * 1000) / 10,
+    });
+  });
+
+  it('chapas diferentes saem em linhas separadas, da mais fina para a mais grossa', () => {
+    const lines = sheathingBom([sheathed({ sheathing: { thickness: 0.5 } }), sheathed(), sheathed({ sheathing: { sheet: { height: 108 } } })]);
+    expect(lines.map((l) => [l.thickness, l.height, l.qty])).toEqual([
+      [0.4375, 96, 6],
+      [0.4375, 108, 3],
+      [0.5, 96, 6],
+    ]);
   });
 });

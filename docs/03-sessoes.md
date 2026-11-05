@@ -1558,7 +1558,7 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   coluna e passou a quebrar). Não conferido: a seção "Posts" no app rodando (só testes e DOM/jsdom), `pnpm e2e`. Não
   feito (S39): posts e conectores no bloco
   "Wall content"; (backlog) post atravessando a top plate até a viga, posts lidos da planta estrutural pela IA.
-- [ ] **S38 — Sheathing (regra de framing; P47, P48; P8 revista; entra no escopo v1).** `config.sheathing?:
+- [x] **S38 — Sheathing (regra de framing; P47, P48; P8 revista; entra no escopo v1).** `config.sheathing?:
   { thickness: 0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?:
   { corner?: 'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail, edge, field } }`, ligado
   por config, wall type ou parede (`sheathing: true | false | spec`). **Desligado por padrão**: pesos e folhas de
@@ -1572,6 +1572,36 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   pregação (P48) e "engineer to verify" quando houver avanço na linha de piso. **Web**: seção "Sheathing" nas
   configurações e liga/desliga por parede. **CLI**: schema. **Fixtures novos** `wall-144-sheathed` e
   `house-corner-L-sheathed` (members iguais aos dos originais; campo `sheathing` novo).
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Core**: `SheathingSpec`/`SheathingConfig` (`walls: 'exterior' | 'all' | 'none'`, default as externas) em
+  `config.ts`; `Wall.sheathing` e `WallTypeEntry.sheathing` (`true | false | spec`; `resolveWallType` copia o do tipo);
+  `Panel.sheathing` (`side, thickness, sheet, sheets[{ face, x, y, w, h, cut? }], overhang` por face, `areaSqFt`,
+  `weightLb`, `nailing`). `rules/sheathing.ts`: `resolveSheathing` (parede > tipo > projeto > `DEFAULT_SHEATHING`),
+  `faceOverhangs`, `faceSheets` (bordas nas marcas `layoutOrigin + k·48`, fileiras de baixo, sobra em tira no topo —
+  P52 nova), `panelSheathing` (área sem o RO, peso 3.2 lb/pé²·pol → 1.4 para 7/16", P8 revista) e `sheathingJointRows`
+  (emenda horizontal na cavidade → fileira de blocking "Sheathing joint" da S36, centro na emenda). **Canto: avança a
+  parede que ENCOSTA** (`+t_outra`, a chapa começa na marca 0 do prédio), não a que atravessa como a P47 dizia — a plate
+  da atravessada já chega à face externa da outra; registrado em 04 e na P47 para o humano. Canto de dentro:
+  `EndJoint.concave` (marcado em `frameWalls` pela parede externa com `outside`), avanço na face interior. T/+: contínua;
+  junta de painel: acaba no painel (P49). Linha de piso `floorTop`/`floorBottom` só na face exterior. Erro
+  `SHEATHING_INVALID`. Peso do painel com a chapa (`panelWeight`, `estimateWeight`). **BOM**: `sheathingBom` (uma chapa
+  inteira por pedaço, sem aproveitamento; sobra pela área); `bom.csv` com as linhas `sheathing 7/16"`/`sheet` no fim;
+  sem preço de chapa (fica para a S40). **Folha** (só com chapa): contorno tracejado verde dos pedaços da face exterior,
+  espaço para os avanços, seção "Sheathing" na margem (chapa, pedaços, área e peso, pregação 8d @ 6"/12" — P48 —,
+  avanço de canto, "floor line: … — engineer to verify", nota P47/P48), nota de peso "lumber and sheathing" e legenda.
+  **CLI**: `sheathingSpecShape`, `sheathingConfigShape`, `wallSheathing`, `cornerOverhang` (`"auto"` ou medida) em
+  config, tipo e parede; type locks. **Web**: `draft.ts` lê e escreve `sheathing` (config, tipo, parede);
+  `lib/editor/sheathing.ts`; seção "Sheathing" nas configurações (Off / Exterior walls / All walls / Only walls that ask,
+  espessura, faces, chapa, avanços, pregação) e campo "Sheathing" no Framing do inspetor (segue tipo/projeto, Sheathed,
+  No sheathing, Custom do arquivo); juntar exige o mesmo sheathing; tabela "Sheathing" na aba Materials. **Fixtures
+  novos** `wall-144-sheathed` (6 pedaços, 3 tiras de 1 1/8", 362.4 lb) e `house-corner-L-sheathed` (4x9 descendo 10 7/8";
+  W2 começa em −5.5; 411.8 / 327.4 lb), members iguais aos originais. Testes: core 758 → 795, cli 188 → 200, extract 213
+  (+ 1 pulado), web 568 → 578. Verde: `pnpm check` duas vezes e `pnpm --filter web build`; os 17 fixtures e 10
+  snapshots existentes sem um byte mudado. Conferido: folhas de `wall-144-sheathed`, das duas paredes do
+  `house-corner-L-sheathed` e de uma parede de 10'-1 1/8" com as duas faces, janela e avanço no topo renderizadas para
+  PNG (Chrome headless, `out/s38/`). Não conferido: a seção e o campo no app rodando (só jsdom; o select do app não é
+  dirigível no jsdom, a escolha é testada em `lib/editor/sheathing`), `pnpm e2e`. Não feito: preço de chapa e campo
+  para o sheathing do tipo de parede (S40); sheathing no "Wall content" e o texto por ponta (S39).
 - [ ] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF, mas regenera os 10
   snapshots).** `Panel` não conhece as ligações (vivem em `Wall.joints` e `WallFrame.connections`): `Panel.ends?` e
   `Panel.tees?` (canto com quem, quem atravessa, T/+ em x) preenchidos em `framePanel`/`splitWall`. **Folha**:

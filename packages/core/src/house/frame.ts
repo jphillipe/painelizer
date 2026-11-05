@@ -67,7 +67,33 @@ export function frameWalls(house: House, tolerance: number = DEFAULT_TOLERANCE):
   for (const w of house.walls) axes.set(w.id, axisOf(w));
   const frames = house.walls.map((w, i) => frameWall(axes.get(w.id)!, connections[i]!, axes));
   markOutside(frames, axes);
+  markConcave(frames, axes);
   return frames;
+}
+
+/**
+ * Canto de dentro (S38): na parede externa com lado de fora conhecido, a ponta em canto cuja outra parede sai para o
+ * lado de fora desta ganha `concave: true` no `EndJoint` — a chapa avança na face do ângulo de fora (a interior).
+ * Sem `outside` (parede interna, indecidível), o canto fica como de fora.
+ */
+function markConcave(frames: WallFrame[], axes: ReadonlyMap<string, Axis>): void {
+  for (const f of frames) {
+    if (f.outside === undefined) continue;
+    const dx = Math.sign(f.plateEnd.x - f.plateStart.x);
+    const dy = Math.sign(f.plateEnd.y - f.plateStart.y);
+    for (const end of ['start', 'end'] as const) {
+      const c = f.connections[end];
+      const joint = f.wall.joints?.[end];
+      if (c.kind !== 'corner' || joint?.kind !== 'corner') continue;
+      const other = axes.get(c.wallId)!;
+      // A outra parede sai do cruzamento para o lado da ponta mais distante dele.
+      const dist = (p: Point): number => Math.abs(p.x - c.at.x) + Math.abs(p.y - c.at.y);
+      const far = dist(other.start) >= dist(other.end) ? other.start : other.end;
+      // Normal à direita do sentido de caminhada: (dy, −dx) (a mesma de `markOutside`).
+      const toRight = dy * (far.x - c.at.x) - dx * (far.y - c.at.y) > EPS;
+      if (toRight === (f.outside === 'right')) joint.concave = true;
+    }
+  }
 }
 
 /** Preenche `outside` das paredes externas: o lado oposto ao centro da caixa das plates (faces externas). */

@@ -29,6 +29,9 @@
  *   blocos entre as peças de altura inteira, fora das zonas de abertura e do trecho do ladder (P11, P50).
  * - Fileiras por altura (S36, `rules/blocking.ts`, P44): `wall.blocking` (presets resolvidos) entre as mesmas peças;
  *   vão em zona de abertura, no ladder ou com bloco na mesma altura é pulado com aviso `BLOCKING_SKIPPED`.
+ * - Sheathing (S38, `rules/sheathing.ts`, P47): com a parede que leva chapa, `Panel.sheathing` (chapas verticais da marca
+ *   0, avanço no canto e na linha de piso) e, na parede mais alta que a chapa, a fileira de blocking da emenda (como as
+ *   fileiras por altura). O peso do painel inclui a chapa.
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
@@ -60,6 +63,7 @@ import {
 import { panelWeight } from '../rules/weight';
 import { fireBlocks, heightBlocks, resolveBlockingRows, type BlockingSkip } from '../rules/blocking';
 import { postMembers } from '../rules/posts';
+import { panelSheathing, resolveSheathing, sheathingJointRows } from '../rules/sheathing';
 import { validatePanel } from './validate';
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
@@ -282,7 +286,13 @@ export function framePanel(
     ...plan.zones.map((z) => ({ lo: z.start, hi: z.end, reason: 'opening' as const, openingIds: z.openingIds })),
     ...ladderSkip.map((b, i) => ({ ...b, reason: 'tee' as const, teeWallId: strips[i]!.wallId })),
   ];
-  const height = heightBlocks(wall, resolveBlockingRows(wall, config), verticals, skips, [...ladder, ...fire], config);
+  // Sheathing (S38, P47): a emenda horizontal das chapas vira uma fileira a mais, depois das do projeto.
+  const sheathingSpec = resolveSheathing(wall, config);
+  const rows = [
+    ...resolveBlockingRows(wall, config),
+    ...(sheathingSpec === undefined ? [] : sheathingJointRows(wall, sheathingSpec, config)),
+  ];
+  const height = heightBlocks(wall, rows, verticals, skips, [...ladder, ...fire], config);
   warnings.push(...height.warnings);
   const blocks = [...ladder, ...fire, ...height.members];
 
@@ -294,6 +304,7 @@ export function framePanel(
   });
 
   const members = [...plates, ...verticals, ...blocks, ...framings.flatMap((f) => f.members)];
+  const sheathing = sheathingSpec === undefined ? undefined : panelSheathing(wall, sheathingSpec, panelOpenings);
   const panel: Panel = {
     id: wall.id,
     wallId: wall.id,
@@ -310,8 +321,9 @@ export function framePanel(
     // Parede de um painel só; `splitWall` dá o id, o offset e o peso de cada trecho (S15, S16).
     level: wall.level ?? 1,
     wallOffset: 0,
-    weightLb: panelWeight({ members }),
+    weightLb: panelWeight({ members, sheathing }),
     ...(wall.wallType === undefined ? {} : { wallType: wall.wallType }),
+    ...(sheathing === undefined ? {} : { sheathing }),
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.

@@ -239,7 +239,8 @@ describe('tipos de parede (S35)', () => {
   it.each([
     [{ ...cfg, wallTypes: { A: { section: '2x8' } } }, /^p\.config\.wallTypes\.A\.section: expected one of 2x4, 2x6/],
     [{ ...cfg, wallTypes: { A: { exterior: 'yes' } } }, /^p\.config\.wallTypes\.A\.exterior: expected true\/false/],
-    [{ ...cfg, wallTypes: { A: { sheathing: true } } }, /^p\.config\.wallTypes\.A\.sheathing: unknown key/],
+    // S38: `sheathing` entrou no tipo; valor fora da lista aponta o campo.
+    [{ ...cfg, wallTypes: { A: { sheathing: { side: 'outside' } } } }, /^p\.config\.wallTypes\.A\.sheathing\.side: expected one of exterior, interior, both/],
     [{ ...cfg, wallTypes: { '': {} } }, /^p\.config\.wallTypes: empty key/],
     [{ ...cfg, wallTypes: [] }, /^p\.config\.wallTypes: expected an object/],
   ])('catálogo inválido aponta o campo (%#)', (config, message) => {
@@ -255,7 +256,8 @@ describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 17 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen; S37: wall-144-post)', () => expect(files).toHaveLength(17));
+  it('são 19 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen; S37: wall-144-post; S38: wall-144-sheathed e house-corner-L-sheathed)', () =>
+    expect(files).toHaveLength(19));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {
@@ -324,6 +326,69 @@ describe('blocking por altura (S36)', () => {
     [project({}, { blocking: [{ y: -3 }] }), /^p\.walls\[0\]\.blocking\[0\]\.y: /],
     [project({ config: { ...cfg, blockingPresets: { a: { y: 30, use: 'x' } } } }), /^p\.config\.blockingPresets\.a\.use: unknown key/],
   ])('entrada inválida aponta o campo (%#)', (raw, message) => {
+    expect(() => projectFrom(raw, 'p')).toThrow(message);
+  });
+});
+
+describe('sheathing (S38)', () => {
+  const cfg = { studSpacing: 16, studLength: 92.625 };
+
+  it('config, tipo e parede: medidas pés-pol, "auto" no canto, true/false/objeto na parede', () => {
+    const p = projectFrom(
+      project(
+        {
+          config: {
+            ...cfg,
+            sheathing: {
+              thickness: '7/16"',
+              sheet: { width: "4'", height: "9'" },
+              side: 'both',
+              walls: 'all',
+              overhang: { corner: 'auto', floorTop: "1'-0\"", floorBottom: 0 },
+              nailing: { nail: '8d', edge: 6, field: '12"' },
+            },
+            wallTypes: { WT: { section: '2x6', exterior: true, bearing: true, sheathing: false } },
+          },
+        },
+        { sheathing: { overhang: { corner: '3 1/2"' } } },
+      ),
+      'p',
+    );
+    expect(p.config.sheathing).toEqual({
+      thickness: 0.4375,
+      sheet: { width: 48, height: 108 },
+      side: 'both',
+      walls: 'all',
+      overhang: { corner: 'auto', floorTop: 12, floorBottom: 0 },
+      nailing: { nail: '8d', edge: 6, field: 12 },
+    });
+    expect(p.config.wallTypes?.['WT']?.sheathing).toBe(false);
+    expect(p.walls[0]!.sheathing).toEqual({ overhang: { corner: 3.5 } });
+    expect(projectFrom(project({}, { sheathing: true }), 'p').walls[0]!.sheathing).toBe(true);
+  });
+
+  it('o tipo dá o sheathing à parede que não diz', () => {
+    const p = projectFrom(
+      project({ config: { ...cfg, wallTypes: { WT: { section: '2x6', exterior: true, bearing: true, sheathing: true } } } }, {
+        section: undefined,
+        exterior: undefined,
+        bearing: undefined,
+        wallType: 'WT',
+      }),
+      'p',
+    );
+    expect(p.walls[0]!.sheathing).toBe(true);
+  });
+
+  it.each([
+    [project({ config: { ...cfg, sheathing: { side: 'out' } } }), /^p\.config\.sheathing\.side: expected one of exterior, interior, both/],
+    [project({ config: { ...cfg, sheathing: { walls: 'some' } } }), /^p\.config\.sheathing\.walls: expected one of exterior, all, none/],
+    [project({ config: { ...cfg, sheathing: { thickness: 0 } } }), /^p\.config\.sheathing\.thickness: expected a measurement > 0/],
+    [project({ config: { ...cfg, sheathing: { overhang: { corner: 'yes' } } } }), /^p\.config\.sheathing\.overhang\.corner: /],
+    [project({ config: { ...cfg, sheathing: { overhang: { floorTop: -1 } } } }), /^p\.config\.sheathing\.overhang\.floorTop: invalid measurement/],
+    [project({}, { sheathing: 'yes' }), /^p\.walls\[0\]\.sheathing: /],
+    [project({}, { sheathing: { walls: 'all' } }), /^p\.walls\[0\]\.sheathing\.walls: unknown key/],
+  ])('valor inválido aponta o campo (%#)', (raw, message) => {
     expect(() => projectFrom(raw, 'p')).toThrow(message);
   });
 });

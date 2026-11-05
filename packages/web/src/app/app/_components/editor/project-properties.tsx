@@ -8,6 +8,7 @@ import type { ExtractOutcome } from '@/types/extract';
 import { ProjectDataForm } from '../project-data-form';
 import { CatalogEditor } from './catalog-editor';
 import { EnumSelect, Field, MeasureInput, MeasureListInput, NumberInput, Section, TextInput } from './fields';
+import { SheathingSettings } from './sheathing-settings';
 
 export interface ProjectPropertiesProps {
   draft: ProjectDraft;
@@ -77,6 +78,8 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
           </Field>
         </div>
       </Section>
+
+      <SheathingSettings config={c} onChange={(sheathing) => setConfig({ sheathing })} />
 
       <Section title="Panels and stock">
         <div className="grid grid-cols-2 gap-3">

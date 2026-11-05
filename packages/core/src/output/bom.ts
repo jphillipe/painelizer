@@ -21,7 +21,7 @@
 
 import { DEFAULT_STOCK_LENGTHS } from '../config';
 import { EPS } from '../eps';
-import type { Panel } from '../panel';
+import type { Panel, PanelSheathing } from '../panel';
 import { isSawnSection, type Section } from '../sections';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, sectionRank } from './cutlist';
@@ -72,6 +72,64 @@ export function stockLengthFor(
     throw new EngineError('PIECE_OVER_STOCK', {}, { length, max: Math.max(...stockLengths) });
   }
   return best;
+}
+
+/**
+ * Linha de chapas de sheathing da BOM (S38): por chapa inteira (espessura × largura × altura).
+ *
+ * Regra (como a madeira, S4): cada pedaço de chapa do painel sai de uma chapa inteira própria — sem aproveitamento de
+ * sobra (otimização de corte é backlog); por isso `qty` e a sobra são um teto. A tira de sobra no topo (P52) também
+ * conta uma chapa.
+ */
+export interface SheathingBomLine {
+  thickness: number;
+  width: number;
+  height: number;
+  /** Chapas inteiras a comprar = pedaços nos painéis. */
+  qty: number;
+  /** Quantos desses pedaços são cortados (`SheathingSheet.cut`). */
+  cut: number;
+  /** Área instalada (sem os vãos das aberturas), pés², a 0.01. */
+  areaSqFt: number;
+  /** Sobra em % da área comprada, a 0.1. */
+  wastePercent: number;
+}
+
+/**
+ * Chapas de sheathing do conjunto de painéis (S38), por (espessura, largura, altura), da chapa mais fina para a mais
+ * grossa e, na mesma espessura, da menor para a maior. Vazia quando nenhum painel leva chapa.
+ */
+export function sheathingBom(panels: readonly { sheathing?: PanelSheathing | undefined }[]): SheathingBomLine[] {
+  const lines = new Map<string, SheathingBomLine & { sqIn: number }>();
+  for (const p of panels) {
+    const s = p.sheathing;
+    if (s === undefined) continue;
+    const key = `${s.thickness}|${s.sheet.width}|${s.sheet.height}`;
+    const line = lines.get(key) ?? {
+      thickness: s.thickness,
+      width: s.sheet.width,
+      height: s.sheet.height,
+      qty: 0,
+      cut: 0,
+      areaSqFt: 0,
+      wastePercent: 0,
+      sqIn: 0,
+    };
+    line.qty += s.sheets.length;
+    line.cut += s.sheets.filter((q) => q.cut === true).length;
+    line.sqIn += s.areaSqFt * 144;
+    lines.set(key, line);
+  }
+  return [...lines.values()]
+    .map(({ sqIn, ...l }) => {
+      const bought = l.qty * l.width * l.height;
+      return {
+        ...l,
+        areaSqFt: Math.round((sqIn / 144) * 100) / 100,
+        wastePercent: bought > 0 ? Math.round(((bought - sqIn) / bought) * 1000) / 10 : 0,
+      };
+    })
+    .sort((a, b) => a.thickness - b.thickness || a.height - b.height || a.width - b.width);
 }
 
 /**

@@ -1,0 +1,46 @@
+{
+  "$comment": "S38 (2026-11-05, aprovado por delegação; not confirmed by the human — review; hipóteses P47, P48, P52, P8 revista): a parede de wall-144-plain.json (12' 2x6 externa portante, sem abertura, parede solta) com o sheathing default do projeto — `config.sheathing` com os valores default escritos por extenso (7/16\", 48x96 de pé, face exterior) e sem `walls` (default: liga as externas). Members idênticos aos do wall-144-plain: a emenda horizontal das chapas cai em y = 96, sobre as top plates (94.125–97.125), e não pede bloco. Chapas da marca 0 (layoutOrigin 0): colunas 0–48, 48–96, 96–144 (as emendas nos studs centrados em 48 e 96); fileira de 96 de baixo e a sobra de 1 1/8\" (97.125 − 96) em tira cortada no topo (P52) — 6 pedaços, 3 cortados. Sem ligações: sem avanço de canto; sem avanço de piso. Área 144 × 97.125 / 144 = 97.125 → 97.13 pés²; chapa 97.13 × 3.2 × 0.4375 = 135.98 → 136.0 lb; madeira 3 × 12 × 2.0 + 10 × 92.625 / 12 × 2.0 = 226.375; painel 362.36 → 362.4 lb. Pregação default 8d @ 6\" bordas / 12\" campo (P48).",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "sheathing": {
+      "thickness": 0.4375,
+      "sheet": { "width": 48, "height": 96 },
+      "side": "exterior"
+    }
+  },
+  "wall": {
+    "id": "W-plain",
+    "length": 144,
+    "height": 97.125,
+    "section": "2x6",
+    "exterior": true,
+    "bearing": true,
+    "openings": []
+  },
+  "expected": {
+    "sameMembersAs": "wall-144-plain",
+    "sheathing": {
+      "side": "exterior",
+      "thickness": 0.4375,
+      "sheet": { "width": 48, "height": 96 },
+      "sheets": [
+        { "face": "exterior", "x": 0, "y": 0, "w": 48, "h": 96 },
+        { "face": "exterior", "x": 0, "y": 96, "w": 48, "h": 1.125, "cut": true },
+        { "face": "exterior", "x": 48, "y": 0, "w": 48, "h": 96 },
+        { "face": "exterior", "x": 48, "y": 96, "w": 48, "h": 1.125, "cut": true },
+        { "face": "exterior", "x": 96, "y": 0, "w": 48, "h": 96 },
+        { "face": "exterior", "x": 96, "y": 96, "w": 48, "h": 1.125, "cut": true }
+      ],
+      "overhang": { "exterior": { "start": 0, "end": 0, "top": 0, "bottom": 0 } },
+      "areaSqFt": 97.13,
+      "weightLb": 136,
+      "nailing": { "nail": "8d", "edge": 6, "field": 12 }
+    },
+    "lumberWeightLb": 226.4,
+    "weightLb": 362.4,
+    "warnings": []
+  }
+}

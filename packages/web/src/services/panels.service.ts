@@ -80,6 +80,7 @@ export function generate(projectText: string): GenerateResult {
         ...(priced?.cost === undefined ? {} : { cost: priced.cost }),
       };
     }),
+    ...(r.built.sheathing.length === 0 ? {} : { sheathing: r.built.sheathing.map((l) => ({ ...l })) }),
     ...(r.built.cost === undefined ? {} : { cost: { total: r.built.cost.total, unpriced: r.built.cost.unpriced } }),
     cutLists: r.built.cutLists.map((c) => ({ panelId: c.panelId, lines: c.lines.map((x) => ({ role: x.role, section: x.section, length: x.length, qty: x.qty })) })),
   };

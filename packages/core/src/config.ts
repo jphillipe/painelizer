@@ -76,6 +76,63 @@ export interface BlockingPreset {
   label?: string;
 }
 
+/**
+ * Faces que levam chapa (S38, hipótese P47): `'exterior'` = a face de fora (a do `facing` na casa em planta; na parede
+ * interna, só "uma das faces"), `'interior'` = a outra, `'both'` = as duas.
+ */
+export type SheathingSide = 'exterior' | 'interior' | 'both';
+
+/** Uma face da parede (S38). */
+export type SheathingFace = 'exterior' | 'interior';
+
+/** Pregação da chapa (S38, hipótese P48): texto da folha, nunca geometria. `edge`/`field` = espaçamento, polegadas. */
+export interface SheathingNailing {
+  /** Prego (`8d`). */
+  nail: string;
+  /** Espaçamento nas bordas da chapa. */
+  edge: number;
+  /** Espaçamento no campo (studs intermediários). */
+  field: number;
+}
+
+/** Avanços da chapa além do painel (S38, hipótese P47). Polegadas. */
+export interface SheathingOverhang {
+  /**
+   * Canto em L: na face do ângulo de fora, a parede que **encosta** estende a chapa sobre a ponta da que atravessa —
+   * `'auto'` = a espessura da outra parede (`EndJoint.otherThickness`), número = esse avanço. A que atravessa e as
+   * demais ligações não avançam.
+   */
+  corner?: 'auto' | number;
+  /** Acima da double top, na linha de piso (Matilda 12–24"). Só na face exterior. Default 0. */
+  floorTop?: number;
+  /** Abaixo da bottom plate (sobre a rim). Só na face exterior. Default 0. */
+  floorBottom?: number;
+}
+
+/**
+ * Chapa de sheathing (OSB/plywood) como o projeto a escreve (S38, hipótese P47): tudo opcional, o que faltar vem da
+ * camada de baixo (parede ← tipo de parede ← `config.sheathing` ← `DEFAULT_SHEATHING`).
+ */
+export interface SheathingSpec {
+  /** Espessura da chapa. Default 7/16" (0.4375). */
+  thickness?: number;
+  /** Chapa inteira, de pé: `width` ao longo da parede (default 48), `height` na vertical (default 96; 108 = 4x9). */
+  sheet?: { width?: number; height?: number };
+  /** Faces com chapa. Default `'exterior'`. */
+  side?: SheathingSide;
+  overhang?: SheathingOverhang;
+  /** Pregação para a nota da folha. Default 8d @ 6" bordas / 12" campo (P48). */
+  nailing?: Partial<SheathingNailing>;
+}
+
+/** Quais paredes `config.sheathing` liga por si (S38): as externas (default), todas ou nenhuma (só por tipo/parede). */
+export type SheathingWalls = 'exterior' | 'all' | 'none';
+
+/** `config.sheathing` (S38): a chapa do projeto e as paredes que ela liga sem que a parede ou o tipo digam. */
+export interface SheathingConfig extends SheathingSpec {
+  walls?: SheathingWalls;
+}
+
 export const DEFAULT_PANEL_CONFIG:Readonly<PanelConfig> = { maxLength: 240, module: 48, lap: 48, minLap: 24 };
 
 export interface Config {
@@ -130,6 +187,11 @@ export interface Config {
    * id igual ao de um embutido o substitui.
    */
   blockingPresets?: Record<string, BlockingPreset>;
+  /**
+   * Sheathing (S38, hipótese P47): a chapa do projeto. Ausente = nenhuma parede leva chapa, salvo a que a pede
+   * (`wall.sheathing` ou o tipo); presente = liga as paredes de `walls` (default: as externas).
+   */
+  sheathing?: SheathingConfig;
   /** Tabela de preços para o orçamento (S31, `output/cost.ts`). Ausente = sem orçamento. */
   prices?: PriceEntry[];
 }

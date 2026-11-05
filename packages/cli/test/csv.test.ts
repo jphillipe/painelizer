@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelizeWall, splitWall, type Config, type Wall } from 'core';
+import { panelizeWall, sheathingBom, splitWall, type Config, type Wall } from 'core';
 import plain from '../../core/test/fixtures/wall-144-plain.json';
 import split480 from '../../core/test/fixtures/wall-480-split.json';
 import { bomCsv, csvCell, cutListCsv, panelsCsv, projectBom, toCsv } from '../src/csv';
@@ -62,6 +62,14 @@ describe('bomCsv', () => {
     const long = panelizeWall({ ...(plain.wall as Wall), length: 240 }, plain.config as Config);
     const csv = bomCsv(projectBom([long], plain.config.studLength));
     expect(csv).toContain(`2x6,oversize,240,"240""",3,720,0,0\n`);
+  });
+
+  it('chapas de sheathing (S38) no fim: uma linha por chapa inteira, sobra pela área', () => {
+    const sheathed = panelizeWall({ ...(plain.wall as Wall), sheathing: true }, plain.config as Config);
+    const csv = bomCsv(projectBom([sheathed], plain.config.studLength), sheathingBom([sheathed]));
+    expect(csv.trimEnd().split('\n').at(-1)).toBe(`"sheathing 7/16""",sheet,96,"48"" x 96""",6,,,49.4`);
+    // Sem chapa, o arquivo é o de antes.
+    expect(bomCsv(projectBom([panel], plain.config.studLength), [])).toBe(bomCsv(projectBom([panel], plain.config.studLength)));
   });
 });
 

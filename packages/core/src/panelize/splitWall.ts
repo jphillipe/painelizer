@@ -15,7 +15,7 @@
  *    par de studs da junta (fechamento em `b − t`, primeiro stud do seguinte em `b`), cripples, blocos,
  *    validações e avisos saem por painel, sem remendo no painel inteiro.
  * 4. `splicePlates` emenda as plates mais longas que o maior `config.stockLengths` (P14) e `panelWeight`
- *    estima o peso (P8). Painel acima de `config.panel.maxWeight` só pelo peso real (a escolha das quebras usa
+ *    estima o peso (P8; com a chapa, S38 — cada trecho monta as suas chapas, que acabam na junta, P49). Painel acima de `config.panel.maxWeight` só pelo peso real (a escolha das quebras usa
  *    uma estimativa por trecho) ganha o aviso `PANEL_OVERWEIGHT`.
  *
  * Ids (S16): `{level}-{wallId}-P{n}` — pavimento (`Wall.level`, default 1), parede e ordem do painel de start
@@ -268,6 +268,8 @@ function estimateWeight(whole: Panel, a: number, b: number, config: Config, cfg:
   const lapWeight = memberWeightLb({ section: whole.section, length: cfg.lap });
   const studWeight = memberWeightLb({ section: whole.section, length: studLengthFor(whole, config) });
   if (b < whole.length - EPS) total += studWeight + lapWeight;
+  // Chapa (S38): pela fração do comprimento (o avanço de canto é pequeno perto do painel).
+  if (whole.sheathing !== undefined) total += whole.sheathing.weightLb * ((b - a) / whole.length);
   if (a > EPS) total -= lapWeight;
   return total;
 }

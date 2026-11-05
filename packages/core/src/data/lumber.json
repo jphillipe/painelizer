@@ -1,8 +1,8 @@
 {
-  "$comment": "Peso da madeira para estimar o peso do painel (S15, hipótese P8). SPF No. 2 (P10) a ~35 pcf: lb por pé linear = área real (in²) / 144 × 35. 2x4 1.5×3.5 = 5.25 in² → 1.28; 2x6 8.25 → 2.0; 2x8 10.875 → 2.64; 2x10 13.875 → 3.37; 2x12 16.875 → 4.1. Posts (S37, hipótese P45), também a 35 pcf: 4x4 3.5×3.5 = 12.25 in² → 2.98; 4x6 19.25 → 4.68; 6x6 30.25 → 7.35. LVL/PSL calculados pela seção real a `engineeredPcf` (~42 pcf, valor típico de catálogo). Sem sheathing, pregos ou isolamento — a folha anota.",
+  "$comment": "Peso da madeira para estimar o peso do painel (S15, hipótese P8). SPF No. 2 (P10) a ~35 pcf: lb por pé linear = área real (in²) / 144 × 35. 2x4 1.5×3.5 = 5.25 in² → 1.28; 2x6 8.25 → 2.0; 2x8 10.875 → 2.64; 2x10 13.875 → 3.37; 2x12 16.875 → 4.1. Posts (S37, hipótese P45), também a 35 pcf: 4x4 3.5×3.5 = 12.25 in² → 2.98; 4x6 19.25 → 4.68; 6x6 30.25 → 7.35. LVL/PSL calculados pela seção real a `engineeredPcf` (~42 pcf, valor típico de catálogo). Sheathing (S38, P8 revista): `sheathingPsfPerInch` = lb por pé² por polegada de espessura da chapa (OSB/plywood ~38 pcf): 3.2 → 1.4 lb/pé² para 7/16\". Sem pregos nem isolamento — a folha anota.",
   "poundsPerFoot": {
     "2x4": 1.28,
-    "2x6": 2.0,
+    "2x6": 2,
     "2x8": 2.64,
     "2x10": 3.37,
     "2x12": 4.1,
@@ -10,5 +10,6 @@
     "4x6": 4.68,
     "6x6": 7.35
   },
-  "engineeredPcf": 42
+  "engineeredPcf": 42,
+  "sheathingPsfPerInch": 3.2
 }

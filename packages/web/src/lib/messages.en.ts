@@ -227,6 +227,8 @@ const ENGINE_ERRORS: Record<string, Template> = {
             ? `from ${String(p['from'])} to ${String(p['to'])} must be a range inside the ${inch(p['length'])} wall.`
             : `${String(p['field'])} must be a number (got ${String(p['value'])}).`),
     ),
+  SHEATHING_INVALID: (p, t) =>
+    at(wallOnly(t), `sheathing: ${String(p['field'])} must be ${p['field'] === 'nailing.nail' ? 'a nail name' : p['field'] === 'overhang.corner' ? '"auto" or a measurement of 0 or more' : String(p['field']).startsWith('overhang') ? 'a measurement of 0 or more' : 'a measurement above 0'} (got ${String(p['value'])}).`),
   WALL_TYPE_UNKNOWN: (p, t) =>
     p['fields'] === undefined
       ? String(undefined)
@@ -351,6 +353,7 @@ const FALLBACK: Record<string, string> = {
   BLOCKING_SKIPPED: 'A blocking row has no blocks across an opening, a tee ladder or another row at the same height.',
   BLOCKING_PRESET_UNKNOWN: 'A blocking row uses a preset that is not in the project or the built-in presets.',
   BLOCKING_ROW_INVALID: 'A blocking row is outside the wall or its center does not fit between the plates.',
+  SHEATHING_INVALID: 'A sheathing setting is out of range (thickness, sheet size, overhang or nailing).',
 };
 
 const ALL: Record<string, Template> = { ...ENGINE_WARNINGS, ...ENGINE_ERRORS, ...CLI, ...EXTRACT, ...EXTRACT_ERRORS, ...ADAPTERS };

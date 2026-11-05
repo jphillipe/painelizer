@@ -1,0 +1,62 @@
+{
+  "$comment": "S38 (2026-11-05, aprovado por delegação; not confirmed by the human — review; hipóteses P47, P48, P52, P8 revista): o house-corner-L.json (W1 atravessa, W2 encosta; 2x6 externas) com chapa 4x9 (48x108) na face exterior descendo 10 7/8\" sobre a rim (`overhang.floorBottom`): 97.125 + 10.875 = 108, uma fileira só, sem emenda horizontal — members idênticos aos do house-corner-L. Canto (P47 revista na S38): a parede que ENCOSTA (W2) estende a chapa sobre a ponta da que atravessa — `corner: \"auto\"` = t de W1 = 5.5: as chapas de W2 começam em x = −5.5, a quina do prédio = a marca 0 (layoutOrigin −5.5), e a primeira emenda cai em 42.5, no centro do stud 41.75–43.25 (como o $comment do house-corner-L já previa); a de W1 (atravessa) começa na própria ponta da plate (x = 0, já na face externa de W2) e não avança. Pontas livres: a chapa acaba na plate (W1: tira de 2.75 entre 144 e 146.75; W2: pedaço de 26.75 entre 90.5 e 117.25). Área: W1 146.75 × 108 / 144 = 110.06 pés² → 154.1 lb de chapa, painel 257.7 + 154.1 = 411.8 lb; W2 122.75 × 108 / 144 = 92.06 pés² → 128.9 lb, painel 198.5 + 128.9 = 327.4 lb. O avanço na linha de piso leva \"engineer to verify\" na folha.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 },
+    "sheathing": {
+      "sheet": { "width": 48, "height": 108 },
+      "overhang": { "corner": "auto", "floorBottom": 10.875 }
+    }
+  },
+  "house": {
+    "walls": [
+      { "id": "W1", "start": { "x": 0, "y": 0 }, "end": { "x": 144, "y": 0 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] },
+      { "id": "W2", "start": { "x": 0, "y": 0 }, "end": { "x": 0, "y": 120 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": true, "floorsSupported": 0, "openings": [] }
+    ]
+  },
+  "expected": {
+    "sameMembersAs": "house-corner-L",
+    "panelIds": ["1-W1-P1", "1-W2-P1"],
+    "panels": {
+      "1-W1-P1": {
+        "weightLb": 411.8,
+        "sheathing": {
+          "side": "exterior",
+          "thickness": 0.4375,
+          "sheet": { "width": 48, "height": 108 },
+          "sheets": [
+            { "face": "exterior", "x": 0, "y": -10.875, "w": 48, "h": 108 },
+            { "face": "exterior", "x": 48, "y": -10.875, "w": 48, "h": 108 },
+            { "face": "exterior", "x": 96, "y": -10.875, "w": 48, "h": 108 },
+            { "face": "exterior", "x": 144, "y": -10.875, "w": 2.75, "h": 108, "cut": true }
+          ],
+          "overhang": { "exterior": { "start": 0, "end": 0, "top": 0, "bottom": 10.875 } },
+          "areaSqFt": 110.06,
+          "weightLb": 154.1,
+          "nailing": { "nail": "8d", "edge": 6, "field": 12 }
+        }
+      },
+      "1-W2-P1": {
+        "weightLb": 327.4,
+        "sheathing": {
+          "side": "exterior",
+          "thickness": 0.4375,
+          "sheet": { "width": 48, "height": 108 },
+          "sheets": [
+            { "face": "exterior", "x": -5.5, "y": -10.875, "w": 48, "h": 108 },
+            { "face": "exterior", "x": 42.5, "y": -10.875, "w": 48, "h": 108 },
+            { "face": "exterior", "x": 90.5, "y": -10.875, "w": 26.75, "h": 108, "cut": true }
+          ],
+          "overhang": { "exterior": { "start": 5.5, "end": 0, "top": 0, "bottom": 10.875 } },
+          "areaSqFt": 92.06,
+          "weightLb": 128.9,
+          "nailing": { "nail": "8d", "edge": 6, "field": 12 }
+        }
+      }
+    },
+    "warnings": []
+  }
+}

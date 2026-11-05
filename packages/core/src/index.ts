@@ -132,7 +132,20 @@ export {
 } from './rules/breaks';
 export { lapEnd, type LapObstacle } from './rules/laps';
 export { splicePlates, supportCenters } from './rules/splice';
-export { ENGINEERED_PCF, POUNDS_PER_FOOT, memberWeightLb, panelWeight, poundsPerFoot } from './rules/weight';
+export { ENGINEERED_PCF, POUNDS_PER_FOOT, SHEATHING_PSF_PER_INCH, memberWeightLb, panelWeight, poundsPerFoot } from './rules/weight';
+export {
+  DEFAULT_SHEATHING,
+  DEFAULT_SHEATHING_WALLS,
+  SHEATHING_JOINT_LABEL,
+  faceOverhangs,
+  faceSheets,
+  panelSheathing,
+  resolveSheathing,
+  sheathingFaces,
+  sheathingJointRows,
+  sheathingPsf,
+  type ResolvedSheathing,
+} from './rules/sheathing';
 export * from './house/types';
 export {
   DEFAULT_TOLERANCE,

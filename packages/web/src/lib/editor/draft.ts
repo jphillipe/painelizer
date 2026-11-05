@@ -27,7 +27,7 @@
  * Escrita (`textFromDraft`): chaves conhecidas (as das shapes do schema) em ordem fixa, medidas como número (sem
  * perda; pés-pol arredondaria a 1/16"), chaves desconhecidas (`$comment`, `$reviewed`…) devolvidas em `extra` — o
  e recusa as outras. Nós aninhados (`building`, `panel`, catálogo, `header`, `ends`,
- * `extraStuds`, `posts`, `blocking`, `blockingPresets`) só guardam chaves conhecidas.
+ * `extraStuds`, `posts`, `blocking`, `blockingPresets`, `sheathing`) só guardam chaves conhecidas.
  *
  * `lib/editor/*` é a única camada do cliente que importa `core` (docs/10-design.md §7).
  */
@@ -44,6 +44,8 @@ import {
   type Point,
   type PostSection,
   type PriceEntry,
+  type SheathingSide,
+  type SheathingWalls,
   type TeeStyle,
   type WallSection,
 } from 'core';
@@ -68,12 +70,17 @@ import {
   pointShape,
   readField,
   rootShape,
+  sheathingConfigShape,
+  sheathingNailingShape,
+  sheathingOverhangShape,
+  sheathingSheetShape,
+  sheathingSpecShape,
   wallTypeShape,
   type FieldIssue,
 } from 'cli/schema';
 import type { z } from 'zod';
 
-export type { CornerStyle, DoorFrame, EndRule, Exposure, FloorSpan, OpeningType, Point, TeeStyle, WallSection };
+export type { CornerStyle, DoorFrame, EndRule, Exposure, FloorSpan, OpeningType, Point, SheathingSide, SheathingWalls, TeeStyle, WallSection };
 export type Species = LumberSpecies;
 /** Seção de header como o arquivo escreve: `"2x10"`, `"LVL 1.75x9.25"` ou objeto com medidas em polegadas. */
 export type HeaderSectionDraft = string | { material: 'LVL' | 'PSL'; width: number; depth: number };
@@ -135,6 +142,23 @@ export interface DraftBlockingPreset {
   label?: string;
 }
 
+/** Chapa de sheathing como o arquivo a escreve (S38): tudo opcional, medidas em polegadas. */
+export interface DraftSheathing {
+  thickness?: number;
+  sheet?: { width?: number; height?: number };
+  side?: SheathingSide;
+  overhang?: { corner?: 'auto' | number; floorTop?: number; floorBottom?: number };
+  nailing?: { nail?: string; edge?: number; field?: number };
+}
+
+/** `config.sheathing` (S38): a chapa do projeto e as paredes que ela liga sozinha. */
+export interface DraftSheathingConfig extends DraftSheathing {
+  walls?: SheathingWalls;
+}
+
+/** Sheathing da parede ou do tipo (S38): liga/desliga, ou a chapa (que liga e ajusta). */
+export type DraftWallSheathing = boolean | DraftSheathing;
+
 export interface DraftWall {
   id: string;
   /** Planta (S13): eixo da parede. */
@@ -161,6 +185,8 @@ export interface DraftWall {
   panelBreaks?: number[];
   /** Fileiras de blocking por altura (S36); ausente = as do tipo de parede. */
   blocking?: DraftBlockingEntry[];
+  /** Sheathing (S38); ausente = o do tipo, senão a regra de `config.sheathing.walls`. */
+  sheathing?: DraftWallSheathing;
   openings: DraftOpening[];
   extra?: Extra;
 }
@@ -208,6 +234,8 @@ export interface DraftWallType {
   description?: string;
   /** Fileiras de blocking do tipo (S36). */
   blocking?: DraftBlockingEntry[];
+  /** Sheathing do tipo (S38). */
+  sheathing?: DraftWallSheathing;
 }
 
 export interface DraftConfig {
@@ -231,6 +259,8 @@ export interface DraftConfig {
   fireBlockAt?: number;
   /** Presets de blocking do projeto, por id (S36); somados aos embutidos. */
   blockingPresets?: Record<string, DraftBlockingPreset>;
+  /** Sheathing do projeto (S38); ausente = nenhuma parede leva chapa, salvo a que pede. */
+  sheathing?: DraftSheathingConfig;
   /** Tabela de preços do orçamento (S31), como o schema a lê; o editor não a edita, só preserva. */
   prices?: PriceEntry[];
   extra?: Extra;
@@ -333,6 +363,7 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
     wallTypes: r.record(c['wallTypes'], `${path}.wallTypes`, wallTypeFrom),
     fireBlockAt: r.field(C.fireBlockAt, c['fireBlockAt'], `${path}.fireBlockAt`),
     blockingPresets: r.record(c['blockingPresets'], `${path}.blockingPresets`, blockingPresetFrom),
+    sheathing: sheathingConfigFrom(r, c['sheathing'], `${path}.sheathing`),
     prices: r.field(C.prices, c['prices'], `${path}.prices`),
     extra: rest(c, CONFIG_KEYS),
   });
@@ -403,7 +434,59 @@ function wallTypeFrom(r: Reader, raw: unknown, path: string): DraftWallType {
     bearing: r.field(T.bearing, t['bearing'], `${path}.bearing`),
     description: r.field(T.description, t['description'], `${path}.description`),
     blocking: blockingFrom(r, t['blocking'], `${path}.blocking`),
+    sheathing: wallSheathingFrom(r, t['sheathing'], `${path}.sheathing`),
   });
+}
+
+/** Chapa campo a campo (S38): um campo ruim não derruba os vizinhos. */
+function sheathingFrom(r: Reader, s: Record<string, unknown>, path: string): DraftSheathing {
+  const S = sheathingSpecShape;
+  const sheetRaw = r.obj(s['sheet'], `${path}.sheet`);
+  const overRaw = r.obj(s['overhang'], `${path}.overhang`);
+  const nailRaw = r.obj(s['nailing'], `${path}.nailing`);
+  const H = sheathingSheetShape;
+  const O = sheathingOverhangShape;
+  const N = sheathingNailingShape;
+  return compact({
+    thickness: r.field(S.thickness, s['thickness'], `${path}.thickness`),
+    sheet:
+      sheetRaw === undefined
+        ? undefined
+        : compact({
+            width: r.field(H.width, sheetRaw['width'], `${path}.sheet.width`),
+            height: r.field(H.height, sheetRaw['height'], `${path}.sheet.height`),
+          }),
+    side: r.field(S.side, s['side'], `${path}.side`),
+    overhang:
+      overRaw === undefined
+        ? undefined
+        : compact({
+            corner: r.field(O.corner, overRaw['corner'], `${path}.overhang.corner`),
+            floorTop: r.field(O.floorTop, overRaw['floorTop'], `${path}.overhang.floorTop`),
+            floorBottom: r.field(O.floorBottom, overRaw['floorBottom'], `${path}.overhang.floorBottom`),
+          }),
+    nailing:
+      nailRaw === undefined
+        ? undefined
+        : compact({
+            nail: r.field(N.nail, nailRaw['nail'], `${path}.nailing.nail`),
+            edge: r.field(N.edge, nailRaw['edge'], `${path}.nailing.edge`),
+            field: r.field(N.field, nailRaw['field'], `${path}.nailing.field`),
+          }),
+  });
+}
+
+function sheathingConfigFrom(r: Reader, raw: unknown, path: string): DraftSheathingConfig | undefined {
+  const s = r.obj(raw, path);
+  if (s === undefined) return undefined;
+  return compact({ ...sheathingFrom(r, s, path), walls: r.field(sheathingConfigShape.walls, s['walls'], `${path}.walls`) });
+}
+
+/** `true`/`false` ou a chapa (S38). */
+function wallSheathingFrom(r: Reader, raw: unknown, path: string): DraftWallSheathing | undefined {
+  if (raw === undefined || typeof raw === 'boolean') return raw;
+  const s = r.obj(raw, path);
+  return s === undefined ? undefined : sheathingFrom(r, s, path);
 }
 
 function blockingPresetFrom(r: Reader, raw: unknown, path: string): DraftBlockingPreset {
@@ -499,6 +582,7 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
     posts,
     panelBreaks: r.field(W.panelBreaks, w['panelBreaks'], `${path}.panelBreaks`),
     blocking: blockingFrom(r, w['blocking'], `${path}.blocking`),
+    sheathing: wallSheathingFrom(r, w['sheathing'], `${path}.sheathing`),
     openings,
     extra: rest(w, WALL_KEYS),
   });
@@ -750,9 +834,12 @@ function configJson(c: DraftConfig): Record<string, unknown> {
     headerSchedule:
       c.headerSchedule === undefined ? undefined : mapValues(c.headerSchedule, (h) => compact({ ...h, section: sectionJson(h.section) })),
     wallTypes:
-      c.wallTypes === undefined ? undefined : mapValues(c.wallTypes, (t) => compact({ ...t, blocking: blockingJson(t.blocking) })),
+      c.wallTypes === undefined
+        ? undefined
+        : mapValues(c.wallTypes, (t) => compact({ ...t, blocking: blockingJson(t.blocking), sheathing: wallSheathingJson(t.sheathing) })),
     fireBlockAt: c.fireBlockAt,
     blockingPresets: c.blockingPresets === undefined ? undefined : mapValues(c.blockingPresets, (p) => compact({ ...p })),
+    sheathing: c.sheathing === undefined ? undefined : compact({ ...sheathingJson(c.sheathing), walls: c.sheathing.walls }),
     prices: c.prices?.map((p) => ({ ...p })),
     ...(c.extra ?? {}),
   });
@@ -779,9 +866,29 @@ function wallJson(w: DraftWall): Record<string, unknown> {
     posts: w.posts === undefined ? undefined : w.posts.map((p) => compact({ ...p })),
     panelBreaks: w.panelBreaks === undefined ? undefined : [...w.panelBreaks],
     blocking: blockingJson(w.blocking),
+    sheathing: wallSheathingJson(w.sheathing),
     openings: w.openings.map(openingJson),
     ...(w.extra ?? {}),
   });
+}
+
+/** Chapa (S38) em ordem fixa; objeto aninhado vazio não é escrito. */
+function sheathingJson(s: DraftSheathing): Record<string, unknown> {
+  const nested = (o: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
+    const c = o === undefined ? undefined : compact(o);
+    return c === undefined || Object.keys(c).length === 0 ? undefined : c;
+  };
+  return compact({
+    thickness: s.thickness,
+    sheet: nested(s.sheet),
+    side: s.side,
+    overhang: nested(s.overhang),
+    nailing: nested(s.nailing),
+  });
+}
+
+function wallSheathingJson(s: DraftWallSheathing | undefined): unknown {
+  return s === undefined || typeof s === 'boolean' ? s : sheathingJson(s);
 }
 
 function blockingJson(b: readonly DraftBlockingEntry[] | undefined): unknown[] | undefined {
