@@ -4,8 +4,8 @@ import { EXAMPLES } from '../src/examples';
 import { parseProject } from '../src/project';
 
 describe('EXAMPLES (S20)', () => {
-  it('são os três arquivos de examples/, cada um passando no parser', () => {
-    expect(EXAMPLES.map((e) => e.id)).toEqual(['casa-exemplo', 'house-28x40', 'ringgold-checkpoint']);
+  it('são os quatro arquivos de examples/ (S40: phase8-sample), cada um passando no parser', () => {
+    expect(EXAMPLES.map((e) => e.id)).toEqual(['casa-exemplo', 'house-28x40', 'ringgold-checkpoint', 'phase8-sample']);
     for (const e of EXAMPLES) {
       const fromDisk = JSON.parse(readFileSync(new URL(`../examples/${e.id}.json`, import.meta.url), 'utf8')) as unknown;
       expect(JSON.parse(e.text)).toEqual(fromDisk);

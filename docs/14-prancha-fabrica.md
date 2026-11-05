@@ -80,6 +80,28 @@ o Checkpoint 2 vai validar. S26 (mensagens com código) e S28.1 (fatoração) v�
 Toda sessão da Fase 8 toca regra de framing: abordagem em até 5 linhas e confirmação antes de código; fixtures
 confirmados antes de editar (CLAUDE.md).
 
+## Entregue na Fase 8 (2026-11-05, S35–S40, por delegação — revisar com `docs/15-fase8-revisar.md`)
+
+Tudo opcional e desligado por padrão: um projeto sem as chaves novas gera os mesmos painéis de antes. Exemplo com tudo
+ligado: `packages/cli/examples/phase8-sample.json` (cartão "Phase 8 sample" no app).
+
+| # | Pedido | O que foi entregue | Como ligar | O que falta / hipótese |
+|---|---|---|---|---|
+| 1 | Numerar as paredes e destacar o wall type | Catálogo de tipos que completa a parede (seção, posição, carga, descrição); `W01 · WT-1S` na planta e na folha; coluna `wall_type` no `panels.csv`; a leitura por IA monta o catálogo da A-800 (S35). Legenda dos tipos na planta (S39) | `config.wallTypes` + `wall.wallType`; no app: Project settings → Wall types e o campo "Wall type" da parede | A leitura não traz `bearing` do tipo (a A-800 não diz) |
+| 2 | Blocos atrás dos armários e para acessórios do banheiro | Fileiras de bloco com o centro na cota, entre todos os studs do trecho, 8 presets (cozinha 36/54/84, banheiro 15/39/42/48/79); cota e uso na folha (S36); fire blocking também com cota | `wall.blocking` (presets ou `{ y, from?, to?, label? }`), `config.blockingPresets`, `wallTypes[tag].blocking`; no app: seção "Blocking" da parede | P44 (cota ao centro, do subfloor; um valor por faixa). Sem campo no app para os presets do projeto e o blocking do tipo |
+| 3 | Posts 4x4/6x6 com conectores e viga LVL | Post 4x4/4x6/6x6 no lugar dos studs de layout, na lista de corte e na BOM; conectores e viga como texto na folha (S37) | `wall.posts`; no app: seção "Posts" da parede | P45 (post até a top plate, sem calço). Posts lidos da planta estrutural pela IA: backlog |
+| 4 | Encontro em X | Feito na S31 (uma faixa, ladder ou backer); selo "+" na planta e linha no bloco da folha (S39) | automático pela planta | P46 sem resposta; a prancha escreve "X" — a planta usa "+" (P53) |
+| 5 | Plywood no canto e na divisão de piso | Chapas 4x8/4x9 de pé da marca 0, cortadas no painel; avanço no canto pela parede que **encosta**; `floorTop`/`floorBottom` na linha de piso com "engineer to verify"; emenda horizontal com blocking; peso, BOM e aba Materials (S38) | `config.sheathing` (liga as externas), `wallTypes[tag].sheathing`, `wall.sheathing`; no app: Project settings → Sheathing, campo "Sheathing" da parede e do tipo | P47 (revista: quem avança), P52 (tira de 1 1/8" e uma chapa por pedaço); sem preço de chapa; otimização de corte: backlog |
+| 6 | "Encaixe" mostrado na planta e na folha | Planta com selo L/T/+ e traço na parede que atravessa, legenda; folha com a ligação de cada ponta ("corner with W04 — this wall runs through") (S39) | automático | 3D: backlog; formato na P53 |
+| 7 | "Dizer o que vai nessa parede" | Bloco "Wall content" sob o cabeçalho: wall/tipo, aberturas, ligações, blocking, chapa, posts, pregação, com ▲ "engineer to verify" (S39) | automático | P53 (conteúdo e ordem; folha ~80–110 px mais alta) |
+| 8 | Amarração 3× 3" @ 12" OC | Nota de pregação das ligações e da chapa na folha (S39, S38) | `config.nailing.wallJoint`, `config.sheathing.nailing`; no app: Project settings → Framing (pregação das ligações) e Sheathing | P48; junta painel-painel sem pregação impressa |
+| 9 | U-block e espaçadores no 3-stud | Não feito | — | backlog, só se a fábrica pedir |
+| 10 | Parede com 2x4 double header | Já coberto | — | — |
+| 11 | Validação estrutural | Toda regra nova tem P e ▲ na folha; nada vira cálculo | — | o engenheiro valida |
+
+Também na S40: tabela de preços no app (Project settings → Prices: por peça de um comprimento ou por pé), que liga o
+custo da aba Materials e o `cost.csv`.
+
 ## Backlog (sem sessão)
 
 `tee: 'u-block'` e espaçadores no 3-stud; aproveitamento de chapa (corte otimizado); 3D; posts lidos da planta

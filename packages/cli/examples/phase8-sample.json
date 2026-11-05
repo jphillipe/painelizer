@@ -1,0 +1,289 @@
+{
+  "$comment": "Phase 8 sample (S40, 2026-11-05): the 28x40 house from house-28x40.json with what the factory asked for on 2026-10-28 — wall types (WT-1S, WT-2, WT-3), height blocking (kitchen and bath presets), a 4x6 post, sheathing on the exterior walls (4x9 sheets lapping the rim 10 7/8\"), a tee and a cross (W06/W07 meet W05 at 14'-0\" from both sides) and a price table. Built to check the app end to end; not a factory project and not confirmed by the human — review.",
+  "name": "Phase 8 sample (wall types, blocking, post, sheathing)",
+  "date": "2026-11-05",
+  "revision": "A",
+  "northAngle": 0,
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [
+      92.625,
+      104.625
+    ],
+    "headerHeight": 82.5,
+    "building": {
+      "groundSnowLoad": 50,
+      "buildingWidth": 336,
+      "windSpeed": 120,
+      "exposure": "B"
+    },
+    "wallTypes": {
+      "WT-1S": {
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "description": "2x6 exterior bearing wall, 7/16\" OSB sheathing"
+      },
+      "WT-2": {
+        "section": "2x4",
+        "exterior": false,
+        "bearing": false,
+        "description": "2x4 interior partition"
+      },
+      "WT-3": {
+        "section": "2x4",
+        "exterior": false,
+        "bearing": true,
+        "description": "2x4 interior bearing wall"
+      }
+    },
+    "sheathing": {
+      "sheet": {
+        "width": 48,
+        "height": 108
+      },
+      "overhang": {
+        "floorBottom": 10.875
+      }
+    },
+    "prices": [
+      {
+        "section": "2x4",
+        "length": 92.625,
+        "price": 4.1
+      },
+      {
+        "section": "2x6",
+        "length": 92.625,
+        "price": 6.2
+      },
+      {
+        "section": "2x4",
+        "perFoot": 0.55
+      },
+      {
+        "section": "2x6",
+        "perFoot": 0.85
+      },
+      {
+        "section": "2x10",
+        "perFoot": 1.6
+      },
+      {
+        "section": "4x6",
+        "perFoot": 3.9
+      }
+    ]
+  },
+  "walls": [
+    {
+      "id": "W01",
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "x": 480,
+        "y": 0
+      },
+      "height": 97.125,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P1",
+          "type": "door",
+          "offset": 168,
+          "roughWidth": 38,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        },
+        {
+          "id": "J1",
+          "type": "window",
+          "offset": 336,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ],
+      "wallType": "WT-1S",
+      "posts": [
+        {
+          "x": 96,
+          "section": "4x6",
+          "label": "P-01",
+          "base": "HDU2 hold-down",
+          "top": "LUS28 — LVL 1 3/4 x 11 7/8 above"
+        }
+      ]
+    },
+    {
+      "id": "W02",
+      "start": {
+        "x": 480,
+        "y": 0
+      },
+      "end": {
+        "x": 480,
+        "y": 336
+      },
+      "height": 97.125,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "J2",
+          "type": "window",
+          "offset": 72,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        },
+        {
+          "id": "J3",
+          "type": "window",
+          "offset": 216,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ],
+      "wallType": "WT-1S"
+    },
+    {
+      "id": "W03",
+      "start": {
+        "x": 480,
+        "y": 336
+      },
+      "end": {
+        "x": 0,
+        "y": 336
+      },
+      "height": 97.125,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P2",
+          "type": "door",
+          "offset": 240,
+          "roughWidth": 72,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x12",
+            "plies": 2
+          }
+        }
+      ],
+      "wallType": "WT-1S"
+    },
+    {
+      "id": "W04",
+      "start": {
+        "x": 0,
+        "y": 336
+      },
+      "end": {
+        "x": 0,
+        "y": 0
+      },
+      "height": 97.125,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "J4",
+          "type": "window",
+          "offset": 96,
+          "roughWidth": 36,
+          "roughHeight": 48,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ],
+      "wallType": "WT-1S"
+    },
+    {
+      "id": "W05",
+      "start": {
+        "x": 264,
+        "y": 0
+      },
+      "end": {
+        "x": 264,
+        "y": 336
+      },
+      "height": 97.125,
+      "floorsSupported": 0,
+      "openings": [
+        {
+          "id": "P3",
+          "type": "door",
+          "offset": 120,
+          "roughWidth": 34,
+          "roughHeight": 82.5,
+          "header": {
+            "section": "2x10",
+            "plies": 2
+          }
+        }
+      ],
+      "wallType": "WT-3"
+    },
+    {
+      "id": "W06",
+      "start": {
+        "x": 264,
+        "y": 168
+      },
+      "end": {
+        "x": 480,
+        "y": 168
+      },
+      "height": 97.125,
+      "wallType": "WT-2",
+      "openings": [],
+      "blocking": [
+        "kitchen-base",
+        "kitchen-upper-top"
+      ]
+    },
+    {
+      "id": "W07",
+      "start": {
+        "x": 0,
+        "y": 168
+      },
+      "end": {
+        "x": 264,
+        "y": 168
+      },
+      "height": 97.125,
+      "wallType": "WT-2",
+      "openings": [],
+      "blocking": [
+        "bath-towel",
+        {
+          "y": 34,
+          "from": 24,
+          "to": 96,
+          "label": "Grab bar"
+        }
+      ]
+    }
+  ]
+}

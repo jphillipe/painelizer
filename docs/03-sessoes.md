@@ -1639,12 +1639,32 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   sobreposto. Não conferido: o PDF do app (resvg com as fontes do servidor — o ▲ depende da fonte), `pnpm e2e`, o
   bloco no app rodando. Efeito colateral: as folhas ficaram 78–111 px mais altas, ~10–20% menores na carta paisagem
   quando a altura limita (P53).
-- [ ] **S40 — Fechamento da fase (web + docs; sem regra nova).** Tabela de preços no editor (`config.prices`, hoje só
+- [x] **S40 — Fechamento da fase (web + docs; sem regra nova).** Tabela de preços no editor (`config.prices`, hoje só
   pelo JSON) e o que tiver ficado sem campo nas sessões anteriores. Conferência no app sem Supabase (porta 3001):
   um exemplo com wall types, blocking, post e sheathing → gerar → planta, folhas e Materials, com capturas em `out/`
   (ignorado pelo git); `pnpm e2e` sem Supabase. `docs/14-prancha-fabrica.md` com o que foi entregue por pedido,
   `01-escopo-v1.md`, `08-revisar.md`, e uma lista única "Fase 8 — revisar" (decisões por delegação, fixtures novos e
   P novas) para o humano ler antes do push.
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Editor**: seção "Prices" no catálogo das configurações (`config.prices`: tamanho pela regra do schema de preço,
+  por peça de um comprimento ou por pé, valor, linha repetida apontada; `lib/editor/prices.ts`), pregação das ligações
+  em Framing (`config.nailing.wallJoint`: quantidade, espaçamento, fixador) e "Sheathing" no cartão do tipo de parede
+  (liga/desliga; spec do arquivo aparece como "Custom"). Sem campo, para a lista de revisão: `config.blockingPresets`
+  e `wallTypes[tag].blocking`; preço de chapa não entrou. **Exemplo** `phase8-sample` (CLI e cartão do app): a casa
+  28x40 com wall types em todas as paredes, blocking de cozinha e banheiro, post 4x6, sheathing nas externas, um T e um +
+  e preços — 7 paredes, 15 painéis, sem aviso. **Conferência no app** (`next dev` sem Supabase na 3001, Chrome headless
+  por CDP; capturas em `out/s40/`): exemplo → editor (tipos, Posts, Blocking, Sheathing, Fire blocking above, pregação,
+  preços) → Generate → planta, folhas e Materials, console limpo. **Consertado**: rótulo da parede na planta caía em cima
+  do selo T/+ (agora desvia, `wallLabelSpot`; 15 snapshots iguais), subtotal "$0.00" de seção sem preço em Materials
+  (agora "—"), alinhamento da tabela de preços. **Não consertado** (em `docs/15`): rótulo da parede ainda pode tocar o
+  traço de junta de painéis; marcas de layout `208"`/`210"` sobrepostas no fim da parede (mudaria snapshot); rótulo
+  do editor sob parede que cruza. **`pnpm e2e`** sem Supabase: 5 passaram, 5 pulados (os de Supabase local), inclusive
+  o PDF — a primeira rodada caiu no laço de recarga conhecido logo depois do outro `next dev` e passou na segunda.
+  **Docs**: `docs/15-fase8-revisar.md` (lista única antes do push), tabela "pedido → entregue → como ligar → o que
+  falta" em `docs/14`, `01-escopo-v1.md`, `08-revisar.md` regenerado. Testes: core 843 → 844, cli 207, extract 213
+  (+ 1 pulado), web 579 → 591. Verde: `pnpm check` duas vezes e `pnpm --filter web build`; fixtures e snapshots sem um
+  byte mudado. Não conferido: Supabase (gravar/reabrir projeto com os campos novos), leitura real por IA, CI do GitHub e
+  o PDF gerado no Cloud Run (fontes do contêiner).
 
 Backlog da Fase 8 (sem sessão): `tee: 'u-block'` e espaçadores no 3-stud (só se a fábrica pedir), aproveitamento
 de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL do piso como item de lista.

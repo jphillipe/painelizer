@@ -271,7 +271,7 @@ function GroupRows({ group, priced }: { group: SectionGroup; priced: boolean }) 
         {priced ? (
           <>
             <TableCell />
-            <TableCell className="text-right font-mono text-[13px] font-semibold">{fmtMoney(group.cost)}</TableCell>
+            <TableCell className="text-right font-mono text-[13px] font-semibold">{group.rows.some((r) => r.cost !== undefined) ? fmtMoney(group.cost) : '—'}</TableCell>
           </>
         ) : null}
       </TableRow>

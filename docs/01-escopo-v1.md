@@ -31,7 +31,10 @@ equipe usando só o desenho gerado.
 - Blocking horizontal quando altura exceder limite configurável; blocking por altura para armários e acessórios
   (presets por uso e por wall type) — pedido da fábrica em 2026-10-28, S36.
 - Sheathing (OSB/plywood) por painel: chapas, avanço no canto e na linha de piso, pregação como nota —
-  pedido da fábrica em 2026-10-28 (era backlog v2), S38. Sem otimização de corte.
+  pedido da fábrica em 2026-10-28 (era backlog v2), S38. Sem otimização de corte. Desligado por padrão.
+- Posts 4x4/4x6/6x6 do projeto no lugar dos studs de layout, com conectores como texto — S37.
+- Ligações na saída: bloco "Wall content" na folha (o que vai na parede, com "engineer to verify" nos itens de
+  hipótese) e selos L/T/+ com legenda na planta — S39.
 - Divisão em painéis por comprimento/peso máximo; nunca dentro de abertura; preferir quebra em stud de layout
   múltiplo de 48" (módulo do OSB), depois qualquer stud de layout.
 - Aberturas vizinhas com zonas sobrepostas compartilham king stud.
@@ -51,7 +54,8 @@ equipe usando só o desenho gerado.
 - Lista de corte por painel (papel, seção, comprimento, quantidade).
 - Lista de material consolidada por comprimento comercial (8', 10', 12', 14', 16') + % sobra. CSV/XLSX.
 - Planta de painéis (vista superior numerada).
-- Orçamento = lista consolidada × tabela de preços (JSON).
+- Orçamento = lista consolidada × tabela de preços (`config.prices`; editável no app desde a S40). Chapas de sheathing
+  na lista de material, ainda sem preço.
 
 ## Fora (explicitamente)
 - Treliças de telhado/piso; análise estrutural; qualquer coisa que exija selo de engenheiro.

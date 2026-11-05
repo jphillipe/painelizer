@@ -6,6 +6,7 @@
 import casaExemplo from '../examples/casa-exemplo.json' with { type: 'json' };
 import house28x40 from '../examples/house-28x40.json' with { type: 'json' };
 import ringgold from '../examples/ringgold-checkpoint.json' with { type: 'json' };
+import phase8 from '../examples/phase8-sample.json' with { type: 'json' };
 
 export interface Example {
   id: string;
@@ -17,4 +18,6 @@ export const EXAMPLES: readonly Example[] = [
   { id: 'casa-exemplo', label: 'Sample house (L corner, tee, loose walls)', text: JSON.stringify(casaExemplo, null, 2) },
   { id: 'house-28x40', label: 'House 28×40 (full plan, 5 walls)', text: JSON.stringify(house28x40, null, 2) },
   { id: 'ringgold-checkpoint', label: '26 Ringgold St (4 wall segments)', text: JSON.stringify(ringgold, null, 2) },
+  // S40: o que a fase 8 trouxe (wall types, blocking, post, sheathing, preços), para conferir o app de ponta a ponta.
+  { id: 'phase8-sample', label: 'Phase 8 sample (wall types, blocking, post, sheathing)', text: JSON.stringify(phase8, null, 2) },
 ];

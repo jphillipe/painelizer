@@ -78,7 +78,7 @@ describe('panels.service.generate', () => {
 
 describe('panels.service.check', () => {
   it('mesmos painéis e avisos do generate, sem arquivos', () => {
-    for (const id of ['casa-exemplo', 'house-28x40', 'ringgold-checkpoint']) {
+    for (const id of ['casa-exemplo', 'house-28x40', 'ringgold-checkpoint', 'phase8-sample']) {
       const c = check(exampleText(id) as string);
       const g = generate(exampleText(id) as string);
       if (!c.ok || !g.ok) throw new Error('should build');
@@ -114,8 +114,9 @@ describe('panels.service.check', () => {
 describe('listExamples', () => {
   it('a leitura real do Ringgold primeiro, depois os exemplos do CLI (sem o checkpoint do Ringgold), com rótulo e fatos do próprio arquivo', () => {
     const list = listExamples();
-    expect(list.map((e) => e.id)).toEqual(['ringgold-reading', 'casa-exemplo', 'house-28x40']);
-    expect(list.map((e) => e.kind)).toEqual(['reading', 'project', 'project']);
+    expect(list.map((e) => e.id)).toEqual(['ringgold-reading', 'casa-exemplo', 'house-28x40', 'phase8-sample']);
+    expect(list.map((e) => e.kind)).toEqual(['reading', 'project', 'project', 'project']);
+    expect(list[3]!.facts).toBe('7 walls · 15 panels');
     expect(list.every((e) => e.label.length > 0)).toBe(true);
     expect(list[0]!.facts).toBe('28 walls · 30 openings · level 1 · from A-100 + A-800');
     expect(list[2]!.facts).toBe('5 walls · 12 panels');

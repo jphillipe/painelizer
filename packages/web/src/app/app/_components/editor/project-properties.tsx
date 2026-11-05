@@ -9,6 +9,7 @@ import { ProjectDataForm } from '../project-data-form';
 import { CatalogEditor } from './catalog-editor';
 import { EnumSelect, Field, MeasureInput, MeasureListInput, NumberInput, Section, TextInput } from './fields';
 import { SheathingSettings } from './sheathing-settings';
+import { withJointNailing } from '@/lib/editor/prices';
 
 export interface ProjectPropertiesProps {
   draft: ProjectDraft;
@@ -32,6 +33,9 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
     }
     setConfig({ panel: Object.keys(panel).length === 0 ? undefined : panel });
   };
+  // Pregação das ligações (S39, P48): campo vazio = o default do motor (3× 3" nails or screws @ 12" OC).
+  const setJointNailing = (patch: { count?: number | undefined; spacing?: number | undefined; fastener?: string | undefined }): void =>
+    setConfig({ nailing: withJointNailing(c.nailing, patch) });
   const b = c.building ?? {};
 
   return (
@@ -75,6 +79,15 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
           </Field>
           <Field id="c-tee" label="Tee">
             <EnumSelect id="c-tee" value={c.tee} noneLabel="Ladder (default)" options={TEE_OPTIONS} onChange={(v) => setConfig({ tee: v as DraftConfig['tee'] })} />
+          </Field>
+          <Field id="c-jn-count" label="Wall joint fasteners" hint="Corner, tee and cross; printed on the sheet (engineer to verify)">
+            <NumberInput id="c-jn-count" value={c.nailing?.wallJoint?.count} integer min={1} placeholder="3" onCommit={(v) => setJointNailing({ count: v })} />
+          </Field>
+          <Field id="c-jn-spacing" label="Joint fastener spacing">
+            <MeasureInput id="c-jn-spacing" value={c.nailing?.wallJoint?.spacing} positive placeholder={`12"`} onCommit={(v) => setJointNailing({ spacing: v })} />
+          </Field>
+          <Field id="c-jn-fastener" label="Joint fastener" className="col-span-2">
+            <TextInput id="c-jn-fastener" value={c.nailing?.wallJoint?.fastener} placeholder={`3" nails or screws`} onCommit={(v) => setJointNailing({ fastener: v })} />
           </Field>
         </div>
       </Section>

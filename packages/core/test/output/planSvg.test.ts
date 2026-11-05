@@ -222,3 +222,36 @@ describe('housePlanSvg — ligações e legenda (S39)', () => {
     expect(Number(attr(svg.split('\n')[0]!, 'height'))).toBeGreaterThan(legendTop);
   });
 });
+
+describe('rótulo da parede desvia dos encontros (S40)', () => {
+  const wall = (id: string, start: { x: number; y: number }, end: { x: number; y: number }, wallType?: string) => ({
+    id,
+    start,
+    end,
+    height: 97.125,
+    section: '2x6' as const,
+    exterior: true,
+    bearing: false,
+    openings: [],
+    ...(wallType === undefined ? {} : { wallType }),
+  });
+  const xOf = (svg: string, cls: string, text: string): number => {
+    const m = new RegExp(`<text class="${cls}"[^>]* x="([0-9.-]+)"[^>]*>${text}</text>`).exec(svg);
+    if (m === null) throw new Error(`no ${cls} ${text}`);
+    return Number(m[1]);
+  };
+
+  it('T no meio da parede: o rótulo longo sai do meio e fica fora do selo; sem T, fica no meio', () => {
+    const tee = { walls: [wall('W1', { x: 0, y: 0 }, { x: 200, y: 0 }, 'WT-LONG-TAG'), wall('W2', { x: 100, y: 0 }, { x: 100, y: 120 })] };
+    const { panels } = panelizeHouse(tee, config);
+    const svg = housePlanSvg(tee, panels);
+    // O id do painel único de W1 marca o meio da parede.
+    const mid = xOf(svg, 'panel-id', '1-W1-P1');
+    const label = xOf(svg, 'wall-id', 'W1 · WT-LONG-TAG');
+    expect(Math.abs(label - mid)).toBeGreaterThan(40);
+
+    const alone = { walls: [wall('W1', { x: 0, y: 0 }, { x: 200, y: 0 }, 'WT-LONG-TAG')] };
+    const svg2 = housePlanSvg(alone, panelizeHouse(alone, config).panels);
+    expect(xOf(svg2, 'wall-id', 'W1 · WT-LONG-TAG')).toBe(xOf(svg2, 'panel-id', '1-W1-P1'));
+  });
+});

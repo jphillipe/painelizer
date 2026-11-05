@@ -67,6 +67,10 @@ const BADGE_R = 6.5;
 const THROUGH_EXT = 5;
 /** Do selo à quina das faces, em px (o selo fica fora das paredes). */
 const BADGE_GAP = 11;
+/** Largura estimada de um caractere do rótulo da parede (11 px), para desviar dos selos (S40). */
+const WALL_LABEL_CHAR = 6.2;
+/** Folga entre o rótulo da parede e o selo de um encontro, em px (S40). */
+const WALL_LABEL_PAD = 4;
 /** Legenda: da linha da cota à primeira linha, altura da linha, largura estimada do caractere a 9 px. */
 const LEGEND_GAP = 26;
 const LEGEND_ROW = 16;
@@ -192,8 +196,11 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
       const mid: Point = { x: (plan.start.x + plan.end.x) / 2, y: (plan.start.y + plan.end.y) / 2 };
       out.push(labelAt(w, mid, outward, p.id, 10, PANEL_ID, 'panel-id', true, scale, P, p.id));
     }
-    const mid: Point = { x: (w.from.x + w.to.x) / 2, y: (w.from.y + w.to.y) / 2 };
-    out.push(labelAt(w, mid, outward === 1 ? -1 : 1, S.plan.wallLabel(w.wall.id, w.wall.wallType), 11, WALL_ID, 'wall-id', false, scale, P));
+    // Rótulo da parede no meio, do lado de dentro; se cair sobre o selo/encontro de um T ou + (S40), anda ao longo da
+    // parede até o ponto livre mais perto do meio. Sem colisão, fica no meio (como antes).
+    const label = S.plan.wallLabel(w.wall.id, w.wall.wallType);
+    const spot = wallLabelSpot(w, junctions, label.length * WALL_LABEL_CHAR, scale);
+    out.push(labelAt(w, spot, outward === 1 ? -1 : 1, label, 11, WALL_ID, 'wall-id', false, scale, P));
   }
 
   // Ligações (S39): traço na parede que atravessa e selo L/T/+.
@@ -435,6 +442,36 @@ function wallJunctions(walls: readonly WallGeom[]): Junction[] {
 }
 
 /** Letra do selo. */
+/**
+ * Onde vai o rótulo da parede (S40): o meio da parede, salvo quando a faixa do rótulo ao longo dela cobre um encontro
+ * desta parede (a outra parede que chega e o selo L/T/+ ficam do lado de dentro, onde o rótulo também fica). Aí, o
+ * ponto mais perto do meio em que o rótulo inteiro fica entre as pontas e fora de todo encontro; sem nenhum, o meio.
+ *
+ * @param widthPx largura estimada do texto, px
+ */
+function wallLabelSpot(w: WallGeom, junctions: readonly Junction[], widthPx: number, scale: number): Point {
+  const lo = Math.min(w.dir === 'x' ? w.from.x : w.from.y, w.dir === 'x' ? w.to.x : w.to.y);
+  const hi = Math.max(w.dir === 'x' ? w.from.x : w.from.y, w.dir === 'x' ? w.to.x : w.to.y);
+  const mid = (lo + hi) / 2;
+  const half = (widthPx / 2 + WALL_LABEL_PAD) / scale;
+  // Cada encontro desta parede ocupa, ao longo dela, a espessura das outras e o selo (de lado e de diâmetro).
+  const blocked = junctions
+    .filter((j) => j.walls.includes(w.wall.id))
+    .map((j) => {
+      const c = w.dir === 'x' ? j.at.x : j.at.y;
+      const r = (BADGE_GAP + 2 * BADGE_R) / scale + w.t / 2;
+      return { lo: c - r, hi: c + r };
+    });
+  const free = (c: number): boolean => c - half >= lo - 1e-9 && c + half <= hi + 1e-9 && !blocked.some((b) => c + half > b.lo && c - half < b.hi);
+  const at = (c: number): Point => (w.dir === 'x' ? { x: c, y: w.axis } : { x: w.axis, y: c });
+  if (free(mid)) return at(mid);
+  // Candidatos: encostado de um lado ou do outro de cada encontro; o mais perto do meio.
+  const options = blocked.flatMap((b) => [b.lo - half, b.hi + half]).filter(free);
+  if (options.length === 0) return at(mid);
+  options.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
+  return at(options[0]!);
+}
+
 const BADGE: Readonly<Record<Junction['kind'], string>> = { corner: 'L', tee: 'T', cross: '+' };
 
 /** Traço no eixo da parede que atravessa e selo do lado de dentro do encontro (voltado ao centro da planta). */

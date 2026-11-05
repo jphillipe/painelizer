@@ -4,7 +4,10 @@ import { PlusIcon, Trash2Icon } from 'lucide-react';
 import type { Dispatch } from 'react';
 import { headerSection, readField } from 'cli/schema';
 import { Button } from '@/components/ui/button';
+import type { PriceEntry } from 'core';
 import type { DraftHeaderEntry, DraftOpeningType, DraftWallType, HeaderSectionDraft, ProjectDraft } from '@/lib/editor/draft';
+import { duplicatePrices, newPrice, patchPrice, priceMode, priceValue, readPriceSection, withPrice } from '@/lib/editor/prices';
+import { wallSheathingChoice } from '@/lib/editor/sheathing';
 import type { EditorAction, Patch } from '@/lib/editor/state';
 import { wallTypeUsage } from '@/lib/editor/wall-types';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
@@ -17,6 +20,9 @@ import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, Text
  * S35: tipos de parede (`config.wallTypes`, por tag) — o que cada tipo dá à parede que não disser (seção, posição,
  * carga). Renomear a tag troca `wallType` das paredes; apagar só quando nenhuma parede usa (a parede que dependia do
  * tipo ficaria sem seção).
+ *
+ * S40: sheathing do tipo (liga/desliga; um spec do arquivo aparece como "Custom" e fica) e a tabela de preços
+ * (`config.prices`) do orçamento.
  */
 export function CatalogEditor({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
   return (
@@ -24,6 +30,7 @@ export function CatalogEditor({ draft, dispatch }: { draft: ProjectDraft; dispat
       <WallTypes draft={draft} dispatch={dispatch} />
       <OpeningTypes draft={draft} dispatch={dispatch} />
       <HeaderSchedule draft={draft} dispatch={dispatch} />
+      <Prices draft={draft} dispatch={dispatch} />
     </>
   );
 }
@@ -109,7 +116,20 @@ function WallTypes({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatc
                 <Field id={`${p}-bearing`} label="Load">
                   <BoolSelect id={`${p}-bearing`} value={t.bearing} trueLabel="Bearing" falseLabel="Non-bearing" onChange={(v) => put(tag, t, { bearing: v })} />
                 </Field>
-                <Field id={`${p}-desc`} label="Description" className="col-span-2 sm:col-span-4">
+                <Field id={`${p}-sheathing`} label="Sheathing">
+                  <EnumSelect
+                    id={`${p}-sheathing`}
+                    value={wallSheathingChoice(t.sheathing)}
+                    noneLabel="From project"
+                    options={[
+                      { value: 'on', label: 'Sheathed' },
+                      { value: 'off', label: 'No sheathing' },
+                      ...(wallSheathingChoice(t.sheathing) === 'custom' ? [{ value: 'custom', label: 'Custom (from the project file)' }] : []),
+                    ]}
+                    onChange={(v) => v !== 'custom' && put(tag, t, { sheathing: v === undefined ? undefined : v === 'on' })}
+                  />
+                </Field>
+                <Field id={`${p}-desc`} label="Description" className="col-span-2 sm:col-span-3">
                   <TextInput id={`${p}-desc`} value={t.description} onCommit={(v) => put(tag, t, { description: v })} />
                 </Field>
               </div>
@@ -356,6 +376,75 @@ function HeaderSchedule({ draft, dispatch }: { draft: ProjectDraft; dispatch: Di
   );
 }
 
+/**
+ * Tabela de preços (S40): por peça de um comprimento de estoque ou por pé linear da seção (o que o LVL/PSL usa). Moeda
+ * do projeto; a aba Materials e o `cost.csv` multiplicam pela lista de material. Lista vazia = sem orçamento.
+ */
+function Prices({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
+  const list = draft.config.prices ?? [];
+  const dups = duplicatePrices(list);
+  const set = (i: number, value: PriceEntry | undefined): void => dispatch({ type: 'updateConfig', patch: { prices: withPrice(list, i, value) } });
+  return (
+    <Section
+      title={`Prices (${list.length})`}
+      actions={
+        <Button variant="outline" size="xs" onClick={() => set(list.length, newPrice(list))}>
+          <PlusIcon /> Add price
+        </Button>
+      }
+    >
+      {list.length === 0 ? (
+        <p className="text-[13px] text-ink-3">No prices: Materials shows quantities only. Add a price per stock piece or per linear foot to get a cost.</p>
+      ) : (
+        <p className="text-[12px] text-ink-3">A stock piece uses the price for its exact length; otherwise the per-foot price of its size. Lines without a price stay out of the total. Sheathing is not priced yet.</p>
+      )}
+      <ul className="space-y-3">
+        {list.map((pr, i) => {
+          const p = `pr-${i}`;
+          const mode = priceMode(pr);
+          return (
+            <li key={i} className="space-y-2 rounded-md border bg-card p-3" data-price={i}>
+              <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                <Field id={`${p}-section`} label="Size">
+                  <TextInput
+                    id={`${p}-section`}
+                    value={pr.section}
+                    required
+                    mono
+                    placeholder="2x6"
+                    validate={(v) => (readPriceSection(v) === undefined ? 'Use 2x4…2x12, 4x4, 4x6, 6x6, or LVL / PSL <width>x<depth>' : undefined)}
+                    onCommit={(v) => {
+                      const section = v === undefined ? undefined : readPriceSection(v);
+                      if (section !== undefined) set(i, patchPrice(pr, { section }));
+                    }}
+                  />
+                </Field>
+                <Field id={`${p}-mode`} label="Priced">
+                  <EnumSelect id={`${p}-mode`} value={mode} options={PRICE_MODE_OPTIONS} onChange={(v) => v !== undefined && set(i, patchPrice(pr, { mode: v as 'each' | 'perFoot' }))} />
+                </Field>
+                <Field id={`${p}-length`} label="Stock length">
+                  {mode === 'each' && 'length' in pr ? (
+                    <MeasureInput id={`${p}-length`} value={pr.length} positive required onCommit={(v) => v !== undefined && set(i, patchPrice(pr, { length: v }))} />
+                  ) : (
+                    <span className="block py-1.5 text-[13px] text-ink-3">any</span>
+                  )}
+                </Field>
+                <Field id={`${p}-value`} label={mode === 'each' ? 'Price per piece' : 'Price per foot'}>
+                  <NumberInput id={`${p}-value`} value={priceValue(pr)} min={0} required onCommit={(v) => v !== undefined && set(i, patchPrice(pr, { value: v }))} />
+                </Field>
+                <Button variant="ghost" size="icon-xs" className="mt-7" aria-label={`Remove price ${i + 1}`} onClick={() => set(i, undefined)}>
+                  <Trash2Icon />
+                </Button>
+              </div>
+              {dups.has(i) ? <p className="text-[12px] text-destructive">Same size and length as an earlier line — the project will not build until one goes.</p> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
 /** Seção de header como texto (`"LVL 1.75x9.25"`); o objeto do arquivo vira o mesmo texto ao editar. */
 export function sectionText(s: HeaderSectionDraft | undefined): string | undefined {
   return s === undefined || typeof s === 'string' ? s : `${s.material} ${s.width}x${s.depth}`;
@@ -371,6 +460,10 @@ function clean<T extends object>(o: Patch<T>): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 }
 
+const PRICE_MODE_OPTIONS = [
+  { value: 'each', label: 'Per piece' },
+  { value: 'perFoot', label: 'Per foot' },
+] as const;
 const WALL_SECTION_OPTIONS = [
   { value: '2x4', label: '2x4' },
   { value: '2x6', label: '2x6' },
