@@ -62,6 +62,8 @@ export {
 } from './rules/blocking';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
 export { postFace, postMembers, postsForSegment, type PostContext, type PostFace, type PostObstacle } from './rules/posts';
+export { panelEnds, panelTees } from './rules/panelJoints';
+export { DEFAULT_NAILING, resolveNailing } from './rules/nailing';
 export {
   framingForOpening,
   openingKingXs,

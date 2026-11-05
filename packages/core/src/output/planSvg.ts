@@ -16,16 +16,23 @@
  *   tipo de parede quando ela tem (`W01 · WT-1S`, S35).
  * - Cotas externas totais (faces externas) embaixo e à esquerda; seta do norte no canto superior direito quando
  *   `house.northAngle` existe (graus, do +y da planta no sentido horário).
+ * - Ligações (S39; pedido 6 da prancha): em cada canto, T e + um selo com L, T ou + do lado de dentro do encontro e um
+ *   traço laranja no eixo da parede que **atravessa**, cobrindo a espessura das que encostam. Vêm de `Panel.ends`
+ *   (primeiro e último painel de cada parede) e `Panel.tees`; a parede que atravessa é a do T e, no canto, a com
+ *   `through`.
+ * - Legenda (S39) sob as cotas: preenchimentos, junta de painéis, selos e traço; com tipos de parede, a leitura do rótulo
+ *   (`W01 · WT-1S`) e uma linha por tipo usado, com a descrição de `opts.wallTypes` e as paredes que o usam.
  * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
  * - Saída determinística: mesma entrada → mesma string.
  */
 
 import type { Panel } from '../panel';
 import { sectionDepth } from '../sections';
-import type { Point } from '../wall';
+import type { Point, WallTypeEntry } from '../wall';
 import type { House, HouseWall } from '../house/types';
 import { formatFeetInches } from '../units';
-import { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
+import { wrapText } from './sheet/pieceList';
+import { DIM, FONT, MUTED, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
 import { sheetStrings, type SheetStrings } from './sheet/strings';
 
 export interface PlanSvgOptions {
@@ -35,6 +42,8 @@ export interface PlanSvgOptions {
   margin?: number;
   /** Título no topo. Padrão "Panel plan". */
   title?: string;
+  /** Catálogo de tipos de parede do projeto (`config.wallTypes`, S39): a descrição de cada tipo vai à legenda. */
+  wallTypes?: Readonly<Record<string, WallTypeEntry>>;
 }
 
 const FILL_EXTERIOR = '#d9c9a8';
@@ -51,6 +60,17 @@ const DIM_GAP = 24;
 const JOINT_EXT = 6;
 /** Distância da face da parede ao centro do rótulo (id de painel / de parede), em px. */
 const LABEL_GAP = 9;
+/** Cor do traço da parede que atravessa (S39). */
+const THROUGH = '#d35400';
+/** Raio do selo L/T/+ e quanto o traço passa da espessura das que encostam, em px. */
+const BADGE_R = 6.5;
+const THROUGH_EXT = 5;
+/** Do selo à quina das faces, em px (o selo fica fora das paredes). */
+const BADGE_GAP = 11;
+/** Legenda: da linha da cota à primeira linha, altura da linha, largura estimada do caractere a 9 px. */
+const LEGEND_GAP = 26;
+const LEGEND_ROW = 16;
+const LEGEND_CHAR = 4.8;
 
 /** Uma parede com a geometria que o desenho precisa. */
 interface WallGeom {
@@ -110,7 +130,9 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   const drawH = (maxY - minY) * scale;
   const dimY = drawY0 + drawH + PAD + DIM_GAP;
   const totalW = drawX0 + drawW + PAD + margin;
-  const totalH = dimY + 8 + margin;
+  const junctions = wallJunctions(walls);
+  const legend = planLegend(walls, opts.wallTypes, margin, dimY + LEGEND_GAP, totalW - 2 * margin, S);
+  const totalH = legend.bottom + margin;
 
   const toPx = (x: number): number => drawX0 + (x - minX) * scale;
   const toPy = (y: number): number => drawY0 + (maxY - y) * scale;
@@ -174,6 +196,14 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
     out.push(labelAt(w, mid, outward === 1 ? -1 : 1, S.plan.wallLabel(w.wall.id, w.wall.wallType), 11, WALL_ID, 'wall-id', false, scale, P));
   }
 
+  // Ligações (S39): traço na parede que atravessa e selo L/T/+.
+  const byId = new Map(walls.map((w) => [w.wall.id, w]));
+  out.push('<g class="junctions">');
+  for (const j of junctions) {
+    out.push(junctionMark(j, byId, { x: cx, y: cy }, scale, P, S));
+  }
+  out.push('</g>');
+
   // Área de clique de cada painel (M3): retângulo transparente sobre o trecho da plate, com `data-panel-id`, por
   // cima de tudo — quem embute a planta numa página pode destacar e abrir a folha do painel. Invisível no papel.
   out.push('<g class="panel-hits" fill="transparent" stroke="none">');
@@ -187,6 +217,9 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   // Cotas externas totais.
   out.push(dimensionH(toPx(minX), toPx(maxX), dimY, toPy(minY), formatFeetInches(maxX - minX)));
   out.push(dimensionV(margin + 20, toPy(maxY), toPy(minY), toPx(minX), formatFeetInches(maxY - minY)));
+
+  // Legenda (S39).
+  out.push(...legend.svg);
 
   out.push('</svg>');
   return out.join('\n');
@@ -352,6 +385,173 @@ function panelHit(w: WallGeom, p: Panel, scale: number, P: (p: Point) => [number
     `<rect class="panel-hit" data-panel-id="${esc(p.id)}" x="${px(x)}" y="${px(y)}" width="${px(width)}" height="${px(height)}">` +
     `<title>${esc(S.plan.panelTitle(p.id, p.length, w.wall.id))}</title></rect>`
   );
+}
+
+/** Encontro de paredes na planta (S39): ponto dos eixos, tipo, quem atravessa e quem está nele. */
+interface Junction {
+  at: Point;
+  kind: 'corner' | 'tee' | 'cross';
+  /** Parede que atravessa. */
+  through?: string;
+  /** Todas as paredes do encontro, a que atravessa primeiro. */
+  walls: string[];
+}
+
+const KIND_RANK = { corner: 0, tee: 1, cross: 2 } as const;
+
+/** Os encontros da casa, a partir das pontas e dos T dos painéis; cada um uma vez, na ordem em que aparece. */
+function wallJunctions(walls: readonly WallGeom[]): Junction[] {
+  const found = new Map<string, Junction>();
+  const add = (at: Point, kind: Junction['kind'], through: string | undefined, ids: readonly (string | undefined)[]): void => {
+    const key = `${Math.round(at.x * 100)},${Math.round(at.y * 100)}`;
+    const j = found.get(key) ?? { at, kind, walls: [] };
+    if (KIND_RANK[kind] > KIND_RANK[j.kind]) j.kind = kind;
+    if (j.through === undefined && through !== undefined) j.through = through;
+    for (const id of ids) if (id !== undefined && !j.walls.includes(id)) j.walls.push(id);
+    found.set(key, j);
+  };
+  for (const w of walls) {
+    const first = w.panels[0]!;
+    const last = w.panels[w.panels.length - 1]!;
+    for (const [e, at] of [
+      [first.ends?.start, w.wall.start],
+      [last.ends?.end, w.wall.end],
+    ] as const) {
+      if (e === undefined || e.kind === 'panel') continue;
+      if (e.kind === 'corner') add(at, 'corner', e.through ? w.wall.id : e.wallId, [w.wall.id, e.wallId]);
+      else add(at, e.cross === true ? 'cross' : 'tee', e.wallId, [e.wallId, w.wall.id]);
+    }
+    for (const p of w.panels) {
+      for (const t of p.tees ?? []) {
+        const at = w.dir === 'x' ? { x: p.plan!.start.x + w.sign * t.x, y: w.axis } : { x: w.axis, y: p.plan!.start.y + w.sign * t.x };
+        add(at, t.sides === 2 ? 'cross' : 'tee', w.wall.id, [w.wall.id, t.wallId, t.otherWallId]);
+      }
+    }
+  }
+  for (const j of found.values()) {
+    if (j.through !== undefined) j.walls = [j.through, ...j.walls.filter((id) => id !== j.through)];
+  }
+  return [...found.values()];
+}
+
+/** Letra do selo. */
+const BADGE: Readonly<Record<Junction['kind'], string>> = { corner: 'L', tee: 'T', cross: '+' };
+
+/** Traço no eixo da parede que atravessa e selo do lado de dentro do encontro (voltado ao centro da planta). */
+function junctionMark(
+  j: Junction,
+  byId: ReadonlyMap<string, WallGeom>,
+  center: Point,
+  scale: number,
+  P: (p: Point) => [number, number],
+  S: SheetStrings,
+): string {
+  const parts: string[] = [`<g class="junction ${j.kind}">`, `<title>${esc(S.plan.junctionTitle(j.kind, j.through, j.walls))}</title>`];
+  const others = j.walls.filter((id) => id !== j.through).map((id) => byId.get(id)?.t ?? 0);
+  const half = Math.max(0, ...others) / 2;
+  const tw = j.through === undefined ? undefined : byId.get(j.through);
+  if (tw !== undefined) {
+    // Do encontro, meia espessura das outras e mais um pouco para cada lado, sem passar da ponta da plate.
+    const ext = half + THROUGH_EXT / scale;
+    const lo = Math.min(...(tw.dir === 'x' ? [tw.from.x, tw.to.x] : [tw.from.y, tw.to.y]));
+    const hi = Math.max(...(tw.dir === 'x' ? [tw.from.x, tw.to.x] : [tw.from.y, tw.to.y]));
+    const c = tw.dir === 'x' ? j.at.x : j.at.y;
+    const a = Math.max(lo, c - ext);
+    const b = Math.min(hi, c + ext);
+    const [x1, y1] = P(tw.dir === 'x' ? { x: a, y: tw.axis } : { x: tw.axis, y: a });
+    const [x2, y2] = P(tw.dir === 'x' ? { x: b, y: tw.axis } : { x: tw.axis, y: b });
+    parts.push(
+      `<line class="through" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${THROUGH}" stroke-width="2.5"/>`,
+    );
+  }
+  const tMax = Math.max(tw?.t ?? 0, ...others);
+  const d = tMax / 2 + BADGE_GAP / scale;
+  const sx = center.x < j.at.x ? -1 : 1;
+  const sy = center.y < j.at.y ? -1 : 1;
+  const [bx, by] = P({ x: j.at.x + sx * d, y: j.at.y + sy * d });
+  parts.push(badge(bx, by, BADGE[j.kind]));
+  parts.push('</g>');
+  return parts.join('\n');
+}
+
+/** Selo redondo com a letra, centrado em (x, y). O + é desenhado (o caractere a 8 px some). */
+function badge(x: number, y: number, letter: string): string {
+  const circle = `<circle cx="${px(x)}" cy="${px(y)}" r="${BADGE_R}" fill="#ffffff" stroke="#333" stroke-width="0.75"/>`;
+  if (letter === '+') {
+    return (
+      circle +
+      `<path d="M${px(x - 3.5)} ${px(y)}H${px(x + 3.5)}M${px(x)} ${px(y - 3.5)}V${px(y + 3.5)}" stroke="#000" stroke-width="1.5"/>`
+    );
+  }
+  return (
+    circle +
+    `<text x="${px(x)}" y="${px(y)}" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" ` +
+    `dominant-baseline="central">${esc(letter)}</text>`
+  );
+}
+
+/**
+ * Legenda sob as cotas (S39): símbolos em fluxo (quebram na largura) e, com tipos de parede, a leitura do rótulo e uma
+ * linha por tipo usado. Devolve o SVG e o y onde termina.
+ */
+function planLegend(
+  walls: readonly WallGeom[],
+  wallTypes: Readonly<Record<string, WallTypeEntry>> | undefined,
+  x0: number,
+  top: number,
+  width: number,
+  S: SheetStrings,
+): { svg: string[]; bottom: number } {
+  const L = S.plan.legend;
+  const out: string[] = ['<g class="legend" font-size="9" fill="#333">'];
+  type Item = { glyph: (x: number, y: number) => string; text: string };
+  const swatch = (fill: string) => (x: number, y: number) =>
+    `<rect x="${px(x)}" y="${px(y - 5)}" width="14" height="8" fill="${fill}" stroke="${STROKE}" stroke-width="0.75"/>`;
+  const items: Item[] = [
+    { glyph: swatch(FILL_EXTERIOR), text: L.exterior },
+    { glyph: swatch(FILL_INTERIOR), text: L.interior },
+    { glyph: (x, y) => `<line x1="${px(x + 7)}" y1="${px(y - 7)}" x2="${px(x + 7)}" y2="${px(y + 5)}" stroke="${DIM}" stroke-width="1.5"/>`, text: L.joint },
+    { glyph: (x, y) => badge(x + 7, y - 1, BADGE.corner), text: L.corner },
+    { glyph: (x, y) => badge(x + 7, y - 1, BADGE.tee), text: L.tee },
+    { glyph: (x, y) => badge(x + 7, y - 1, BADGE.cross), text: L.cross },
+    { glyph: (x, y) => `<line x1="${px(x)}" y1="${px(y - 1)}" x2="${px(x + 14)}" y2="${px(y - 1)}" stroke="${THROUGH}" stroke-width="2.5"/>`, text: L.through },
+  ];
+  let x = x0;
+  let y = top;
+  for (const item of items) {
+    const w = 18 + item.text.length * LEGEND_CHAR + 14;
+    if (x > x0 && x + w > x0 + width) {
+      x = x0;
+      y += LEGEND_ROW;
+    }
+    out.push(item.glyph(x, y));
+    out.push(`<text x="${px(x + 18)}" y="${px(y)}">${esc(item.text)}</text>`);
+    x += w;
+  }
+  // Tipos de parede (S35/S39): só quando alguma parede tem.
+  const used = new Map<string, string[]>();
+  for (const w of walls) {
+    if (w.wall.wallType === undefined) continue;
+    used.set(w.wall.wallType, [...(used.get(w.wall.wallType) ?? []), w.wall.id]);
+  }
+  if (used.size > 0) {
+    y += 4;
+    const chars = Math.max(30, Math.floor(width / (LEGEND_CHAR + 0.4)));
+    const lines = [
+      L.wallLabel,
+      ...[...used.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([tag, ids]) => L.wallType(tag, wallTypes?.[tag]?.description, ids)),
+    ];
+    for (const text of lines) {
+      for (const line of wrapText(text, chars)) {
+        y += LEGEND_ROW - 3;
+        out.push(`<text class="legend-type" x="${px(x0)}" y="${px(y)}" fill="${MUTED}">${esc(line)}</text>`);
+      }
+    }
+  }
+  out.push('</g>');
+  return { svg: out, bottom: y + 6 };
 }
 
 /** Seta do norte centrada em (cx, cy), girada `angle` graus no sentido horário a partir de "para cima". */

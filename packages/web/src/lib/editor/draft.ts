@@ -40,6 +40,7 @@ import {
   type Exposure,
   type FloorSpan,
   type LumberSpecies,
+  type NailingConfig,
   type OpeningType,
   type Point,
   type PostSection,
@@ -261,6 +262,8 @@ export interface DraftConfig {
   blockingPresets?: Record<string, DraftBlockingPreset>;
   /** Sheathing do projeto (S38); ausente = nenhuma parede leva chapa, salvo a que pede. */
   sheathing?: DraftSheathingConfig;
+  /** Pregação das ligações entre paredes (S39, P48), como o schema a lê; o editor não a edita, só preserva. */
+  nailing?: NailingConfig;
   /** Tabela de preços do orçamento (S31), como o schema a lê; o editor não a edita, só preserva. */
   prices?: PriceEntry[];
   extra?: Extra;
@@ -364,6 +367,7 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
     fireBlockAt: r.field(C.fireBlockAt, c['fireBlockAt'], `${path}.fireBlockAt`),
     blockingPresets: r.record(c['blockingPresets'], `${path}.blockingPresets`, blockingPresetFrom),
     sheathing: sheathingConfigFrom(r, c['sheathing'], `${path}.sheathing`),
+    nailing: r.field(C.nailing, c['nailing'], `${path}.nailing`),
     prices: r.field(C.prices, c['prices'], `${path}.prices`),
     extra: rest(c, CONFIG_KEYS),
   });
@@ -840,6 +844,10 @@ function configJson(c: DraftConfig): Record<string, unknown> {
     fireBlockAt: c.fireBlockAt,
     blockingPresets: c.blockingPresets === undefined ? undefined : mapValues(c.blockingPresets, (p) => compact({ ...p })),
     sheathing: c.sheathing === undefined ? undefined : compact({ ...sheathingJson(c.sheathing), walls: c.sheathing.walls }),
+    nailing:
+      c.nailing === undefined
+        ? undefined
+        : compact({ wallJoint: c.nailing.wallJoint === undefined ? undefined : compact({ ...c.nailing.wallJoint }) }),
     prices: c.prices?.map((p) => ({ ...p })),
     ...(c.extra ?? {}),
   });

@@ -125,6 +125,22 @@ export interface SheathingSpec {
   nailing?: Partial<SheathingNailing>;
 }
 
+/**
+ * Pregação de uma ligação (S39, hipótese P48): `count` fixadores (`fastener`, texto livre) a cada `spacing` polegadas
+ * OC ao longo da altura. Só texto da folha.
+ */
+export interface JointNailing {
+  count: number;
+  fastener: string;
+  spacing: number;
+}
+
+/** `config.nailing` (S39): o que o projeto disser vai por cima de `DEFAULT_NAILING`. */
+export interface NailingConfig {
+  /** Canto, T e + entre paredes (studs de amarração). */
+  wallJoint?: Partial<JointNailing>;
+}
+
 /** Quais paredes `config.sheathing` liga por si (S38): as externas (default), todas ou nenhuma (só por tipo/parede). */
 export type SheathingWalls = 'exterior' | 'all' | 'none';
 
@@ -192,6 +208,11 @@ export interface Config {
    * (`wall.sheathing` ou o tipo); presente = liga as paredes de `walls` (default: as externas).
    */
   sheathing?: SheathingConfig;
+  /**
+   * Pregação das ligações entre paredes (S39, hipótese P48): texto da folha, nunca geometria. Ausente = os valores da
+   * prancha da fábrica (`DEFAULT_NAILING`: 3× 3" nails or screws @ 12" OC). A da chapa fica em `sheathing.nailing`.
+   */
+  nailing?: NailingConfig;
   /** Tabela de preços para o orçamento (S31, `output/cost.ts`). Ausente = sem orçamento. */
   prices?: PriceEntry[];
 }

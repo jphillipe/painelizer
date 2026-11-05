@@ -32,6 +32,8 @@
  * - Sheathing (S38, `rules/sheathing.ts`, P47): com a parede que leva chapa, `Panel.sheathing` (chapas verticais da marca
  *   0, avanço no canto e na linha de piso) e, na parede mais alta que a chapa, a fileira de blocking da emenda (como as
  *   fileiras por altura). O peso do painel inclui a chapa.
+ * - Ligações (S39, `rules/panelJoints.ts`): `Panel.ends` e `Panel.tees` repetem `wall.joints` com a montagem usada
+ *   (canto, T, junta de painéis), para a folha e a planta. Não mudam peça.
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
@@ -64,6 +66,7 @@ import { panelWeight } from '../rules/weight';
 import { fireBlocks, heightBlocks, resolveBlockingRows, type BlockingSkip } from '../rules/blocking';
 import { postMembers } from '../rules/posts';
 import { panelSheathing, resolveSheathing, sheathingJointRows } from '../rules/sheathing';
+import { panelEnds, panelTees } from '../rules/panelJoints';
 import { validatePanel } from './validate';
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
@@ -245,7 +248,8 @@ export function framePanel(
   }));
 
   // Ligações (S14): faixas de T sem conflito com abertura; studs de canto e de encosto.
-  const { clear: strips, warnings: teeWarnings } = teeConflicts(wall, teeStrips(wall.joints), openings, plan.zones);
+  const allStrips = teeStrips(wall.joints);
+  const { clear: strips, warnings: teeWarnings } = teeConflicts(wall, allStrips, openings, plan.zones);
   const jointStuds: StudMember[] = [...cornerStuds(wall, config), ...backerStuds(strips, config)].map(({ x, flat }) => ({
     role: 'stud',
     ...fullHeight,
@@ -305,6 +309,8 @@ export function framePanel(
 
   const members = [...plates, ...verticals, ...blocks, ...framings.flatMap((f) => f.members)];
   const sheathing = sheathingSpec === undefined ? undefined : panelSheathing(wall, sheathingSpec, panelOpenings);
+  const ends = panelEnds(wall, config);
+  const tees = panelTees(wall, config, allStrips.map((s) => strips.includes(s)));
   const panel: Panel = {
     id: wall.id,
     wallId: wall.id,
@@ -324,6 +330,9 @@ export function framePanel(
     weightLb: panelWeight({ members, sheathing }),
     ...(wall.wallType === undefined ? {} : { wallType: wall.wallType }),
     ...(sheathing === undefined ? {} : { sheathing }),
+    // Ligações (S39): o que a folha e a planta dizem de cada ponta e de cada T; nenhuma peça muda.
+    ...(ends === undefined ? {} : { ends }),
+    ...(tees.length === 0 ? {} : { tees }),
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.

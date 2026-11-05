@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1131" height="867" viewBox="0 0 1131 867" font-family="Helvetica, Arial, sans-serif">
-<rect width="1131" height="867" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1131" height="891" viewBox="0 0 1131 891" font-family="Helvetica, Arial, sans-serif">
+<rect width="1131" height="891" fill="#ffffff"/>
 <text x="24" y="42" font-size="18" font-weight="bold" fill="#000">Panel plan</text>
 <text x="24" y="58" font-size="12" fill="#333">5 walls · 12 panels · 40'-5 1/2&quot; × 28'-5 1/2&quot; (exterior faces)</text>
 <g class="north" transform="rotate(0 1085 46)" stroke="#000" fill="#000">
@@ -86,6 +86,38 @@
 <text class="panel-id" data-panel-id="1-W05-P1" x="652" y="578" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 578)">1-W05-P1</text>
 <text class="panel-id" data-panel-id="1-W05-P2" x="652" y="247.5" font-size="10" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 652 247.5)">1-W05-P2</text>
 <text class="wall-id" x="627" y="439.5" font-size="11" fill="#666" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 627 439.5)">W05</text>
+<g class="junctions">
+<g class="junction corner">
+<title>L corner · W01 runs through, W04 butts</title>
+<line class="through" x1="106" y1="775.5" x2="122" y2="775.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="128" cy="759" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="128" y="759" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">L</text>
+</g>
+<g class="junction corner">
+<title>L corner · W01 runs through, W02 butts</title>
+<line class="through" x1="1061" y1="775.5" x2="1077" y2="775.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="1055" cy="759" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="1055" y="759" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">L</text>
+</g>
+<g class="junction tee">
+<title>T tee · W01 runs through, W05 butts</title>
+<line class="through" x1="631" y1="775.5" x2="648" y2="775.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="623" cy="759" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="623" y="759" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">T</text>
+</g>
+<g class="junction corner">
+<title>L corner · W03 runs through, W02 butts</title>
+<line class="through" x1="1061" y1="103.5" x2="1077" y2="103.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="1055" cy="120" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="1055" y="120" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">L</text>
+</g>
+<g class="junction corner">
+<title>L corner · W03 runs through, W04 butts</title>
+<line class="through" x1="106" y1="103.5" x2="122" y2="103.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="128" cy="120" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="128" y="120" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">L</text>
+</g>
+<g class="junction tee">
+<title>T tee · W03 runs through, W05 butts</title>
+<line class="through" x1="631" y1="103.5" x2="648" y2="103.5" stroke="#d35400" stroke-width="2.5"/>
+<circle cx="623" cy="120" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="623" y="120" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">T</text>
+</g>
+</g>
 <g class="panel-hits" fill="transparent" stroke="none">
 <rect class="panel-hit" data-panel-id="1-W01-P1" x="106" y="770" width="288" height="11"><title>1-W01-P1 · 12'-0&quot; · wall W01</title></rect>
 <rect class="panel-hit" data-panel-id="1-W01-P2" x="394" y="770" width="288" height="11"><title>1-W01-P2 · 12'-0&quot; · wall W01</title></rect>
@@ -116,4 +148,20 @@
 <line x1="41" y1="784" x2="47" y2="778"/>
 </g>
 <text x="40" y="439.5" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 439.5)">28'-5 1/2&quot;</text>
+<g class="legend" font-size="9" fill="#333">
+<rect x="24" y="856" width="14" height="8" fill="#d9c9a8" stroke="#5a4632" stroke-width="0.75"/>
+<text x="42" y="861">exterior wall</text>
+<rect x="118.4" y="856" width="14" height="8" fill="#ece3d1" stroke="#5a4632" stroke-width="0.75"/>
+<text x="136.4" y="861">interior wall</text>
+<line x1="219.8" y1="854" x2="219.8" y2="866" stroke="#1f4e79" stroke-width="1.5"/>
+<text x="230.8" y="861">panel joint</text>
+<circle cx="304.6" cy="860" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="304.6" y="860" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">L</text>
+<text x="315.6" y="861">corner</text>
+<circle cx="365.4" cy="860" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><text x="365.4" y="860" font-size="8" font-weight="bold" fill="#000" text-anchor="middle" dominant-baseline="central">T</text>
+<text x="376.4" y="861">tee</text>
+<circle cx="411.8" cy="860" r="6.5" fill="#ffffff" stroke="#333" stroke-width="0.75"/><path d="M408.3 860H415.3M411.8 856.5V863.5" stroke="#000" stroke-width="1.5"/>
+<text x="422.8" y="861">cross</text>
+<line x1="460.8" y1="860" x2="474.8" y2="860" stroke="#d35400" stroke-width="2.5"/>
+<text x="478.8" y="861">wall that runs through</text>
+</g>
 </svg>

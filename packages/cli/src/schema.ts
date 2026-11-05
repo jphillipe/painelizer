@@ -49,6 +49,7 @@ import {
   type Post,
   type PostSection,
   type PriceEntry,
+  type NailingConfig,
   type SheathingConfig,
   type SheathingSide,
   type SheathingSpec,
@@ -528,6 +529,10 @@ export const sheathingSpecShape = {
   overhang: node(sheathingOverhangShape).optional(),
   nailing: node(sheathingNailingShape).optional(),
 };
+/** Pregação de uma ligação entre paredes (S39, P48): texto da folha, campo a campo sobre o default da prancha. */
+export const jointNailingShape = { count: count.optional(), fastener: text.optional(), spacing: positiveMeasure.optional() };
+/** `config.nailing` (S39): pregação das ligações entre paredes (canto, T, +). */
+export const nailingShape = { wallJoint: node(jointNailingShape).optional() };
 /** `config.sheathing` (S38): a chapa do projeto e as paredes que ela liga (default: as externas). */
 export const sheathingConfigShape = { ...sheathingSpecShape, walls: oneOf(SHEATHING_WALLS).optional() };
 const sheathingSpecNode = node(sheathingSpecShape);
@@ -630,6 +635,7 @@ export const configShape = {
   fireBlockAt: positiveMeasure.optional(),
   blockingPresets: record(node(blockingPresetShape)).optional(),
   sheathing: node(sheathingConfigShape).optional(),
+  nailing: node(nailingShape).optional(),
   prices: prices.optional(),
 };
 
@@ -856,6 +862,7 @@ export type SchemaMatchesCore = [
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof sheathingSpecShape>>>>, SheathingSpec>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof sheathingConfigShape>>>>, SheathingConfig>>,
   Assert<Same<z.output<typeof wallSheathing>, boolean | SheathingSpec>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof nailingShape>>>>, NailingConfig>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof pointShape>>>>, Point>>,
   Assert<Same<LooseWallFile, WallInput>>,
   Assert<Same<PlanWallFile, HouseWallInput>>,

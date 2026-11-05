@@ -374,6 +374,12 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   { nail: '8d', edge: 6, field: 12 }` por default, sobrescrito por tipo ou parede; a folha imprime "nailing: 8d @ 6"
   edges, 12" field" na seção Sheathing com "engineer to verify (hypotheses P47, P48)". A pregação da junção entre
   paredes (3× 3" @ 12" OC) fica para a S39 (`config.nailing`). — S38.
+  **Em vigor desde a S39 (2026-11-05, por delegação; revisar), parte das ligações:** hipótese: `config.nailing.wallJoint =
+  { count: 3, fastener: '3" nails or screws', spacing: 12 }` por default, campo a campo pelo projeto; a folha imprime
+  "wall joints: 3× 3" nails or screws @ 12" OC ▲" no bloco "Wall content" de todo painel com canto, T ou + (nos dois
+  painéis do encontro), e "▲ engineer to verify (hypothesis P48)". Perguntas que ficam para a fábrica: a pregação é por
+  fileira ao longo da altura (3 a cada 12") ou 3 pregos a cada 12" no total? Prego ou parafuso — a folha deve escolher?
+  Vale igual para canto, T e +? — S39.
 - [ ] **P49 — Encaixe painel-painel na mesma parede.** A conclusão da prancha pede studs avançados/recuados para
   uma parede entrar na outra. No canto e no T o motor já faz (quem atravessa/encosta, P21). E na junta de dois
   painéis da mesma parede: stud duplo encostado (como hoje), stud recuado num lado, ou chapa avançada pregando no
@@ -382,6 +388,23 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   **Em vigor desde a S38 (2026-11-05, por delegação; revisar), parte da chapa:** hipótese: a chapa acaba na ponta de
   cada painel (a junta de painéis da mesma parede não avança nem recua); as quebras preferidas caem em marca múltipla de
   48" (P6), logo a chapa termina inteira na junta na maioria dos casos. — S38.
+  **Em vigor desde a S39 (2026-11-05, por delegação; revisar), parte da folha:** a junta de painéis aparece no bloco "Wall
+  content" de cada lado ("end: panel joint with 1-W01-P2 — double top laps 48" onto it ▲" / "start: … — double top held
+  back 48" ▲") com ▲ desta hipótese; stud duplo na junta como hoje (S15), sem pregação impressa (a prancha não dá
+  número para a junta painel-painel). — S39.
+
+## Novas (abertas em 2026-11-05, S39 — folha "o que vai nesta parede" e planta com encaixes)
+- [ ] **P53 — Bloco "Wall content" e símbolos da planta.** O Nicolas pediu "dizer o que vai nessa parede" e mostrar a
+  amarração na folha e na planta, sem dizer o formato. — hipótese: na folha, um bloco sob o cabeçalho, em toda a
+  largura, com Wall (id, tipo e descrição, pavimento, seção, posição, carga, dimensões e trecho da parede), Openings,
+  Joints (por ponta: livre, canto — quem atravessa e a montagem —, T, +, junta de painéis; T/+ ao longo do painel com
+  x e montagem), Blocking, Sheathing, Posts e Nailing; grupo vazio diz "none"; ▲ só nas linhas que saem de hipótese
+  estrutural (P44–P50) e um rodapé "▲ engineer to verify (hypotheses …)"; o canto e o T em si sem ▲. Na planta, selo
+  L/T/+ do lado de dentro de cada encontro e traço laranja no eixo da parede que atravessa, com legenda e a lista dos
+  tipos de parede usados. Perguntas que ficam para a fábrica: é esse o conteúdo e a ordem que a mesa quer ler? O bloco
+  repete o que a margem já detalha (chapa, posts) — tirar de um dos dois? A junta painel-painel leva pregação
+  impressa (qual)? O "+" da planta deve ser "X", como na prancha? A folha mais alta (~80–110 px; ~10–20% menor na
+  carta paisagem) incomoda na leitura da cota? — S39.
 
 ## Novas (abertas em 2026-11-05, S38 — sheathing)
 - [ ] **P52 — Sobra de altura da chapa e contagem de chapas.** A parede de 97 1/8" (3 plates + 92 5/8") com chapa 4x8

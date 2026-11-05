@@ -14,6 +14,10 @@
  * - Cabeçalho: id do painel, projeto (`opts.project`), parede, pavimento, seção, externa/interna,
  *   portante, dimensões, nº de peças a cortar (plies contam, como na lista), peso, data e revisão (`opts.date`,
  *   `opts.revision` — a folha não lê o relógio: mesma entrada, mesma string) e a linha da vista (P24).
+ * - Bloco "Wall content" (S39, `sheet/content.ts`) sob o cabeçalho, em toda a largura: parede e tipo (com a descrição
+ *   de `opts.wallTypes`), dimensões, aberturas, ligações por ponta e T (`Panel.ends`/`Panel.tees`), blocking, chapas,
+ *   posts e pregação (`opts.nailing`, default da prancha, P48), com ▲ nas linhas de hipótese. A largura da folha vem
+ *   do desenho e da lista; a altura do bloco empurra os dois para baixo.
  * - Desenho: contorno tracejado, members com cor por papel e `<title>`, rótulo curto por peça (K king, J jack,
  *   C cripple, H header, S sill, B bloco; studs e plates sem letra; stud extra com o `label` do projeto ao longo
  *   da peça), cortes na obra hachurados em vermelho, cotas de RO (largura; peitoril, altura do RO e base do
@@ -33,11 +37,15 @@
  * - Saída determinística: mesma entrada → mesma string.
  */
 
+import type { NailingConfig } from '../config';
 import { piecesOf, type Panel, type SheathingSheet, type Warning } from '../panel';
+import { resolveNailing } from '../rules/nailing';
+import type { WallTypeEntry } from '../wall';
 import { formatFeetInches } from '../units';
 import { blockingColumnWidth, blockingDims, blockingRows } from './sheet/blocking';
 import { CHAIN_ROW, layoutMarksSvg, openingDims, studChain } from './sheet/dims';
-import { TITLE_HEIGHT, sheetHeader } from './sheet/header';
+import { contentBlock, wallContentGroups } from './sheet/content';
+import { CONTENT_TOP, sheetHeader } from './sheet/header';
 import { FIELD_CUT_HATCH, fieldCutMark, memberLabels, memberRect, overhang } from './sheet/members';
 import { LIST_WIDTH, pieceList } from './sheet/pieceList';
 import { FONT, LABEL, MUTED, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
@@ -61,6 +69,10 @@ export interface PanelSvgOptions {
   date?: string;
   /** Revisão da folha, como texto (S17). Ausente = sem revisão. */
   revision?: string;
+  /** Catálogo de tipos de parede do projeto (`config.wallTypes`, S39): a descrição do tipo vai ao "Wall content". */
+  wallTypes?: Readonly<Record<string, WallTypeEntry>>;
+  /** Pregação das ligações (`config.nailing`, S39). Ausente = os valores da prancha (hipótese P48). */
+  nailing?: NailingConfig;
 }
 
 const DIM_LEFT_WIDTH = 56;
@@ -80,36 +92,13 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const studSpacing = opts.studSpacing ?? 16;
   const margin = opts.margin ?? 24;
   const S = sheetStrings();
+  validateSheet(panel, scale, studSpacing, margin);
+  const { overLeft, overRight, sheets, sheathPad, drawX0, rows, rightX, listX, totalW } = horizontalLayout(panel, scale, margin, S);
+  const content = sheetContent(panel, opts, margin, totalW, S);
 
-  if (!Number.isFinite(scale) || scale <= 0) {
-    throw new RangeError(`panelSvg: invalid scale (${scale}); expected a number > 0`);
-  }
-  if (!Number.isFinite(studSpacing) || studSpacing <= 0) {
-    throw new RangeError(`panelSvg: invalid studSpacing (${studSpacing}); expected a number > 0`);
-  }
-  if (!Number.isFinite(margin) || margin < 0) {
-    throw new RangeError(`panelSvg: invalid margin (${margin}); expected a number ≥ 0`);
-  }
-  if (
-    !Number.isFinite(panel.length) ||
-    panel.length <= 0 ||
-    !Number.isFinite(panel.height) ||
-    panel.height <= 0
-  ) {
-    throw new RangeError(
-      `panelSvg: panel ${panel.id} has invalid dimensions (${panel.length} × ${panel.height})`,
-    );
-  }
-
-  // Avanço da double top plate além do contorno (laps de canto e T, S14): o desenho abre espaço dos dois
-  // lados e cota o avanço. Sem avanço, nada muda.
-  const { left: overLeft, right: overRight } = overhang(panel);
-  // Chapas além do contorno (S38): canto e linha de piso. Sem sheathing, tudo 0.
-  const sheets = drawnSheets(panel);
-  const sheathPad = sheathingPad(panel, sheets);
-  const drawX0 = margin + DIM_LEFT_WIDTH + Math.max(overLeft, sheathPad.left) * scale;
   // Com avanço, a cota fica entre o cabeçalho e o topo do painel: o desenho desce `OVERHANG_DIM_GAP`.
-  const drawY0 = margin + TITLE_HEIGHT + (overLeft > 0 || overRight > 0 ? OVERHANG_DIM_GAP : 0) + sheathPad.top * scale;
+  const drawY0 =
+    margin + CONTENT_TOP + content.height + (overLeft > 0 || overRight > 0 ? OVERHANG_DIM_GAP : 0) + sheathPad.top * scale;
   const drawW = panel.length * scale;
   const drawH = panel.height * scale;
   const dimY = drawY0 + drawH + sheathPad.bottom * scale + DIM_GAP;
@@ -124,12 +113,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const legendY = chainY + 6 + CHAIN_ROW * chain.rows + LEGEND_GAP;
   const warningsY = legendY + 6;
 
-  // Fileiras de blocking (S36): coluna de cotas e rótulos entre o desenho e a lista; sem fileira, nada muda.
-  const rows = blockingRows(panel);
-  const rightX = drawX0 + drawW + Math.max(overRight, sheathPad.right) * scale;
-  const listX = rightX + blockingColumnWidth(rows, S) + LIST_GAP;
   const list = pieceList(panel, listX, drawY0, S);
-  const totalW = listX + LIST_WIDTH + margin;
   const totalH = Math.max(warningsY + panel.warnings.length * WARNING_LINE, list.bottom) + margin;
 
   const out: string[] = [];
@@ -139,8 +123,9 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   );
   out.push(`<rect width="${px(totalW)}" height="${px(totalH)}" fill="#ffffff"/>`);
 
-  // Cabeçalho.
+  // Cabeçalho e bloco "Wall content" (S39).
   out.push(...sheetHeader(panel, opts, margin, totalW, piecesOf(panel), panel.weightLb, S));
+  out.push(...content.svg);
 
   // Contorno do painel.
   out.push(
@@ -228,6 +213,73 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
 
   out.push('</svg>');
   return out.join('\n');
+}
+
+/** Folha impossível: escala, espaçamento, margem ou painel sem dimensão. */
+function validateSheet(panel: Panel, scale: number, studSpacing: number, margin: number): void {
+  if (!Number.isFinite(scale) || scale <= 0) {
+    throw new RangeError(`panelSvg: invalid scale (${scale}); expected a number > 0`);
+  }
+  if (!Number.isFinite(studSpacing) || studSpacing <= 0) {
+    throw new RangeError(`panelSvg: invalid studSpacing (${studSpacing}); expected a number > 0`);
+  }
+  if (!Number.isFinite(margin) || margin < 0) {
+    throw new RangeError(`panelSvg: invalid margin (${margin}); expected a number ≥ 0`);
+  }
+  if (
+    !Number.isFinite(panel.length) ||
+    panel.length <= 0 ||
+    !Number.isFinite(panel.height) ||
+    panel.height <= 0
+  ) {
+    throw new RangeError(
+      `panelSvg: panel ${panel.id} has invalid dimensions (${panel.length} × ${panel.height})`,
+    );
+  }
+}
+
+/**
+ * O que a folha ocupa na horizontal: desenho (com o avanço da double top e das chapas), coluna das fileiras de blocking
+ * e lista de peças. A largura total sai daqui e não depende do bloco "Wall content" (que se ajusta a ela).
+ */
+function horizontalLayout(panel: Panel, scale: number, margin: number, S: SheetStrings) {
+  // Avanço da double top plate além do contorno (laps de canto e T, S14): o desenho abre espaço dos dois
+  // lados e cota o avanço. Sem avanço, nada muda.
+  const { left: overLeft, right: overRight } = overhang(panel);
+  // Chapas além do contorno (S38): canto e linha de piso. Sem sheathing, tudo 0.
+  const sheets = drawnSheets(panel);
+  const sheathPad = sheathingPad(panel, sheets);
+  const drawX0 = margin + DIM_LEFT_WIDTH + Math.max(overLeft, sheathPad.left) * scale;
+  // Fileiras de blocking (S36): coluna de cotas e rótulos entre o desenho e a lista; sem fileira, nada muda.
+  const rows = blockingRows(panel);
+  const rightX = drawX0 + panel.length * scale + Math.max(overRight, sheathPad.right) * scale;
+  const listX = rightX + blockingColumnWidth(rows, S) + LIST_GAP;
+  const totalW = listX + LIST_WIDTH + margin;
+  return { overLeft, overRight, sheets, sheathPad, drawX0, rows, rightX, listX, totalW };
+}
+
+/** O bloco "Wall content" da folha (S39), entre as margens, logo abaixo das linhas do cabeçalho. */
+function sheetContent(panel: Panel, opts: PanelSvgOptions, margin: number, totalW: number, S: SheetStrings) {
+  const description = panel.wallType === undefined ? undefined : opts.wallTypes?.[panel.wallType]?.description;
+  const groups = wallContentGroups(
+    panel,
+    { ...(description === undefined ? {} : { description }), nailing: resolveNailing(opts.nailing) },
+    S,
+  );
+  return contentBlock(groups, margin, margin + CONTENT_TOP, totalW - 2 * margin, S);
+}
+
+/**
+ * Altura do cabeçalho com o bloco "Wall content" (S39), px: da margem ao topo do desenho, sem a cota do avanço da
+ * double top nem o avanço das chapas. Para quem precisa achar o desenho na folha (testes, quem embute a folha).
+ */
+export function sheetHeaderHeight(panel: Panel, opts: PanelSvgOptions = {}): number {
+  const scale = opts.scale ?? 4;
+  const margin = opts.margin ?? 24;
+  const S = sheetStrings();
+  validateSheet(panel, scale, opts.studSpacing ?? 16, margin);
+  const { totalW } = horizontalLayout(panel, scale, margin, S);
+  return CONTENT_TOP + sheetContent(panel, opts, margin, totalW, S).height;
 }
 
 /** Cor do contorno das chapas (S38). */

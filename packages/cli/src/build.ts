@@ -257,6 +257,9 @@ export function buildProject(project: Project): BuildResult {
         project: project.name,
         ...(project.date === undefined ? {} : { date: project.date }),
         ...(project.revision === undefined ? {} : { revision: project.revision }),
+        // Bloco "Wall content" (S39): descrição do tipo de parede e pregação das ligações (P48).
+        ...(project.config.wallTypes === undefined ? {} : { wallTypes: project.config.wallTypes }),
+        ...(project.config.nailing === undefined ? {} : { nailing: project.config.nailing }),
       }),
     });
   }
@@ -266,12 +269,20 @@ export function buildProject(project: Project): BuildResult {
     { path: 'bom.csv', content: bomCsv(bom, sheathing) },
     ...(cost === undefined ? [] : [{ path: 'cost.csv', content: costCsv(cost) }]),
     { path: 'panels.csv', content: panelsCsv(panels) },
-    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
+    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: planSvg(project.house, project, panels) }]),
   );
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));
   const cutLists = panels.map((p) => ({ panelId: p.id, lines: cutList(p) }));
   return { panels, files, warnings, bom, sheathing, cutLists, ...(cost === undefined ? {} : { cost }) };
+}
+
+/** Planta de painéis do projeto em planta (S16), com a legenda dos tipos de parede (S39). */
+function planSvg(house: NonNullable<Project['house']>, project: Project, panels: readonly Panel[]): string {
+  return housePlanSvg(house, panels, {
+    title: project.name,
+    ...(project.config.wallTypes === undefined ? {} : { wallTypes: project.config.wallTypes }),
+  });
 }
 
 /** `W01-P1` → `W01-P1.svg`; qualquer caractere fora de [A-Za-z0-9._-] vira `_`. */

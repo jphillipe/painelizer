@@ -91,6 +91,23 @@ describe('buildProject', () => {
     expect(bare).toContain('text-anchor="end">sample-house</text>');
   });
 
+  it('S39: "Wall content" com a descrição do tipo e a pregação do projeto; planta com selos e a legenda dos tipos', () => {
+    const w01 = result.files.find((f) => f.path === 'panels/1-W01-P1.svg')!.content;
+    expect(w01).toContain('>Wall content</text>');
+    expect(w01).toContain('>W01 · type WT-1S — 2x6 exterior bearing wall, sheathed</text>');
+    expect(w01).toContain('>start: corner with W02 — this wall runs through (California corner)</text>');
+    expect(w01).toContain('>wall joints: 3× 3&quot; nails or screws @ 12&quot; OC ▲</text>');
+    const plan = result.files.find((f) => f.path === 'plan.svg')!.content;
+    expect(plan).toContain('<title>L corner · W01 runs through, W02 butts</title>');
+    expect(plan).toContain('<title>T tee · W02 runs through, W03 butts</title>');
+    expect(plan).toContain('>WT-2 — 2x4 interior partition (W03, W04)</text>');
+    // config.nailing do projeto vai à folha.
+    const p = example();
+    p.config.nailing = { wallJoint: { count: 2, fastener: '16d nails', spacing: 8 } };
+    const custom = buildProject(p).files.find((f) => f.path === 'panels/1-W01-P1.svg')!.content;
+    expect(custom).toContain('>wall joints: 2× 16d nails @ 8&quot; OC ▲</text>');
+  });
+
   it('folhas e planta sempre em inglês (P51)', () => {
     const sheet = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
     expect(sheet).toContain('>Pieces</text>');

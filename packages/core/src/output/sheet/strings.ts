@@ -8,8 +8,20 @@
  */
 
 import { warningMessage, type Warning } from '../../messages';
-import type { SheathingFace } from '../../config';
-import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening, PanelSheathing, PostMember, SheathingOverhangs, SheathingSheet } from '../../panel';
+import type { JointNailing, SheathingFace, SheathingNailing } from '../../config';
+import type {
+  BlockingKind,
+  FieldCut,
+  MemberRole,
+  Panel,
+  PanelEnd,
+  PanelOpening,
+  PanelSheathing,
+  PanelTee,
+  PostMember,
+  SheathingOverhangs,
+  SheathingSheet,
+} from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import type { CutRole } from '../cutlist';
 
@@ -91,6 +103,35 @@ export interface SheetStrings {
     legend: string;
     sheetTitle(sheet: SheathingSheet): string;
   };
+  /**
+   * Bloco "Wall content" sob o cabeçalho (S39; pedidos 6–8 da prancha): o que vai nesta parede, por grupo. As linhas que
+   * saem de hipótese levam `verify` no fim e o rodapé do bloco lista as hipóteses.
+   */
+  content: {
+    title: string;
+    labels: Readonly<Record<ContentGroupKey, string>>;
+    none: string;
+    /** Id, tipo e descrição do tipo. */
+    wall(panel: Pick<Panel, 'wallId' | 'wallType'>, description: string | undefined): string;
+    /** Pavimento, seção, posição e carga. */
+    kind(panel: Pick<Panel, 'level' | 'section' | 'exterior' | 'bearing'>): string;
+    /** Dimensões do painel e onde ele fica na parede. */
+    span(panel: Pick<Panel, 'length' | 'height' | 'wallOffset'>): string;
+    opening(o: PanelOpening): string;
+    /** Uma ponta: livre, canto, T, + ou junta de painéis; com o avanço da chapa naquela ponta (S38), se houver. */
+    end(side: 'start' | 'end', e: PanelEnd | undefined, sheathingOverhang: number): string;
+    /** Parede que encosta em T (ou +) ao longo do painel. */
+    tee(t: PanelTee): string;
+    sheathingCorner(o: SheathingOverhangs, face: SheathingFace | undefined): string | undefined;
+    sheathingFloor(o: SheathingOverhangs): string | undefined;
+    wallJointNailing(n: JointNailing): string;
+    sheathingNailing(n: SheathingNailing): string;
+    post(p: Pick<PostMember, 'section' | 'x' | 'label' | 'base' | 'top'>): string;
+    /** Marca no fim da linha que sai de hipótese. */
+    verify: string;
+    /** Rodapé do bloco: a marca e as hipóteses (`P44`, `P48`…). */
+    footer(hypotheses: readonly string[]): string;
+  };
   /** Texto do aviso no rodapé (depois do código). */
   warning(w: Warning): string;
   /** Planta (S16). */
@@ -104,8 +145,27 @@ export interface SheetStrings {
     jointTitle(left: string, right: string): string;
     panelTitle(panelId: string, length: number, wallId: string): string;
     northTitle(angle: string): string;
+    /** `<title>` do encontro de paredes (S39): tipo, quem atravessa, quem encosta. */
+    junctionTitle(kind: 'corner' | 'tee' | 'cross', through: string | undefined, walls: readonly string[]): string;
+    /** Legenda da planta (S39). */
+    legend: {
+      exterior: string;
+      interior: string;
+      joint: string;
+      corner: string;
+      tee: string;
+      cross: string;
+      through: string;
+      /** Como ler o rótulo da parede quando há tipos. */
+      wallLabel: string;
+      /** Um tipo usado: tag, descrição do catálogo e as paredes. */
+      wallType(tag: string, description: string | undefined, wallIds: readonly string[]): string;
+    };
   };
 }
+
+/** Grupos do bloco "Wall content" (S39), na ordem da folha. */
+export type ContentGroupKey = 'wall' | 'openings' | 'joints' | 'blocking' | 'sheathing' | 'posts' | 'nailing';
 
 /** Nome legível de um papel de peça (cortes na obra): os termos da fábrica. */
 export function roleName(role: MemberRole): string {
@@ -150,6 +210,30 @@ function postConnectors(post: Pick<PostMember, 'base' | 'top'>): string | undefi
     ...(post.top === undefined ? [] : [`top: ${post.top}`]),
   ];
   return parts.length === 0 ? undefined : parts.join(' · ');
+}
+
+const CORNER_STYLE_NAME = { california: 'California corner', 'three-stud': '3-stud corner' } as const;
+const TEE_FRAMING_NAME = { ladder: 'ladder', backer: 'backer studs', none: 'no tee framing (opening zone)' } as const;
+
+/** "start: corner with W02 — this wall runs through (California corner)" (S39). */
+function endText(side: 'start' | 'end', e: PanelEnd | undefined, overhang: number): string {
+  const sheathing = overhang > 1e-9 ? `, sheathing overhangs ${formatInches(overhang)}` : '';
+  if (e === undefined) return `${side}: free end`;
+  const other = e.kind === 'panel' ? (e.panelId ?? 'next panel') : (e.wallId ?? 'the other wall');
+  switch (e.kind) {
+    case 'corner': {
+      const what = `${side}: ${e.concave === true ? 'inside corner' : 'corner'} with ${other}`;
+      return e.through
+        ? `${what} — this wall runs through (${CORNER_STYLE_NAME[e.style ?? 'california']})${sheathing}`
+        : `${what} — this wall butts against it${sheathing}`;
+    }
+    case 'tee':
+      return `${side}: ${e.cross === true ? 'cross' : 'tee'} into ${other} — ${other} runs through${sheathing}`;
+    case 'panel':
+      return side === 'end'
+        ? `${side}: panel joint with ${other} — double top laps ${formatInches(e.lap)} onto it`
+        : `${side}: panel joint with ${other} — double top held back ${formatInches(e.lap)}`;
+  }
 }
 
 const EN: SheetStrings = {
@@ -267,6 +351,63 @@ const EN: SheetStrings = {
     sheetTitle: (p) =>
       `sheathing ${p.face} ${formatInches(p.w)} x ${formatInches(p.h)} at x=${formatInches(p.x)}, y=${formatInches(p.y)}${p.cut === true ? ' (cut)' : ''}`,
   },
+  content: {
+    title: 'Wall content',
+    labels: {
+      wall: 'Wall',
+      openings: 'Openings',
+      joints: 'Joints',
+      blocking: 'Blocking',
+      sheathing: 'Sheathing',
+      posts: 'Posts',
+      nailing: 'Nailing',
+    },
+    none: 'none',
+    wall: (panel, description) =>
+      [panel.wallId, ...(panel.wallType === undefined ? [] : [`type ${panel.wallType}`])].join(' · ') +
+      (description === undefined || description.trim() === '' ? '' : ` — ${description.trim()}`),
+    kind: (panel) =>
+      `level ${panel.level} · ${panel.section} ${panel.exterior ? 'exterior' : 'interior'} ${panel.bearing ? 'bearing' : 'non-bearing'}`,
+    span: (panel) =>
+      `panel ${formatFeetInches(panel.length)} × ${formatFeetInches(panel.height)} · wall x=${formatFeetInches(panel.wallOffset)} to ` +
+      formatFeetInches(panel.wallOffset + panel.length),
+    opening: (o) => {
+      const base = o.top - o.height;
+      return [
+        `${o.id} ${o.type === 'door' ? 'door' : 'window'}`,
+        `RO ${formatInches(o.width)} × ${formatInches(o.height)}`,
+        `x=${formatInches(o.x)} to ${formatInches(o.x + o.width)}`,
+        ...(base > 1e-9 ? [`sill ${formatInches(base)}`] : []),
+        `header ${formatInches(o.top)}`,
+      ].join(' · ');
+    },
+    end: endText,
+    tee: (t) => {
+      const walls = t.sides === 2 ? `${t.wallId ?? '?'} and ${t.otherWallId ?? '?'}` : (t.wallId ?? '?');
+      return `${t.sides === 2 ? 'cross' : 'tee'} with ${walls} at ${formatInches(t.x)} — ${TEE_FRAMING_NAME[t.framing]}`;
+    },
+    sheathingCorner: (o, face) => {
+      const parts = [cornerPart('start', o.start), cornerPart('end', o.end)].filter((p) => p !== undefined);
+      if (parts.length === 0) return undefined;
+      return `corner overhang${face === undefined ? '' : ` (${face})`}: ${parts.join(' · ')}`;
+    },
+    sheathingFloor: (o) => {
+      const parts = [
+        ...(o.top > 1e-9 ? [`${formatInches(o.top)} above the double top`] : []),
+        ...(o.bottom > 1e-9 ? [`${formatInches(o.bottom)} below the bottom plate`] : []),
+      ];
+      return parts.length === 0 ? undefined : `floor line: ${parts.join(', ')}`;
+    },
+    wallJointNailing: (n) => `wall joints: ${n.count}× ${n.fastener} @ ${formatInches(n.spacing)} OC`,
+    sheathingNailing: (n) => `sheathing: ${n.nail} @ ${formatInches(n.edge)} edges, ${formatInches(n.field)} field`,
+    post: (p) => {
+      const connectors = postConnectors(p);
+      return postItem(p) + (connectors === undefined ? '' : ` — ${connectors}`);
+    },
+    verify: '▲',
+    footer: (hypotheses) =>
+      `▲ engineer to verify (${hypotheses.length === 1 ? 'hypothesis' : 'hypotheses'} ${hypotheses.join(', ')})`,
+  },
   // Com parâmetros, a frase sai de código + parâmetros (vale também para um `message` guardado antes de P51);
   // sem eles (aviso montado à mão), o `message` como veio.
   warning: (w) =>
@@ -289,6 +430,24 @@ const EN: SheetStrings = {
     jointTitle: (left, right) => `joint ${left} | ${right}`,
     panelTitle: (panelId, length, wallId) => `${panelId} · ${formatFeetInches(length)} · wall ${wallId}`,
     northTitle: (angle) => `north: ${angle}° from plan +y, clockwise`,
+    junctionTitle: (kind, through, walls) => {
+      const butting = walls.filter((id) => id !== through);
+      const name = { corner: 'L corner', tee: 'T tee', cross: '+ cross' }[kind];
+      if (through === undefined) return `${name} · ${walls.join(', ')}`;
+      return `${name} · ${through} runs through${butting.length === 0 ? '' : `, ${butting.join(' and ')} ${butting.length === 1 ? 'butts' : 'butt'}`}`;
+    },
+    legend: {
+      exterior: 'exterior wall',
+      interior: 'interior wall',
+      joint: 'panel joint',
+      corner: 'corner',
+      tee: 'tee',
+      cross: 'cross',
+      through: 'wall that runs through',
+      wallLabel: 'W01 · WT-1 = wall · wall type',
+      wallType: (tag, description, ids) =>
+        `${tag}${description === undefined || description.trim() === '' ? '' : ` — ${description.trim()}`} (${ids.join(', ')})`,
+    },
   },
 };
 

@@ -175,3 +175,50 @@ describe('housePlanSvg — canto em L', () => {
     expect(out).toContain('>1-W2-P1</text>');
   });
 });
+
+describe('housePlanSvg — ligações e legenda (S39)', () => {
+  /** Encontros: classe, `<title>` e o traço da parede que atravessa (pontos em px). */
+  function junctions(out: string): { kind: string; title: string; through: string[] }[] {
+    return [...out.matchAll(/<g class="junction (corner|tee|cross)">\n<title>([^<]*)<\/title>\n((?:<line class="through"[^>]*>\n)?)/g)].map((m) => ({
+      kind: m[1]!,
+      title: m[2]!,
+      through: m[3] === '' ? [] : [m[3]!],
+    }));
+  }
+
+  it('casa 28x40: 4 cantos em L e 2 T, cada um uma vez, com quem atravessa no <title> e o traço', () => {
+    const js = junctions(svg);
+    expect(js.map((j) => j.kind).sort()).toEqual(['corner', 'corner', 'corner', 'corner', 'tee', 'tee']);
+    expect(js.every((j) => j.through.length === 1)).toBe(true);
+    expect(js.filter((j) => j.kind === 'tee').map((j) => j.title).sort()).toEqual([
+      'T tee · W01 runs through, W05 butts',
+      'T tee · W03 runs through, W05 butts',
+    ]);
+    // Traço no eixo da parede que atravessa: horizontal no T de W01 (y = 0 na planta).
+    const tee = tags(svg, /<g class="junction tee">\n<title>T tee · W01[^]*?<line class="through"[^>]*>/g)[0]!;
+    const line = /<line class="through"[^>]*>/.exec(tee)![0];
+    expect(attr(line, 'y1')).toBe(px(toPy(0)));
+    expect(attr(line, 'y2')).toBe(px(toPy(0)));
+    // Meia espessura da W05 (2x4) e 5 px para cada lado do eixo dela (x = 324 na planta).
+    expect(Number(attr(line, 'x2')) - Number(attr(line, 'x1'))).toBeCloseTo((3.5 / 2 + 2.5) * 2 * 2, 6);
+  });
+
+  it('canto em L: o selo do lado de dentro e a W1 marcada como a que atravessa', () => {
+    const h = cornerL.house;
+    const out = housePlanSvg(h, panelizeHouse(h, cornerL.config).panels);
+    expect(junctions(out)).toEqual([{ kind: 'corner', title: 'L corner · W1 runs through, W2 butts', through: [expect.any(String)] }]);
+    expect(out).toContain('>L</text>');
+  });
+
+  it('legenda: símbolos sempre; linhas de tipo só com tipo de parede', () => {
+    for (const t of ['exterior wall', 'interior wall', 'panel joint', 'corner', 'tee', 'cross', 'wall that runs through']) {
+      expect(svg).toContain(`>${t}</text>`);
+    }
+    expect(svg).not.toContain('class="legend-type"');
+    // A legenda fica abaixo da cota total e a altura da planta a inclui.
+    const legendTop = Math.min(...[...svg.split('<g class="legend"')[1]!.matchAll(/ y="([\d.]+)"/g)].map((m) => Number(m[1])));
+    const dimText = tags(svg, /<text x="[^"]+" y="[^"]+" font-size="12" fill="#1f4e79" text-anchor="middle">40'-5 1\/2&quot;<\/text>/g)[0]!;
+    expect(legendTop).toBeGreaterThan(Number(attr(dimText, 'y')) + 8);
+    expect(Number(attr(svg.split('\n')[0]!, 'height'))).toBeGreaterThan(legendTop);
+  });
+});

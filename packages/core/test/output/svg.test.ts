@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Config, Member, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
-import { esc, memberBox, panelSvg, px, verticalCenters } from '../../src/output/svg';
+import { esc, memberBox, panelSvg, px, sheetHeaderHeight, verticalCenters } from '../../src/output/svg';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import plainJson from '../fixtures/wall-144-plain.json';
@@ -29,9 +29,12 @@ const lowHeaderPanel = panelizeWall(window.wall, {
   headerHeight: 82.5,
 });
 
-/** Origem do desenho em px: margem 24 + 56 de espaço para a cota da altura; 24 + 60 do cabeçalho (S17). */
+/**
+ * Origem do desenho em px: margem 24 + 56 de espaço para a cota da altura; em y, a margem e o cabeçalho, cuja altura
+ * depende do bloco "Wall content" (S39; era 60 fixo até a S38).
+ */
 const X0 = 24 + 56;
-const Y0 = 24 + 60;
+const y0 = (panel: Panel): number => 24 + sheetHeaderHeight(panel);
 
 function rects(svg: string): string[] {
   return svg.match(/<rect class="member [^"]+"[^>]*>/g) ?? [];
@@ -101,15 +104,15 @@ describe('panelSvg', () => {
     expect(attr(last!, 'width')).toBe('6');
     expect(attr(last!, 'height')).toBe(String(92.625 * 4));
     // topo do stud em y = 1.5 + 92.625 = 94.125 → (97.125 − 94.125) × 4 = 12 px abaixo da origem
-    expect(attr(last!, 'y')).toBe(String(Y0 + 12));
+    expect(attr(last!, 'y')).toBe(String(y0(plainPanel) + 12));
   });
 
   it('eixo y invertido: bottom plate no rodapé do desenho, double top plate no topo', () => {
     const bottom = rects(svg).find((r) => r.includes('class="member bottomPlate"'))!;
     const dtp = rects(svg).find((r) => r.includes('class="member doubleTopPlate"'))!;
-    expect(attr(bottom, 'y')).toBe(String(Y0 + (97.125 - 1.5) * 4));
+    expect(attr(bottom, 'y')).toBe(String(y0(plainPanel) + (97.125 - 1.5) * 4));
     expect(attr(bottom, 'width')).toBe(String(144 * 4));
-    expect(attr(dtp, 'y')).toBe(String(Y0));
+    expect(attr(dtp, 'y')).toBe(String(y0(plainPanel)));
   });
 
   it('marcas de layout no rodapé: múltiplos de 16 e o fechamento 142.5', () => {
@@ -199,7 +202,7 @@ describe('panelSvg — corte na obra', () => {
     expect(attr(cut, 'x')).toBe(px(X0 + 40 * 4));
     expect(attr(cut, 'width')).toBe('152');
     // topo da bottom plate (y=1.5) e 1.5" de altura
-    expect(attr(cut, 'y')).toBe(px(Y0 + (97.125 - 1.5) * 4));
+    expect(attr(cut, 'y')).toBe(px(y0(doorPanel) + (97.125 - 1.5) * 4));
     expect(attr(cut, 'height')).toBe('6');
     expect(attr(cut, 'fill')).toBe('url(#field-cut-hatch)');
     expect(doorSvg).toContain('<pattern id="field-cut-hatch"');
@@ -232,7 +235,7 @@ describe('panelSvg — corte na obra', () => {
     const out = panelSvg(nonBearingDoorPanel);
     const header = rects(out).find((r) => r.includes('class="member header"'))!;
     expect(attr(header, 'height')).toBe('6');
-    expect(attr(header, 'y')).toBe(px(Y0 + (97.125 - 84) * 4));
+    expect(attr(header, 'y')).toBe(px(y0(nonBearingDoorPanel) + (97.125 - 84) * 4));
     expect(out).toContain('<title>header 2x4 × 41&quot; [R602.7.4] — x=38 1/2&quot; y=82 1/2&quot;</title>');
     expect(out).not.toContain('plies');
     expect(rects(out)).toHaveLength(14);
@@ -306,7 +309,7 @@ describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
     const over = 5.5 * 4;
     // Contorno deslocado em 22 px à direita e 22 px para baixo (espaço da cota do avanço); a double top
     // começa 22 px antes dele.
-    expect(svg).toContain(`<rect x="${px(X0 + over)}" y="${px(Y0 + 22)}" width="469" height="388.5" fill="none"`);
+    expect(svg).toContain(`<rect x="${px(X0 + over)}" y="${px(y0(panel) + 22)}" width="469" height="388.5" fill="none"`);
     const dt = rects(svg).find((r) => r.includes('doubleTopPlate'))!;
     expect(attr(dt, 'x')).toBe(px(X0));
     expect(attr(dt, 'width')).toBe(px(122.75 * 4));
@@ -352,8 +355,8 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(sheet.match(/class="dim dim-length"/g)).toHaveLength(3);
     expect(sheet.match(/<text class="opening-id" /g)).toHaveLength(2);
     expect(sheet).toContain('<text class="face" ');
-    // Linha da largura 9" abaixo do topo do RO (82.5 → 73.5): y = Y0 + (97.125 − 73.5) × 4.
-    expect(sheet).toContain(`<line x1="${px(X0 + 24 * 4)}" y1="${px(Y0 + (97.125 - 73.5) * 4)}" x2="${px(X0 + 60 * 4)}"`);
+    // Linha da largura 9" abaixo do topo do RO (82.5 → 73.5): y = y0 + (97.125 − 73.5) × 4.
+    expect(sheet).toContain(`<line x1="${px(X0 + 24 * 4)}" y1="${px(y0(windowDoorPanel) + (97.125 - 73.5) * 4)}" x2="${px(X0 + 60 * 4)}"`);
     // Painel sem aberturas não tem cotas de RO.
     const bare = panelSvg({ ...windowDoorPanel, openings: [] });
     expect(bare.match(/class="dim dim-height"/g)).toHaveLength(1);
@@ -439,7 +442,7 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     const s2 = panelSvg(w2!, { project: 'house-corner-L' });
     // Flat de canto (1.5–7, centro 4.25) entra na cadeia; fechamento colado à marca 144 desce uma linha.
     expect(s1).toContain('>4 1/4&quot;</text>');
-    expect(s1).toContain(`y="${px(Y0 + 97.125 * 4 + 28 + 34 + 22)}" font-size="9" fill="#666" text-anchor="middle">145 1/4&quot;</text>`);
+    expect(s1).toContain(`y="${px(y0(w1!) + 97.125 * 4 + 28 + 34 + 22)}" font-size="9" fill="#666" text-anchor="middle">145 1/4&quot;</text>`);
     await expect(s1).toMatchFileSnapshot('../__snapshots__/house-corner-L-W1.svg');
     await expect(s2).toMatchFileSnapshot('../__snapshots__/house-corner-L-W2.svg');
   });

@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="905" height="852" viewBox="0 0 905 852" font-family="Helvetica, Arial, sans-serif">
+<rect width="905" height="852" fill="#ffffff"/>
+<text x="24" y="42" font-size="18" font-weight="bold" fill="#000">1-W2-P1</text>
+<text class="project" x="881" y="42" font-size="14" font-weight="bold" fill="#000" text-anchor="end">house-corner-L-sheathed</text>
+<text class="info" x="24" y="58" font-size="12" fill="#333">wall W2 · level 1 · 2x6 exterior bearing · 9'-9 1/4&quot; × 8'-1 1/8&quot; · 12 pieces · 327.4 lb</text>
+<text class="view" x="24" y="72" font-size="11" fill="#333">Viewed from inside — exterior face on the back; start of wall (x=0) on the left (hypothesis P24: the elevation follows the plan start→end direction)</text>
+<g class="wall-content" font-size="10" fill="#000">
+<text class="content-title" x="24" y="90" font-size="11" font-weight="bold">Wall content</text>
+<line x1="24" y1="94" x2="881" y2="94" stroke="#666" stroke-width="0.5"/>
+<text class="content-label" x="24" y="106" font-size="9" font-weight="bold" fill="#666">Wall</text>
+<text class="content-wall" x="88" y="106">W2</text>
+<text class="content-wall" x="88" y="118">level 1 · 2x6 exterior bearing</text>
+<text class="content-wall" x="88" y="130">panel 9'-9 1/4&quot; × 8'-1 1/8&quot; · wall x=0&quot; to 9'-9 1/4&quot;</text>
+<text class="content-label" x="24" y="145" font-size="9" font-weight="bold" fill="#666">Openings</text>
+<text class="content-openings" x="88" y="145">none</text>
+<text class="content-label" x="24" y="160" font-size="9" font-weight="bold" fill="#666">Joints</text>
+<text class="content-joints" x="88" y="160">start: corner with W1 — this wall butts against it, sheathing</text>
+<text class="content-joints" x="88" y="172">overhangs 5 1/2&quot; ▲</text>
+<text class="content-joints" x="88" y="184">end: free end</text>
+<text class="content-label" x="461.5" y="106" font-size="9" font-weight="bold" fill="#666">Blocking</text>
+<text class="content-blocking" x="525.5" y="106">none</text>
+<text class="content-label" x="461.5" y="121" font-size="9" font-weight="bold" fill="#666">Sheathing</text>
+<text class="content-sheathing" x="525.5" y="121">7/16&quot; exterior face · 48&quot; x 108&quot; sheets</text>
+<text class="content-sheathing" x="525.5" y="133">3 pieces (1 cut) · 92.06 sq ft · 128.9 lb</text>
+<text class="content-sheathing" x="525.5" y="145">corner overhang: start 5 1/2&quot; ▲</text>
+<text class="content-sheathing" x="525.5" y="157">floor line: 10 7/8&quot; below the bottom plate ▲</text>
+<text class="content-label" x="461.5" y="172" font-size="9" font-weight="bold" fill="#666">Nailing</text>
+<text class="content-nailing" x="525.5" y="172">wall joints: 3× 3&quot; nails or screws @ 12&quot; OC ▲</text>
+<text class="content-nailing" x="525.5" y="184">sheathing: 8d @ 6&quot; edges, 12&quot; field ▲</text>
+<text class="content-verify" x="24" y="198" font-size="9" fill="#666">▲ engineer to verify (hypotheses P47, P48)</text>
+</g>
+<rect x="102" y="238" width="469" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
+<g class="members" stroke="#5a4632" stroke-width="1">
+<rect class="member bottomPlate" x="102" y="620.5" width="469" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 117 1/4&quot; — x=0&quot; y=0&quot;</title></rect>
+<rect class="member topPlate" x="102" y="244" width="469" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 117 1/4&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
+<rect class="member doubleTopPlate" x="80" y="238" width="491" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 122 3/4&quot; — x=-5 1/2&quot; y=95 5/8&quot;</title></rect>
+<rect class="member stud" x="102" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="141" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=9 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="205" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=25 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="269" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=41 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="333" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=57 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="397" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=73 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="461" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=89 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="525" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=105 3/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="565" y="250" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=115 3/4&quot; y=1 1/2&quot;</title></rect>
+</g>
+<g class="labels" font-size="8" font-weight="bold" fill="#000" text-anchor="middle">
+</g>
+<g class="sheathing" fill="none" stroke="#2a7f62" stroke-width="1.2" stroke-dasharray="8 4">
+<rect x="80" y="238" width="192" height="432"><title>sheathing exterior 48&quot; x 108&quot; at x=-5 1/2&quot;, y=-10 7/8&quot;</title></rect>
+<rect x="272" y="238" width="192" height="432"><title>sheathing exterior 48&quot; x 108&quot; at x=42 1/2&quot;, y=-10 7/8&quot;</title></rect>
+<rect x="464" y="238" width="107" height="432"><title>sheathing exterior 26 3/4&quot; x 108&quot; at x=90 1/2&quot;, y=-10 7/8&quot; (cut)</title></rect>
+</g>
+<text class="face" x="336.5" y="235" font-size="10" fill="#666" text-anchor="middle">exterior face on the back (viewed from inside)</text>
+<g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="102" y1="626.5" x2="102" y2="702"/>
+<line x1="571" y1="626.5" x2="571" y2="702"/>
+<line x1="102" y1="698" x2="571" y2="698"/>
+<line x1="99" y1="701" x2="105" y2="695"/>
+<line x1="568" y1="701" x2="574" y2="695"/>
+</g>
+<text x="336.5" y="694" font-size="12" fill="#1f4e79" text-anchor="middle">9'-9 1/4&quot;</text>
+<g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="80" y1="238" x2="80" y2="232"/>
+<line x1="102" y1="238" x2="102" y2="232"/>
+<line x1="80" y1="228" x2="102" y2="228"/>
+<line x1="77" y1="231" x2="83" y2="225"/>
+<line x1="99" y1="231" x2="105" y2="225"/>
+</g>
+<text x="91" y="224" font-size="12" fill="#1f4e79" text-anchor="middle">overhang 5 1/2&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="102" y1="238" x2="40" y2="238"/>
+<line x1="102" y1="626.5" x2="40" y2="626.5"/>
+<line x1="44" y1="238" x2="44" y2="626.5"/>
+<line x1="41" y1="241" x2="47" y2="235"/>
+<line x1="41" y1="629.5" x2="47" y2="623.5"/>
+</g>
+<text x="40" y="432.25" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 432.25)">8'-1 1/8&quot;</text>
+<g class="layout" stroke="#666" stroke-width="0.75">
+<line x1="102" y1="732" x2="571" y2="732"/>
+<line x1="102" y1="724" x2="102" y2="732"/>
+<line x1="144" y1="724" x2="144" y2="732"/>
+<line x1="208" y1="724" x2="208" y2="732"/>
+<line x1="272" y1="724" x2="272" y2="732"/>
+<line x1="336" y1="724" x2="336" y2="732"/>
+<line x1="400" y1="724" x2="400" y2="732"/>
+<line x1="464" y1="724" x2="464" y2="732"/>
+<line x1="528" y1="724" x2="528" y2="732"/>
+<line x1="565" y1="724" x2="565" y2="732"/>
+</g>
+<text x="102" y="743" font-size="9" fill="#666" text-anchor="middle">0&quot;</text>
+<text x="144" y="743" font-size="9" fill="#666" text-anchor="middle">10 1/2&quot;</text>
+<text x="208" y="743" font-size="9" fill="#666" text-anchor="middle">26 1/2&quot;</text>
+<text x="272" y="743" font-size="9" fill="#666" text-anchor="middle">42 1/2&quot;</text>
+<text x="336" y="743" font-size="9" fill="#666" text-anchor="middle">58 1/2&quot;</text>
+<text x="400" y="743" font-size="9" fill="#666" text-anchor="middle">74 1/2&quot;</text>
+<text x="464" y="743" font-size="9" fill="#666" text-anchor="middle">90 1/2&quot;</text>
+<text x="528" y="743" font-size="9" fill="#666" text-anchor="middle">106 1/2&quot;</text>
+<text x="565" y="743" font-size="9" fill="#666" text-anchor="middle">115 3/4&quot;</text>
+<g class="chain" stroke="#1f4e79" stroke-width="0.75">
+<line x1="102" y1="756" x2="571" y2="756"/>
+<line x1="102" y1="748" x2="102" y2="760"/>
+<line x1="105" y1="750" x2="105" y2="760"/>
+<line x1="144" y1="750" x2="144" y2="760"/>
+<line x1="208" y1="750" x2="208" y2="760"/>
+<line x1="272" y1="750" x2="272" y2="760"/>
+<line x1="336" y1="750" x2="336" y2="760"/>
+<line x1="400" y1="750" x2="400" y2="760"/>
+<line x1="464" y1="750" x2="464" y2="760"/>
+<line x1="528" y1="750" x2="528" y2="760"/>
+<line x1="568" y1="750" x2="568" y2="760"/>
+</g>
+<g class="chain-labels" font-size="9" fill="#1f4e79" text-anchor="end">
+<text class="chain-label row-0" x="108" y="762" transform="rotate(-90 108 762)">3/4&quot;</text>
+<text class="chain-label row-0" x="147" y="762" transform="rotate(-90 147 762)">10 1/2&quot;</text>
+<text class="chain-label row-0" x="211" y="762" transform="rotate(-90 211 762)">26 1/2&quot;</text>
+<text class="chain-label row-0" x="275" y="762" transform="rotate(-90 275 762)">42 1/2&quot;</text>
+<text class="chain-label row-0" x="339" y="762" transform="rotate(-90 339 762)">58 1/2&quot;</text>
+<text class="chain-label row-0" x="403" y="762" transform="rotate(-90 403 762)">74 1/2&quot;</text>
+<text class="chain-label row-0" x="467" y="762" transform="rotate(-90 467 762)">90 1/2&quot;</text>
+<text class="chain-label row-0" x="531" y="762" transform="rotate(-90 531 762)">106 1/2&quot;</text>
+<text class="chain-label row-0" x="571" y="762" transform="rotate(-90 571 762)">116 1/2&quot;</text>
+</g>
+<g class="pieces" font-size="11" fill="#000">
+<text x="599" y="250" font-size="12" font-weight="bold">Pieces</text>
+<g font-size="9" fill="#666"><text x="617" y="265" text-anchor="end">qty</text><text x="625" y="265">piece</text><text x="695" y="265">size</text><text x="829" y="265" text-anchor="end">ft-in</text><text x="881" y="265" text-anchor="end">in</text></g>
+<line x1="599" y1="268" x2="881" y2="268" stroke="#666" stroke-width="0.5"/>
+<g class="piece plates"><text x="617" y="278" text-anchor="end">1</text><text x="625" y="278">plate</text><text x="695" y="278">2x6</text><text x="829" y="278" text-anchor="end">10'-2 3/4&quot;</text><text x="881" y="278" text-anchor="end">122 3/4&quot;</text></g>
+<g class="piece plates"><text x="617" y="291" text-anchor="end">2</text><text x="625" y="291">plate</text><text x="695" y="291">2x6</text><text x="829" y="291" text-anchor="end">9'-9 1/4&quot;</text><text x="881" y="291" text-anchor="end">117 1/4&quot;</text></g>
+<g class="piece stud"><text x="617" y="304" text-anchor="end">9</text><text x="625" y="304">stud</text><text x="695" y="304">2x6</text><text x="829" y="304" text-anchor="end">7'-8 5/8&quot;</text><text x="881" y="304" text-anchor="end">92 5/8&quot;</text></g>
+<line x1="599" y1="308" x2="881" y2="308" stroke="#666" stroke-width="0.5"/>
+<text x="617" y="317" text-anchor="end" font-weight="bold">12</text>
+<text x="625" y="317" font-weight="bold">pieces to cut</text>
+<text class="weight" x="599" y="336">Estimated weight: 327.4 lb</text>
+<text x="599" y="347" font-size="9" fill="#666">lumber and sheathing, no nails (hypothesis P8)</text>
+<text x="599" y="366" font-weight="bold">Sheathing</text>
+<text class="sheathing-item" x="599" y="378" font-size="10">7/16&quot; exterior face · 48&quot; x 108&quot; sheets</text>
+<text class="sheathing-item" x="599" y="390" font-size="10">3 pieces (1 cut) · 92.06 sq ft · 128.9 lb</text>
+<text class="sheathing-item" x="599" y="402" font-size="10">nailing: 8d @ 6&quot; edges, 12&quot; field</text>
+<text class="sheathing-item" x="599" y="414" font-size="10">corner overhang: start 5 1/2&quot;</text>
+<text class="sheathing-item" x="599" y="426" font-size="10">floor line: 10 7/8&quot; below the bottom plate —</text>
+<text class="sheathing-item" x="599" y="438" font-size="10">engineer to verify</text>
+<text x="599" y="449" font-size="9" fill="#666">sheets from layout mark 0, cut at the panel ends; nailing and</text>
+<text x="599" y="460" font-size="9" fill="#666">overhangs — engineer to verify (hypotheses P47, P48)</text>
+</g>
+<text class="legend" x="24" y="822" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0 · dashed green = sheathing sheet</text>
+</svg>

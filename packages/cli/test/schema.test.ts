@@ -392,3 +392,24 @@ describe('sheathing (S38)', () => {
     expect(() => projectFrom(raw, 'p')).toThrow(message);
   });
 });
+
+describe('nailing (S39, P48)', () => {
+  const cfg = { studSpacing: 16, studLength: 92.625 };
+
+  it('config.nailing.wallJoint: quantidade, fixador (texto) e espaçamento em pés-pol; tudo opcional', () => {
+    const p = projectFrom(project({ config: { ...cfg, nailing: { wallJoint: { count: 4, fastener: '16d nails', spacing: '8"' } } } }), 'p');
+    expect(p.config.nailing).toEqual({ wallJoint: { count: 4, fastener: '16d nails', spacing: 8 } });
+    expect(projectFrom(project({ config: { ...cfg, nailing: {} } }), 'p').config.nailing).toEqual({});
+    expect(projectFrom(project({ config: cfg }), 'p').config.nailing).toBeUndefined();
+  });
+
+  it.each([
+    [{ wallJoint: { count: 0 } }, /^p\.config\.nailing\.wallJoint\.count: /],
+    [{ wallJoint: { spacing: 0 } }, /^p\.config\.nailing\.wallJoint\.spacing: /],
+    [{ wallJoint: { fastener: '' } }, /^p\.config\.nailing\.wallJoint\.fastener: /],
+    [{ wallJoint: { nail: '8d' } }, /^p\.config\.nailing\.wallJoint\.nail: /],
+    [{ sheathing: {} }, /^p\.config\.nailing\.sheathing: /],
+  ])('recusa %j com o caminho do campo', (nailing, message) => {
+    expect(() => projectFrom(project({ config: { ...cfg, nailing } }), 'p')).toThrow(message);
+  });
+});

@@ -54,6 +54,16 @@ describe('ida e volta pelo parser do CLI', () => {
     expect(parseProject(textFromDraft(draft), 'p')).toEqual(parseProject(text, 'p'));
   });
 
+  it('S39: nailing (pregação das ligações, P48) passa pelo draft e volta igual; não vai para extra', () => {
+    const raw = JSON.parse(EXAMPLES[0]!.text) as { config: Record<string, unknown> };
+    raw.config['nailing'] = { wallJoint: { count: 4, fastener: '16d nails', spacing: '8"' } };
+    const text = JSON.stringify(raw);
+    const draft = load(text);
+    expect(draft.config.nailing).toEqual({ wallJoint: { count: 4, fastener: '16d nails', spacing: 8 } });
+    expect(draft.config.extra?.['nailing']).toBeUndefined();
+    expect(parseProject(textFromDraft(draft), 'p')).toEqual(parseProject(text, 'p'));
+  });
+
   it('leitura real do Ringgold (toProject do extract) abre sem problems e volta igual', () => {
     const project = toProject(ringgoldOutput, { wallHeight: `9'-1 1/8"`, floorsSupported: 2, building: { groundSnowLoad: 30, buildingWidth: `29'` } });
     const text = JSON.stringify(project, null, 2);

@@ -1,113 +1,133 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1001" height="700.5" viewBox="0 0 1001 700.5" font-family="Helvetica, Arial, sans-serif">
-<rect width="1001" height="700.5" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1001" height="811.5" viewBox="0 0 1001 811.5" font-family="Helvetica, Arial, sans-serif">
+<rect width="1001" height="811.5" fill="#ffffff"/>
 <text x="24" y="42" font-size="18" font-weight="bold" fill="#000">1-W1-P1</text>
 <text class="project" x="977" y="42" font-size="14" font-weight="bold" fill="#000" text-anchor="end">house-corner-L</text>
 <text class="info" x="24" y="58" font-size="12" fill="#333">wall W1 · level 1 · 2x6 exterior bearing · 12'-2 3/4&quot; × 8'-1 1/8&quot; · 15 pieces · 257.7 lb</text>
 <text class="view" x="24" y="72" font-size="11" fill="#333">Viewed from outside — exterior face toward the viewer; start of wall (x=0) on the left (hypothesis P24)</text>
-<rect x="80" y="84" width="587" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
+<g class="wall-content" font-size="10" fill="#000">
+<text class="content-title" x="24" y="90" font-size="11" font-weight="bold">Wall content</text>
+<line x1="24" y1="94" x2="977" y2="94" stroke="#666" stroke-width="0.5"/>
+<text class="content-label" x="24" y="106" font-size="9" font-weight="bold" fill="#666">Wall</text>
+<text class="content-wall" x="88" y="106">W1</text>
+<text class="content-wall" x="88" y="118">level 1 · 2x6 exterior bearing</text>
+<text class="content-wall" x="88" y="130">panel 12'-2 3/4&quot; × 8'-1 1/8&quot; · wall x=0&quot; to 12'-2 3/4&quot;</text>
+<text class="content-label" x="24" y="145" font-size="9" font-weight="bold" fill="#666">Openings</text>
+<text class="content-openings" x="88" y="145">none</text>
+<text class="content-label" x="509.5" y="106" font-size="9" font-weight="bold" fill="#666">Joints</text>
+<text class="content-joints" x="573.5" y="106">start: corner with W2 — this wall runs through (California corner)</text>
+<text class="content-joints" x="573.5" y="118">end: free end</text>
+<text class="content-label" x="509.5" y="133" font-size="9" font-weight="bold" fill="#666">Blocking</text>
+<text class="content-blocking" x="573.5" y="133">none</text>
+<text class="content-label" x="509.5" y="148" font-size="9" font-weight="bold" fill="#666">Sheathing</text>
+<text class="content-sheathing" x="573.5" y="148">none</text>
+<text class="content-label" x="509.5" y="163" font-size="9" font-weight="bold" fill="#666">Nailing</text>
+<text class="content-nailing" x="573.5" y="163">wall joints: 3× 3&quot; nails or screws @ 12&quot; OC ▲</text>
+<text class="content-verify" x="24" y="177" font-size="9" fill="#666">▲ engineer to verify (hypothesis P48)</text>
+</g>
+<rect x="80" y="195" width="587" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
 <g class="members" stroke="#5a4632" stroke-width="1">
-<rect class="member bottomPlate" x="80" y="466.5" width="587" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 146 3/4&quot; — x=0&quot; y=0&quot;</title></rect>
-<rect class="member topPlate" x="80" y="90" width="587" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 146 3/4&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
-<rect class="member doubleTopPlate" x="102" y="84" width="565" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 141 1/4&quot; — x=5 1/2&quot; y=95 5/8&quot;</title></rect>
-<rect class="member stud" x="80" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="141" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=15 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="205" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=31 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="269" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=47 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="333" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=63 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="397" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=79 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="461" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=95 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="525" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=111 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="589" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=127 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="653" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=143 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="661" y="96" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=145 1/4&quot; y=1 1/2&quot;</title></rect>
-<rect class="member stud" x="86" y="96" width="22" height="370.5" fill="#f2e6cc"><title>stud (flat) 2x6 × 92 5/8&quot; — x=1 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member bottomPlate" x="80" y="577.5" width="587" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 146 3/4&quot; — x=0&quot; y=0&quot;</title></rect>
+<rect class="member topPlate" x="80" y="201" width="587" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 146 3/4&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
+<rect class="member doubleTopPlate" x="102" y="195" width="565" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 141 1/4&quot; — x=5 1/2&quot; y=95 5/8&quot;</title></rect>
+<rect class="member stud" x="80" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="141" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=15 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="205" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=31 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="269" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=47 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="333" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=63 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="397" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=79 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="461" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=95 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="525" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=111 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="589" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=127 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="653" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=143 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="661" y="207" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=145 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="86" y="207" width="22" height="370.5" fill="#f2e6cc"><title>stud (flat) 2x6 × 92 5/8&quot; — x=1 1/2&quot; y=1 1/2&quot;</title></rect>
 </g>
 <g class="labels" font-size="8" font-weight="bold" fill="#000" text-anchor="middle">
 </g>
-<text class="face" x="373.5" y="81" font-size="10" fill="#666" text-anchor="middle">exterior face (viewed from outside)</text>
+<text class="face" x="373.5" y="192" font-size="10" fill="#666" text-anchor="middle">exterior face (viewed from outside)</text>
 <g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
-<line x1="80" y1="472.5" x2="80" y2="504.5"/>
-<line x1="667" y1="472.5" x2="667" y2="504.5"/>
-<line x1="80" y1="500.5" x2="667" y2="500.5"/>
-<line x1="77" y1="503.5" x2="83" y2="497.5"/>
-<line x1="664" y1="503.5" x2="670" y2="497.5"/>
+<line x1="80" y1="583.5" x2="80" y2="615.5"/>
+<line x1="667" y1="583.5" x2="667" y2="615.5"/>
+<line x1="80" y1="611.5" x2="667" y2="611.5"/>
+<line x1="77" y1="614.5" x2="83" y2="608.5"/>
+<line x1="664" y1="614.5" x2="670" y2="608.5"/>
 </g>
-<text x="373.5" y="496.5" font-size="12" fill="#1f4e79" text-anchor="middle">12'-2 3/4&quot;</text>
+<text x="373.5" y="607.5" font-size="12" fill="#1f4e79" text-anchor="middle">12'-2 3/4&quot;</text>
 <g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
-<line x1="80" y1="84" x2="40" y2="84"/>
-<line x1="80" y1="472.5" x2="40" y2="472.5"/>
-<line x1="44" y1="84" x2="44" y2="472.5"/>
-<line x1="41" y1="87" x2="47" y2="81"/>
-<line x1="41" y1="475.5" x2="47" y2="469.5"/>
+<line x1="80" y1="195" x2="40" y2="195"/>
+<line x1="80" y1="583.5" x2="40" y2="583.5"/>
+<line x1="44" y1="195" x2="44" y2="583.5"/>
+<line x1="41" y1="198" x2="47" y2="192"/>
+<line x1="41" y1="586.5" x2="47" y2="580.5"/>
 </g>
-<text x="40" y="278.25" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 278.25)">8'-1 1/8&quot;</text>
+<text x="40" y="389.25" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 389.25)">8'-1 1/8&quot;</text>
 <g class="layout" stroke="#666" stroke-width="0.75">
-<line x1="80" y1="534.5" x2="667" y2="534.5"/>
-<line x1="80" y1="526.5" x2="80" y2="534.5"/>
-<line x1="144" y1="526.5" x2="144" y2="534.5"/>
-<line x1="208" y1="526.5" x2="208" y2="534.5"/>
-<line x1="272" y1="526.5" x2="272" y2="534.5"/>
-<line x1="336" y1="526.5" x2="336" y2="534.5"/>
-<line x1="400" y1="526.5" x2="400" y2="534.5"/>
-<line x1="464" y1="526.5" x2="464" y2="534.5"/>
-<line x1="528" y1="526.5" x2="528" y2="534.5"/>
-<line x1="592" y1="526.5" x2="592" y2="534.5"/>
-<line x1="656" y1="526.5" x2="656" y2="534.5"/>
-<line x1="661" y1="526.5" x2="661" y2="534.5"/>
+<line x1="80" y1="645.5" x2="667" y2="645.5"/>
+<line x1="80" y1="637.5" x2="80" y2="645.5"/>
+<line x1="144" y1="637.5" x2="144" y2="645.5"/>
+<line x1="208" y1="637.5" x2="208" y2="645.5"/>
+<line x1="272" y1="637.5" x2="272" y2="645.5"/>
+<line x1="336" y1="637.5" x2="336" y2="645.5"/>
+<line x1="400" y1="637.5" x2="400" y2="645.5"/>
+<line x1="464" y1="637.5" x2="464" y2="645.5"/>
+<line x1="528" y1="637.5" x2="528" y2="645.5"/>
+<line x1="592" y1="637.5" x2="592" y2="645.5"/>
+<line x1="656" y1="637.5" x2="656" y2="645.5"/>
+<line x1="661" y1="637.5" x2="661" y2="645.5"/>
 </g>
-<text x="80" y="545.5" font-size="9" fill="#666" text-anchor="middle">0&quot;</text>
-<text x="144" y="545.5" font-size="9" fill="#666" text-anchor="middle">16&quot;</text>
-<text x="208" y="545.5" font-size="9" fill="#666" text-anchor="middle">32&quot;</text>
-<text x="272" y="545.5" font-size="9" fill="#666" text-anchor="middle">48&quot;</text>
-<text x="336" y="545.5" font-size="9" fill="#666" text-anchor="middle">64&quot;</text>
-<text x="400" y="545.5" font-size="9" fill="#666" text-anchor="middle">80&quot;</text>
-<text x="464" y="545.5" font-size="9" fill="#666" text-anchor="middle">96&quot;</text>
-<text x="528" y="545.5" font-size="9" fill="#666" text-anchor="middle">112&quot;</text>
-<text x="592" y="545.5" font-size="9" fill="#666" text-anchor="middle">128&quot;</text>
-<text x="656" y="545.5" font-size="9" fill="#666" text-anchor="middle">144&quot;</text>
-<text x="661" y="556.5" font-size="9" fill="#666" text-anchor="middle">145 1/4&quot;</text>
+<text x="80" y="656.5" font-size="9" fill="#666" text-anchor="middle">0&quot;</text>
+<text x="144" y="656.5" font-size="9" fill="#666" text-anchor="middle">16&quot;</text>
+<text x="208" y="656.5" font-size="9" fill="#666" text-anchor="middle">32&quot;</text>
+<text x="272" y="656.5" font-size="9" fill="#666" text-anchor="middle">48&quot;</text>
+<text x="336" y="656.5" font-size="9" fill="#666" text-anchor="middle">64&quot;</text>
+<text x="400" y="656.5" font-size="9" fill="#666" text-anchor="middle">80&quot;</text>
+<text x="464" y="656.5" font-size="9" fill="#666" text-anchor="middle">96&quot;</text>
+<text x="528" y="656.5" font-size="9" fill="#666" text-anchor="middle">112&quot;</text>
+<text x="592" y="656.5" font-size="9" fill="#666" text-anchor="middle">128&quot;</text>
+<text x="656" y="656.5" font-size="9" fill="#666" text-anchor="middle">144&quot;</text>
+<text x="661" y="667.5" font-size="9" fill="#666" text-anchor="middle">145 1/4&quot;</text>
 <g class="chain" stroke="#1f4e79" stroke-width="0.75">
-<line x1="80" y1="558.5" x2="667" y2="558.5"/>
-<line x1="80" y1="550.5" x2="80" y2="562.5"/>
-<line x1="83" y1="552.5" x2="83" y2="562.5"/>
-<line x1="97" y1="552.5" x2="97" y2="562.5"/>
-<line x1="144" y1="552.5" x2="144" y2="562.5"/>
-<line x1="208" y1="552.5" x2="208" y2="562.5"/>
-<line x1="272" y1="552.5" x2="272" y2="562.5"/>
-<line x1="336" y1="552.5" x2="336" y2="562.5"/>
-<line x1="400" y1="552.5" x2="400" y2="562.5"/>
-<line x1="464" y1="552.5" x2="464" y2="562.5"/>
-<line x1="528" y1="552.5" x2="528" y2="562.5"/>
-<line x1="592" y1="552.5" x2="592" y2="562.5"/>
-<line x1="656" y1="552.5" x2="656" y2="562.5"/>
-<line x1="664" y1="552.5" x2="664" y2="562.5"/>
+<line x1="80" y1="669.5" x2="667" y2="669.5"/>
+<line x1="80" y1="661.5" x2="80" y2="673.5"/>
+<line x1="83" y1="663.5" x2="83" y2="673.5"/>
+<line x1="97" y1="663.5" x2="97" y2="673.5"/>
+<line x1="144" y1="663.5" x2="144" y2="673.5"/>
+<line x1="208" y1="663.5" x2="208" y2="673.5"/>
+<line x1="272" y1="663.5" x2="272" y2="673.5"/>
+<line x1="336" y1="663.5" x2="336" y2="673.5"/>
+<line x1="400" y1="663.5" x2="400" y2="673.5"/>
+<line x1="464" y1="663.5" x2="464" y2="673.5"/>
+<line x1="528" y1="663.5" x2="528" y2="673.5"/>
+<line x1="592" y1="663.5" x2="592" y2="673.5"/>
+<line x1="656" y1="663.5" x2="656" y2="673.5"/>
+<line x1="664" y1="663.5" x2="664" y2="673.5"/>
 </g>
 <g class="chain-labels" font-size="9" fill="#1f4e79" text-anchor="end">
-<text class="chain-label row-0" x="86" y="564.5" transform="rotate(-90 86 564.5)">3/4&quot;</text>
-<text class="chain-label row-0" x="100" y="564.5" transform="rotate(-90 100 564.5)">4 1/4&quot;</text>
-<text class="chain-label row-0" x="147" y="564.5" transform="rotate(-90 147 564.5)">16&quot;</text>
-<text class="chain-label row-0" x="211" y="564.5" transform="rotate(-90 211 564.5)">32&quot;</text>
-<text class="chain-label row-0" x="275" y="564.5" transform="rotate(-90 275 564.5)">48&quot;</text>
-<text class="chain-label row-0" x="339" y="564.5" transform="rotate(-90 339 564.5)">64&quot;</text>
-<text class="chain-label row-0" x="403" y="564.5" transform="rotate(-90 403 564.5)">80&quot;</text>
-<text class="chain-label row-0" x="467" y="564.5" transform="rotate(-90 467 564.5)">96&quot;</text>
-<text class="chain-label row-0" x="531" y="564.5" transform="rotate(-90 531 564.5)">112&quot;</text>
-<text class="chain-label row-0" x="595" y="564.5" transform="rotate(-90 595 564.5)">128&quot;</text>
-<text class="chain-label row-0" x="659" y="564.5" transform="rotate(-90 659 564.5)">144&quot;</text>
-<text class="chain-label row-1" x="667" y="610.5" transform="rotate(-90 667 610.5)">146&quot;</text>
+<text class="chain-label row-0" x="86" y="675.5" transform="rotate(-90 86 675.5)">3/4&quot;</text>
+<text class="chain-label row-0" x="100" y="675.5" transform="rotate(-90 100 675.5)">4 1/4&quot;</text>
+<text class="chain-label row-0" x="147" y="675.5" transform="rotate(-90 147 675.5)">16&quot;</text>
+<text class="chain-label row-0" x="211" y="675.5" transform="rotate(-90 211 675.5)">32&quot;</text>
+<text class="chain-label row-0" x="275" y="675.5" transform="rotate(-90 275 675.5)">48&quot;</text>
+<text class="chain-label row-0" x="339" y="675.5" transform="rotate(-90 339 675.5)">64&quot;</text>
+<text class="chain-label row-0" x="403" y="675.5" transform="rotate(-90 403 675.5)">80&quot;</text>
+<text class="chain-label row-0" x="467" y="675.5" transform="rotate(-90 467 675.5)">96&quot;</text>
+<text class="chain-label row-0" x="531" y="675.5" transform="rotate(-90 531 675.5)">112&quot;</text>
+<text class="chain-label row-0" x="595" y="675.5" transform="rotate(-90 595 675.5)">128&quot;</text>
+<text class="chain-label row-0" x="659" y="675.5" transform="rotate(-90 659 675.5)">144&quot;</text>
+<text class="chain-label row-1" x="667" y="721.5" transform="rotate(-90 667 721.5)">146&quot;</text>
 </g>
 <g class="pieces" font-size="11" fill="#000">
-<text x="695" y="96" font-size="12" font-weight="bold">Pieces</text>
-<g font-size="9" fill="#666"><text x="713" y="111" text-anchor="end">qty</text><text x="721" y="111">piece</text><text x="791" y="111">size</text><text x="925" y="111" text-anchor="end">ft-in</text><text x="977" y="111" text-anchor="end">in</text></g>
-<line x1="695" y1="114" x2="977" y2="114" stroke="#666" stroke-width="0.5"/>
-<g class="piece plates"><text x="713" y="124" text-anchor="end">2</text><text x="721" y="124">plate</text><text x="791" y="124">2x6</text><text x="925" y="124" text-anchor="end">12'-2 3/4&quot;</text><text x="977" y="124" text-anchor="end">146 3/4&quot;</text></g>
-<g class="piece plates"><text x="713" y="137" text-anchor="end">1</text><text x="721" y="137">plate</text><text x="791" y="137">2x6</text><text x="925" y="137" text-anchor="end">11'-9 1/4&quot;</text><text x="977" y="137" text-anchor="end">141 1/4&quot;</text></g>
-<g class="piece stud"><text x="713" y="150" text-anchor="end">12</text><text x="721" y="150">stud</text><text x="791" y="150">2x6</text><text x="925" y="150" text-anchor="end">7'-8 5/8&quot;</text><text x="977" y="150" text-anchor="end">92 5/8&quot;</text></g>
-<line x1="695" y1="154" x2="977" y2="154" stroke="#666" stroke-width="0.5"/>
-<text x="713" y="163" text-anchor="end" font-weight="bold">15</text>
-<text x="721" y="163" font-weight="bold">pieces to cut</text>
-<text class="weight" x="695" y="182">Estimated weight: 257.7 lb</text>
-<text x="695" y="193" font-size="9" fill="#666">lumber only, no sheathing (hypothesis P8)</text>
+<text x="695" y="207" font-size="12" font-weight="bold">Pieces</text>
+<g font-size="9" fill="#666"><text x="713" y="222" text-anchor="end">qty</text><text x="721" y="222">piece</text><text x="791" y="222">size</text><text x="925" y="222" text-anchor="end">ft-in</text><text x="977" y="222" text-anchor="end">in</text></g>
+<line x1="695" y1="225" x2="977" y2="225" stroke="#666" stroke-width="0.5"/>
+<g class="piece plates"><text x="713" y="235" text-anchor="end">2</text><text x="721" y="235">plate</text><text x="791" y="235">2x6</text><text x="925" y="235" text-anchor="end">12'-2 3/4&quot;</text><text x="977" y="235" text-anchor="end">146 3/4&quot;</text></g>
+<g class="piece plates"><text x="713" y="248" text-anchor="end">1</text><text x="721" y="248">plate</text><text x="791" y="248">2x6</text><text x="925" y="248" text-anchor="end">11'-9 1/4&quot;</text><text x="977" y="248" text-anchor="end">141 1/4&quot;</text></g>
+<g class="piece stud"><text x="713" y="261" text-anchor="end">12</text><text x="721" y="261">stud</text><text x="791" y="261">2x6</text><text x="925" y="261" text-anchor="end">7'-8 5/8&quot;</text><text x="977" y="261" text-anchor="end">92 5/8&quot;</text></g>
+<line x1="695" y1="265" x2="977" y2="265" stroke="#666" stroke-width="0.5"/>
+<text x="713" y="274" text-anchor="end" font-weight="bold">15</text>
+<text x="721" y="274" font-weight="bold">pieces to cut</text>
+<text class="weight" x="695" y="293">Estimated weight: 257.7 lb</text>
+<text x="695" y="304" font-size="9" fill="#666">lumber only, no sheathing (hypothesis P8)</text>
 </g>
-<text class="legend" x="24" y="670.5" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0</text>
+<text class="legend" x="24" y="781.5" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0</text>
 </svg>

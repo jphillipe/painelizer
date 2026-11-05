@@ -1602,7 +1602,7 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   PNG (Chrome headless, `out/s38/`). Não conferido: a seção e o campo no app rodando (só jsdom; o select do app não é
   dirigível no jsdom, a escolha é testada em `lib/editor/sheathing`), `pnpm e2e`. Não feito: preço de chapa e campo
   para o sheathing do tipo de parede (S40); sheathing no "Wall content" e o texto por ponta (S39).
-- [ ] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF, mas regenera os 10
+- [x] **S39 — Folha "o que vai nesta parede" e planta com encaixes (core svg/planSvg + web; SRF, mas regenera os 10
   snapshots).** `Panel` não conhece as ligações (vivem em `Wall.joints` e `WallFrame.connections`): `Panel.ends?` e
   `Panel.tees?` (canto com quem, quem atravessa, T/+ em x) preenchidos em `framePanel`/`splitWall`. **Folha**:
   bloco "Wall content" sob o cabeçalho (altura variável no lugar de `TITLE_HEIGHT = 60` de `sheet/header.ts`) com
@@ -1612,6 +1612,33 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   "▲ engineer to verify" nos itens com hipótese. **Planta**: símbolo L/T/+ em cada ligação com a parede que
   atravessa marcada, legenda (hoje não há) e wall type por parede. Snapshots regenerados (`vitest -u`) e conferidos
   como PNG pelo Chrome headless: `house-corner-L`, a planta 28x40 e um painel com blocking. 3D fica no backlog.
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Core**: `PanelEnd`/`PanelTee` e `Panel.ends?`/`Panel.tees?` (`panel.ts`), de `wall.joints` do trecho em
+  `framePanel` (`rules/panelJoints.ts`: `panelEnds` — canto com quem atravessa e a montagem, T, +, junta de painéis
+  com o lap —, `panelTees` — x, paredes, `ladder`/`backer`/`none`); `splitWall` já dava a cada trecho as suas
+  ligações. Nenhum member mudou (19 fixtures sem um byte mudado). `config.nailing` (`NailingConfig`, `JointNailing`;
+  `rules/nailing.ts`: `DEFAULT_NAILING` 3× 3" nails or screws @ 12" OC, `resolveNailing`; P48). **Folha**:
+  `sheet/content.ts` — bloco "Wall content" sob o cabeçalho (Wall, Openings, Joints, Blocking, Sheathing, Posts,
+  Nailing; "none" no vazio; ▲ nas linhas de hipótese e rodapé "▲ engineer to verify (hypotheses …)"), 1–3 colunas pela
+  largura da folha, quebra sem partir medida; `TITLE_HEIGHT` fixo saiu (`CONTENT_TOP` + altura do bloco;
+  `sheetHeaderHeight` exportado); `panelSvg` com `opts.wallTypes` e `opts.nailing`; frases em `strings.ts`
+  (`content`). **Planta**: selo L/T/+ do lado de dentro de cada encontro, traço laranja no eixo da parede que
+  atravessa, `<title>` com quem atravessa e quem encosta, legenda (antes não havia) e, com tipos, a leitura do rótulo e
+  uma linha por tipo com descrição (`opts.wallTypes`, opcional) e paredes. **CLI**: `nailingShape`/`jointNailingShape`
+  no `configShape`, type lock; `buildProject` passa `wallTypes` e `nailing` à folha e `wallTypes` à planta.
+  **Web**: `draft.ts` lê e escreve `config.nailing` (sem campo; S40). **P53 nova** (formato do bloco e dos símbolos),
+  P48 e P49 com "Em vigor desde a S39", regra da pregação em `02-framing.md`, `08-revisar.md` regenerado.
+  **Snapshots**: os 10 regenerados e conferidos por script contra o `HEAD` (tirando bloco/selos/legenda, cada folha é a
+  antiga deslocada em y por uma constante de 78–111 px e a planta é a antiga sem deslocamento — nenhuma peça nem cota
+  mudou); 5 novos (`wall-144-kitchen`, `wall-144-post`, `house-corner-L-sheathed-W1`/`W2`, `house-walltypes-plan`).
+  Testes: core 795 → 843, cli 200 → 207, extract 213 (+ 1 pulado), web 578 → 579. Verde: `pnpm check` duas vezes e
+  `pnpm --filter web build`. Conferido visualmente (Chrome headless, PNG em `out/s39/final` e `out/s39/v3`):
+  `house-corner-L-W1`/`W2`, `house-28x40-plan`, `wall-144-window-door`, `wall-144-plain`, `wall-144-kitchen`,
+  `wall-144-post`, `house-corner-L-sheathed-W1`/`W2`, `house-walltypes-plan`, e as folhas/plantas de `house-tee`,
+  `house-cross`, `wall-480-split` e `wall-144-fireblock` — texto cabendo, bloco acima do desenho e da lista, nada
+  sobreposto. Não conferido: o PDF do app (resvg com as fontes do servidor — o ▲ depende da fonte), `pnpm e2e`, o
+  bloco no app rodando. Efeito colateral: as folhas ficaram 78–111 px mais altas, ~10–20% menores na carta paisagem
+  quando a altura limita (P53).
 - [ ] **S40 — Fechamento da fase (web + docs; sem regra nova).** Tabela de preços no editor (`config.prices`, hoje só
   pelo JSON) e o que tiver ficado sem campo nas sessões anteriores. Conferência no app sem Supabase (porta 3001):
   um exemplo com wall types, blocking, post e sheathing → gerar → planta, folhas e Materials, com capturas em `out/`

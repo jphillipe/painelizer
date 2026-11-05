@@ -5,7 +5,7 @@
  * - `Member.x` / `Member.y` = canto inferior esquerdo da peça.
  */
 
-import type { SheathingFace, SheathingNailing, SheathingSide } from './config';
+import type { CornerStyle, SheathingFace, SheathingNailing, SheathingSide, TeeStyle } from './config';
 import { isCount } from './eps';
 import type { HeaderSource, OpeningType } from './opening';
 import type { PostSection, Section, WallSection } from './sections';
@@ -216,6 +216,42 @@ export interface PanelSheathing {
   nailing: SheathingNailing;
 }
 
+/**
+ * Como uma ponta do painel se liga (S39): o `EndJoint` da parede (ou do trecho, na junta de painéis) como a folha e a
+ * planta precisam. Ponta sem entrada em `Panel.ends` é livre.
+ * - `corner`: canto com `wallId`; `through` = esta parede atravessa (plate até a face externa da outra) e leva o stud
+ *   de canto da montagem `style` (P5); senão encosta na outra. `concave` = canto de dentro (S38).
+ * - `tee`: esta parede encosta em T no meio de `wallId` (que atravessa); `cross` = cruzamento em + (P46).
+ * - `panel`: junta com o painel vizinho da mesma parede (`panelId`): no `end` a double top avança `lap` sobre ele, no
+ *   `start` ela recua `lap` (P23).
+ */
+export type PanelEnd =
+  | {
+      kind: 'corner';
+      wallId?: string;
+      through: boolean;
+      otherThickness: number;
+      /** Montagem do canto, só em quem atravessa (`config.corner`, P5). */
+      style?: CornerStyle;
+      concave?: true;
+    }
+  | { kind: 'tee'; wallId?: string; otherThickness: number; cross?: true }
+  | { kind: 'panel'; panelId?: string; lap: number };
+
+/**
+ * Parede que encosta em T neste painel (S39), em x do painel: a faixa `[x − width/2, x + width/2]` e a montagem que
+ * saiu (`config.tee`; `'none'` = faixa em zona de abertura, sem peça de T, aviso `OPENING_AT_TEE`). No + (`sides: 2`,
+ * P46) a faixa serve `wallId` e `otherWallId`.
+ */
+export interface PanelTee {
+  x: number;
+  width: number;
+  wallId?: string;
+  sides?: 2;
+  otherWallId?: string;
+  framing: TeeStyle | 'none';
+}
+
 export interface Panel {
   /** `{level}-{wallId}-P{n}` (S16): pavimento, parede e ordem do painel de start para end, sempre com `-P1`. */
   id: string;
@@ -245,6 +281,13 @@ export interface Panel {
   weightLb: number;
   /** Chapas do painel (S38). Só quando a parede leva sheathing. */
   sheathing?: PanelSheathing;
+  /**
+   * Ligações das pontas (S39): canto, T ou junta de painéis, de `Wall.joints` do trecho. Ausente (ou ponta ausente) =
+   * ponta livre; parede solta de um painel só não tem.
+   */
+  ends?: { start?: PanelEnd; end?: PanelEnd };
+  /** Paredes que encostam em T ao longo do painel (S39), por x crescente. Só quando há alguma. */
+  tees?: PanelTee[];
   /**
    * Pontas da plate deste painel em planta (S16): `start` é o x=0 do painel, `end` o `length`. Só na casa em
    * planta (`panelizeHouse`); parede solta não tem.

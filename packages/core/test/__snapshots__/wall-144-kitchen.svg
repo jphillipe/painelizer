@@ -1,0 +1,250 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1263" height="852.5" viewBox="0 0 1263 852.5" font-family="Helvetica, Arial, sans-serif">
+<rect width="1263" height="852.5" fill="#ffffff"/>
+<text x="24" y="42" font-size="18" font-weight="bold" fill="#000">W-kitchen</text>
+<text class="project" x="1239" y="42" font-size="14" font-weight="bold" fill="#000" text-anchor="end">wall-144-kitchen</text>
+<text class="info" x="24" y="58" font-size="12" fill="#333">wall W-kitchen · level 1 · 2x6 exterior bearing · 12'-0&quot; × 8'-1 1/8&quot; · 36 pieces · 315.6 lb</text>
+<text class="view" x="24" y="72" font-size="11" fill="#333">Viewed from outside — exterior face toward the viewer; start of wall (x=0) on the left (hypothesis P24)</text>
+<g class="wall-content" font-size="10" fill="#000">
+<text class="content-title" x="24" y="90" font-size="11" font-weight="bold">Wall content</text>
+<line x1="24" y1="94" x2="1239" y2="94" stroke="#666" stroke-width="0.5"/>
+<text class="content-label" x="24" y="106" font-size="9" font-weight="bold" fill="#666">Wall</text>
+<text class="content-wall" x="88" y="106">W-kitchen</text>
+<text class="content-wall" x="88" y="118">level 1 · 2x6 exterior bearing</text>
+<text class="content-wall" x="88" y="130">panel 12'-0&quot; × 8'-1 1/8&quot; · wall x=0&quot; to 12'-0&quot;</text>
+<text class="content-label" x="24" y="145" font-size="9" font-weight="bold" fill="#666">Openings</text>
+<text class="content-openings" x="88" y="145">win1 window · RO 36&quot; × 48&quot; · x=48&quot; to 84&quot; · sill 36 7/8&quot; · header 84 7/8&quot;</text>
+<text class="content-label" x="640.5" y="106" font-size="9" font-weight="bold" fill="#666">Joints</text>
+<text class="content-joints" x="704.5" y="106">start: free end</text>
+<text class="content-joints" x="704.5" y="118">end: free end</text>
+<text class="content-label" x="640.5" y="133" font-size="9" font-weight="bold" fill="#666">Blocking</text>
+<text class="content-blocking" x="704.5" y="133">B · Base cabinets / countertop (center 36&quot;) ▲</text>
+<text class="content-blocking" x="704.5" y="145">B · Upper cabinets, bottom (center 54&quot;) ▲</text>
+<text class="content-blocking" x="704.5" y="157">B · Upper cabinets, top (center 84&quot;) ▲</text>
+<text class="content-label" x="640.5" y="172" font-size="9" font-weight="bold" fill="#666">Sheathing</text>
+<text class="content-sheathing" x="704.5" y="172">none</text>
+<text class="content-verify" x="24" y="186" font-size="9" fill="#666">▲ engineer to verify (hypothesis P44)</text>
+</g>
+<rect x="80" y="204" width="576" height="388.5" fill="none" stroke="#999" stroke-width="0.5" stroke-dasharray="4 3"/>
+<g class="members" stroke="#5a4632" stroke-width="1">
+<rect class="member bottomPlate" x="80" y="586.5" width="576" height="6" fill="#d9c9a8"><title>bottomPlate 2x6 × 144&quot; — x=0&quot; y=0&quot;</title></rect>
+<rect class="member topPlate" x="80" y="210" width="576" height="6" fill="#d9c9a8"><title>topPlate 2x6 × 144&quot; — x=0&quot; y=94 1/8&quot;</title></rect>
+<rect class="member doubleTopPlate" x="80" y="204" width="576" height="6" fill="#d9c9a8"><title>doubleTopPlate 2x6 × 144&quot; — x=0&quot; y=95 5/8&quot;</title></rect>
+<rect class="member stud" x="80" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=0&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="141" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=15 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="205" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=31 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="461" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=95 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="525" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=111 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="589" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=127 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member stud" x="650" y="216" width="6" height="370.5" fill="#f2e6cc"><title>stud 2x6 × 92 5/8&quot; — x=142 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member kingStud" x="260" y="216" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=45&quot; y=1 1/2&quot;</title></rect>
+<rect class="member kingStud" x="422" y="216" width="6" height="370.5" fill="#e3c690"><title>kingStud 2x6 × 92 5/8&quot; — x=85 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member block" x="86" y="445.5" width="55" height="6" fill="#cdb98f"><title>block 2x6 × 13 3/4&quot; &quot;Base cabinets / countertop&quot; — x=1 1/2&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="147" y="445.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Base cabinets / countertop&quot; — x=16 3/4&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="211" y="445.5" width="49" height="6" fill="#cdb98f"><title>block 2x6 × 12 1/4&quot; &quot;Base cabinets / countertop&quot; — x=32 3/4&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="428" y="445.5" width="33" height="6" fill="#cdb98f"><title>block 2x6 × 8 1/4&quot; &quot;Base cabinets / countertop&quot; — x=87&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="467" y="445.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Base cabinets / countertop&quot; — x=96 3/4&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="531" y="445.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Base cabinets / countertop&quot; — x=112 3/4&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="595" y="445.5" width="55" height="6" fill="#cdb98f"><title>block 2x6 × 13 3/4&quot; &quot;Base cabinets / countertop&quot; — x=128 3/4&quot; y=35 1/4&quot;</title></rect>
+<rect class="member block" x="467" y="373.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Upper cabinets, bottom&quot; — x=96 3/4&quot; y=53 1/4&quot;</title></rect>
+<rect class="member block" x="531" y="373.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Upper cabinets, bottom&quot; — x=112 3/4&quot; y=53 1/4&quot;</title></rect>
+<rect class="member block" x="595" y="373.5" width="55" height="6" fill="#cdb98f"><title>block 2x6 × 13 3/4&quot; &quot;Upper cabinets, bottom&quot; — x=128 3/4&quot; y=53 1/4&quot;</title></rect>
+<rect class="member block" x="86" y="253.5" width="55" height="6" fill="#cdb98f"><title>block 2x6 × 13 3/4&quot; &quot;Upper cabinets, top&quot; — x=1 1/2&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="147" y="253.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Upper cabinets, top&quot; — x=16 3/4&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="211" y="253.5" width="49" height="6" fill="#cdb98f"><title>block 2x6 × 12 1/4&quot; &quot;Upper cabinets, top&quot; — x=32 3/4&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="428" y="253.5" width="33" height="6" fill="#cdb98f"><title>block 2x6 × 8 1/4&quot; &quot;Upper cabinets, top&quot; — x=87&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="467" y="253.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Upper cabinets, top&quot; — x=96 3/4&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="531" y="253.5" width="58" height="6" fill="#cdb98f"><title>block 2x6 × 14 1/2&quot; &quot;Upper cabinets, top&quot; — x=112 3/4&quot; y=83 1/4&quot;</title></rect>
+<rect class="member block" x="595" y="253.5" width="55" height="6" fill="#cdb98f"><title>block 2x6 × 13 3/4&quot; &quot;Upper cabinets, top&quot; — x=128 3/4&quot; y=83 1/4&quot;</title></rect>
+<rect class="member jackStud" x="266" y="253" width="6" height="333.5" fill="#d2b072"><title>jackStud 2x6 × 83 3/8&quot; — x=46 1/2&quot; y=1 1/2&quot;</title></rect>
+<rect class="member jackStud" x="416" y="253" width="6" height="333.5" fill="#d2b072"><title>jackStud 2x6 × 83 3/8&quot; — x=84&quot; y=1 1/2&quot;</title></rect>
+<rect class="member header" x="266" y="216" width="156" height="37" fill="#c49a5c"><title>header 2x10 × 39&quot; (2 plies) [project] — x=46 1/2&quot; y=84 7/8&quot;</title></rect>
+<text x="344" y="234.5" font-size="10" fill="#000" text-anchor="middle" dominant-baseline="middle">H · 2x10 × 39&quot; (2 plies)</text>
+<rect class="member sill" x="272" y="445" width="144" height="6" fill="#d9c9a8"><title>sill 2x6 × 36&quot; — x=48&quot; y=35 3/8&quot;</title></rect>
+<rect class="member cripple" x="333" y="451" width="6" height="135.5" fill="#f2e6cc"><title>cripple 2x6 × 33 7/8&quot; — x=63 1/4&quot; y=1 1/2&quot;</title></rect>
+<rect class="member cripple" x="397" y="451" width="6" height="135.5" fill="#f2e6cc"><title>cripple 2x6 × 33 7/8&quot; — x=79 1/4&quot; y=1 1/2&quot;</title></rect>
+</g>
+<g class="labels" font-size="8" font-weight="bold" fill="#000" text-anchor="middle">
+<text class="label kingStud" x="263" y="226">K</text>
+<text class="label jackStud" x="269" y="263">J</text>
+<text class="label cripple" x="336" y="461">C</text>
+<text class="label cripple" x="400" y="461">C</text>
+<text class="label jackStud" x="419" y="263">J</text>
+<text class="label kingStud" x="425" y="226">K</text>
+<text class="label block" x="113.5" y="442.5">B</text>
+<text class="label block" x="176" y="442.5">B</text>
+<text class="label block" x="235.5" y="442.5">B</text>
+<text class="label block" x="444.5" y="442.5">B</text>
+<text class="label block" x="496" y="442.5">B</text>
+<text class="label block" x="560" y="442.5">B</text>
+<text class="label block" x="622.5" y="442.5">B</text>
+<text class="label block" x="496" y="370.5">B</text>
+<text class="label block" x="560" y="370.5">B</text>
+<text class="label block" x="622.5" y="370.5">B</text>
+<text class="label block" x="113.5" y="250.5">B</text>
+<text class="label block" x="176" y="250.5">B</text>
+<text class="label block" x="235.5" y="250.5">B</text>
+<text class="label block" x="444.5" y="250.5">B</text>
+<text class="label block" x="496" y="250.5">B</text>
+<text class="label block" x="560" y="250.5">B</text>
+<text class="label block" x="622.5" y="250.5">B</text>
+<text class="label sill" x="344" y="442">S</text>
+</g>
+<g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="272" y1="253" x2="272" y2="293"/>
+<line x1="416" y1="253" x2="416" y2="293"/>
+<line x1="272" y1="289" x2="416" y2="289"/>
+<line x1="269" y1="292" x2="275" y2="286"/>
+<line x1="413" y1="292" x2="419" y2="286"/>
+</g>
+<text x="344" y="285" font-size="12" fill="#1f4e79" text-anchor="middle">RO 36&quot;</text>
+<text class="opening-id" x="344" y="301" font-size="10" fill="#666" text-anchor="middle">win1 · window</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="416" y1="445" x2="392" y2="445"/>
+<line x1="416" y1="592.5" x2="392" y2="592.5"/>
+<line x1="396" y1="445" x2="396" y2="592.5"/>
+<line x1="393" y1="448" x2="399" y2="442"/>
+<line x1="393" y1="595.5" x2="399" y2="589.5"/>
+</g>
+<text x="392" y="518.75" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 392 518.75)">sill height 36 7/8&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="416" y1="253" x2="392" y2="253"/>
+<line x1="416" y1="445" x2="392" y2="445"/>
+<line x1="396" y1="253" x2="396" y2="445"/>
+<line x1="393" y1="256" x2="399" y2="250"/>
+<line x1="393" y1="448" x2="399" y2="442"/>
+</g>
+<text x="392" y="349" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 392 349)">RO 48&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="416" y1="253" x2="372" y2="253"/>
+<line x1="416" y1="592.5" x2="372" y2="592.5"/>
+<line x1="376" y1="253" x2="376" y2="592.5"/>
+<line x1="373" y1="256" x2="379" y2="250"/>
+<line x1="373" y1="595.5" x2="379" y2="589.5"/>
+</g>
+<text x="372" y="422.75" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 372 422.75)">header 84 7/8&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="656" y1="448.5" x2="668" y2="448.5"/>
+<line x1="656" y1="592.5" x2="668" y2="592.5"/>
+<line x1="672" y1="448.5" x2="672" y2="592.5"/>
+<line x1="669" y1="451.5" x2="675" y2="445.5"/>
+<line x1="669" y1="595.5" x2="675" y2="589.5"/>
+</g>
+<text x="668" y="520.5" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 668 520.5)">36&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="656" y1="376.5" x2="682" y2="376.5"/>
+<line x1="656" y1="592.5" x2="682" y2="592.5"/>
+<line x1="686" y1="376.5" x2="686" y2="592.5"/>
+<line x1="683" y1="379.5" x2="689" y2="373.5"/>
+<line x1="683" y1="595.5" x2="689" y2="589.5"/>
+</g>
+<text x="682" y="484.5" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 682 484.5)">54&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="656" y1="256.5" x2="696" y2="256.5"/>
+<line x1="656" y1="592.5" x2="696" y2="592.5"/>
+<line x1="700" y1="256.5" x2="700" y2="592.5"/>
+<line x1="697" y1="259.5" x2="703" y2="253.5"/>
+<line x1="697" y1="595.5" x2="703" y2="589.5"/>
+</g>
+<text x="696" y="424.5" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 696 424.5)">84&quot;</text>
+<g class="blocking-rows" font-size="9" fill="#1f4e79">
+<text class="blocking-row backing" x="714" y="259.5">B · Upper cabinets, top (center 84&quot;)</text>
+<text class="blocking-row backing" x="714" y="379.5">B · Upper cabinets, bottom (center 54&quot;)</text>
+<text class="blocking-row backing" x="714" y="451.5">B · Base cabinets / countertop (center 36&quot;)</text>
+</g>
+<text class="face" x="368" y="201" font-size="10" fill="#666" text-anchor="middle">exterior face (viewed from outside)</text>
+<g class="dim dim-length" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="80" y1="592.5" x2="80" y2="624.5"/>
+<line x1="656" y1="592.5" x2="656" y2="624.5"/>
+<line x1="80" y1="620.5" x2="656" y2="620.5"/>
+<line x1="77" y1="623.5" x2="83" y2="617.5"/>
+<line x1="653" y1="623.5" x2="659" y2="617.5"/>
+</g>
+<text x="368" y="616.5" font-size="12" fill="#1f4e79" text-anchor="middle">12'-0&quot;</text>
+<g class="dim dim-height" stroke="#1f4e79" stroke-width="0.75" fill="none">
+<line x1="80" y1="204" x2="40" y2="204"/>
+<line x1="80" y1="592.5" x2="40" y2="592.5"/>
+<line x1="44" y1="204" x2="44" y2="592.5"/>
+<line x1="41" y1="207" x2="47" y2="201"/>
+<line x1="41" y1="595.5" x2="47" y2="589.5"/>
+</g>
+<text x="40" y="398.25" font-size="12" fill="#1f4e79" text-anchor="middle" transform="rotate(-90 40 398.25)">8'-1 1/8&quot;</text>
+<g class="layout" stroke="#666" stroke-width="0.75">
+<line x1="80" y1="654.5" x2="656" y2="654.5"/>
+<line x1="80" y1="646.5" x2="80" y2="654.5"/>
+<line x1="144" y1="646.5" x2="144" y2="654.5"/>
+<line x1="208" y1="646.5" x2="208" y2="654.5"/>
+<line x1="272" y1="646.5" x2="272" y2="654.5"/>
+<line x1="336" y1="646.5" x2="336" y2="654.5"/>
+<line x1="400" y1="646.5" x2="400" y2="654.5"/>
+<line x1="464" y1="646.5" x2="464" y2="654.5"/>
+<line x1="528" y1="646.5" x2="528" y2="654.5"/>
+<line x1="592" y1="646.5" x2="592" y2="654.5"/>
+<line x1="650" y1="646.5" x2="650" y2="654.5"/>
+</g>
+<text x="80" y="665.5" font-size="9" fill="#666" text-anchor="middle">0&quot;</text>
+<text x="144" y="665.5" font-size="9" fill="#666" text-anchor="middle">16&quot;</text>
+<text x="208" y="665.5" font-size="9" fill="#666" text-anchor="middle">32&quot;</text>
+<text x="272" y="665.5" font-size="9" fill="#666" text-anchor="middle">48&quot;</text>
+<text x="336" y="665.5" font-size="9" fill="#666" text-anchor="middle">64&quot;</text>
+<text x="400" y="665.5" font-size="9" fill="#666" text-anchor="middle">80&quot;</text>
+<text x="464" y="665.5" font-size="9" fill="#666" text-anchor="middle">96&quot;</text>
+<text x="528" y="665.5" font-size="9" fill="#666" text-anchor="middle">112&quot;</text>
+<text x="592" y="665.5" font-size="9" fill="#666" text-anchor="middle">128&quot;</text>
+<text x="650" y="665.5" font-size="9" fill="#666" text-anchor="middle">142 1/2&quot;</text>
+<g class="chain" stroke="#1f4e79" stroke-width="0.75">
+<line x1="80" y1="678.5" x2="656" y2="678.5"/>
+<line x1="80" y1="670.5" x2="80" y2="682.5"/>
+<line x1="83" y1="672.5" x2="83" y2="682.5"/>
+<line x1="144" y1="672.5" x2="144" y2="682.5"/>
+<line x1="208" y1="672.5" x2="208" y2="682.5"/>
+<line x1="263" y1="672.5" x2="263" y2="682.5"/>
+<line x1="269" y1="672.5" x2="269" y2="682.5"/>
+<line x1="336" y1="672.5" x2="336" y2="682.5"/>
+<line x1="400" y1="672.5" x2="400" y2="682.5"/>
+<line x1="419" y1="672.5" x2="419" y2="682.5"/>
+<line x1="425" y1="672.5" x2="425" y2="682.5"/>
+<line x1="464" y1="672.5" x2="464" y2="682.5"/>
+<line x1="528" y1="672.5" x2="528" y2="682.5"/>
+<line x1="592" y1="672.5" x2="592" y2="682.5"/>
+<line x1="653" y1="672.5" x2="653" y2="682.5"/>
+</g>
+<g class="chain-labels" font-size="9" fill="#1f4e79" text-anchor="end">
+<text class="chain-label row-0" x="86" y="684.5" transform="rotate(-90 86 684.5)">3/4&quot;</text>
+<text class="chain-label row-0" x="147" y="684.5" transform="rotate(-90 147 684.5)">16&quot;</text>
+<text class="chain-label row-0" x="211" y="684.5" transform="rotate(-90 211 684.5)">32&quot;</text>
+<text class="chain-label row-0" x="266" y="684.5" transform="rotate(-90 266 684.5)">45 3/4&quot;</text>
+<text class="chain-label row-1" x="272" y="730.5" transform="rotate(-90 272 730.5)">47 1/4&quot;</text>
+<text class="chain-label row-0" x="339" y="684.5" transform="rotate(-90 339 684.5)">64&quot;</text>
+<text class="chain-label row-0" x="403" y="684.5" transform="rotate(-90 403 684.5)">80&quot;</text>
+<text class="chain-label row-0" x="422" y="684.5" transform="rotate(-90 422 684.5)">84 3/4&quot;</text>
+<text class="chain-label row-1" x="428" y="730.5" transform="rotate(-90 428 730.5)">86 1/4&quot;</text>
+<text class="chain-label row-0" x="467" y="684.5" transform="rotate(-90 467 684.5)">96&quot;</text>
+<text class="chain-label row-0" x="531" y="684.5" transform="rotate(-90 531 684.5)">112&quot;</text>
+<text class="chain-label row-0" x="595" y="684.5" transform="rotate(-90 595 684.5)">128&quot;</text>
+<text class="chain-label row-0" x="656" y="684.5" transform="rotate(-90 656 684.5)">143 1/4&quot;</text>
+</g>
+<g class="pieces" font-size="11" fill="#000">
+<text x="957" y="216" font-size="12" font-weight="bold">Pieces</text>
+<g font-size="9" fill="#666"><text x="975" y="231" text-anchor="end">qty</text><text x="983" y="231">piece</text><text x="1053" y="231">size</text><text x="1187" y="231" text-anchor="end">ft-in</text><text x="1239" y="231" text-anchor="end">in</text></g>
+<line x1="957" y1="234" x2="1239" y2="234" stroke="#666" stroke-width="0.5"/>
+<g class="piece plates"><text x="975" y="244" text-anchor="end">3</text><text x="983" y="244">plate</text><text x="1053" y="244">2x6</text><text x="1187" y="244" text-anchor="end">12'-0&quot;</text><text x="1239" y="244" text-anchor="end">144&quot;</text></g>
+<g class="piece stud"><text x="975" y="257" text-anchor="end">7</text><text x="983" y="257">stud</text><text x="1053" y="257">2x6</text><text x="1187" y="257" text-anchor="end">7'-8 5/8&quot;</text><text x="1239" y="257" text-anchor="end">92 5/8&quot;</text></g>
+<g class="piece kingStud"><text x="975" y="270" text-anchor="end">2</text><text x="983" y="270">king (K)</text><text x="1053" y="270">2x6</text><text x="1187" y="270" text-anchor="end">7'-8 5/8&quot;</text><text x="1239" y="270" text-anchor="end">92 5/8&quot;</text></g>
+<g class="piece jackStud"><text x="975" y="283" text-anchor="end">2</text><text x="983" y="283">jack (J)</text><text x="1053" y="283">2x6</text><text x="1187" y="283" text-anchor="end">6'-11 3/8&quot;</text><text x="1239" y="283" text-anchor="end">83 3/8&quot;</text></g>
+<g class="piece header"><text x="975" y="296" text-anchor="end">2</text><text x="983" y="296">header (H)</text><text x="1053" y="296">2x10</text><text x="1187" y="296" text-anchor="end">3'-3&quot;</text><text x="1239" y="296" text-anchor="end">39&quot;</text></g>
+<g class="piece sill"><text x="975" y="309" text-anchor="end">1</text><text x="983" y="309">sill (S)</text><text x="1053" y="309">2x6</text><text x="1187" y="309" text-anchor="end">3'-0&quot;</text><text x="1239" y="309" text-anchor="end">36&quot;</text></g>
+<g class="piece cripple"><text x="975" y="322" text-anchor="end">2</text><text x="983" y="322">cripple (C)</text><text x="1053" y="322">2x6</text><text x="1187" y="322" text-anchor="end">2'-9 7/8&quot;</text><text x="1239" y="322" text-anchor="end">33 7/8&quot;</text></g>
+<g class="piece block"><text x="975" y="335" text-anchor="end">8</text><text x="983" y="335">block (B)</text><text x="1053" y="335">2x6</text><text x="1187" y="335" text-anchor="end">1'-2 1/2&quot;</text><text x="1239" y="335" text-anchor="end">14 1/2&quot;</text></g>
+<g class="piece block"><text x="975" y="348" text-anchor="end">5</text><text x="983" y="348">block (B)</text><text x="1053" y="348">2x6</text><text x="1187" y="348" text-anchor="end">1'-1 3/4&quot;</text><text x="1239" y="348" text-anchor="end">13 3/4&quot;</text></g>
+<g class="piece block"><text x="975" y="361" text-anchor="end">2</text><text x="983" y="361">block (B)</text><text x="1053" y="361">2x6</text><text x="1187" y="361" text-anchor="end">1'-0 1/4&quot;</text><text x="1239" y="361" text-anchor="end">12 1/4&quot;</text></g>
+<g class="piece block"><text x="975" y="374" text-anchor="end">2</text><text x="983" y="374">block (B)</text><text x="1053" y="374">2x6</text><text x="1187" y="374" text-anchor="end">8 1/4&quot;</text><text x="1239" y="374" text-anchor="end">8 1/4&quot;</text></g>
+<line x1="957" y1="378" x2="1239" y2="378" stroke="#666" stroke-width="0.5"/>
+<text x="975" y="387" text-anchor="end" font-weight="bold">36</text>
+<text x="983" y="387" font-weight="bold">pieces to cut</text>
+<text class="weight" x="957" y="406">Estimated weight: 315.6 lb</text>
+<text x="957" y="417" font-size="9" fill="#666">lumber only, no sheathing (hypothesis P8)</text>
+</g>
+<text class="legend" x="24" y="790.5" font-size="9" fill="#666">K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0</text>
+<text x="24" y="812.5" font-size="11" fill="#a33">! BLOCKING_SKIPPED: Wall W-kitchen: blocking row &quot;Base cabinets / countertop&quot; at 36&quot; (center) skipped across the zone of opening(s) win1 [45, 87] — add backing there by hand if needed</text>
+<text x="24" y="828.5" font-size="11" fill="#a33">! BLOCKING_SKIPPED: Wall W-kitchen: blocking row &quot;Upper cabinets, top&quot; at 84&quot; (center) skipped across the zone of opening(s) win1 [45, 87] — add backing there by hand if needed</text>
+</svg>

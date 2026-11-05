@@ -231,8 +231,8 @@ describe('fixture house-walltypes — o house-corner-L com seção, posição e 
     panels.forEach((p, i) => {
       const sheet = panelSvg(p, { project: 'house-walltypes' });
       expect(sheet, p.id).toContain(`<text class="info" x="24" y="58" font-size="12" fill="#333">${escaped(expected[p.id]!.infoLine)}</text>`);
-      // Tirando a tag da linha de dados e o nome do projeto, a folha é a do house-corner-L.
-      const plain = sheet.replace(` · type ${p.wallType}`, '').replace('house-walltypes', 'house-corner-L');
+      // Tirando a tag (linha de dados e "Wall content", S39) e o nome do projeto, a folha é a do house-corner-L.
+      const plain = sheet.replaceAll(` · type ${p.wallType}`, '').replace('house-walltypes', 'house-corner-L');
       expect(plain, p.id).toBe(panelSvg(originalPanels[i]!, { project: 'house-corner-L' }));
     });
   });
@@ -244,8 +244,16 @@ describe('fixture house-walltypes — o house-corner-L com seção, posição e 
     const before = housePlanSvg(original.house, originalPanels);
     expect(before).toContain('>W1</text>');
     expect(before).not.toContain(' · type ');
-    // Tirando os rótulos, a planta é a do house-corner-L.
-    expect(plan.replace('>W1 · WT-1S<', '>W1<').replace('>W2 · X1<', '>W2<').replaceAll(/ · type [^ ]+/g, '')).toBe(before);
+    // Tirando os rótulos e a legenda (que com tipos ganha as linhas deles, S39), a planta é a do house-corner-L.
+    const body = (svg: string): string => svg.slice(svg.indexOf('<text'), svg.indexOf('<g class="legend"'));
+    expect(body(plan.replace('>W1 · WT-1S<', '>W1<').replace('>W2 · X1<', '>W2<').replaceAll(/ · type [^ ]+/g, ''))).toBe(body(before));
+    // Legenda (S39): como ler o rótulo e uma linha por tipo usado, com as paredes; a descrição vem do catálogo.
+    expect(before).not.toContain('class="legend-type"');
+    expect(plan).toContain('>W01 · WT-1 = wall · wall type</text>');
+    expect(plan).toContain('>WT-1S (W1)</text>');
+    expect(plan).toContain('>X1 (W2)</text>');
+    const described = housePlanSvg(fx.house, panels, { wallTypes: fx.config.wallTypes! });
+    expect(described).toContain('>WT-1S — 2x6 exterior bearing wall, sheathed (W1)</text>');
   });
 
   it('pelo arquivo: tag fora do catálogo com dado faltando é erro de projeto com o código do motor', () => {

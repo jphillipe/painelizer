@@ -19,6 +19,11 @@ import ircJson from '../fixtures/wall-144-window-irc.json';
 import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import house28x40Json from '../fixtures/house-28x40.json';
+import kitchenJson from '../fixtures/wall-144-kitchen.json';
+import postJson from '../fixtures/wall-144-post.json';
+import sheathedJson from '../fixtures/house-corner-L-sheathed.json';
+import wallTypesJson from '../fixtures/house-walltypes.json';
+import crossJson from '../fixtures/house-cross.json';
 import { houseFixture, wallFixture } from '../helpers/fixtures';
 
 const plain = wallFixture(plainJson);
@@ -36,10 +41,18 @@ const doorPanel = panelizeWall(door.wall, door.config);
 const nonBearingDoorPanel = panelizeWall(nonBearingDoor.wall, nonBearingDoor.config);
 const [cornerW1, cornerW2] = panelizeHouse(cornerL.house, cornerL.config).panels;
 const housePanels = panelizeHouse(house28x40.house, house28x40.config).panels;
+const kitchen = wallFixture(kitchenJson);
+const post = wallFixture(postJson);
+const sheathed = houseFixture(sheathedJson);
+const [, sheathedW2] = panelizeHouse(sheathed.house, sheathed.config).panels;
+const wallTypes = houseFixture(wallTypesJson);
+const wallTypesPanels = panelizeHouse(wallTypes.house, wallTypes.config).panels;
+const cross = houseFixture(crossJson);
+const crossPanels = panelizeHouse(cross.house, cross.config).panels;
 
 const STAMP = { project: 'Casa X', date: '2026-10-14', revision: 'A' };
 
-/** Os 10 desenhos dos snapshots, com o nome do arquivo. */
+/** Os desenhos dos snapshots (10 até a S38; 5 novos na S39), com o nome do arquivo. */
 const SHEETS: readonly { name: string; svg: () => string }[] = [
   { name: 'wall-144-plain', svg: () => panelSvg(plainPanel) },
   { name: 'wall-144-window', svg: () => panelSvg(panelizeWall(window.wall, window.config)) },
@@ -54,6 +67,11 @@ const SHEETS: readonly { name: string; svg: () => string }[] = [
   { name: 'house-corner-L-W1', svg: () => panelSvg(cornerW1!, { project: 'house-corner-L' }) },
   { name: 'house-corner-L-W2', svg: () => panelSvg(cornerW2!, { project: 'house-corner-L' }) },
   { name: 'house-28x40-plan', svg: () => housePlanSvg(house28x40.house, housePanels) },
+  { name: 'wall-144-kitchen', svg: () => panelSvg(panelizeWall(kitchen.wall, kitchen.config)) },
+  { name: 'wall-144-post', svg: () => panelSvg(panelizeWall(post.wall, post.config)) },
+  { name: 'house-corner-L-sheathed-W2', svg: () => panelSvg(sheathedW2!) },
+  { name: 'house-walltypes-plan', svg: () => housePlanSvg(wallTypes.house, wallTypesPanels, { wallTypes: wallTypes.config.wallTypes! }) },
+  { name: 'house-cross W1 + plan', svg: () => panelSvg(crossPanels[0]!) + housePlanSvg(cross.house, crossPanels) },
 ];
 
 /** Frases esperadas. */
@@ -107,6 +125,39 @@ const T = {
     '<title>north: 0° from plan +y, clockwise</title>',
   ],
   cornerPlan: `>2 walls · 2 panels · 12'-2 3/4&quot; × 10'-2 3/4&quot; (exterior faces)</text>`,
+  /** Bloco "Wall content" (S39): título, rótulos dos grupos e frases. */
+  content: {
+    title: 'Wall content',
+    labels: ['Wall', 'Openings', 'Joints', 'Blocking', 'Sheathing'],
+    windowDoor: [
+      'W-window-door',
+      'level 1 · 2x6 exterior bearing',
+      `panel 12'-0&quot; × 8'-1 1/8&quot; · wall x=0&quot; to 12'-0&quot;`,
+      'win1 window · RO 36&quot; × 48&quot; · x=24&quot; to 60&quot; · sill 34 1/2&quot; · header 82 1/2&quot;',
+      'door1 door · RO 38&quot; × 82 1/2&quot; · x=64 1/2&quot; to 102 1/2&quot; · header 82 1/2&quot;',
+      'start: free end',
+      'end: free end',
+      'none',
+    ],
+    cornerW1: [
+      'start: corner with W2 — this wall runs through (California corner)',
+      'wall joints: 3× 3&quot; nails or screws @ 12&quot; OC ▲',
+      '▲ engineer to verify (hypothesis P48)',
+    ],
+    cornerW2: ['start: corner with W1 — this wall butts against it'],
+    cross: ['cross with W2 and W3 at 72&quot; — ladder ▲', '▲ engineer to verify (hypotheses P46, P48)'],
+  },
+  /** Planta (S39): selos, legenda e tipos. */
+  planJoints: [
+    '<title>L corner · W01 runs through, W04 butts</title>',
+    '<title>T tee · W01 runs through, W05 butts</title>',
+    '>exterior wall</text>',
+    '>interior wall</text>',
+    '>panel joint</text>',
+    '>wall that runs through</text>',
+  ],
+  planTypes: ['>W01 · WT-1 = wall · wall type</text>', '>WT-1S — 2x6 exterior bearing wall, sheathed (W1)</text>'],
+  crossTitle: '<title>+ cross · W1 runs through, W2 and W3 butt</title>',
 };
 
 const PT_WORDS =
@@ -172,6 +223,29 @@ describe('textos da folha', () => {
     expect(housePlanSvg(cornerL.house, [cornerW1!, cornerW2!])).toContain(T.cornerPlan);
     // Título dado pelo projeto vale como veio.
     expect(housePlanSvg(house28x40.house, housePanels, { title: 'Casa 28x40' })).toContain('>Casa 28x40</text>');
+  });
+});
+
+describe('bloco "Wall content" e ligações na planta (S39)', () => {
+  it('título, rótulos e frases do bloco', () => {
+    const sheet = panelSvg(windowDoorPanel, STAMP);
+    expect(sheet).toContain(`>${T.content.title}</text>`);
+    for (const l of T.content.labels) expect(sheet).toContain(`>${l}</text>`);
+    for (const t of T.content.windowDoor) expect(sheet).toContain(`>${t}</text>`);
+    // Sem ligação nem hipótese, sem pregação e sem rodapé de verificação.
+    expect(sheet).not.toContain('>Nailing</text>');
+    expect(sheet).not.toContain('engineer to verify (hypothes');
+    for (const t of T.content.cornerW1) expect(panelSvg(cornerW1!)).toContain(`>${t}</text>`);
+    for (const t of T.content.cornerW2) expect(panelSvg(cornerW2!)).toContain(`>${t}</text>`);
+    for (const t of T.content.cross) expect(panelSvg(crossPanels[0]!)).toContain(`>${t}</text>`);
+  });
+
+  it('planta: selos, quem atravessa, legenda e tipos', () => {
+    const plan = housePlanSvg(house28x40.house, housePanels);
+    for (const t of T.planJoints) expect(plan).toContain(t);
+    const typed = housePlanSvg(wallTypes.house, wallTypesPanels, { wallTypes: wallTypes.config.wallTypes! });
+    for (const t of T.planTypes) expect(typed).toContain(t);
+    expect(housePlanSvg(cross.house, crossPanels)).toContain(T.crossTitle);
   });
 });
 

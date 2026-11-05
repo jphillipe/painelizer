@@ -134,6 +134,12 @@
   plate, sobre as top plates ou fora da parede não pede bloco. `Panel.sheathing`: pedaços (`{ face, x, y, w, h, cut? }`
   em x/y do painel), avanços por face, área instalada (sem o RO), peso (3.2 lb/pé² por polegada → 1.4 para 7/16", P8) e
   a pregação (texto da folha, nunca geometria). Pedaço todo dentro de um RO sai; com vão recortado, `cut`.
+- Pregação das ligações entre paredes (S39, hipótese P48; `rules/nailing.ts`): só texto da folha, nunca peça nem
+  geometria. `config.nailing.wallJoint = { count, fastener, spacing }`, default da prancha: 3× 3" nails or screws @ 12"
+  OC no canto, T e +; impressa no bloco "Wall content" do painel que tem canto/T/+ (a da chapa é a de
+  `sheathing.nailing`, S38). A folha diz, por ponta, o que o motor já faz (P21): quem atravessa o canto (com a
+  montagem, P5), quem encosta, T/+ ao longo do painel (ladder/backer/sem peça na zona de abertura), junta de painéis
+  com o lap da double top (P23) — `Panel.ends`/`Panel.tees`, sem mudar peça.
 - Cripples abaixo do sill nos studs de layout que caem inteiros dentro do RO, exceto o colado ao jack ou o que
   o invade (ex.: RO em 48 com jack em 46.5–48: o stud da marca 48, em 47.25–48.75, invade o jack e sai) ou a até
   2" de folga livre dele — confirmado pela fábrica (P3, P13).

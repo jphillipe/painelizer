@@ -1,13 +1,15 @@
 /**
- * Cabeçalho da folha (S17): id do painel e projeto; dados do painel, data e revisão; linha da vista (P24).
+ * Cabeçalho da folha (S17): id do painel e projeto; dados do painel, data e revisão; linha da vista (P24). Logo abaixo
+ * vem o bloco "Wall content" (S39, `content.ts`), de altura variável: a altura do cabeçalho inteiro deixou de ser fixa
+ * (era `TITLE_HEIGHT = 60`) e é `CONTENT_TOP` + a altura do bloco.
  */
 
 import type { Panel } from '../../panel';
 import { esc, px } from './primitives';
 import type { SheetStrings } from './strings';
 
-/** Altura do cabeçalho: três linhas (id/projeto, dados do painel/data, vista). */
-export const TITLE_HEIGHT = 60;
+/** Da margem ao topo do bloco "Wall content": as três linhas do cabeçalho (id/projeto, dados/data, vista). */
+export const CONTENT_TOP = 54;
 
 export interface SheetStamp {
   project?: string;
