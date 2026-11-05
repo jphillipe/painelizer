@@ -1,5 +1,5 @@
 {
-  "$comment": "Checkpoint 2 — 26 Ringgold St (SOL and Associates, A-100 1st floor, A-800 wall types, A-400 sections). Four panels up to 16' read from the architect's plan; SAB's structural set (headers, wall height, species) is NOT in the PDF — everything that depends on it is marked as a hypothesis. Exterior dimensions are to the outer face of stud (note 8); window and door dimensions are to the centerline (notes 9 and 10). S12.5: openings by tag + centerline (as A-100 dimensions them) with the catalog in config.openingTypes — \"A2\" is the pair of type A windows (2 x 2'-5\" x 6'-0\") with the RO of hypothesis P28 made explicit; \"1\" is door 1 (36x80, metal frame) with the RO of hypothesis P29 made explicit, now equal to the default HM frame allowance (P34 revised on 2026-10-15; before, it gave 40 1/2\" x 83\"); \"U2\" is door U2 (36x80, wood) with the default allowance (P33). Same 90 pieces as before. Hypotheses (P27–P31): (1) wall height 9'-1 1/8\" (10'-0\" floor to floor minus ~10 7/8\" of floor; precut stud 104 5/8\"); (2) pair of type A windows (2x 2'-5\" x 6'-0\", casement with transom) with RO 58 1/2\" x 72 1/2\" and top of RO at 96 1/4\" above subfloor (sill at 2'-0\" on elevation A-200); (3) 36x80 door with RO 38\" x 82 1/2\"; (4) header from IRC Table R602.7(1): snow 30 psf, width 29', 2 floors above (1st-floor wall of a 3-story building), wind 130 mph exposure B — SAB's structural set governs when it arrives; (5) the longer wall runs through at the corner (north and south run through at the west), so x=0 = outer corner of the building; (6) I1 is non-bearing (partition between bedrooms, type 1, 2x4). S2 is the second panel of the south wall (starts 12' from the corner), hence layoutOrigin -12'.",
+  "$comment": "Checkpoint 2 — 26 Ringgold St (SOL and Associates, A-100 1st floor, A-800 wall types, A-400 sections). Four panels up to 16' read from the architect's plan; SAB's structural set (headers, wall height, species) is NOT in the PDF — everything that depends on it is marked as a hypothesis. Exterior dimensions are to the outer face of stud (note 8); window and door dimensions are to the centerline (notes 9 and 10). S12.5: openings by tag + centerline (as A-100 dimensions them) with the catalog in config.openingTypes — \"A2\" is the pair of type A windows (2 x 2'-5\" x 6'-0\") with the RO of hypothesis P28 made explicit; \"1\" is door 1 (36x80, metal frame) with the RO of hypothesis P29 made explicit, now equal to the default HM frame allowance (P34 revised on 2026-10-15; before, it gave 40 1/2\" x 83\"); \"U2\" is door U2 (36x80, wood) with the default allowance (P33). Same 90 pieces as before. Hypotheses (P27–P31): (1) wall height 9'-1 1/8\" (10'-0\" floor to floor minus ~10 7/8\" of floor; precut stud 104 5/8\"); (2) pair of type A windows (2x 2'-5\" x 6'-0\", casement with transom) with RO 58 1/2\" x 72 1/2\" and top of RO at 96 1/4\" above subfloor (sill at 2'-0\" on elevation A-200); (3) 36x80 door with RO 38\" x 82 1/2\"; (4) header from IRC Table R602.7(1): snow 30 psf, width 29', 2 floors above (1st-floor wall of a 3-story building), wind 130 mph exposure B — SAB's structural set governs when it arrives; (5) the longer wall runs through at the corner (north and south run through at the west), so x=0 = outer corner of the building; (6) I1 is non-bearing (partition between bedrooms, type 1, 2x4). S2 is the second panel of the south wall (starts 12' from the corner), hence layoutOrigin -12'. S35: wall types from A-800 in `config.wallTypes` — X1 (2x6 exterior; A-100 note 2: all new exterior walls are type X1) and 1 (2x4 interior partition; note 3) — with the architect's tag on each wall (`wallType`). The partition types do not say whether a wall is bearing, so every wall keeps its own section, exterior and bearing; the tag goes on the sheets and in `panels.csv`. Same panels and pieces as before (cut list and BOM unchanged).",
   "name": "26 Ringgold St — checkpoint",
   "date": "2026-10-14",
   "revision": "A",
@@ -44,6 +44,18 @@
         "frame": "wood",
         "description": "door U2, WD (A-800)"
       }
+    },
+    "wallTypes": {
+      "1": {
+        "section": "2x4",
+        "exterior": false,
+        "description": "partition type 1, 2x4 @ 16\" o.c., 5/8\" GWB both sides, 1 HR (A-800)"
+      },
+      "X1": {
+        "section": "2x6",
+        "exterior": true,
+        "description": "exterior wall, 2x6 @ 16\" o.c., 1/2\" plywood sheathing, R-21 (A-800)"
+      }
     }
   },
   "walls": [
@@ -52,6 +64,7 @@
       "$comment": "North wall, first 16' from the northwest corner. Pair of A windows with centerline 8'-5 7/8\" from the corner (A-100).",
       "length": "16'",
       "height": "9'-1 1/8\"",
+      "wallType": "X1",
       "section": "2x6",
       "exterior": true,
       "bearing": true,
@@ -71,6 +84,7 @@
       "$comment": "South wall, first 12' from the southwest corner. Pair of A windows with centerline 8'-7\" from the corner.",
       "length": "12'",
       "height": "9'-1 1/8\"",
+      "wallType": "X1",
       "section": "2x6",
       "exterior": true,
       "bearing": true,
@@ -90,6 +104,7 @@
       "$comment": "South wall, from 12' to 24' from the southwest corner. Door 1 (36x80, WD/GLASS, 45 min) with centerline 14'-4 1/2\" from the corner and pair of A windows with centerline at 19'-1\" (8'-7\" + 5'-9 1/2\" + 4'-8 1/2\"). Between the door RO and the window RO there is 8 1/4\": table R602.7(1) calls for 2 jacks per side (2+1.5+2 = 9\" with a shared king), which do not fit — jackStuds 1 on both openings (warning HEADER_JACKS_BELOW_TABLE) until SAB's structural set gives the header and the jacks.",
       "length": "12'",
       "height": "9'-1 1/8\"",
+      "wallType": "X1",
       "section": "2x6",
       "exterior": true,
       "bearing": true,
@@ -117,6 +132,7 @@
       "$comment": "Partition between the 1st and 2nd bedrooms of Unit 3 (type 1, 2x4), butting the north wall (x=0) and the bathroom/hall wall. 15'-2 3/4\" between GWB faces + 5/8\" on each side = 15'-4\". Door U2 (36x80) with centerline 1'-10\" from the south wall — jamb 3\" from the corner.",
       "length": "15'-4\"",
       "height": "9'-1 1/8\"",
+      "wallType": "1",
       "section": "2x4",
       "exterior": false,
       "bearing": false,

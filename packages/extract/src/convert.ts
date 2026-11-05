@@ -154,7 +154,7 @@ function wallJson(w: WallOut, defaultHeight: string | null, opts: ConvertOptions
     floorsSupported,
     floorSpan,
     level: w.level,
-    wallType: w.wallType,
+    wallType: w.wallType === null || w.wallType.trim() === '' ? null : w.wallType.trim(),
     openings: w.openings.filter((o) => !isUnplaced(o) && !isUnsized(o)).map((o) => openingJson(o, headerHeight)),
   });
 }
@@ -297,6 +297,18 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
       description: h.description,
     });
   }
+  // Tipos de parede da folha de partition types (S35): seção e posição; a leitura não diz se a parede é portante,
+  // então `bearing` fica na parede. Tag ou descrição em branco não entram (o parser do CLI as recusaria).
+  const wallTypes: Record<string, unknown> = {};
+  for (const t of out.wallTypes) {
+    const tag = t.tag.trim();
+    if (tag === '') continue;
+    wallTypes[tag] = strip({
+      section: t.section,
+      exterior: t.exterior,
+      description: t.description.trim() === '' ? null : t.description,
+    });
+  }
   const config = strip({
     studSpacing: 16,
     studThickness: 1.5,
@@ -307,6 +319,7 @@ export function toProject(out: ExtractionOutput, opts: ConvertOptions = {}): Rec
     building: building['groundSnowLoad'] !== undefined && building['buildingWidth'] !== undefined ? building : null,
     openingTypes: Object.keys(openingTypes).length > 0 ? openingTypes : null,
     headerSchedule: Object.keys(headerSchedule).length > 0 ? headerSchedule : null,
+    wallTypes: Object.keys(wallTypes).length > 0 ? wallTypes : null,
   });
   return strip({
     name: out.projectName,

@@ -15,6 +15,7 @@ import { noticeOfError, noticeText } from '@/lib/notices';
 import type { Notice } from '@/types/panels';
 import { issueFromNotice, type IdIndex, type Issue } from './problems';
 import { configFromDraft, resolveDraftOpening } from './resolve';
+import { withWallType } from './wall-types';
 
 export interface Rect {
   x: number;
@@ -110,7 +111,7 @@ export function planGeometry(draft: ProjectDraft, lastGood?: PlanGeometry): Plan
         geoms.push({ openingId: o.id, type: o.type, s0: s0 ?? 0, s1: (s0 ?? 0) + width, rect: undefined, resolved: false, error: r.message, form: s0 === undefined ? 'none' : formOf(o) });
       }
     }
-    const hw = toHouseWall(w, w.start, w.end, resolved);
+    const hw = toHouseWall(withWallType(draft.config, w), w.start, w.end, resolved);
     try {
       axes.set(w.id, axisOf(hw));
     } catch (e) {

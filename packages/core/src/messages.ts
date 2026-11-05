@@ -22,6 +22,7 @@ export const WARNING_CODES = [
   'STUDS_OVERLAP',
   'STUD_HEIGHT_ABOVE_LIMIT',
   'PANEL_OVERWEIGHT',
+  'WALL_TYPE_MISMATCH',
 ] as const;
 export type WarningCode = (typeof WARNING_CODES)[number];
 
@@ -68,6 +69,9 @@ export const ENGINE_ERROR_CODES = [
   'EXTRA_STUD_INVALID',
   'EXTRA_STUD_OUT_OF_WALL',
   'EXTRA_STUD_IN_OPENING',
+  // tipos de parede (S35)
+  'WALL_TYPE_UNKNOWN',
+  'WALL_FIELD_MISSING',
   // divisão em painéis, emendas, estoque
   'CANNOT_SPLIT',
   'PANEL_BREAK_INVALID',
@@ -164,6 +168,18 @@ function lead(w: MessageWhere): string {
 }
 
 const inch = (n: ParamValue | undefined): string => `${String(n)}"`;
+
+/** Como a frase chama cada campo que o tipo de parede pode dar (S35). */
+const WALL_FIELD_NAME: Readonly<Record<string, string>> = {
+  section: 'section',
+  exterior: 'exterior/interior',
+  bearing: 'bearing/non-bearing',
+};
+const wallFields = (v: ParamValue | undefined): string =>
+  (Array.isArray(v) ? v : [v]).map((f) => WALL_FIELD_NAME[String(f)] ?? String(f)).join(', ');
+/** Valor de um campo da parede ou do tipo, como se lê: `2x6`, `exterior`, `non-bearing`. */
+const wallFieldValue = (field: ParamValue | undefined, v: ParamValue | undefined): string =>
+  field === 'exterior' ? (v === true ? 'exterior' : 'interior') : field === 'bearing' ? (v === true ? 'bearing' : 'non-bearing') : String(v);
 const list = (v: ParamValue | undefined): string => (Array.isArray(v) ? v.join(', ') : String(v));
 
 type Template = (p: MessageParams, w: MessageWhere) => string;
@@ -220,6 +236,12 @@ const WARNING: Record<WarningCode, Template> = {
     ),
   PANEL_OVERWEIGHT: (p) =>
     `Panel ${p.panelId}: estimated weight ${p.weight} lb is over the ${p.max} lb limit (config.panel.maxWeight) and no break fixes it — check with the shop`,
+  WALL_TYPE_MISMATCH: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `${p.field === 'section' ? `section ${wallFieldValue(p.field, p.wall)}` : `${wallFieldValue(p.field, p.wall)} wall`}, but wall type "${p.wallType}" is ` +
+        `${wallFieldValue(p.field, p.type)} — the panel follows the wall; fix the wall or the type`,
+    ),
 };
 
 const ERROR: Record<EngineErrorCode, Template> = {
@@ -293,6 +315,16 @@ const ERROR: Record<EngineErrorCode, Template> = {
     `${lead(w)}extraStuds[${p.index}]: ${p.count} stud(s) from x=${p.x} run past the ${inch(p.length)} wall`,
   EXTRA_STUD_IN_OPENING: (p, w) =>
     `${lead(w)}extraStuds[${p.index}]: stud at x=${p.x} falls in the opening zone [${p.start}, ${p.end}] — extra studs stay clear of kings, jacks and the RO`,
+
+  WALL_TYPE_UNKNOWN: (p, w) =>
+    at({ wallId: w.wallId }, `wall type "${p.tag}" is not in config.wallTypes and the wall does not give ${wallFields(p.fields)}`),
+  WALL_FIELD_MISSING: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      p.wallType === undefined
+        ? `${wallFields(p.fields)} missing — set it on the wall or give the wall a type from config.wallTypes`
+        : `${wallFields(p.fields)} missing — wall type "${p.wallType}" does not give it; set it on the wall or on the type`,
+    ),
 
   CANNOT_SPLIT: (p, w) =>
     at(

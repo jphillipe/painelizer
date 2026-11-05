@@ -5,7 +5,7 @@
 
 import type { HeaderScheduleEntry, OpeningCatalogEntry } from './opening';
 import type { Section } from './sections';
-import type { Wall } from './wall';
+import type { Wall, WallTypeEntry } from './wall';
 
 /** Espaçamento OC entre studs admitido no escopo v1 (docs/01-escopo-v1.md). */
 export type StudSpacing = 16 | 24;
@@ -101,6 +101,8 @@ export interface Config {
   openingTypes?: Record<string, OpeningCatalogEntry>;
   /** Wood header schedule do estrutural, por marca (S12.5). */
   headerSchedule?: Record<string, HeaderScheduleEntry>;
+  /** Tipos de parede do projeto, por tag (S35): dão seção, posição e carga à parede que traz `wallType`. */
+  wallTypes?: Record<string, WallTypeEntry>;
   /** Montagem do canto externo (S14). Ausente = `'california'` (P5). */
   corner?: CornerStyle;
   /** Montagem do T (S14). Ausente = `'ladder'` (P5, alturas por hipótese P22). */

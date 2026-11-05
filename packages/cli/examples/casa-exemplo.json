@@ -1,5 +1,5 @@
 {
-  "$comment": "CLI input example, in plan form (S13): each wall has `start`/`end` on the centerline (inches or feet-inches, sign allowed) instead of `length`; opening offsets and `center` are measured from `start`. W01 (12') and W02 (16') make a corner at (0,0): W02 is the longer one and would run through (16'-2 3/4\" plate, above the BOM's 16' stock — splices are S15), so W01 declares `ends.start: \"through\"` and runs through: plate 146 3/4\" (to the outer face of W02), layout origin 0; W02 butts: plate 189 1/4\" (starts at the inner face of W01), origin −5.5 (layout mark 0 is the corner). W03 (interior bearing 2x4) butts as a tee in the middle of W02: plate 117 1/4\". W04–W07 are loose walls, set apart on the plan (free ends): they come out the same as in the previous example. config.studLength = factory precuts (P7); headerHeight 82.5 = factory default header height (P2), overridden per opening when the project gives another (W06). Header (S9.2): `building` carries the snow load and the house width; W05 and W06 (exterior bearing, floorsSupported 0 = roof only) get the header from IRC table R602.7(1) — 2-2x6 with 2 jacks; W07 carries the project header (`header` 2-2x10) on both openings, which overrides the table. W04 (interior non-bearing) has a door with the flat member of R602.7.4 (source `R602.7.4`, no cripples above). W07 = window and door 4.5\" apart (jack + shared king + jack), like fixture wall-144-window-door (with the table's 2 jacks the ROs would need 7.5\"); the door's bottom plate comes out in one piece and the SVG marks the field cut. Walls up to 16' — none is split (S15: a wall over 240\" would come out as W-P1, W-P2…). S12: `building.windSpeed` 120 mph / exposure B → kings from Table R602.7.5 (all openings ≤ 4' → 1 king); `doubleSillOver` 6' → no window in the example gets a double sill. S12.5: project catalog — `openingTypes` (J36 = 35 1/2\" x 47 1/4\" window, RO 36x48 by the default +1/2\" x +3/4\" allowance, P32; P30 = 30x80 wood door, RO 32 x 82 1/2\" by the +2\" x +2 1/2\" allowance, P33) and `headerSchedule` (HDR1 = 2-2x10, 1 jack, 1 king). W04 and W05 describe the opening by `tag` + `center`; W07 uses `headerMark` on both openings. 125 pieces (it was 123 with W01 and W02 loose: each plate that grew gained a stud). S14: California corner in W01 (flat stud at x=1.5, because it runs through) and ladder blocking in W02 in the tee zone of W03 (3 2x6 blocks; double top cut in two pieces); W02's double top steps back 5.5 at the corner and W01's extends 5.5; W03's extends 5.5 over W02 — 130 pieces. S16: `northAngle` at the root (degrees, from the plan's +y, clockwise) puts the north arrow in `plan.svg`; panels come out as `{level}-{wallId}-P{n}` (`1-W01-P1`). S17: `date` and `revision` at the root go into the title block of the sheets (`panels/<id>.svg`), along with `name`.",
+  "$comment": "CLI input example, in plan form (S13): each wall has `start`/`end` on the centerline (inches or feet-inches, sign allowed) instead of `length`; opening offsets and `center` are measured from `start`. W01 (12') and W02 (16') make a corner at (0,0): W02 is the longer one and would run through (16'-2 3/4\" plate, above the BOM's 16' stock — splices are S15), so W01 declares `ends.start: \"through\"` and runs through: plate 146 3/4\" (to the outer face of W02), layout origin 0; W02 butts: plate 189 1/4\" (starts at the inner face of W01), origin −5.5 (layout mark 0 is the corner). W03 (interior bearing 2x4) butts as a tee in the middle of W02: plate 117 1/4\". W04–W07 are loose walls, set apart on the plan (free ends): they come out the same as in the previous example. config.studLength = factory precuts (P7); headerHeight 82.5 = factory default header height (P2), overridden per opening when the project gives another (W06). Header (S9.2): `building` carries the snow load and the house width; W05 and W06 (exterior bearing, floorsSupported 0 = roof only) get the header from IRC table R602.7(1) — 2-2x6 with 2 jacks; W07 carries the project header (`header` 2-2x10) on both openings, which overrides the table. W04 (interior non-bearing) has a door with the flat member of R602.7.4 (source `R602.7.4`, no cripples above). W07 = window and door 4.5\" apart (jack + shared king + jack), like fixture wall-144-window-door (with the table's 2 jacks the ROs would need 7.5\"); the door's bottom plate comes out in one piece and the SVG marks the field cut. Walls up to 16' — none is split (S15: a wall over 240\" would come out as W-P1, W-P2…). S12: `building.windSpeed` 120 mph / exposure B → kings from Table R602.7.5 (all openings ≤ 4' → 1 king); `doubleSillOver` 6' → no window in the example gets a double sill. S12.5: project catalog — `openingTypes` (J36 = 35 1/2\" x 47 1/4\" window, RO 36x48 by the default +1/2\" x +3/4\" allowance, P32; P30 = 30x80 wood door, RO 32 x 82 1/2\" by the +2\" x +2 1/2\" allowance, P33) and `headerSchedule` (HDR1 = 2-2x10, 1 jack, 1 king). W04 and W05 describe the opening by `tag` + `center`; W07 uses `headerMark` on both openings. 125 pieces (it was 123 with W01 and W02 loose: each plate that grew gained a stud). S14: California corner in W01 (flat stud at x=1.5, because it runs through) and ladder blocking in W02 in the tee zone of W03 (3 2x6 blocks; double top cut in two pieces); W02's double top steps back 5.5 at the corner and W01's extends 5.5; W03's extends 5.5 over W02 — 130 pieces. S16: `northAngle` at the root (degrees, from the plan's +y, clockwise) puts the north arrow in `plan.svg`; panels come out as `{level}-{wallId}-P{n}` (`1-W01-P1`). S17: `date` and `revision` at the root go into the title block of the sheets (`panels/<id>.svg`), along with `name`. S35: wall types — `config.wallTypes` (WT-1S = 2x6 exterior bearing; WT-2 = 2x4 interior, bearing not stated) and `wallType` on every wall. W05–W07 carry only the tag and take section, exterior and bearing from WT-1S; W03 and W04 take section and exterior from WT-2 and state bearing themselves; W01 and W02 repeat what WT-1S says (no warning: nothing differs). Same panels and pieces as before (cut list and BOM unchanged); the tag goes on each sheet, on the plan (`W01 · WT-1S`) and in `panels.csv` (`wall_type`).",
   "name": "sample-house",
   "date": "2026-10-14",
   "revision": "A",
@@ -42,6 +42,19 @@
         "kingStuds": 1,
         "description": "(2) 2x10"
       }
+    },
+    "wallTypes": {
+      "WT-1S": {
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "description": "2x6 exterior bearing wall, sheathed"
+      },
+      "WT-2": {
+        "section": "2x4",
+        "exterior": false,
+        "description": "2x4 interior partition"
+      }
     }
   },
   "walls": [
@@ -51,6 +64,7 @@
       "end": { "x": "12'-0\"", "y": 0 },
       "ends": { "start": "through" },
       "height": "8'-1 1/8\"",
+      "wallType": "WT-1S",
       "section": "2x6",
       "exterior": true,
       "bearing": true,
@@ -62,6 +76,7 @@
       "start": { "x": 0, "y": 0 },
       "end": { "x": 0, "y": "16'" },
       "height": 97.125,
+      "wallType": "WT-1S",
       "section": "2x6",
       "exterior": true,
       "bearing": true,
@@ -73,8 +88,7 @@
       "start": { "x": 0, "y": "8'" },
       "end": { "x": 120, "y": "8'" },
       "height": 97.125,
-      "section": "2x4",
-      "exterior": false,
+      "wallType": "WT-2",
       "bearing": true,
       "openings": []
     },
@@ -83,8 +97,7 @@
       "start": { "x": 0, "y": "25'" },
       "end": { "x": "10'-6\"", "y": "25'" },
       "height": 97.125,
-      "section": "2x4",
-      "exterior": false,
+      "wallType": "WT-2",
       "bearing": false,
       "openings": [
         {
@@ -100,9 +113,7 @@
       "start": { "x": "13'", "y": "25'" },
       "end": { "x": "25'", "y": "25'" },
       "height": "8'-1 1/8\"",
-      "section": "2x6",
-      "exterior": true,
-      "bearing": true,
+      "wallType": "WT-1S",
       "floorsSupported": 0,
       "openings": [
         {
@@ -117,9 +128,7 @@
       "start": { "x": "27'", "y": "25'" },
       "end": { "x": "37'", "y": "25'" },
       "height": "9'-1 1/8\"",
-      "section": "2x6",
-      "exterior": true,
-      "bearing": true,
+      "wallType": "WT-1S",
       "floorsSupported": 0,
       "openings": [
         {
@@ -137,9 +146,7 @@
       "start": { "x": 0, "y": "35'" },
       "end": { "x": "12'-0\"", "y": "35'" },
       "height": "8'-1 1/8\"",
-      "section": "2x6",
-      "exterior": true,
-      "bearing": true,
+      "wallType": "WT-1S",
       "floorsSupported": 0,
       "openings": [
         {

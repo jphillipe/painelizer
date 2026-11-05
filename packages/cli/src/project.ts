@@ -47,6 +47,12 @@
  * Idioma: folhas e planta sempre em inglês (P51 resolvida). O `locale` na raiz que a S34 gravava ainda é aceito
  * pelo schema e ignorado.
  *
+ * Tipos de parede (S35): `config.wallTypes = { "WT-1S": { section?, exterior?, bearing?, description? } }` e
+ * `wallType` na parede. A parede com tipo pode omitir `section`, `exterior` e `bearing` — o tipo os dá; o que a
+ * parede disser vale sobre o tipo (com aviso `WALL_TYPE_MISMATCH` se for diferente). Tag fora do catálogo é só
+ * rótulo quando a parede traz os três campos, e erro quando falta algum. A tag sai na folha, na planta e no
+ * `panels.csv`.
+ *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
  * (medidas; o `stockLengths` na raiz do arquivo continua aceito e entra em `config.stockLengths` — os dois juntos é erro). Plate
@@ -55,10 +61,21 @@
  * A validação é estrutural (tipos, campos obrigatórios, chave desconhecida), com mensagem apontando o caminho do
  * campo, e mora no schema zod de `schema.ts` (S28.2) — o mesmo que o editor do web usa em modo tolerante. Chaves
  * com `$` (`$comment`) passam sem ser lidas. Regras de framing não são validadas aqui: isso é papel do core (S10);
- * daqui só se chama `resolveOpenings`, que transforma a forma de catálogo das aberturas em `Opening`.
+ * daqui só se chamam `resolveOpenings`, que transforma a forma de catálogo das aberturas em `Opening`, e
+ * `resolveWallType`, que completa a parede pelo tipo dela.
  */
 
-import { EngineError, resolveOpenings, type Config, type House, type OpeningSpec, type Wall } from 'core';
+import {
+  EngineError,
+  resolveOpenings,
+  resolveWallType,
+  type Config,
+  type House,
+  type OpeningSpec,
+  type Wall,
+  type WallTypeField,
+  type WallTypeInput,
+} from 'core';
 import { projectFileSchema, readMeasure, type FieldIssueParams } from './schema';
 
 export interface Project {
@@ -114,7 +131,10 @@ export function parseProject(text: string, source = 'project'): Project {
   return projectFrom(raw, source);
 }
 
-/** Valida pelo schema (a primeira issue vira `ProjectError`) e resolve as aberturas de cada parede pelo catálogo. */
+/**
+ * Valida pelo schema (a primeira issue vira `ProjectError`) e resolve, pelo catálogo, o tipo e as aberturas de cada
+ * parede.
+ */
 export function projectFrom(raw: unknown, source = 'project'): Project {
   const parsed = projectFileSchema.safeParse(raw);
   if (!parsed.success) {
@@ -134,11 +154,19 @@ export function projectFrom(raw: unknown, source = 'project'): Project {
       throw new ProjectError(`${source}.walls[${i}].openings`, (e as Error).message, e instanceof EngineError ? e : undefined);
     }
   };
+  /** Seção, posição e carga da parede: as dela, senão as do tipo (S35). O que faltar é erro de projeto, com código. */
+  const typed = <W extends WallTypeInput>(w: W, i: number): W & Pick<Wall, WallTypeField> => {
+    try {
+      return resolveWallType(w, config);
+    } catch (e) {
+      throw new ProjectError(`${source}.walls[${i}]`, (e as Error).message, e instanceof EngineError ? e : undefined);
+    }
+  };
   if (file.format === 'loose') {
-    project.walls = file.walls.map(({ wallType: _type, ...w }, i) => ({ ...w, openings: resolve(w.openings, w.id, i) }));
+    project.walls = file.walls.map((w, i) => ({ ...typed(w, i), openings: resolve(w.openings, w.id, i) }));
   } else {
     const house: House = {
-      walls: file.walls.map(({ wallType: _type, ...w }, i) => ({ ...w, openings: resolve(w.openings, w.id, i) })),
+      walls: file.walls.map((w, i) => ({ ...typed(w, i), openings: resolve(w.openings, w.id, i) })),
     };
     if (file.northAngle !== undefined) house.northAngle = file.northAngle;
     project.house = house;

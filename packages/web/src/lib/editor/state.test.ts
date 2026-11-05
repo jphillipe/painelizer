@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
+import { parseProject } from 'cli/project';
 import { textFromDraft, wallById, type ProjectDraft } from './draft';
 import { canRedo, canUndo, commit, editorReducer, HISTORY_LIMIT, initialEditorState, isReviewed, NEW_WALL_LENGTH, reviewedCount, selectedWallIds, toggledWall, viewedUnderlay, wallsSelection, type EditorAction, type EditorState } from './state';
 
@@ -382,6 +383,43 @@ describe('S29: catálogo editável', () => {
     expect(marks(s)).toEqual(before.map((m) => (m === 'HDR1' ? 'H-A' : m)));
     expect(before.filter((m) => m === 'HDR1')).toHaveLength(2);
     expect(Object.keys(draftOf(run(s, { type: 'setHeaderEntry', mark: 'HDR2', value: undefined })).config.headerSchedule ?? {})).toEqual(['H-A']);
+  });
+});
+
+describe('S35: tipos de parede no catálogo', () => {
+  const casa = (): EditorState => editorReducer(initialEditorState, { type: 'load', text: EXAMPLES.find((e) => e.id === 'casa-exemplo')!.text, source: 'sample' });
+  const types = (s: EditorState): string[] => draftOf(s).walls.map((w) => w.wallType ?? '-');
+
+  it('setWallType cria, substitui e apaga; catálogo vazio sai do config; um undo por edição', () => {
+    const s = run(casa(), { type: 'setWallType', tag: ' WT-3 ', value: { section: '2x4', exterior: false, bearing: true } });
+    expect(Object.keys(draftOf(s).config.wallTypes ?? {})).toEqual(['WT-1S', 'WT-2', 'WT-3']);
+    const r = run(s, { type: 'setWallType', tag: 'WT-3', value: { section: '2x6' } });
+    expect(draftOf(r).config.wallTypes?.['WT-3']).toEqual({ section: '2x6' });
+    expect(Object.keys(draftOf(run(r, { type: 'undo' })).config.wallTypes?.['WT-3'] ?? {})).toEqual(['section', 'exterior', 'bearing']);
+    const empty = run(r, { type: 'setWallType', tag: 'WT-3', value: undefined }, { type: 'setWallType', tag: 'WT-2', value: undefined }, { type: 'setWallType', tag: 'WT-1S', value: undefined });
+    expect(draftOf(empty).config).not.toHaveProperty('wallTypes');
+    // Tag em branco não cria linha.
+    expect(draftOf(run(casa(), { type: 'setWallType', tag: '  ', value: {} })).config.wallTypes).toEqual(draftOf(casa()).config.wallTypes);
+  });
+
+  it('renameWallType troca a tag na mesma posição e em todas as paredes que a usam', () => {
+    const before = types(casa());
+    const s = run(casa(), { type: 'renameWallType', tag: 'WT-1S', newTag: ' EXT ' });
+    expect(Object.keys(draftOf(s).config.wallTypes ?? {})).toEqual(['EXT', 'WT-2']);
+    expect(types(s)).toEqual(before.map((t) => (t === 'WT-1S' ? 'EXT' : t)));
+    expect(before.filter((t) => t === 'WT-1S')).toHaveLength(5);
+    // As paredes que só traziam a tag continuam completas pelo tipo renomeado.
+    expect(() => parseProject(textFromDraft(draftOf(s)), 'p')).not.toThrow();
+    // Para uma tag que já existe, para a mesma, vazia ou inexistente: nada muda.
+    expect(run(s, { type: 'renameWallType', tag: 'EXT', newTag: 'WT-2' })).toBe(s);
+    expect(run(s, { type: 'renameWallType', tag: 'EXT', newTag: '  ' })).toBe(s);
+    expect(run(s, { type: 'renameWallType', tag: 'nope', newTag: 'X' })).toBe(s);
+  });
+
+  it('updateWall e updateWalls gravam e apagam a tag; a parede só com a tag não ganha seção no arquivo', () => {
+    const s = run(casa(), { type: 'updateWall', wallId: 'W01', patch: { wallType: undefined } }, { type: 'updateWalls', wallIds: ['W03', 'W04'], patch: { wallType: 'WT-1S' } });
+    expect(types(s)).toEqual(['-', 'WT-1S', 'WT-1S', 'WT-1S', 'WT-1S', 'WT-1S', 'WT-1S']);
+    expect(wallById(draftOf(s), 'W05')).not.toHaveProperty('section');
   });
 });
 

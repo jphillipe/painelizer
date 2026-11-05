@@ -76,7 +76,8 @@ describe('buildProject', () => {
     const svg = result.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
     expect(svg).toContain('text-anchor="end">sample-house</text>');
     expect(svg).toContain('>date 2026-10-14 · rev. A</text>');
-    expect(svg).toContain('>wall W07 · level 1 · 2x6 exterior bearing · ');
+    // S35: W07 só traz a tag; seção, posição e carga vêm de WT-1S, e a tag entra na linha de dados.
+    expect(svg).toContain('>wall W07 · type WT-1S · level 1 · 2x6 exterior bearing · ');
     expect(svg).toContain('>Estimated weight: ');
     expect(svg).toContain('>sill height ');
     // W01 atravessa o canto em (0,0) indo para +x com a casa a +y: vista de fora.
@@ -221,7 +222,7 @@ describe('buildProject', () => {
     expect(result.panels.map((x) => x.id).slice(7)).toEqual(['1-W40-P1', '1-W40-P2']);
     expect(result.files.map((f) => f.path).slice(-2)).toEqual(['panels/1-W40-P1.svg', 'panels/1-W40-P2.svg']);
     const csv = result.files.find((f) => f.path === 'panels.csv')!.content;
-    expect(csv.split('\n')[0]).toBe('panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings');
+    expect(csv.split('\n')[0]).toBe('panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings,wall_type');
     expect(csv).toContain('1-W01-P1,W01,1,0,"0""",146.75,"12\'-2 3/4""",97.125,"8\'-1 1/8""",2x6,');
     expect(csv).toContain('1-W40-P1,W40,1,0,"0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');
     expect(csv).toContain('1-W40-P2,W40,1,240,"20\'-0""",240,"20\'-0""",97.125,"8\'-1 1/8""",2x6,');

@@ -16,6 +16,9 @@
  *   10' em parede portante; 14' (2x4) e 20' (2x6) em parede não portante. Acima disso, projeto
  *   estrutural.
  *
+ * - `WALL_TYPE_MISMATCH` (S35): seção, posição ou carga da parede diferente do que o tipo dela
+ *   (`config.wallTypes`) diz. A parede manda; o aviso pede para corrigir um dos dois (`rules/wallTypes.ts`).
+ *
  * "Header fora da tabela" não é aviso: sem header não há geometria, então `rules/openingHeader.ts`
  * lança `Error` (docs/04-decisoes.md, 2026-10-05).
  */
@@ -28,6 +31,7 @@ import type { WallSection } from '../sections';
 import type { Wall } from '../wall';
 import { warning, type Warning } from '../messages';
 import { openingZone } from '../rules/openings';
+import { wallTypeWarnings } from '../rules/wallTypes';
 
 /** Folga mínima entre a zona da abertura e a ponta da parede para caber o stud de ponta. */
 const MIN_CORNER_GAP = 1.5;
@@ -50,6 +54,7 @@ export function validatePanel(panel: Panel, wall: Wall, config: Config): Warning
     ...openingsNearCorner(wall, config),
     ...overlappingStuds(panel, wall),
     ...studHeight(wall, config),
+    ...wallTypeWarnings(wall, config),
   ];
 }
 

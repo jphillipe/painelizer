@@ -65,7 +65,9 @@ export interface SheetStrings {
   plan: {
     title: string;
     summary(walls: number, panels: number, width: number, depth: number): string;
-    wallTitle(wallId: string, section: string, plateLength: number, panels: number): string;
+    /** Rótulo da parede na planta: o id e, quando a parede tem, o tipo (`W01 · WT-1S`; S35). */
+    wallLabel(wallId: string, wallType: string | undefined): string;
+    wallTitle(wallId: string, section: string, plateLength: number, panels: number, wallType?: string): string;
     openingTitle(id: string, type: 'window' | 'door', roughWidth: number, wallId: string): string;
     jointTitle(left: string, right: string): string;
     panelTitle(panelId: string, length: number, wallId: string): string;
@@ -107,6 +109,7 @@ const EN: SheetStrings = {
     const kind = [panel.exterior ? 'exterior' : 'interior', panel.bearing ? 'bearing' : 'non-bearing'];
     return [
       `wall ${panel.wallId}`,
+      ...(panel.wallType === undefined ? [] : [`type ${panel.wallType}`]),
       `level ${panel.level}`,
       [panel.section, ...kind].join(' '),
       `${formatFeetInches(panel.length)} × ${formatFeetInches(panel.height)}`,
@@ -181,8 +184,9 @@ const EN: SheetStrings = {
     summary: (walls, panels, width, depth) =>
       `${plural(walls, 'wall', 'walls')} · ${plural(panels, 'panel', 'panels')} · ` +
       `${formatFeetInches(width)} × ${formatFeetInches(depth)} (exterior faces)`,
-    wallTitle: (wallId, section, plateLength, n) =>
-      `${wallId} ${section} · plate ${formatFeetInches(plateLength)} · ${plural(n, 'panel', 'panels')}`,
+    wallLabel: (wallId, wallType) => (wallType === undefined ? wallId : `${wallId} · ${wallType}`),
+    wallTitle: (wallId, section, plateLength, n, wallType) =>
+      `${wallId} ${section}${wallType === undefined ? '' : ` · type ${wallType}`} · plate ${formatFeetInches(plateLength)} · ${plural(n, 'panel', 'panels')}`,
     openingTitle: (id, type, roughWidth, wallId) =>
       `${id} ${type === 'window' ? 'window' : 'door'} · RO ${formatInches(roughWidth)} · wall ${wallId}`,
     jointTitle: (left, right) => `joint ${left} | ${right}`,

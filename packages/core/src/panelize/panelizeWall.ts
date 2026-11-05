@@ -290,6 +290,7 @@ export function framePanel(
     level: wall.level ?? 1,
     wallOffset: 0,
     weightLb: panelWeight({ members }),
+    ...(wall.wallType === undefined ? {} : { wallType: wall.wallType }),
   };
 
   // Validações (S10) por último, sobre o painel pronto e as aberturas com os jacks resolvidos.

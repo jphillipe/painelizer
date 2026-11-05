@@ -13,6 +13,9 @@
 - **OC (on center)** — espaçamento entre studs, de centro a centro (16" entre marcas). Na fita, a marca da
   borda fica em 15 1/4", 31 1/4"… para o stud ficar centrado em 16, 32…
 - **Ply** — camada. Header "2 plies" = duas peças lado a lado.
+- **Wall type** — tag do tipo de parede do projeto (`WT-1S`, `X1`; a folha de partition types do arquiteto).
+  `config.wallTypes[tag]` dá seção, posição (externa/interna) e carga (portante ou não) à parede que traz
+  `wallType` e não as diz; o que a parede disser vale sobre o tipo (S35, `rules/wallTypes.ts`).
 - **Seções nominais → reais:** 2x4 = 1.5 × 3.5; 2x6 = 1.5 × 5.5; 2x8 = 1.5 × 7.25; 2x10 = 1.5 × 9.25; 2x12 = 1.5 × 11.25.
 
 ## Convenções do motor (não mudar sem registrar em 04-decisoes.md)
@@ -203,9 +206,10 @@ em mais do que o necessário.
   quando a regra é hipótese, `hypothesis` (`'P30'`, `'P39'`, `'P40'`…). A frase em português é montada a partir
   deles em `messages.ts` (CLI e folha); o app monta a sua em inglês com os mesmos parâmetros
   (`packages/web/src/lib/messages.en.ts`) e nunca lê o português. A folha não imprime "hipótese"; o CLI acrescenta.
-  Os 12 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
+  Os 13 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
   `WIND_SPEED_MISSING`, `SPECIES_NOT_IN_TABLE`, `DOOR_RO_HEIGHT_MISMATCH`, `OPENING_AT_TEE`, `OPENING_NEAR_CORNER`,
-  `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `PANEL_OVERWEIGHT` (`FIRE_BLOCKING_REQUIRED` saiu na S31: virou peça).
+  `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `PANEL_OVERWEIGHT`, `WALL_TYPE_MISMATCH` (S35: a parede contradiz o tipo
+  dela; a parede manda) (`FIRE_BLOCKING_REQUIRED` saiu na S31: virou peça).
 - **Erros que o projeto provoca** (dado do humano ou da leitura) são `EngineError` com código de
   `ENGINE_ERROR_CODES` (planta, catálogo e aberturas, header e kings…) e os mesmos ids e parâmetros; guardas internas
   (estado que nenhuma entrada válida produz) seguem `RangeError`. Fora da tabela continua `requiresEngineer`, nunca

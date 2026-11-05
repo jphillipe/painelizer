@@ -47,9 +47,11 @@ export interface CommitInputProps<T> {
   className?: string | undefined;
   inputMode?: 'text' | 'numeric' | 'decimal' | undefined;
   'aria-label'?: string | undefined;
+  /** Id de um `<datalist>` com sugestões (o campo continua aceitando texto livre). */
+  list?: string | undefined;
 }
 
-export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Object.is, placeholder, disabled, mono = true, className, inputMode, 'aria-label': ariaLabel }: CommitInputProps<T>) {
+export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Object.is, placeholder, disabled, mono = true, className, inputMode, 'aria-label': ariaLabel, list }: CommitInputProps<T>) {
   const [text, setText] = useState(() => format(value));
   const [error, setError] = useState<string | undefined>(undefined);
   // Valor novo confirmado pisca em verde por 600 ms (M4): o único outro sinal era o chip "Checking…" na top bar.
@@ -97,6 +99,7 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
       placeholder={placeholder}
       disabled={disabled}
       inputMode={inputMode}
+      list={list}
       aria-label={ariaLabel}
       aria-invalid={error !== undefined || undefined}
       className={cn('h-8 text-[13px]', mono && 'font-mono', flashing && 'commit-flash', className)}
@@ -199,19 +202,41 @@ export interface TextInputProps {
   placeholder?: string;
   disabled?: boolean;
   mono?: boolean;
+  /** Id de um `<datalist>` com sugestões. */
+  list?: string;
 }
 
 const formatText = (v: string | undefined): string => v ?? '';
 
 /** Texto livre; vazio = campo limpo (salvo `required`); `validate` devolve a mensagem de erro. */
-export function TextInput({ id, value, onCommit, required, validate, placeholder, disabled, mono = false }: TextInputProps) {
+export function TextInput({ id, value, onCommit, required, validate, placeholder, disabled, mono = false, list }: TextInputProps) {
   const parse = (text: string): Parse<string | undefined> => {
     const t = text.trim();
     if (t === '') return required === true ? { ok: false, message: 'Required' } : { ok: true, value: undefined };
     const err = validate?.(t);
     return err === undefined ? { ok: true, value: t } : { ok: false, message: err };
   };
-  return <CommitInput id={id} value={value} format={formatText} parse={parse} onCommit={onCommit} placeholder={placeholder} disabled={disabled} mono={mono} />;
+  return <CommitInput id={id} value={value} format={formatText} parse={parse} onCommit={onCommit} placeholder={placeholder} disabled={disabled} mono={mono} list={list} />;
+}
+
+/**
+ * Tag do tipo de parede (S35): caixa de combinação — escolhe uma das tags do catálogo (`config.wallTypes`, com o
+ * resumo de cada uma) ou digita uma tag livre, que fica só como rótulo. Vazio apaga a tag.
+ */
+export function WallTypeInput({ id, value, options, onCommit, placeholder }: { id: string; value: string | undefined; options: readonly { tag: string; summary: string }[]; onCommit: (v: string | undefined) => void; placeholder?: string }) {
+  const listId = `${id}-options`;
+  return (
+    <>
+      <TextInput id={id} value={value} mono list={listId} placeholder={placeholder ?? (options.length === 0 ? 'e.g. WT-1S' : 'Pick or type a tag')} onCommit={onCommit} />
+      <datalist id={listId}>
+        {options.map((o) => (
+          <option key={o.tag} value={o.tag}>
+            {o.summary}
+          </option>
+        ))}
+      </datalist>
+    </>
+  );
 }
 
 /** Lista de medidas separadas por vírgula (pré-cortes, estoque). */

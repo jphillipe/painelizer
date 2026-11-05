@@ -31,6 +31,13 @@ const list = (v: unknown, max = 10, total?: unknown): string => {
 };
 const ord = (v: unknown): string => (typeof v === 'number' ? String(v + 1) : String(v));
 
+/** Como a tela chama cada campo que o tipo de parede pode dar (S35). */
+const WALL_FIELD: Readonly<Record<string, string>> = { section: 'section', exterior: 'exterior / interior', bearing: 'bearing / non-bearing' };
+const wallFields = (v: unknown): string => (Array.isArray(v) ? v : [v]).map((f) => WALL_FIELD[String(f)] ?? String(f)).join(', ');
+/** Valor de um campo da parede ou do tipo, como se lê: `2x6`, `exterior`, `non-bearing`. */
+const wallValue = (field: unknown, v: unknown): string =>
+  field === 'exterior' ? (v === true ? 'exterior' : 'interior') : field === 'bearing' ? (v === true ? 'bearing' : 'non-bearing') : String(v);
+
 /** "Wall W01, opening J1: …" / "Wall W01: …" / "Opening J1: …" / "…" com maiúscula. */
 function at(t: MessageTarget, body: string): string {
   const parts: string[] = [];
@@ -115,6 +122,14 @@ const ENGINE_WARNINGS: Record<string, Template> = {
   STUD_HEIGHT_ABOVE_LIMIT: (p, t) =>
     at(wallOnly(t), `${inch(p['studLength'])} studs exceed the ${inch(p['limit'])} limit for a ${p['bearing'] === true ? 'bearing' : 'non-bearing'} ${String(p['section'])} wall (table R602.3(5)) — needs a structural design.`),
   PANEL_OVERWEIGHT: (p) => `Panel ${String(p['panelId'])}: estimated ${String(p['weight'])} lb is over the ${String(p['max'])} lb limit, and no break fixes it.`,
+  WALL_TYPE_MISMATCH: (p, t) =>
+    typeof p['field'] !== 'string' || p['wall'] === undefined || p['type'] === undefined
+      ? String(undefined)
+      : at(
+          wallOnly(t),
+          `${p['field'] === 'section' ? `section ${wallValue(p['field'], p['wall'])}` : `${wallValue(p['field'], p['wall'])} wall`}, but wall type "${String(p['wallType'])}" is ` +
+            `${wallValue(p['field'], p['type'])} — the panel follows the wall. Fix the wall or the type.`,
+        ),
 };
 
 /** Erros do motor (`ENGINE_ERROR_CODES` do core). */
@@ -178,6 +193,19 @@ const ENGINE_ERRORS: Record<string, Template> = {
   EXTRA_STUD_OUT_OF_WALL: (p, t) => at(t, `extra stud #${ord(p['index'])}: ${String(p['count'])} stud(s) from x=${String(p['x'])} run past the ${inch(p['length'])} wall.`),
   EXTRA_STUD_IN_OPENING: (p, t) =>
     at(t, `extra stud #${ord(p['index'])}: the stud at x=${String(p['x'])} falls in the opening zone [${String(p['start'])}, ${String(p['end'])}] — extra studs stay clear of kings, jacks and the rough opening.`),
+  WALL_TYPE_UNKNOWN: (p, t) =>
+    p['fields'] === undefined
+      ? String(undefined)
+      : at(wallOnly(t), `wall type "${String(p['tag'])}" is not in the project wall types and the wall does not give ${wallFields(p['fields'])}.`),
+  WALL_FIELD_MISSING: (p, t) =>
+    p['fields'] === undefined
+      ? String(undefined)
+      : at(
+          wallOnly(t),
+          p['wallType'] === undefined
+            ? `${wallFields(p['fields'])} missing — set it on the wall or give the wall a type.`
+            : `${wallFields(p['fields'])} missing — wall type "${String(p['wallType'])}" does not give it. Set it on the wall or on the type.`,
+        ),
   CANNOT_SPLIT: (p, t) =>
     at(
       wallOnly(t),
@@ -283,6 +311,9 @@ const FALLBACK: Record<string, string> = {
   WALL_HEIGHT_MISSING: 'The drawings have no sections or ceiling height. Type the wall height.',
   ENGINE_INTERNAL: 'The engine rejected this (internal check). See Details for the engine message.',
   PROJECT_INVALID: 'The project file has an invalid value.',
+  WALL_TYPE_MISMATCH: 'The wall differs from its wall type; the panel follows the wall.',
+  WALL_TYPE_UNKNOWN: 'The wall type is not in the project wall types and the wall is missing section, position or load.',
+  WALL_FIELD_MISSING: 'Section, position or load is missing on the wall and its wall type does not give it.',
 };
 
 const ALL: Record<string, Template> = { ...ENGINE_WARNINGS, ...ENGINE_ERRORS, ...CLI, ...EXTRACT, ...EXTRACT_ERRORS, ...ADAPTERS };

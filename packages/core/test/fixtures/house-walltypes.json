@@ -1,0 +1,51 @@
+{
+  "$comment": "S35 (2026-11-05) — not confirmed by the human — review. The house-corner-L plan (two 2x6 walls in an L, W1 runs through, W2 butts) with section, exterior and bearing coming from the wall type instead of the wall. W1 carries only the tag WT-1S, whose catalog line gives all three. W2 carries the tag X1, a partial line as the AI reading writes it (section and exterior from the architect's partition types, no bearing), and states bearing itself. Rule (rules/wallTypes.ts): wall field > wall type; nothing differs, so no WALL_TYPE_MISMATCH. The test requires the members of both panels to be identical to house-corner-L's expectedMembers (same frames, same panel ids); `expected` here only adds what is new: the resolved fields, the tag on each panel, the sheet data line and the plan labels.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 },
+    "wallTypes": {
+      "WT-1S": { "section": "2x6", "exterior": true, "bearing": true, "description": "2x6 exterior bearing wall, sheathed" },
+      "X1": { "section": "2x6", "exterior": true, "description": "2x6 exterior wall (architect's partition type; bearing not stated)" }
+    }
+  },
+  "house": {
+    "walls": [
+      { "id": "W1", "start": { "x": 0, "y": 0 }, "end": { "x": 144, "y": 0 }, "height": 97.125, "wallType": "WT-1S", "floorsSupported": 0, "openings": [] },
+      { "id": "W2", "start": { "x": 0, "y": 0 }, "end": { "x": 0, "y": 120 }, "height": 97.125, "wallType": "X1", "bearing": true, "floorsSupported": 0, "openings": [] }
+    ]
+  },
+  "expected": {
+    "sameMembersAs": "house-corner-L",
+    "panelIds": ["1-W1-P1", "1-W2-P1"],
+    "walls": {
+      "W1": { "wallType": "WT-1S", "section": "2x6", "exterior": true, "bearing": true },
+      "W2": { "wallType": "X1", "section": "2x6", "exterior": true, "bearing": true }
+    },
+    "panels": {
+      "1-W1-P1": {
+        "wallId": "W1",
+        "wallType": "WT-1S",
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "members": 15,
+        "warnings": [],
+        "infoLine": "wall W1 · type WT-1S · level 1 · 2x6 exterior bearing · 12'-2 3/4\" × 8'-1 1/8\" · 15 pieces · 257.7 lb"
+      },
+      "1-W2-P1": {
+        "wallId": "W2",
+        "wallType": "X1",
+        "section": "2x6",
+        "exterior": true,
+        "bearing": true,
+        "members": 12,
+        "warnings": [],
+        "infoLine": "wall W2 · type X1 · level 1 · 2x6 exterior bearing · 9'-9 1/4\" × 8'-1 1/8\" · 12 pieces · 198.5 lb"
+      }
+    },
+    "planLabels": ["W1 · WT-1S", "W2 · X1"]
+  }
+}

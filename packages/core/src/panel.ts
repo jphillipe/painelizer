@@ -170,6 +170,8 @@ export interface Panel {
   /** `Wall.exterior` / `Wall.bearing` da parede de origem (S17), para o cabeçalho da folha. */
   exterior: boolean;
   bearing: boolean;
+  /** Tag do tipo de parede (`Wall.wallType`, S35), para a folha e o `panels.csv`. Só quando a parede tem. */
+  wallType?: string;
   /** Face voltada para quem lê a folha (S17). Só em parede externa em planta. */
   facing?: PanelFacing;
   /** `Wall.layoutOrigin` da parede (0 quando ausente); o SVG desenha as marcas a partir dele. */

@@ -123,11 +123,13 @@ export const PANELS_HEADER = [
   'pieces',
   'weight_lb',
   'warnings',
+  'wall_type',
 ] as const;
 
 /**
  * Um painel por linha (S15/S16): parede de origem, pavimento, onde começa na parede, dimensões, nº de peças,
- * peso estimado da madeira (hipótese P8, sem sheathing) e os códigos dos avisos separados por `;`.
+ * peso estimado da madeira (hipótese P8, sem sheathing), os códigos dos avisos separados por `;` e a tag do tipo de
+ * parede (S35; vazia quando a parede não tem — última coluna, para quem lê as anteriores por posição).
  */
 export function panelsCsv(panels: readonly Panel[]): string {
   const rows: (string | number)[][] = [[...PANELS_HEADER]];
@@ -146,6 +148,7 @@ export function panelsCsv(panels: readonly Panel[]): string {
       piecesOf(p),
       p.weightLb,
       p.warnings.map((w) => w.code).join(';'),
+      p.wallType ?? '',
     ]);
   }
   return toCsv(rows);

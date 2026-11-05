@@ -7,7 +7,8 @@ import type { DraftWall, ProjectDraft } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
 import type { EditorAction, Selection } from '@/lib/editor/state';
 import { joinBlocker } from '@/lib/editor/wall-ops';
-import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
+import { wallTypeHint, wallTypeOptions } from '@/lib/editor/wall-types';
+import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, WallTypeInput } from './fields';
 import { SECTION_OPTIONS, SPAN_OPTIONS } from './wall-properties';
 
 export interface WallsPropertiesProps {
@@ -176,12 +177,12 @@ export function WallsProperties({ draft, wallIds, dispatch, onSelect }: WallsPro
               onChange={(v) => set({ floorSpan: v as DraftWall['floorSpan'] })}
             />
           </Field>
-          <Field id={`ws-${key}-type`} label="Wall type" hint="Architect's tag; not used by the engine">
-            <TextInput
+          <Field id={`ws-${key}-type`} label="Wall type" hint={wallType.mixed ? 'Sets the same type on every selected wall' : wallTypeHint(draft.config, wallType.value)}>
+            <WallTypeInput
               id={`ws-${key}-type`}
               value={wallType.value}
-              mono
-              placeholder={mixed(wallType.mixed, '')}
+              options={wallTypeOptions(draft.config)}
+              {...(wallType.mixed ? { placeholder: 'Mixed' } : {})}
               onCommit={(v) => set({ wallType: v })}
             />
           </Field>

@@ -50,6 +50,7 @@ import {
   pointShape,
   readField,
   rootShape,
+  wallTypeShape,
   type FieldIssue,
 } from 'cli/schema';
 import type { z } from 'zod';
@@ -107,7 +108,7 @@ export interface DraftWall {
   floorSpan?: FloorSpan;
   buildingWidth?: number;
   level?: number;
-  /** Tipo de parede do arquiteto (a extração escreve; o motor não lê). */
+  /** Tag do tipo de parede (S35): com a tag em `config.wallTypes`, o tipo dá seção, posição e carga que faltarem. */
   wallType?: string;
   extraStuds?: DraftExtraStud[];
   /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); ausente = automático. */
@@ -151,6 +152,14 @@ export interface DraftHeaderEntry {
   description?: string;
 }
 
+/** Linha do catálogo de tipos de parede (S35): o que o tipo dá à parede que não disser. */
+export interface DraftWallType {
+  section?: WallSection;
+  exterior?: boolean;
+  bearing?: boolean;
+  description?: string;
+}
+
 export interface DraftConfig {
   studSpacing?: number;
   studThickness?: number;
@@ -166,6 +175,8 @@ export interface DraftConfig {
   stockLengths?: number[];
   openingTypes?: Record<string, DraftOpeningType>;
   headerSchedule?: Record<string, DraftHeaderEntry>;
+  /** Tipos de parede do projeto, por tag (S35). */
+  wallTypes?: Record<string, DraftWallType>;
   /** Fire blocking acima desta cavidade (S31). */
   fireBlockAt?: number;
   /** Tabela de preços do orçamento (S31), como o schema a lê; o editor não a edita, só preserva. */
@@ -267,6 +278,7 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
     stockLengths: r.field(C.stockLengths, c['stockLengths'], `${path}.stockLengths`),
     openingTypes: r.record(c['openingTypes'], `${path}.openingTypes`, openingTypeFrom),
     headerSchedule: r.record(c['headerSchedule'], `${path}.headerSchedule`, headerEntryFrom),
+    wallTypes: r.record(c['wallTypes'], `${path}.wallTypes`, wallTypeFrom),
     fireBlockAt: r.field(C.fireBlockAt, c['fireBlockAt'], `${path}.fireBlockAt`),
     prices: r.field(C.prices, c['prices'], `${path}.prices`),
     extra: rest(c, CONFIG_KEYS),
@@ -325,6 +337,18 @@ function headerEntryFrom(r: Reader, raw: unknown, path: string): DraftHeaderEntr
     jackStuds: r.field(H.jackStuds, h['jackStuds'], `${path}.jackStuds`),
     kingStuds: r.field(H.kingStuds, h['kingStuds'], `${path}.kingStuds`),
     description: r.field(H.description, h['description'], `${path}.description`),
+  });
+}
+
+function wallTypeFrom(r: Reader, raw: unknown, path: string): DraftWallType {
+  const t = r.obj(raw, path);
+  if (t === undefined) return {};
+  const T = wallTypeShape;
+  return compact({
+    section: r.field(T.section, t['section'], `${path}.section`),
+    exterior: r.field(T.exterior, t['exterior'], `${path}.exterior`),
+    bearing: r.field(T.bearing, t['bearing'], `${path}.bearing`),
+    description: r.field(T.description, t['description'], `${path}.description`),
   });
 }
 
@@ -628,6 +652,7 @@ function configJson(c: DraftConfig): Record<string, unknown> {
     openingTypes: c.openingTypes === undefined ? undefined : mapValues(c.openingTypes, (t) => compact({ ...t })),
     headerSchedule:
       c.headerSchedule === undefined ? undefined : mapValues(c.headerSchedule, (h) => compact({ ...h, section: sectionJson(h.section) })),
+    wallTypes: c.wallTypes === undefined ? undefined : mapValues(c.wallTypes, (t) => compact({ ...t })),
     fireBlockAt: c.fireBlockAt,
     prices: c.prices?.map((p) => ({ ...p })),
     ...(c.extra ?? {}),

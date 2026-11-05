@@ -58,7 +58,7 @@ describe('schema strict (S28.2)', () => {
     );
   });
 
-  it('chaves com $ passam em qualquer nível e não chegam ao projeto; wallType é conhecida e não chega à Wall', () => {
+  it('chaves com $ passam em qualquer nível e não chegam ao projeto; wallType chega à Wall (S35)', () => {
     const p = projectFrom(
       project(
         { $comment: 'raiz', $panelizer: { version: 1 }, config: { studSpacing: 16, studLength: 92.625, $note: 'c' } },
@@ -72,7 +72,8 @@ describe('schema strict (S28.2)', () => {
     expect(p).not.toHaveProperty('$comment');
     expect(p.config).not.toHaveProperty('$note');
     expect(p.walls[0]).not.toHaveProperty('$reviewed');
-    expect(p.walls[0]).not.toHaveProperty('wallType');
+    // Tag fora do catálogo numa parede completa: só rótulo, e a parede sai igual ao que era sem a tag.
+    expect(p.walls[0]).toEqual({ ...loose, wallType: '1B', openings: [{ ...opening, header: { section: '2x10', plies: 2 } }] });
     expect(p.walls[0]!.openings[0]).toEqual({ ...opening, header: { section: '2x10', plies: 2 } });
   });
 
@@ -174,11 +175,84 @@ describe('fireBlockAt e prices (S31)', () => {
   });
 });
 
+describe('tipos de parede (S35)', () => {
+  const wallTypes = {
+    'WT-1S': { section: '2x6', exterior: true, bearing: true, description: '2x6 exterior bearing' },
+    X1: { section: '2x4', exterior: false },
+  };
+  const cfg = { studSpacing: 16, studLength: 92.625, wallTypes };
+  const bare = { id: 'W01', length: 144, height: 97.125, openings: [] };
+
+  it('config.wallTypes entra no Config como veio; linha vazia e linha parcial valem', () => {
+    const p = projectFrom(project({ config: { ...cfg, wallTypes: { ...wallTypes, EMPTY: {} } } }), 'p');
+    expect(p.config.wallTypes).toEqual({ ...wallTypes, EMPTY: {} });
+  });
+
+  it('parede só com a tag sai completa pelo tipo; o campo da parede vale sobre o do tipo', () => {
+    const p = projectFrom({ config: cfg, walls: [{ ...bare, wallType: 'WT-1S' }, { ...bare, id: 'W02', wallType: 'X1', bearing: false, section: '2x6' }] }, 'p');
+    expect(p.walls[0]).toEqual({ ...bare, wallType: 'WT-1S', section: '2x6', exterior: true, bearing: true });
+    expect(p.walls[1]).toEqual({ ...bare, id: 'W02', wallType: 'X1', section: '2x6', exterior: false, bearing: false });
+  });
+
+  it('em planta também: a HouseWall sai com os campos do tipo e a tag', () => {
+    const p = projectFrom({ config: cfg, walls: [{ id: 'N', start: { x: 0, y: 0 }, end: { x: 144, y: 0 }, height: 97.125, wallType: 'WT-1S' }] }, 'p');
+    expect(p.house!.walls[0]).toMatchObject({ id: 'N', wallType: 'WT-1S', section: '2x6', exterior: true, bearing: true });
+  });
+
+  it('sem wallType, seção, posição e carga continuam obrigatórias, com a frase de antes no campo', () => {
+    expect(() => projectFrom({ config: cfg, walls: [{ ...bare, exterior: true, bearing: true }] }, 'p')).toThrow(
+      /^p\.walls\[0\]\.section: expected one of 2x4, 2x6, got nothing$/,
+    );
+    expect(() => projectFrom({ config: cfg, walls: [{ ...bare, section: '2x4', bearing: true }] }, 'p')).toThrow(
+      /^p\.walls\[0\]\.exterior: expected true\/false, got nothing$/,
+    );
+    expect(() => projectFrom({ config: cfg, walls: [{ ...bare, section: '2x4', exterior: true }] }, 'p')).toThrow(
+      /^p\.walls\[0\]\.bearing: expected true\/false, got nothing$/,
+    );
+  });
+
+  it('com wallType, o que faltar é erro do motor com código: tag fora do catálogo e campo que o tipo não dá', () => {
+    const fail = (wall: Record<string, unknown>): ProjectError => {
+      try {
+        projectFrom({ config: cfg, walls: [{ ...bare, ...wall }] }, 'p');
+      } catch (e) {
+        return e as ProjectError;
+      }
+      throw new Error('expected a ProjectError');
+    };
+    const unknown = fail({ wallType: 'NOPE', section: '2x4' });
+    expect(unknown).toBeInstanceOf(ProjectError);
+    expect(unknown.path).toBe('p.walls[0]');
+    expect(unknown.engine?.code).toBe('WALL_TYPE_UNKNOWN');
+    expect(unknown.engine?.wallId).toBe('W01');
+    expect(unknown.message).toBe(
+      'p.walls[0]: Wall W01: wall type "NOPE" is not in config.wallTypes and the wall does not give exterior/interior, bearing/non-bearing',
+    );
+    const partial = fail({ wallType: 'X1' });
+    expect(partial.engine?.code).toBe('WALL_FIELD_MISSING');
+    expect(partial.engine?.params).toEqual({ fields: ['bearing'], wallType: 'X1' });
+  });
+
+  it.each([
+    [{ ...cfg, wallTypes: { A: { section: '2x8' } } }, /^p\.config\.wallTypes\.A\.section: expected one of 2x4, 2x6/],
+    [{ ...cfg, wallTypes: { A: { exterior: 'yes' } } }, /^p\.config\.wallTypes\.A\.exterior: expected true\/false/],
+    [{ ...cfg, wallTypes: { A: { sheathing: true } } }, /^p\.config\.wallTypes\.A\.sheathing: unknown key/],
+    [{ ...cfg, wallTypes: { '': {} } }, /^p\.config\.wallTypes: empty key/],
+    [{ ...cfg, wallTypes: [] }, /^p\.config\.wallTypes: expected an object/],
+  ])('catálogo inválido aponta o campo (%#)', (config, message) => {
+    expect(() => projectFrom(project({ config }), 'p')).toThrow(message);
+  });
+
+  it('wallType vazio é erro de texto, como as outras tags', () => {
+    expect(() => projectFrom(project({}, { wallType: '' }), 'p')).toThrow(/^p\.walls\[0\]\.wallType: expected non-empty text/);
+  });
+});
+
 describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 14 (S31: wall-144-fireblock e house-cross)', () => expect(files).toHaveLength(14));
+  it('são 15 (S31: wall-144-fireblock e house-cross; S35: house-walltypes)', () => expect(files).toHaveLength(15));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {

@@ -6,6 +6,7 @@
  */
 
 import type { ProjectDraft } from './draft';
+import { withWallType } from './wall-types';
 
 export type RequiredField = 'wallHeight' | 'snow' | 'width' | 'floors' | 'floorSpan';
 
@@ -29,7 +30,7 @@ export interface ProjectDataNeeds {
 export function projectDataNeeds(draft: ProjectDraft): ProjectDataNeeds {
   const wallsWithoutHeight = draft.walls.filter((w) => w.height === undefined).map((w) => w.id);
   const tableHeaderWalls = draft.walls
-    .filter((w) => w.bearing === true && w.openings.some((o) => o.header === undefined && o.headerMark === undefined))
+    .filter((w) => withWallType(draft.config, w).bearing === true && w.openings.some((o) => o.header === undefined && o.headerMark === undefined))
     .map((w) => w.id);
   const wallsWithoutFloors = draft.walls.filter((w) => tableHeaderWalls.includes(w.id) && w.floorsSupported === undefined).map((w) => w.id);
   const wallsWithoutFloorSpan = draft.walls.filter((w) => tableHeaderWalls.includes(w.id) && w.floorSpan === undefined && w.floorsSupported !== 0).map((w) => w.id);

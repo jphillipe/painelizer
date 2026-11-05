@@ -62,11 +62,39 @@ export interface Wall {
   /** Pavimento da parede (1 = térreo). Ausente = 1. Entra no id dos painéis (S16): `{level}-{wallId}-P{n}`. */
   level?: number;
   /**
+   * Tag do tipo de parede do projeto (`WT-1S`, `X1`; S35). Com a tag em `config.wallTypes`, o tipo dá o que a parede
+   * não disser (`resolveWallType`) e o que ela disser diferente vira aviso `WALL_TYPE_MISMATCH`. Vai para a folha e
+   * para a planta. Tag fora do catálogo é só rótulo.
+   */
+  wallType?: string;
+  /**
    * Ligações desta parede com as vizinhas, em x do painel (S14). Derivadas pela planta (`frameWalls`);
    * ausente = parede solta. Definem as peças de canto e T e os laps da double top plate.
    */
   joints?: WallJoints;
 }
+
+/** O que um tipo de parede pode dar à parede (S35). */
+export type WallTypeField = 'section' | 'exterior' | 'bearing';
+
+/**
+ * Linha do catálogo de tipos de parede do projeto (`config.wallTypes`, por tag; S35). Tudo opcional: a folha de
+ * partition types do arquiteto dá seção e posição, mas não diz se a parede é portante.
+ */
+export interface WallTypeEntry {
+  section?: WallSection;
+  exterior?: boolean;
+  bearing?: boolean;
+  /** Texto do projeto ("2x6 exterior, 5/8 GWB one side"). */
+  description?: string;
+}
+
+/**
+ * Parede como o projeto a escreve (S35): seção, posição e carga podem faltar quando o tipo (`wallType`) as dá.
+ * `resolveWallType` (`rules/wallTypes.ts`) devolve a parede completa.
+ */
+export type WallSpec<W extends { [K in WallTypeField]: Wall[K] } = Wall> = Omit<W, WallTypeField> &
+  Partial<Pick<Wall, WallTypeField>>;
 
 /** Como uma ponta da parede se liga à vizinha (S14). `otherThickness` = espessura real da outra parede. */
 export type EndJoint =

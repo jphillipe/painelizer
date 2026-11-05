@@ -3,8 +3,10 @@
  * ler o mesmo arquivo em modo tolerante (`web/src/lib/editor/draft.ts`).
  *
  * - **Strict**: chave desconhecida é erro, com o caminho dela. Chaves que começam com `$` (`$comment`, `$panelizer`,
- *   `$underlay`, `$reviewed`) são de quem escreve o arquivo e passam sem ser lidas; `wallType` (tipo de parede do
- *   arquiteto, a leitura por IA escreve) é conhecida e ignorada pelo motor.
+ *   `$underlay`, `$reviewed`) são de quem escreve o arquivo e passam sem ser lidas.
+ * - **Tipos de parede** (S35): `config.wallTypes` por tag e `wallType` na parede. `section`, `exterior` e `bearing`
+ *   só podem faltar na parede que traz `wallType`; quem completa (ou recusa, com código) é o core
+ *   (`resolveWallType`, em `project.ts`).
  * - **Medidas**: número em polegadas decimais ou texto pés-pol-fração (`12'-0"`, `92 5/8"`), por `parseFeetInches`
  *   do core. `studSpacing` é medida, mas só 16" ou 24" (escopo v1): `"16'"` (192") é erro.
  * - **Formato das paredes**: `loose` (toda parede com `length`) ou `plan` (toda parede com `start`/`end`, S13), como
@@ -48,6 +50,8 @@ import {
   type TeeStyle,
   type Wall,
   type WallSection,
+  type WallSpec,
+  type WallTypeEntry,
 } from 'core';
 
 // ---- falhas -----------------------------------------------------------------
@@ -465,6 +469,14 @@ export const headerEntryShape = {
   description: text.optional(),
 };
 
+/** Linha do catálogo de tipos de parede (S35): tudo opcional — o tipo dá o que a parede não disser. */
+export const wallTypeShape = {
+  section: oneOf(WALL_SECTIONS).optional(),
+  exterior: boolean.optional(),
+  bearing: boolean.optional(),
+  description: text.optional(),
+};
+
 /** Preço por peça de um comprimento de estoque (S31). */
 export const pieceCostShape = { section: headerSection, length: positiveMeasure, price: money };
 /** Preço por pé linear da seção (S31). */
@@ -523,6 +535,7 @@ export const configShape = {
   stockLengths: stockLengths.optional(),
   openingTypes: record(node(openingTypeShape)).optional(),
   headerSchedule: record(node(headerEntryShape)).optional(),
+  wallTypes: record(node(wallTypeShape)).optional(),
   fireBlockAt: positiveMeasure.optional(),
   prices: prices.optional(),
 };
@@ -557,13 +570,16 @@ export const extraStudShape = { x: measure, count: count.optional(), label: text
 export const pointShape = { x: signedMeasure, y: signedMeasure };
 export const endsShape = { start: oneOf(END_RULES).optional(), end: oneOf(END_RULES).optional() };
 
-/** Campos comuns aos dois formatos de parede. */
+/**
+ * Campos comuns aos dois formatos de parede. `section`, `exterior` e `bearing` são opcionais na shape porque o tipo
+ * de parede pode dá-los (S35); `typedWall` exige os três na parede sem `wallType`.
+ */
 export const wallShape = {
   id: text,
   height: positiveMeasure,
-  section: oneOf(WALL_SECTIONS),
-  exterior: boolean,
-  bearing: boolean,
+  section: oneOf(WALL_SECTIONS).optional(),
+  exterior: boolean.optional(),
+  bearing: boolean.optional(),
   openings: list(node(openingShape)).default([]),
   buildingWidth: positiveMeasure.optional(),
   floorsSupported: floorsSupported.optional(),
@@ -572,7 +588,7 @@ export const wallShape = {
   extraStuds: list(node(extraStudShape)).optional(),
   /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); lista completa, crescente. */
   panelBreaks: list(measure).optional(),
-  /** Tipo de parede do arquiteto (a leitura por IA escreve; o motor não lê). */
+  /** Tag do tipo de parede (S35): com a tag em `config.wallTypes`, o tipo dá seção, posição e carga que faltarem. */
   wallType: text.optional(),
 };
 
@@ -588,8 +604,30 @@ export const planWallShape = {
 };
 
 const derived = (key: string) => `a plan wall does not take ${key} — the engine derives it from the plan (start/end)`;
-const looseWallNode = node(looseWallShape);
-const planWallNode = node(planWallShape, { length: derived('length'), layoutOrigin: derived('layoutOrigin') });
+/** Os campos que só o tipo de parede pode suprir, com a leitura de cada um (a frase de "faltou" é a do campo). */
+const TYPED_FIELDS = [
+  ['section', readOneOf(WALL_SECTIONS)],
+  ['exterior', readBoolean],
+  ['bearing', readBoolean],
+] as const;
+
+/** Parede sem `wallType` tem de trazer seção, posição e carga, como sempre; com `wallType`, o core resolve. */
+function typedWall<W extends { wallType?: string; section?: WallSection; exterior?: boolean; bearing?: boolean }>(
+  w: W,
+  ctx: Ctx,
+): W {
+  if (w.wallType !== undefined) return w;
+  let ok = true;
+  for (const [key, read] of TYPED_FIELDS) {
+    if (w[key] !== undefined) continue;
+    report(ctx, read(undefined) as Fail, [key]);
+    ok = false;
+  }
+  return ok ? w : z.NEVER;
+}
+
+const looseWallNode = node(looseWallShape).transform(typedWall);
+const planWallNode = node(planWallShape, { length: derived('length'), layoutOrigin: derived('layoutOrigin') }).transform(typedWall);
 
 export type LooseWallFile = Clean<z.output<typeof looseWallNode>>;
 export type PlanWallFile = Clean<z.output<typeof planWallNode>>;
@@ -692,18 +730,19 @@ export const projectFileSchema = node(rootShape).transform((p, ctx): ProjectFile
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
-type WallInput = Omit<Wall, 'openings' | 'joints'> & { openings: OpeningSpec[] };
-type HouseWallInput = Omit<HouseWall, 'openings'> & { openings: OpeningSpec[] };
+type WallInput = WallSpec<Omit<Wall, 'openings' | 'joints'> & { openings: OpeningSpec[] }>;
+type HouseWallInput = WallSpec<Omit<HouseWall, 'openings'> & { openings: OpeningSpec[] }>;
 export type SchemaMatchesCore = [
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof configShape>>>>, Omit<Config, never>>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof buildingShape>>>>, Building>>,
   Assert<Same<z.output<typeof panelNode>, PanelConfig>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof openingTypeShape>>>>, OpeningCatalogEntry>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof headerEntryShape>>>>, HeaderScheduleEntry>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof wallTypeShape>>>>, WallTypeEntry>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof headerShape>>>>, OpeningHeader>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof openingShape>>>>, OpeningSpec>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof extraStudShape>>>>, ExtraStud>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof pointShape>>>>, Point>>,
-  Assert<Same<Omit<LooseWallFile, 'wallType'>, WallInput>>,
-  Assert<Same<Omit<PlanWallFile, 'wallType'>, HouseWallInput>>,
+  Assert<Same<LooseWallFile, WallInput>>,
+  Assert<Same<PlanWallFile, HouseWallInput>>,
 ];

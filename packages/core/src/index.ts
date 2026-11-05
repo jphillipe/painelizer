@@ -97,6 +97,15 @@ export {
 } from './rules/openingHeader';
 export { mergeOpeningZones, type MergedZone, type ZonePlan } from './rules/zones';
 export { DEFAULT_ROUGH_OFFSET, resolveOpening, resolveOpenings } from './rules/catalog';
+export {
+  WALL_TYPE_FIELDS,
+  resolveWallType,
+  wallTypeMismatches,
+  wallTypeOf,
+  wallTypeWarnings,
+  type WallTypeInput,
+  type WallTypeMismatch,
+} from './rules/wallTypes';
 export { panelizeWall, planOpenings, resolveHeaders, type OpeningPlan } from './panelize/panelizeWall';
 export { panelId, splitWall, splitWallWithCandidates, wallBreakCandidates, type WallSplit } from './panelize/splitWall';
 export {

@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MeasureInput, NumberInput } from './fields';
+import { MeasureInput, NumberInput, WallTypeInput } from './fields';
 
 afterEach(cleanup);
 
@@ -26,6 +26,44 @@ function Controlled({ initial, onCommit, required }: { initial: number | undefin
     </>
   );
 }
+
+/** S35: o campo "Wall type" oferece as tags do catálogo e aceita texto livre. */
+describe('WallTypeInput no DOM (S35)', () => {
+  const options = [
+    { tag: 'WT-1S', summary: '2x6 · exterior · bearing' },
+    { tag: 'X1', summary: '2x4 · interior' },
+  ];
+
+  it('lista as tags do catálogo num datalist ligado ao campo, com o resumo de cada uma', () => {
+    render(<WallTypeInput id="wt" value="X1" options={options} onCommit={() => {}} />);
+    const input = document.getElementById('wt') as HTMLInputElement;
+    expect(input.value).toBe('X1');
+    expect(input.getAttribute('list')).toBe('wt-options');
+    const list = document.getElementById('wt-options')!;
+    expect(list.tagName).toBe('DATALIST');
+    expect([...list.querySelectorAll('option')].map((o) => [o.value, o.textContent])).toEqual([
+      ['WT-1S', '2x6 · exterior · bearing'],
+      ['X1', '2x4 · interior'],
+    ]);
+  });
+
+  it('tag livre (fora do catálogo) confirma como veio; campo vazio apaga a tag', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<WallTypeInput id="wt" value={undefined} options={options} onCommit={onCommit} />);
+    const input = document.getElementById('wt') as HTMLInputElement;
+    expect(input.placeholder).toBe('Pick or type a tag');
+    await user.type(input, ' 1B {Enter}');
+    expect(onCommit).toHaveBeenLastCalledWith('1B');
+    cleanup();
+    render(<WallTypeInput id="wt" value="WT-1S" options={[]} onCommit={onCommit} />);
+    const filled = document.getElementById('wt') as HTMLInputElement;
+    expect(filled.placeholder).toBe('e.g. WT-1S');
+    await user.clear(filled);
+    await user.tab();
+    expect(onCommit).toHaveBeenLastCalledWith(undefined);
+  });
+});
 
 /** Interação real com o `CommitInput` (M10): a regra "blur/Enter confirma, Esc reverte" tem de valer num DOM. */
 describe('CommitInput no DOM (M10)', () => {

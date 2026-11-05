@@ -12,7 +12,8 @@
  * - Abertura = vão branco na parede, com as ombreiras marcadas; janela leva ainda o traço no eixo. O id da
  *   abertura fica dentro do vão.
  * - Junta entre painéis da mesma parede = tique atravessando a parede; o id de cada painel fica do lado de
- *   fora (o lado oposto ao centro da planta) e o id da parede, do lado de dentro, no meio da plate.
+ *   fora (o lado oposto ao centro da planta) e o id da parede, do lado de dentro, no meio da plate — seguido do
+ *   tipo de parede quando ela tem (`W01 · WT-1S`, S35).
  * - Cotas externas totais (faces externas) embaixo e à esquerda; seta do norte no canto superior direito quando
  *   `house.northAngle` existe (graus, do +y da planta no sentido horário).
  * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
@@ -146,7 +147,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
     out.push(
       `<rect class="wall ${kind}" x="${px(toPx(r.x0))}" y="${px(toPy(r.y1))}" width="${px((r.x1 - r.x0) * scale)}" ` +
         `height="${px((r.y1 - r.y0) * scale)}" fill="${w.wall.exterior ? FILL_EXTERIOR : FILL_INTERIOR}">` +
-        `<title>${esc(S.plan.wallTitle(w.wall.id, w.wall.section, length, n))}</title></rect>`,
+        `<title>${esc(S.plan.wallTitle(w.wall.id, w.wall.section, length, n, w.wall.wallType))}</title></rect>`,
     );
   }
   out.push('</g>');
@@ -170,7 +171,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
       out.push(labelAt(w, mid, outward, p.id, 10, PANEL_ID, 'panel-id', true, scale, P, p.id));
     }
     const mid: Point = { x: (w.from.x + w.to.x) / 2, y: (w.from.y + w.to.y) / 2 };
-    out.push(labelAt(w, mid, outward === 1 ? -1 : 1, w.wall.id, 11, WALL_ID, 'wall-id', false, scale, P));
+    out.push(labelAt(w, mid, outward === 1 ? -1 : 1, S.plan.wallLabel(w.wall.id, w.wall.wallType), 11, WALL_ID, 'wall-id', false, scale, P));
   }
 
   // Área de clique de cada painel (M3): retângulo transparente sobre o trecho da plate, com `data-panel-id`, por

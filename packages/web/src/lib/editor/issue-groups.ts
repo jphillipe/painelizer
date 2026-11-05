@@ -29,6 +29,7 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   'wall.section': 'Section (2x4 or 2x6) is missing',
   'wall.exterior': 'Exterior / interior is not set',
   'wall.bearing': 'Bearing / non-bearing is not set',
+  'wall.wallType': 'Wall type is not in the project wall types',
   'wall.length': 'Wall length is missing',
   'wall.ends': 'Wall needs both start and end',
   'wall.planLength': 'A wall in plan has no length',
@@ -72,6 +73,7 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   DOOR_RO_HEIGHT_MISMATCH: 'Door RO height differs from the header height',
   SPECIES_NOT_IN_TABLE: 'Species not covered by the IRC table',
   WIND_SPEED_MISSING: 'Wind speed is missing (king stud table)',
+  WALL_TYPE_MISMATCH: 'Wall differs from its wall type',
   // motor (packages/core) — erros que um projeto provoca; o CLI e o parser
   HEADER_DATA_MISSING: 'Bearing wall needs snow load and building width (IRC header table)',
   HEADER_OUT_OF_TABLE: 'Header outside the IRC table — engineer required',

@@ -10,6 +10,7 @@
 import { englishMessage } from '@/lib/messages.en';
 import type { Notice } from '@/types/panels';
 import { draftFormat, isPlanWall, type DraftProblem, type ProjectDraft } from './draft';
+import { hasUnknownWallType, missingWallFields, wallFieldNames, withWallType } from './wall-types';
 
 export type Severity = 'problem' | 'warning';
 /** `draft` = leitura tolerante do arquivo; `geometry` = frameWalls no cliente (S21.2); `project` = sem parede. */
@@ -72,6 +73,12 @@ export function hasOriginal(issue: Issue): boolean {
 function kindOf(n: Notice): string | undefined {
   if (n.code === 'HEADER_DATA_MISSING') return n.params?.['missing'] === 'floorsSupported' ? 'wall.floorsSupported' : 'config.building';
   if (n.code === 'WALL_HEIGHT_MISSING') return 'wall.height';
+  // S35: o draft já aponta a tag fora do catálogo e o campo que nem a parede nem o tipo dão.
+  if (n.code === 'WALL_TYPE_UNKNOWN') return 'wall.wallType';
+  if (n.code === 'WALL_FIELD_MISSING') {
+    const first = Array.isArray(n.params?.['fields']) ? (n.params['fields'] as unknown[])[0] : undefined;
+    if (typeof first === 'string') return `wall.${first}`;
+  }
   if (n.stage === 'plan') return 'plan.open'; // mesma família do erro que a geometria vê no cliente
   // Campo do config que o parser recusou: a família do draft (`config.studLength` vazio = "precut stud lengths are missing").
   const config = n.path === undefined ? null : /^(config\.[A-Za-z]+)/.exec(n.path);
@@ -171,12 +178,18 @@ export function draftIssues(draft: ProjectDraft, load: readonly DraftProblem[]):
       problem('wall.length', `wall ${w.id}: length is missing`, loc);
     }
     if (w.height === undefined) problem('wall.height', `wall ${w.id}: height is missing`, loc);
-    if (w.section === undefined) problem('wall.section', `wall ${w.id}: section is missing (2x4 or 2x6)`, loc);
-    if (w.exterior === undefined) problem('wall.exterior', `wall ${w.id}: exterior / interior is not set`, loc);
-    if (w.bearing === undefined) problem('wall.bearing', `wall ${w.id}: bearing / non-bearing is not set`, loc);
+    // S35: seção, posição e carga podem vir do tipo de parede; só falta o que nem a parede nem o tipo dão.
+    const typed = withWallType(c, w);
+    if (hasUnknownWallType(c, w) && missingWallFields(c, w).length > 0) {
+      problem('wall.wallType', `wall ${w.id}: wall type "${w.wallType}" is not in the project wall types and the wall does not give ${wallFieldNames(missingWallFields(c, w))}`, loc);
+    } else {
+      if (typed.section === undefined) problem('wall.section', `wall ${w.id}: section is missing (2x4 or 2x6)`, loc);
+      if (typed.exterior === undefined) problem('wall.exterior', `wall ${w.id}: exterior / interior is not set`, loc);
+      if (typed.bearing === undefined) problem('wall.bearing', `wall ${w.id}: bearing / non-bearing is not set`, loc);
+    }
     // Header pela tabela IRC (core/rules/openingHeader.ts): parede portante com abertura sem header próprio
     // precisa de config.building (neve + largura) e de floorsSupported. O motor diria o mesmo, 600 ms depois.
-    if (w.bearing === true && w.openings.some((o) => o.header === undefined && o.headerMark === undefined)) {
+    if (typed.bearing === true && w.openings.some((o) => o.header === undefined && o.headerMark === undefined)) {
       const b = c.building;
       if (b === undefined || b.groundSnowLoad === undefined || b.buildingWidth === undefined) {
         problem('config.building', `wall ${w.id}: bearing wall with openings needs config.building (snow load and building width) for the IRC header table`, loc);

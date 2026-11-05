@@ -36,6 +36,8 @@ equipe usando só o desenho gerado.
   múltiplo de 48" (módulo do OSB), depois qualquer stud de layout.
 - Aberturas vizinhas com zonas sobrepostas compartilham king stud.
 - Numeração `{pavimento}-{parede}-P{n}`.
+- Wall types do projeto (`config.wallTypes`, por tag): dão seção, posição e carga à parede que não disser; a tag
+  sai na folha, na planta e no `panels.csv` — pedido da fábrica em 2026-10-28, S35.
 - Validações como avisos, não erros.
 
 ### App e dados (Fase 5–6)

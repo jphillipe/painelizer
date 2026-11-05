@@ -66,20 +66,24 @@ describe('bomCsv', () => {
 });
 
 describe('panelsCsv (S15)', () => {
-  it('um painel por linha: parede, posição e dimensões em decimal e pés-pol, peças, peso e avisos', () => {
+  it('um painel por linha: parede, posição e dimensões em decimal e pés-pol, peças, peso, avisos e wall type', () => {
     const panels = splitWall(split480.wall as Wall, split480.config as Config);
     const csv = panelsCsv(panels);
     expect(csv).toBe(
-      'panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings\n' +
-        `1-W-480-P1,W-480,1,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,\n` +
-        `1-W-480-P2,W-480,1,240,"20'-0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,29,409.8,\n`,
+      'panel,wall,level,offset_in,offset,length_in,length,height_in,height,section,pieces,weight_lb,warnings,wall_type\n' +
+        `1-W-480-P1,W-480,1,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,,\n` +
+        `1-W-480-P2,W-480,1,240,"20'-0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,29,409.8,,\n`,
     );
+    // S35: a tag do tipo de parede na última coluna, só quando a parede tem (com vírgula, entre aspas).
+    const typed = panelsCsv(panels.map((p) => ({ ...p, wallType: 'WT-1S' })));
+    expect(typed.split('\n')[1]).toBe(`1-W-480-P1,W-480,1,0,"0""",240,"20'-0""",97.125,"8'-1 1/8""",2x6,27,410.4,,WT-1S`);
+    expect(panelsCsv([{ ...panels[0]!, wallType: 'A, B' }]).split('\n')[1]).toMatch(/,"A, B"$/);
   });
 
   it('painel direto do panelizeWall: pavimento 1, offset 0 e peso preenchidos pelo motor; avisos separados por ;', () => {
     const warned = { ...panel, warnings: [{ code: 'STUDS_OVERLAP' as const, message: '' }, { code: 'PANEL_OVERWEIGHT' as const, message: '' }] };
     const line = panelsCsv([warned]).split('\n')[1]!;
-    expect(line).toBe(`W-plain,W-plain,1,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,226.4,STUDS_OVERLAP;PANEL_OVERWEIGHT`);
+    expect(line).toBe(`W-plain,W-plain,1,0,"0""",144,"12'-0""",97.125,"8'-1 1/8""",2x6,13,226.4,STUDS_OVERLAP;PANEL_OVERWEIGHT,`);
     expect(panelsCsv([{ ...panel, level: 2 }]).split('\n')[1]).toMatch(/^W-plain,W-plain,2,0,/);
   });
 });

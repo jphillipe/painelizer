@@ -67,6 +67,43 @@ describe('convert — Ringgold em formato solto', () => {
     expect(types['A2']?.['sillHeight']).toBe(`1' - 11 3/4"`);
   });
 
+  it('S35: os wall types lidos viram config.wallTypes (seção e posição, sem carga nem evidência) e cada parede leva a tag', () => {
+    const cfg = result.project['config'] as Record<string, unknown>;
+    expect(cfg['wallTypes']).toEqual({
+      X1: { section: '2x6', exterior: true, description: 'Exterior wall, 2x6 @ 16" o.c., R-21, 1/2" plywood' },
+      '1': { section: '2x4', exterior: false, description: 'Partition type 1 - interior wall, 2x4 @ 16" o.c., 5/8" GWB both sides, 1 HR' },
+    });
+    const walls = result.project['walls'] as Record<string, unknown>[];
+    expect(walls.map((w) => w['wallType'])).toEqual(['X1', 'X1', 'X1', '1']);
+    // O catálogo e a tag chegam ao motor; nada contradiz o tipo, então os avisos são os de antes (teste acima).
+    const parsed = parseProject(JSON.stringify(result.project), 'extraído');
+    expect(parsed.config.wallTypes).toEqual(cfg['wallTypes']);
+    expect(parsed.walls.map((w) => w.wallType)).toEqual(['X1', 'X1', 'X1', '1']);
+    expect(result.warnings.some((w) => w.code === 'WALL_TYPE_MISMATCH')).toBe(false);
+  });
+
+  it('S35: sem wall types lidos não há config.wallTypes; tag e descrição em branco ficam fora; parede que contradiz o tipo avisa', () => {
+    expect(toProject({ ...ringgold, wallTypes: [] })['config']).not.toHaveProperty('wallTypes');
+    const blank = toProject({
+      ...ringgold,
+      wallTypes: [
+        { tag: ' X1 ', section: '2x6', exterior: true, description: '  ', evidence: 'A-800' },
+        { tag: '', section: '2x4', exterior: false, description: 'no tag', evidence: '' },
+      ],
+    });
+    expect((blank['config'] as Record<string, unknown>)['wallTypes']).toEqual({ X1: { section: '2x6', exterior: true } });
+
+    // A leitura deu 2x6 numa parede marcada com o tipo 1 (2x4 na A-800): a parede manda e o revisor vê o aviso.
+    const off = convert(
+      { ...ringgold, walls: ringgold.walls.map((w) => (w.id === 'I1' ? { ...w, section: '2x6' as const } : w)) },
+      { studLength: [92.625, 104.625] },
+    );
+    const mismatch = off.warnings.filter((w) => w.code === 'WALL_TYPE_MISMATCH');
+    expect(off.problems).toEqual([]);
+    expect(mismatch).toHaveLength(1);
+    expect(mismatch[0]).toMatchObject({ wallId: 'I1', panelId: '1-I1-P1', params: { wallType: '1', field: 'section', wall: '2x6', type: '2x4' } });
+  });
+
   it('pré-cortes derivados da altura quando não informados: 9\'-1 1/8" − 4 1/2" = 104 5/8"', () => {
     expect(derivedStudLengths(ringgold)).toEqual([104.625]);
     const cfg = toProject(ringgold)['config'] as Record<string, unknown>;

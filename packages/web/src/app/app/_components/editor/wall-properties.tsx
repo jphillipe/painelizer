@@ -14,7 +14,8 @@ import { resolveDraftOpening } from '@/lib/editor/resolve';
 import { isReviewed, type EditorAction, type Patch, type Selection } from '@/lib/editor/state';
 import { cn } from '@/lib/utils';
 import { splitWall, suggestSplit } from '@/lib/editor/wall-ops';
-import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
+import { missingWallFields, typeOfWall, wallTypeHint, wallTypeOptions } from '@/lib/editor/wall-types';
+import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput, WallTypeInput } from './fields';
 import { IssueCallout } from './issue-callout';
 
 export interface WallPropertiesProps {
@@ -42,6 +43,9 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
   const length = wallLength(wall);
   const framingIssue = issues.some((i) => /section|exterior|bearing|floors|building|king|header|wind/i.test(i.kind ?? i.code ?? i.text));
   const reviewed = isReviewed(wall);
+  // S35: o que o tipo de parede dá aparece no lugar de "Not set" (a parede só grava o que ela mesma diz).
+  const type = typeOfWall(draft.config, wall);
+  const fromType = (v: string | undefined): string => (v === undefined ? 'Not set' : `From type (${v})`);
 
   return (
     <div className="space-y-6">
@@ -78,8 +82,8 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
           <Field id={`w-${id}-id`} label="Id">
             <TextInput id={`w-${id}-id`} value={id} required mono validate={(v) => (v === id || isIdFree(draft, v, 'wall') ? undefined : 'Another wall has this id')} onCommit={(v) => v !== undefined && dispatch({ type: 'renameWall', wallId: id, newId: v })} />
           </Field>
-          <Field id={`w-${id}-type`} label="Wall type" hint="Architect's tag; not used by the engine">
-            <TextInput id={`w-${id}-type`} value={wall.wallType} mono onCommit={(v) => set({ wallType: v })} />
+          <Field id={`w-${id}-type`} label="Wall type" hint={wallTypeHint(draft.config, wall.wallType)}>
+            <WallTypeInput id={`w-${id}-type`} value={wall.wallType} options={wallTypeOptions(draft.config)} onCommit={(v) => set({ wallType: v })} />
           </Field>
           <Field id={`w-${id}-level`} label="Level">
             <NumberInput id={`w-${id}-level`} value={wall.level} integer min={1} placeholder="1" onCommit={(v) => set({ level: v })} />
@@ -130,16 +134,16 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
         <SplitControl draft={draft} wallId={id} dispatch={dispatch} />
       </Section>
 
-      <Section title="Framing" collapsible defaultOpen={framingIssue || wall.section === undefined || wall.exterior === undefined || wall.bearing === undefined}>
+      <Section title="Framing" collapsible defaultOpen={framingIssue || missingWallFields(draft.config, wall).length > 0}>
         <div className="grid grid-cols-2 gap-3">
           <Field id={`w-${id}-section`} label="Section">
-            <EnumSelect id={`w-${id}-section`} value={wall.section} noneLabel="Not set" options={SECTION_OPTIONS} onChange={(v) => set({ section: v as DraftWall['section'] })} />
+            <EnumSelect id={`w-${id}-section`} value={wall.section} noneLabel={fromType(type?.section)} options={SECTION_OPTIONS} onChange={(v) => set({ section: v as DraftWall['section'] })} />
           </Field>
           <Field id={`w-${id}-ext`} label="Position">
-            <BoolSelect id={`w-${id}-ext`} value={wall.exterior} trueLabel="Exterior" falseLabel="Interior" onChange={(v) => set({ exterior: v })} />
+            <BoolSelect id={`w-${id}-ext`} value={wall.exterior} trueLabel="Exterior" falseLabel="Interior" noneLabel={fromType(type?.exterior === undefined ? undefined : type.exterior ? 'exterior' : 'interior')} onChange={(v) => set({ exterior: v })} />
           </Field>
           <Field id={`w-${id}-bearing`} label="Load">
-            <BoolSelect id={`w-${id}-bearing`} value={wall.bearing} trueLabel="Bearing" falseLabel="Non-bearing" onChange={(v) => set({ bearing: v })} />
+            <BoolSelect id={`w-${id}-bearing`} value={wall.bearing} trueLabel="Bearing" falseLabel="Non-bearing" noneLabel={fromType(type?.bearing === undefined ? undefined : type.bearing ? 'bearing' : 'non-bearing')} onChange={(v) => set({ bearing: v })} />
           </Field>
           <Field id={`w-${id}-floors`} label={LABELS.floors} hint="Bearing walls: picks the row of the IRC header table">
             <NumberInput id={`w-${id}-floors`} value={wall.floorsSupported} integer min={0} placeholder="0" onCommit={(v) => set({ floorsSupported: v })} />

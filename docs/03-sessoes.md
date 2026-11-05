@@ -1446,7 +1446,7 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
    `pnpm check` duas vezes e `pnpm --filter web build` verdes, commit sem push. A sessão não abre outra sessão nem
    manda mensagem a outra sessão.
 
-- [ ] **S35 — Wall types e numeração na planta (core + cli + extract + web).** **Core**: `wallType?: string` em
+- [x] **S35 — Wall types e numeração na planta (core + cli + extract + web).** **Core**: `wallType?: string` em
   `Wall`/`HouseWall`; `config.wallTypes?: Record<tag, { section?, exterior?, bearing?, description? }>` — tudo
   opcional na entrada, porque a leitura da IA não traz `bearing` (`extract/src/schema.ts`, `WallTypeOut`) e o prompt
   não muda (leitura paga); `rules/wallTypes.ts` (novo, com teste) resolve o que faltar na parede a partir do tipo, no
@@ -1460,6 +1460,35 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   no `catalog-editor.tsx`. **Fixture novo** `house-walltypes` (o `house-corner-L` com seção/externa/portante vindas
   do tipo; members iguais aos do original). Exemplos do CLI (`casa-exemplo.json`, `ringgold-checkpoint.json`) com
   tags, sem mudar contagens. Sem P nova: é dado do projeto.
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Core**: `Wall.wallType?` (e na `HouseWall`), `WallTypeEntry`, `WallSpec` (parede como o projeto a escreve) e
+  `config.wallTypes`; `rules/wallTypes.ts` com `resolveWallType` (parede > tipo; fica antes do motor, como
+  `resolveOpenings` — a `Wall` do motor continua completa), `wallTypeOf`, `wallTypeMismatches` e
+  `wallTypeWarnings`; aviso `WALL_TYPE_MISMATCH` (13 avisos; um por campo diferente, em `validatePanel`, a parede
+  manda) e dois erros com código: `WALL_TYPE_UNKNOWN` (tag fora do catálogo **e** campo faltando; com a parede
+  completa a tag é só rótulo, como a leitura da IA já escrevia) e `WALL_FIELD_MISSING` (campo que nem a parede nem o
+  tipo dão); `Panel.wallType?`. **Folha**: `wall W01 · type WT-1S · level 1 · …`; **planta**: rótulo `W01 · WT-1S`
+  e `· type WT-1S` no `<title>`; sem tipo, nada muda (os 10 snapshots e os 14 fixtures sem um byte mudado).
+  `panels.csv` com `wall_type` na última coluna. **CLI**: `wallTypes` no `configShape`; `section`/`exterior`/
+  `bearing` opcionais só na parede com `wallType` (sem ela, o erro de campo é o de antes); `project.ts` deixou de
+  retirar a tag e chama `resolveWallType`; type locks com `WallSpec` e `WallTypeEntry`. **Extract**: `toProject`
+  monta `config.wallTypes` (seção, posição e descrição; sem `bearing`; tag e descrição em branco ficam fora);
+  prompt e schema intocados, API não chamada. **Web**: `draft.ts` lê e escreve `wallTypes`; `lib/editor/
+  wall-types.ts` (o que o tipo dá, o que falta, resumo); "Wall type" é caixa de combinação (`<datalist>` do
+  catálogo, texto livre aceito) na parede e na seleção múltipla, com a ajuda dizendo o que o tipo dá; Framing mostra
+  "From type (2x6)" no lugar de "Not set"; tabela "Wall types" nas configurações (renomear troca a tag das paredes,
+  apagar só sem uso); a lista de paredes mostra a tag; "Add wall" copia a tag; issues e planta do editor usam os
+  campos resolvidos (família `wall.wallType` para tag fora do catálogo). **Fixture novo** `house-walltypes` (W1 só
+  com a tag; W2 com tipo parcial e `bearing` próprio; `$comment` avisa que não foi confirmado) e **exemplos**:
+  `casa-exemplo` com `WT-1S`/`WT-2` (W05–W07 só com a tag) e `ringgold-checkpoint` com `X1`/`1` — lista de corte
+  e BOM idênticas às de antes (134 e 97 peças). Testes: core 695 → 714, cli 162 → 174, extract 211 → 213 (+ 1
+  pulado), web 533 → 550. Verde: `pnpm check` duas vezes e `pnpm --filter web build`. Conferido: no app (`next dev`
+  sem Supabase, 3001, Chrome headless por CDP; capturas em `out/s35/`): sample → lista com as tags, campo com as
+  opções do catálogo, tag livre vira rótulo com o problema agrupado, "From type" no Framing, tabela "Wall types"
+  (renomear em cascata, nova linha), Generate → planta com `W01 · WT-1S`; folha `1-W07-P1` e planta renderizadas
+  para PNG (a linha de dados cabe ao lado do carimbo). Não conferido: o campo na seleção múltipla (só tipos e
+  testes), `pnpm e2e`, leitura real pela API. Não feito (fica para a S39): descrição do tipo na folha e legenda da
+  planta.
 - [ ] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | presetId)[]` com
   `BlockingRow = { y, from?, to?, label? }` (y = centro do bloco, hipótese P44) e `config.blockingPresets?` somado
   aos embutidos da prancha (cozinha: base, bancada e armário superior; banheiro: vaso, barra/papeleira, válvula,

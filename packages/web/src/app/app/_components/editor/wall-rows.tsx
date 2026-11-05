@@ -3,6 +3,7 @@
 import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
 import { wallLength, type DraftOpening, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
+import { withWallType } from '@/lib/editor/wall-types';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
 import { confidenceTone, type WallProvenance } from '@/lib/editor/provenance';
@@ -101,6 +102,8 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect,
             const selected = selectedIds.includes(w.id);
             const length = wallLength(w);
             const reviewed = isReviewed(w);
+            // S35: papel e seção como o motor os verá (os da parede, senão os do tipo).
+            const typed = withWallType(draft.config, w);
             return (
               <li key={w.id} className={cn('border-l-2 border-transparent transition-colors duration-200', selected && 'border-selection bg-selection/8')}>
                 <button
@@ -114,8 +117,9 @@ export function WallRows({ draft, selection, provenance, issuesByWall, onSelect,
                     {reviewed ? <CheckIcon className="size-3.5 text-ok-700" aria-label="Reviewed" /> : null}
                   </span>
                   <span className="min-w-0 truncate text-[12px] text-ink-3">
-                    {role(w)}
-                    {w.section !== undefined ? ` · ${w.section}` : ''}
+                    {role(typed)}
+                    {typed.section !== undefined ? ` · ${typed.section}` : ''}
+                    {w.wallType !== undefined ? ` · ${w.wallType}` : ''}
                     {w.openings.length > 0 ? ` · ${w.openings.length} op.` : ''}
                   </span>
                   <span className="flex items-center gap-1.5">

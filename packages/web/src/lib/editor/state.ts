@@ -18,6 +18,7 @@ import {
   type DraftBuilding,
   type DraftConfig,
   type DraftHeaderEntry,
+  type DraftWallType,
   type DraftOpening,
   type DraftOpeningType,
   type DraftProblem,
@@ -102,7 +103,7 @@ export type EditorAction =
   | { type: 'redo' }
   | { type: 'endTransaction' }
   | { type: 'updateProject'; patch: Patch<Pick<ProjectDraft, 'name' | 'date' | 'revision' | 'northAngle'>> }
-  | { type: 'updateConfig'; patch: Patch<Omit<DraftConfig, 'building' | 'openingTypes' | 'headerSchedule' | 'extra'>> }
+  | { type: 'updateConfig'; patch: Patch<Omit<DraftConfig, 'building' | 'openingTypes' | 'headerSchedule' | 'wallTypes' | 'extra'>> }
   | { type: 'updateBuilding'; patch: Patch<DraftBuilding> }
   | { type: 'updateWall'; wallId: string; patch: Patch<Omit<DraftWall, 'id' | 'openings' | 'extra'>> }
   | { type: 'renameWall'; wallId: string; newId: string }
@@ -111,7 +112,7 @@ export type EditorAction =
   /** Parede solta: `length`; em planta: move `end` ao longo do eixo. */
   | { type: 'setWallLength'; wallId: string; length: number }
   /**
-   * Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento e papel; em planta, continua da
+   * Nova parede depois de `afterWallId` (ou no fim), copiando altura, seção, pavimento, papel e wall type; em planta, continua da
    * ponta `end` virando 90° — ou, com `segment` (S30: "Draw wall"), entre os dois pontos dados.
    */
   | { type: 'addWall'; afterWallId?: string | undefined; segment?: { start: Point; end: Point } }
@@ -147,9 +148,13 @@ export type EditorAction =
   /** Catálogo (S29): cria/substitui (`value`) ou apaga (`undefined`) um tipo de abertura ou marca de header. */
   | { type: 'setOpeningType'; tag: string; value: DraftOpeningType | undefined }
   | { type: 'setHeaderEntry'; mark: string; value: DraftHeaderEntry | undefined }
+  /** Tipo de parede (S35): cria/substitui ou apaga a linha de `config.wallTypes`. */
+  | { type: 'setWallType'; tag: string; value: DraftWallType | undefined }
   /** Renomeia a chave do catálogo na mesma posição e troca `tag`/`headerMark` das aberturas que a usavam. */
   | { type: 'renameOpeningType'; tag: string; newTag: string }
-  | { type: 'renameHeaderEntry'; mark: string; newMark: string };
+  | { type: 'renameHeaderEntry'; mark: string; newMark: string }
+  /** Renomeia a tag do tipo na mesma posição e troca `wallType` das paredes que a usavam. */
+  | { type: 'renameWallType'; tag: string; newTag: string };
 
 export const HISTORY_LIMIT = 100;
 export { isReviewed, REVIEWED_KEY };
@@ -283,6 +288,8 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
         if (ref.section !== undefined) wall.section = ref.section;
         if (ref.exterior !== undefined) wall.exterior = ref.exterior;
         if (ref.bearing !== undefined) wall.bearing = ref.bearing;
+        // S35: a parede de referência pode só trazer a tag (seção, posição e carga vêm do tipo).
+        if (ref.wallType !== undefined) wall.wallType = ref.wallType;
         if (ref.level !== undefined) wall.level = ref.level;
         if (ref.floorsSupported !== undefined) wall.floorsSupported = ref.floorsSupported;
         if (ref.floorSpan !== undefined) wall.floorSpan = ref.floorSpan;
@@ -431,6 +438,15 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
       const walls = d.walls.map((w) => ({ ...w, openings: w.openings.map((o) => (o.tag === action.tag ? { ...o, tag: newTag } : o)) }));
       return commit(state, { ...d, walls, config: { ...d.config, openingTypes: renameKey(types, action.tag, newTag) } });
     }
+    case 'setWallType':
+      return commit(state, { ...d, config: withEntry(d.config, 'wallTypes', action.tag, action.value) });
+    case 'renameWallType': {
+      const newTag = action.newTag.trim();
+      const types = d.config.wallTypes;
+      if (newTag === '' || newTag === action.tag || types?.[action.tag] === undefined || types[newTag] !== undefined) return state;
+      const walls = d.walls.map((w) => (w.wallType === action.tag ? { ...w, wallType: newTag } : w));
+      return commit(state, { ...d, walls, config: { ...d.config, wallTypes: renameKey(types, action.tag, newTag) } });
+    }
     case 'renameHeaderEntry': {
       const newMark = action.newMark.trim();
       const schedule = d.config.headerSchedule;
@@ -448,7 +464,7 @@ function applyOp(state: EditorState, op: WallOp): EditorState {
 }
 
 /** Catálogo com a entrada trocada ou apagada; catálogo vazio sai do config. */
-function withEntry<K extends 'openingTypes' | 'headerSchedule'>(
+function withEntry<K extends 'openingTypes' | 'headerSchedule' | 'wallTypes'>(
   config: DraftConfig,
   key: K,
   name: string,

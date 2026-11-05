@@ -4,18 +4,24 @@ import { PlusIcon, Trash2Icon } from 'lucide-react';
 import type { Dispatch } from 'react';
 import { headerSection, readField } from 'cli/schema';
 import { Button } from '@/components/ui/button';
-import type { DraftHeaderEntry, DraftOpeningType, HeaderSectionDraft, ProjectDraft } from '@/lib/editor/draft';
+import type { DraftHeaderEntry, DraftOpeningType, DraftWallType, HeaderSectionDraft, ProjectDraft } from '@/lib/editor/draft';
 import type { EditorAction, Patch } from '@/lib/editor/state';
-import { EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
+import { wallTypeUsage } from '@/lib/editor/wall-types';
+import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput } from './fields';
 
 /**
  * Catálogo editável (S29): tipos de abertura (`config.openingTypes`, por tag) e marcas de header
  * (`config.headerSchedule`). Renomear a tag/marca troca a referência em todas as aberturas que a usam (no
  * reducer); apagar só quando nenhuma abertura usa. O motor confere o resto (tamanho, seção, plies).
+ *
+ * S35: tipos de parede (`config.wallTypes`, por tag) — o que cada tipo dá à parede que não disser (seção, posição,
+ * carga). Renomear a tag troca `wallType` das paredes; apagar só quando nenhuma parede usa (a parede que dependia do
+ * tipo ficaria sem seção).
  */
 export function CatalogEditor({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
   return (
     <>
+      <WallTypes draft={draft} dispatch={dispatch} />
       <OpeningTypes draft={draft} dispatch={dispatch} />
       <HeaderSchedule draft={draft} dispatch={dispatch} />
     </>
@@ -30,6 +36,89 @@ export function usageCount(draft: ProjectDraft, by: 'tag' | 'headerMark', key: s
 /** Primeira chave livre `prefix1`, `prefix2`… */
 export function freeKey(catalog: Readonly<Record<string, unknown>> | undefined, prefix: string): string {
   for (let i = 1; ; i++) if (catalog?.[`${prefix}${i}`] === undefined) return `${prefix}${i}`;
+}
+
+function WallTypes({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
+  const types = draft.config.wallTypes ?? {};
+  const entries = Object.entries(types);
+  const put = (tag: string, t: DraftWallType, patch: Patch<DraftWallType>): void =>
+    dispatch({ type: 'setWallType', tag, value: clean<DraftWallType>({ ...t, ...patch }) });
+  return (
+    <Section
+      title={`Wall types (${entries.length})`}
+      actions={
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => dispatch({ type: 'setWallType', tag: freeKey(types, 'WT-'), value: { section: '2x4', exterior: false, bearing: false } })}
+        >
+          <PlusIcon /> Add wall type
+        </Button>
+      }
+    >
+      {entries.length === 0 ? (
+        <p className="text-[13px] text-ink-3">No wall types: each wall carries its own section, position and load.</p>
+      ) : (
+        <p className="text-[12px] text-ink-3">A wall with a type takes from it whatever the wall itself leaves unset; what the wall sets wins, with a warning when it differs.</p>
+      )}
+      <ul className="space-y-3">
+        {entries.map(([tag, t]) => {
+          const used = wallTypeUsage(draft, tag);
+          const p = `wt-${tag}`;
+          return (
+            <li key={tag} className="space-y-3 rounded-md border bg-card p-3" data-wall-type={tag}>
+              <div className="flex items-end gap-2">
+                <Field id={`${p}-tag`} label="Tag" className="flex-1">
+                  <TextInput
+                    id={`${p}-tag`}
+                    value={tag}
+                    required
+                    mono
+                    validate={(v) => (v === tag || types[v] === undefined ? undefined : 'Another wall type has this tag')}
+                    onCommit={(v) => v !== undefined && dispatch({ type: 'renameWallType', tag, newTag: v })}
+                  />
+                </Field>
+                <span className="pb-2 text-[12px] whitespace-nowrap text-ink-3">
+                  {used === 0 ? 'not used' : `${used} wall${used === 1 ? '' : 's'}`}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="mb-1.5"
+                  aria-label={`Remove wall type ${tag}`}
+                  disabled={used > 0}
+                  title={used > 0 ? 'Used by walls: change them first' : undefined}
+                  onClick={() => dispatch({ type: 'setWallType', tag, value: undefined })}
+                >
+                  <Trash2Icon />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Field id={`${p}-section`} label="Section">
+                  <EnumSelect
+                    id={`${p}-section`}
+                    value={t.section}
+                    noneLabel="Not set"
+                    options={WALL_SECTION_OPTIONS}
+                    onChange={(v) => put(tag, t, { section: v as DraftWallType['section'] })}
+                  />
+                </Field>
+                <Field id={`${p}-ext`} label="Position">
+                  <BoolSelect id={`${p}-ext`} value={t.exterior} trueLabel="Exterior" falseLabel="Interior" onChange={(v) => put(tag, t, { exterior: v })} />
+                </Field>
+                <Field id={`${p}-bearing`} label="Load">
+                  <BoolSelect id={`${p}-bearing`} value={t.bearing} trueLabel="Bearing" falseLabel="Non-bearing" onChange={(v) => put(tag, t, { bearing: v })} />
+                </Field>
+                <Field id={`${p}-desc`} label="Description" className="col-span-2 sm:col-span-4">
+                  <TextInput id={`${p}-desc`} value={t.description} onCommit={(v) => put(tag, t, { description: v })} />
+                </Field>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
 }
 
 function OpeningTypes({ draft, dispatch }: { draft: ProjectDraft; dispatch: Dispatch<EditorAction> }) {
@@ -282,6 +371,10 @@ function clean<T extends object>(o: Patch<T>): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 }
 
+const WALL_SECTION_OPTIONS = [
+  { value: '2x4', label: '2x4' },
+  { value: '2x6', label: '2x6' },
+] as const;
 const KIND_OPTIONS = [
   { value: 'window', label: 'Window' },
   { value: 'door', label: 'Door' },
