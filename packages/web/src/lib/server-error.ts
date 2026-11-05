@@ -20,7 +20,7 @@ export function describeServerError(e: unknown): string {
   if (e instanceof Error && DOMAIN_ERRORS.has(e.name)) return domainMessage(e);
   if (e instanceof Error && ADAPTER_ERRORS.has(e.name) && typeof (e as { code?: unknown }).code === 'string') {
     const sentence = englishMessage({ code: (e as unknown as { code: string }).code }) ?? 'The database refused the request.';
-    const detail = `${e.name}: ${e.message}`.replace(/s+/g, ' ').trim();
+    const detail = `${e.name}: ${e.message}`.replace(/\s+/g, ' ').trim();
     return `${sentence} (${detail.length > MAX_DETAIL ? `${detail.slice(0, MAX_DETAIL)}…` : detail})`;
   }
   if (e instanceof Error) {

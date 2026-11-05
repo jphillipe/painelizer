@@ -5,6 +5,8 @@ out
 dist
 *.tsbuildinfo
 pnpm-lock.yaml
+packages/web/test-results
+packages/web/playwright-report
 packages/web/next-env.d.ts
 
 # Texto à mão: docs com tabelas e quebras próprias; SQL o Prettier não lê.

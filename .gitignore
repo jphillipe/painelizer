@@ -10,3 +10,12 @@ packages/web/next-env.d.ts
 .env
 .env.*
 !.env.example
+
+# S33: saídas do Playwright e a sessão gravada pelo setup do e2e; AGENTS.md que o `next dev` 16.4 gera.
+packages/web/test-results/
+packages/web/playwright-report/
+packages/web/e2e/.auth/
+packages/web/AGENTS.md
+# CLI do Supabase local (supabase start)
+supabase/.temp/
+supabase/.branches/

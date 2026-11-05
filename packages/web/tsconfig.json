@@ -32,6 +32,11 @@
     "src/**/*.tsx",
     ".next/types/**/*.ts",
     "vitest.config.ts",
+    "e2e/**/*.ts",
+    "integration/**/*.ts",
+    "testing/**/*.ts",
+    "playwright.config.ts",
+    "vitest.integration.config.ts",
     "next.config.ts",
     ".next/dev/types/**/*.ts"
   ],

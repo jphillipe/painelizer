@@ -23,6 +23,9 @@ export default tseslint.config(
       'out/**',
       'docs/**',
       'packages/web/next-env.d.ts',
+      // S33: saídas do Playwright.
+      'packages/web/test-results/**',
+      'packages/web/playwright-report/**',
     ],
   },
   {
@@ -51,6 +54,8 @@ export default tseslint.config(
       'packages/*/*.{js,mjs,cjs,ts}',
       '**/test/**',
       '**/*.test.{ts,tsx}',
+      // S33: setup dos testes contra o Supabase local.
+      'packages/web/testing/**',
     ],
     languageOptions: { globals: { ...globals.node } },
   },

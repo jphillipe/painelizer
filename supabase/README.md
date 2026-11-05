@@ -137,3 +137,27 @@ em Authentication → Users.
 **Desfazer** (se precisar voltar ao código anterior à S32 com o banco já migrado): o código antigo funciona com as
 colunas novas (ignora `deleted_at`), mas a RLS por time vale para ele também — quem não está em time não vê nada.
 
+
+## Testes contra o Supabase local (S33)
+
+`supabase/config.toml` + `supabase/seed.sql` descrevem um Supabase **local** (Docker) só para testes e
+desenvolvimento: `supabase start` sobe Postgres 17, Auth, PostgREST e Storage, aplica `migrations/*.sql` em ordem e
+roda o seed (o time "Rival Framing", para os testes de RLS entre times). Nada disto toca o projeto real — não há
+`supabase link` e o `db push` não manda seed.
+
+- **Contas de teste**: `admin@panelizer.test` (admin do "National Lumber"), `editor@panelizer.test` (editor),
+  `outsider@panelizer.test` (sem time), `rival@panelizer.test` (admin do "Rival Framing"), todas com a senha
+  `panelizer-local-only`. Criadas pela API de admin com a chave secret LOCAL (`packages/web/testing/local-supabase.ts`,
+  `seedAccounts`), não por INSERT em `auth.users` — tabela interna do Auth que muda entre versões da CLI. O setup do
+  Playwright e cada arquivo de integração chamam `seedAccounts`, que também desfaz o que um teste interrompido deixou.
+- **Chaves**: `supabase status -o env | node packages/web/testing/supabase-env.mjs` imprime `TEST_SUPABASE_URL`,
+  `TEST_SUPABASE_PUBLISHABLE_KEY` e `TEST_SUPABASE_SECRET_KEY` (no CI vão para `$GITHUB_ENV`; no Git Bash,
+  `eval "$(… --export)"`). A URL precisa ser da máquina (`127.0.0.1`/`localhost`): os testes recusam outra, para uma
+  chave copiada do `.env.local` nunca apagar dados reais.
+- **Rodar**: `pnpm test:integration` (adaptadores `projects-table`, `team-table`, `drawings-store` e as políticas de
+  RLS direto pelo cliente) e `pnpm e2e` (Playwright: login, sample, editar, F5, gerar, PDF, lista e lixeira). Sem as
+  variáveis, a integração pula tudo e o e2e roda só os fluxos sem login.
+- **Caixa de e-mail**: convites e "esqueci a senha" chegam no Mailpit, `http://127.0.0.1:54324`.
+- **CI**: job `e2e` em `.github/workflows/ci.yml` (CLI 3.0.0, `supabase start` sem Studio/Realtime/Edge, `supabase stop
+  --no-backup` no fim). Só confere o que o banco local aceita: o projeto real ainda precisa das migrações aplicadas à
+  mão (seções "S24 — aplicar" e "S32 — aplicar").

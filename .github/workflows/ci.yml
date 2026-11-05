@@ -35,3 +35,44 @@ jobs:
       - run: pnpm test
       # Erro de build (rota, import de servidor no cliente, config do Next) aparecia só no Cloud Build.
       - run: pnpm --filter web build
+
+  # S33: adaptadores reais, RLS e os fluxos no navegador contra um Supabase LOCAL (Docker do runner): migrações de
+  # `supabase/migrations` + `supabase/seed.sql`; as contas de teste vêm de `packages/web/testing/local-supabase.ts`.
+  # Nada aqui fala com o projeto real. Job à parte do `check`: precisa de Docker e de navegador, que o check não usa.
+  e2e:
+    name: Integration and E2E (local Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.0.0
+      # Só o que o app usa: Postgres, Auth, PostgREST, Storage, Kong e a caixa de e-mail.
+      - run: supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+      - name: Chaves do Supabase local
+        run: supabase status -o env | node packages/web/testing/supabase-env.mjs >> "$GITHUB_ENV"
+      - run: pnpm test:integration
+      # O e2e roda sobre `next start` (CI=true no playwright.config.ts): o build é o mesmo do deploy.
+      - run: pnpm --filter web build
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - name: Relatório do Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            packages/web/playwright-report
+            packages/web/test-results
+          retention-days: 7
+      - if: always()
+        run: supabase stop --no-backup

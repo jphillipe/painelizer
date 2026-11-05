@@ -35,6 +35,11 @@ Perguntas que só a fábrica responde estão em `docs/05-pendencias.md`, com a h
 - `pnpm panelizer build <projeto.json> --out <pasta>` — CLI do motor
 - `git push` na `main` publica no Cloud Run (`.github/workflows/deploy.yml`); migrações do Supabase vão antes
 - `pnpm hipoteses` — regenera `docs/08-revisar.md` a partir de `05-pendencias.md` e dos comentários `Pnn`
+- `pnpm e2e` — Playwright (`packages/web/e2e`); fora do `check`. Sem `TEST_SUPABASE_*` roda sem login e pula login/lista;
+  na máquina usa o Chrome instalado e sobe `next dev` na 3100 (pare o `pnpm web` antes: o Next 16 só aceita um por pasta)
+- `pnpm test:integration` — adaptadores reais e RLS contra o Supabase LOCAL (`supabase start`, Docker); sem
+  `TEST_SUPABASE_*` tudo é pulado. Os dois rodam no job `e2e` do CI. Nunca apontar `TEST_SUPABASE_URL` para o projeto real
+  (a trava recusa host que não seja da máquina)
 
 ## Glossário mínimo
 stud, plate (bottom/top/double top), king stud, jack stud (trimmer), header, sill, cripple, rough opening (RO),

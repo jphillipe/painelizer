@@ -1348,9 +1348,42 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   nada contra o Supabase real (RLS, triggers, PostgREST, `ilike`/cursor no PostgREST, e-mails de convite e
   recuperação, `verifyOtp`), a tela de login com o formulário (sem Supabase ela mostra o aviso), o botão "Add drawings"
   (só aparece com Storage) e o chip de conflito no editor (só testes).
-- [ ] **S33 — Playwright (SRF).** Login, sample, editar, F5 com retomada, gerar, baixar PDF, lista de projetos;
+- [x] **S33 — Playwright (SRF).** Login, sample, editar, F5 com retomada, gerar, baixar PDF, lista de projetos;
   roda no CI de PR contra `supabase start` local (`supabase/config.toml` + seed); testes de integração dos
   adaptadores reais (`projects-table`, `drawings-store`) e das RLS; testes das server actions com services mockados.
+  Feita em 2026-11-04 (sessão encadeada; SRF; aprovada por delegação, sem revisão prévia do humano; commit, sem push;
+  **o job `e2e` do CI e os testes com Supabase não rodaram em lugar nenhum** — sem Docker na máquina). **Supabase
+  local**: `supabase/config.toml` (do `supabase init` da CLI 3.0.0, enxuto: Postgres 17, cadastro desligado como no
+  real, senha 8+, limites de Auth altos para a suíte, `site_url` = `localhost:3100`) e `supabase/seed.sql` (time
+  "Rival Framing" com id fixo); as quatro contas (admin, editor, sem time, rival) vêm da API de admin em
+  `packages/web/testing/local-supabase.ts` (`seedAccounts`, idempotente), com a trava `assertLocalUrl` (só host da
+  máquina) e `testing/supabase-env.mjs` (`supabase status` → `TEST_SUPABASE_*`). **Integração**
+  (`pnpm test:integration`, `vitest.integration.config.ts`, um arquivo por vez): `projects-table` (revisão otimista,
+  `ilike` com `%`/`_` literais, cursor `or(...)` com datas entre aspas e desempate por id, "Mine", lixeira, apagar
+  só admin e da lixeira, retratos sem `$panelizer`/`$underlay`, `NO_TEAM`), `team-table` (memberships, members,
+  `add_team_member` nos quatro resultados, papéis, `LAST_ADMIN`), `drawings-store` (subir/listar/baixar/copiar/apagar,
+  sem time recusado, outro time lê — decisão da S32, tipo fora da lista recusado) e `rls` (anon, time contra time,
+  mudar `team_id`, criar em nome de outro, retratos só leitura, autopromoção, jobs só do dono, funções de limpeza com
+  42501): 29 testes, pulados aqui com o motivo. **E2E** (`pnpm e2e`, `playwright.config.ts`, `@playwright/test`
+  1.64): `auth.setup` (login do admin pelo formulário → `storageState`), `login.spec` (redirect com `next`, senha
+  errada, sair, conta sem time), `editor.spec` (sample → altura da W01 → F5: com Supabase recarrega do banco em
+  `/app/projects/<id>`, sem ele pelo banner "Resume"; gerar e baixar o PDF, conferido com pdf-lib: 13 páginas = planta
+  + 12 folhas), `projects.spec` (lista, busca, abrir pelo nome, lixeira e restaurar); sem Supabase, os de login/lista
+  pulam e entram dois que conferem o modo aberto. **Actions** (`src/app/actions.test.ts`, no `pnpm test`): as 26
+  actions com os services falsos — login exigido nas 23 do `authActionClient` (21 + as 2 de FormData), as 3 sem
+  sessão, `validationErrors` sem chamar o service, `ctx.user`/dono do job adiante, `revalidatePath` só no `ok`,
+  `redirectTo` dos headers (proxy do Cloud Run), PDF em base64, `extractWalls` (arquivos, `jobId` inválido, desenhos
+  que não baixam), tradução de erro. **Achou um bug**: `describeServerError` trocava cada "s" do detalhe de erro de
+  adaptador por espaço (`/s+/` no lugar de `/\s+/`) — "Project TableError: permi ion denied" na tela; corrigido.
+  **CI**: job `e2e` em `ci.yml` (setup-cli 3.0.0, `supabase start` sem Studio/Realtime/Edge/logs, chaves por
+  `supabase-env.mjs`, integração, build, `playwright install --with-deps chromium`, e2e sobre `next start`, relatório
+  como artefato na falha, `supabase stop --no-backup`). Rodou aqui: `pnpm check` duas vezes (core 677, cli 157,
+  extract 210 + 1 pulado, web 532; eram 468), `pnpm --filter web build`, `pnpm e2e` sem Supabase (5 passam, 5
+  pulados; servidor do próprio Playwright, sem o `.env.local`), `pnpm test:integration` (29 pulados com o motivo) e
+  a tela de login contra uma URL de Supabase sem nada ouvindo (redirect com `next`, hidratação, formulário, "Could
+  not reach the sign-in service"). Não rodou: nada com Supabase (integração, login real, gravação, F5 do banco,
+  lista), `next start` do modo CI e o job no GitHub. Não feito (fora do item): Mailpit no e2e (convite e "esqueci a
+  senha" ponta a ponta), upload de desenhos pelo navegador, leitura por IA no e2e.
 - [ ] **S34 — Folha em inglês (depende da resposta da fábrica no Checkpoint 2).** `locale: 'pt' | 'en'` em
   `PanelSvgOptions`/`PlanSvgOptions` com `strings.ts`; asserções de texto de `svg.test.ts` separadas das de
   estrutura; snapshots por locale; CLI e web com a opção. Se a fábrica ficar com português, o item some.

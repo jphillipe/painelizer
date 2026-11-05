@@ -1,0 +1,81 @@
+# Supabase local (S33): `supabase start` sobe Postgres + Auth + PostgREST + Storage em Docker, aplica
+# `migrations/*.sql` em ordem e roda `seed.sql`. Só para testes (CI de PR, job `e2e`) e desenvolvimento; o projeto
+# real (`sulbendliqbfibvmzcpz`) não lê este arquivo — nada aqui é `supabase link`/`db push`.
+#
+# Gerado a partir do `supabase init` da CLI 3.0.0 e enxugado: o que não está aqui fica no padrão da CLI.
+# As contas de teste NÃO vêm do seed: `packages/web/testing/local-supabase.ts` as cria pela API de Auth (ver
+# `seed.sql` e docs/04-decisoes.md, S33).
+
+project_id = "panelizer"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# O mesmo major do projeto no Supabase (criado em 2026-10-22, Postgres 17).
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+# Caixa de e-mail local (Mailpit): convite e "esqueci a senha" chegam aqui, em http://127.0.0.1:54324.
+[local_smtp]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+# O bucket `drawings` limita a 50 MB por objeto (migração 20261103000000); o servidor local não pode limitar menos.
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+# O app do e2e roda na 3100 (packages/web/playwright.config.ts); o `pnpm web` na 3000.
+site_url = "http://localhost:3100"
+additional_redirect_urls = ["http://localhost:3100/auth/confirm**", "http://localhost:3000/auth/confirm**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Como no projeto real (supabase/README.md, passo 5): sem cadastro; contas pelo painel, pelo convite ou, aqui, pela
+# API de admin com a chave secret local.
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 8
+
+[auth.rate_limit]
+# Os testes entram e saem várias vezes por minuto; o padrão (30) derruba a suíte.
+sign_in_sign_ups = 300
+token_refresh = 300
+token_verifications = 300
+email_sent = 30
+
+[auth.email]
+enabled = true
+double_confirm_changes = true
+enable_confirmations = false
+secure_password_change = false
+max_frequency = "1s"
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false

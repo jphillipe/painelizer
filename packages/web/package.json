@@ -10,6 +10,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
@@ -43,6 +45,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10",
     "@testing-library/react": "^16",

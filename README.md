@@ -30,10 +30,20 @@ pnpm check         # lint + typecheck + test
 pnpm --filter web build   # next build, como o CI e o deploy
 pnpm format:check  # Prettier só confere (o reformat geral do código ainda não foi feito)
 pnpm hipoteses     # regenera docs/08-revisar.md
+pnpm e2e           # Playwright (packages/web/e2e); fora do check — ver abaixo
+pnpm test:integration   # adaptadores e RLS contra o Supabase local (supabase start)
 ```
 
 O CI (`.github/workflows/ci.yml`) roda install, lint, typecheck, test e `next build` em todo PR e push fora da
-`main`; o push na `main` faz o mesmo e publica (`deploy.yml`).
+`main`; o push na `main` faz o mesmo e publica (`deploy.yml`). Num job à parte (`e2e`), o CI sobe um Supabase local
+(`supabase start`: migrações + `supabase/seed.sql`), roda `pnpm test:integration`, faz o build e roda `pnpm e2e`
+sobre `next start` — nada fala com o projeto real.
+
+Na máquina, sem Docker, `pnpm e2e` roda os fluxos sem login (sample, editar, F5 com retomada, gerar, baixar o PDF)
+com o Chrome instalado (`E2E_CHANNEL=chrome`) e pula login e lista de projetos; `pnpm test:integration` pula tudo,
+com o motivo. Com Docker: `supabase start` e as chaves locais no ambiente (Git Bash/WSL) —
+`eval "$(supabase status -o env | node packages/web/testing/supabase-env.mjs --export)"` — e os dois rodam inteiros.
+Detalhes em [`supabase/README.md`](supabase/README.md), "Testes contra o Supabase local".
 
 ## App web
 

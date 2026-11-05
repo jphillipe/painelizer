@@ -8,6 +8,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "test:integration": "pnpm --filter web test:integration",
+    "e2e": "pnpm --filter web e2e",
     "format:check": "prettier --check .",
     "panelizer": "pnpm --filter cli panelizer",
     "hipoteses": "node scripts/hipoteses.mjs",
