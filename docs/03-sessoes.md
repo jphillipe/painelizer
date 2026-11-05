@@ -1384,9 +1384,30 @@ Revista de novo pelo humano no mesmo dia, ao fim da Fase 6: **Fase 7 (S28.1 → 
   not reach the sign-in service"). Não rodou: nada com Supabase (integração, login real, gravação, F5 do banco,
   lista), `next start` do modo CI e o job no GitHub. Não feito (fora do item): Mailpit no e2e (convite e "esqueci a
   senha" ponta a ponta), upload de desenhos pelo navegador, leitura por IA no e2e.
-- [ ] **S34 — Folha em inglês (depende da resposta da fábrica no Checkpoint 2).** `locale: 'pt' | 'en'` em
+- [x] **S34 — Folha em inglês (depende da resposta da fábrica no Checkpoint 2).** `locale: 'pt' | 'en'` em
   `PanelSvgOptions`/`PlanSvgOptions` com `strings.ts`; asserções de texto de `svg.test.ts` separadas das de
   estrutura; snapshots por locale; CLI e web com a opção. Se a fábrica ficar com português, o item some.
+  Feita em 2026-11-04 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push; a
+  fábrica não respondeu o idioma — **padrão continua português**, hipótese P51 nova). **Core**: `sheet/strings.ts`
+  com `SheetStrings` (cabeçalho, vista, face, cotas de RO, lista de peças, corte na obra, avanço, legenda, avisos e
+  os `<title>` da planta) em duas tabelas, `sheetStrings(locale)`, `SHEET_LOCALES`, `DEFAULT_SHEET_LOCALE = 'pt'`,
+  `isSheetLocale`; `locale?` em `PanelSvgOptions` e `PlanSvgOptions` (título padrão da planta "Panel plan" em
+  inglês); as partes da folha recebem o `SheetStrings` em vez de importar constantes; `warningMessageEn` em
+  `messages.ts` para os avisos no rodapé da folha em inglês (o `Warning.message` segue em português). Termos de
+  `02-framing` iguais nos dois idiomas; "peitoril" → "sill height", "seção" → "size", "cortar na obra" → "field
+  cut" (decisões em 04). **Testes**: texto saiu de `svg.test.ts`/`planSvg.test.ts` (ficaram posições, contagens e
+  classes) para `test/output/sheetText.test.ts` — tabela de frases por idioma, desenho igual nos dois (texto tirado),
+  nenhuma palavra em português na folha em inglês, avisos, e **10 snapshots novos em `test/__snapshots__/en/`**; os
+  10 em português **sem um byte mudado**. **CLI**: `locale` na raiz do projeto (`oneOf(['pt','en'])` no schema),
+  `Project.locale`, `buildProject` passa às folhas e à planta, `--locale pt|en` passa por cima do arquivo; CSVs e
+  mensagens do CLI iguais. **Web**: `ProjectDraft.locale` (lido e escrito depois de `revision`), `updateProject`
+  aceita `locale`, "Sheet language" nas configurações do projeto ("Portuguese (default)" = sem a chave). Testes: core
+  677 → 717, cli 157 → 165, extract 210 + 1 pulado, web 532 → 534. Verde: `pnpm check` duas vezes e `pnpm --filter
+  web build`. Conferido: folha `wall-144-window-door`, `house-corner-L-W2` (avanço) e planta 28x40 em inglês
+  renderizadas para PNG pelo Chrome headless (textos cabem, nada sobreposto além do que a folha em português já
+  tem); no app (`next dev` sem Supabase, 3001), sample → Sheet language = English → Generate panels: planta e folhas
+  em inglês (o PDF da tela sai dessas folhas). Não feito (fora do item): unificar as frases de aviso do core com as
+  de `web/lib/messages.en.ts`; resumo e mensagens do CLI seguem em português (CSVs já tinham cabeçalho em inglês).
 
 Backlog sem sessão: DXF (P12: exceção), paredes entre unidades com studs alternados (Matilda, IBC), PDF vetorial
 e capa com BOM, `getClaims()` no proxy (duas consultas de auth por action), underlay no bucket em vez de data URL,

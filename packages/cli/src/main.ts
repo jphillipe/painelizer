@@ -3,20 +3,20 @@
  * grava os arquivos. Este é o único módulo do repositório (junto com `bin/`)
  * que toca `node:fs`.
  *
- * Uso: `panelizer build <projeto.json> --out <dir>`
+ * Uso: `panelizer build <projeto.json> --out <dir> [--locale pt|en]`
  * Códigos de saída: 0 ok; 1 erro de projeto/geração; 2 uso incorreto.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { piecesOf } from 'core';
+import { isSheetLocale, piecesOf, SHEET_LOCALES, type SheetLocale } from 'core';
 import { buildProject, BuildError, problemText, type BuildResult } from './build';
 import { parseProject, ProjectError } from './project';
 
 export const USAGE = `panelizer — motor de painelização de paredes
 
 Uso:
-  panelizer build <projeto.json> --out <dir>
+  panelizer build <projeto.json> --out <dir> [--locale pt|en]
 
 Gera em <dir>:
   cutlist.csv        lista de corte de todos os painéis
@@ -28,8 +28,10 @@ Gera em <dir>:
                      cortes na obra e avisos — abra e imprima no navegador
 
 Opções:
-  --out <dir>   diretório de saída (obrigatório; criado se não existir)
-  -h, --help    esta ajuda
+  --out <dir>      diretório de saída (obrigatório; criado se não existir)
+  --locale pt|en   idioma das folhas e da planta; passa por cima do "locale" do projeto
+                   (sem os dois: português)
+  -h, --help       esta ajuda
 `;
 
 /** Superfície de I/O injetável para testar sem tocar o disco. */
@@ -59,6 +61,8 @@ export interface BuildArgs {
   command: 'build';
   input: string;
   out: string;
+  /** `--locale`: idioma das folhas e da planta, por cima do `locale` do arquivo (S34). */
+  locale?: SheetLocale;
 }
 
 export type ParsedArgs = BuildArgs | { command: 'help' };
@@ -77,6 +81,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
 
   let input: string | undefined;
   let out: string | undefined;
+  let locale: SheetLocale | undefined;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i] as string;
     if (a === '--out' || a === '-o') {
@@ -85,6 +90,10 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       out = v;
     } else if (a.startsWith('--out=')) {
       out = a.slice('--out='.length);
+    } else if (a === '--locale' || a.startsWith('--locale=')) {
+      const v = a === '--locale' ? rest[++i] : a.slice('--locale='.length);
+      if (!isSheetLocale(v)) throw new UsageError(`--locale exige ${SHEET_LOCALES.join(' ou ')}`);
+      locale = v;
     } else if (a.startsWith('-')) {
       throw new UsageError(`opção desconhecida: "${a}"`);
     } else if (input === undefined) {
@@ -95,7 +104,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   }
   if (input === undefined) throw new UsageError('informe o arquivo <projeto.json>');
   if (out === undefined || out === '') throw new UsageError('informe --out <dir>');
-  return { command: 'build', input, out };
+  return { command: 'build', input, out, ...(locale === undefined ? {} : { locale }) };
 }
 
 /**
@@ -130,7 +139,9 @@ export function run(argv: readonly string[], io: Io = nodeIo, cwd: string = proc
 
   let result: BuildResult;
   try {
-    result = buildProject(parseProject(text, args.input));
+    const project = parseProject(text, args.input);
+    if (args.locale !== undefined) project.locale = args.locale;
+    result = buildProject(project);
   } catch (e) {
     if (e instanceof BuildError) {
       io.stderr(`erro: ${e.problems.length} problema(s) ao gerar os painéis — nenhum arquivo gravado`);

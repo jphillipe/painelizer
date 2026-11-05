@@ -4,7 +4,7 @@
 
 import type { Panel } from '../../panel';
 import { esc, px } from './primitives';
-import { infoLine, stampLine, viewNote } from './strings';
+import type { SheetStrings } from './strings';
 
 /** Altura do cabeçalho: três linhas (id/projeto, dados do painel/data, vista). */
 export const TITLE_HEIGHT = 60;
@@ -23,6 +23,7 @@ export function sheetHeader(
   totalW: number,
   pieces: number,
   weightLb: number,
+  S: SheetStrings,
 ): string[] {
   const out: string[] = [];
   const right = totalW - margin;
@@ -38,9 +39,9 @@ export function sheetHeader(
   }
   out.push(
     `<text class="info" x="${px(margin)}" y="${px(margin + 34)}" font-size="12" fill="#333">` +
-      `${esc(infoLine(panel, pieces, weightLb))}</text>`,
+      `${esc(S.infoLine(panel, pieces, weightLb))}</text>`,
   );
-  const date = stampLine(stamp.date, stamp.revision);
+  const date = S.stampLine(stamp.date, stamp.revision);
   if (date !== '') {
     out.push(
       `<text class="stamp" x="${px(right)}" y="${px(margin + 34)}" font-size="11" fill="#333" ` +
@@ -49,7 +50,7 @@ export function sheetHeader(
   }
   out.push(
     `<text class="view" x="${px(margin)}" y="${px(margin + 48)}" font-size="11" fill="#333">` +
-      `${esc(viewNote(panel))}</text>`,
+      `${esc(S.viewNote(panel))}</text>`,
   );
   return out;
 }

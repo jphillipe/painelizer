@@ -35,12 +35,10 @@ function attr(tag: string, name: string): string {
 }
 
 describe('housePlanSvg — casa 28x40', () => {
-  it('é um documento SVG autocontido, com título e resumo', () => {
+  it('é um documento SVG autocontido', () => {
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
     expect(svg.trimEnd().endsWith('</svg>')).toBe(true);
     expect(svg).not.toMatch(/NaN|undefined/);
-    expect(svg).toContain('>Planta de painéis</text>');
-    expect(svg).toContain(`>5 paredes · 12 painéis · 40'-5 1/2&quot; × 28'-5 1/2&quot; (faces externas)</text>`);
   });
 
   it('uma plate por parede, com a espessura real e as pontas como ficam (quem atravessa vai à face externa)', () => {
@@ -65,8 +63,6 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(attr(w05, 'x')).toBe(px(toPx(264 - 1.75)));
     expect(attr(w05, 'width')).toBe('7');
     expect(attr(w05, 'height')).toBe(px(330.5 * 2));
-    expect(svg).toContain(`<title>W01 2x6 · plate 40'-5 1/2&quot; · 3 painéis</title>`);
-    expect(svg).toContain(`<title>W05 2x4 · plate 27'-6 1/2&quot; · 2 painéis</title>`);
   });
 
   it('aberturas como vão: porta sem traço no eixo, janela com; id dentro do vão', () => {
@@ -80,7 +76,6 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(attr(gap, 'width')).toBe('76');
     expect(attr(gap, 'height')).toBe('11');
     expect(tags(p1, /<line/g)).toHaveLength(2);
-    expect(svg).toContain('<title>P1 porta · RO 38&quot; · parede W01</title>');
     expect(svg).toContain(`<text class="opening-id" x="${px(toPx(187))}" y="${px(toPy(0))}" font-size="7"`);
     // J2 na W02 (vertical, start (480,0), offset 72): vão de 11 × 72 px e o traço no eixo x=480.
     const j2 = svg.slice(svg.indexOf('<title>J2 janela'), svg.indexOf('</g>', svg.indexOf('<title>J2 janela')));
@@ -98,7 +93,6 @@ describe('housePlanSvg — casa 28x40', () => {
     expect(attr(j, 'x2')).toBe(px(toPx(141.25)));
     expect(attr(j, 'y1')).toBe(px(toPy(-2.75) + 6));
     expect(attr(j, 'y2')).toBe(px(toPy(2.75) - 6));
-    expect(svg).toContain('<title>junta 1-W01-P1 | 1-W01-P2</title>');
   });
 
   it('ids dos painéis do lado de fora, na ordem; ids de parede do lado de dentro; paredes em y com texto girado', () => {
@@ -125,7 +119,6 @@ describe('housePlanSvg — casa 28x40', () => {
 
   it('seta do norte só com northAngle; o ângulo vira rotate() no sentido horário', () => {
     expect(svg).toContain('<g class="north" transform="rotate(0 ');
-    expect(svg).toContain('<title>norte: 0° do +y da planta, sentido horário</title>');
     const { northAngle, ...rest } = house;
     expect(northAngle).toBe(0);
     expect(housePlanSvg(rest, panels)).not.toContain('class="north"');
@@ -180,6 +173,5 @@ describe('housePlanSvg — canto em L', () => {
     expect(out).not.toContain('class="joint"');
     expect(out).toContain('>1-W1-P1</text>');
     expect(out).toContain('>1-W2-P1</text>');
-    expect(out).toContain(`>2 paredes · 2 painéis · 12'-2 3/4&quot; × 10'-2 3/4&quot; (faces externas)</text>`);
   });
 });

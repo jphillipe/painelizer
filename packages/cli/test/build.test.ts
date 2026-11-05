@@ -90,6 +90,27 @@ describe('buildProject', () => {
     expect(bare).toContain('text-anchor="end">casa-exemplo</text>');
   });
 
+  it('locale (S34): folhas e planta no idioma do projeto; sem locale = português; o resto da saída igual', () => {
+    const en = example();
+    en.locale = 'en';
+    const r = buildProject(en);
+    const sheet = r.files.find((f) => f.path === 'panels/1-W07-P1.svg')!.content;
+    expect(sheet).toContain('>Pieces</text>');
+    expect(sheet).toContain('· door</text>');
+    expect(sheet).not.toContain('peças');
+    const plan = r.files.find((f) => f.path === 'plan.svg')!.content;
+    expect(plan).toContain(' · wall W01</title>');
+    expect(plan).toContain(' walls · 7 panels · ');
+    expect(plan).not.toContain('parede');
+    // Sem locale e com 'pt': byte a byte iguais; CSVs, painéis e BOM não dependem do idioma.
+    const pt = example();
+    pt.locale = 'pt';
+    expect(buildProject(pt).files).toEqual(result.files);
+    expect(r.files.filter((f) => f.path.endsWith('.csv'))).toEqual(result.files.filter((f) => f.path.endsWith('.csv')));
+    expect(r.panels).toEqual(result.panels);
+    expect(r.bom).toEqual(result.bom);
+  });
+
   it('W07: janela e porta com king compartilhado — 24 peças, como o fixture wall-144-window-door', () => {
     const w07 = result.panels.find((p) => p.id === '1-W07-P1')!;
     expect(w07.members).toHaveLength(24);

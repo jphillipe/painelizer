@@ -52,7 +52,15 @@ describe('parseArgs', () => {
     expect(parseArgs(['build', '-h'])).toEqual({ command: 'help' });
   });
 
+  it('--locale pt|en, com espaço ou =', () => {
+    expect(parseArgs(['build', 'p.json', '--out', 'd', '--locale', 'en'])).toEqual({ command: 'build', input: 'p.json', out: 'd', locale: 'en' });
+    expect(parseArgs(['build', '--locale=pt', 'p.json', '--out', 'd'])).toEqual({ command: 'build', input: 'p.json', out: 'd', locale: 'pt' });
+  });
+
   it.each([
+    [['build', 'p.json', '--out', 'd', '--locale'], /--locale exige pt ou en/],
+    [['build', 'p.json', '--out', 'd', '--locale', 'es'], /--locale exige pt ou en/],
+    [['build', 'p.json', '--out', 'd', '--locale=EN'], /--locale exige pt ou en/],
     [['fly'], /comando desconhecido: "fly"/],
     [['build'], /informe o arquivo/],
     [['build', 'p.json'], /informe --out/],
@@ -144,6 +152,22 @@ describe('run (I/O em memória)', () => {
       '  panels/1-W07-P1.svg',
     ]);
     expect(m.err).toEqual([]);
+  });
+
+  it('--locale en: folhas e planta em inglês, por cima do locale do arquivo; CSVs iguais', () => {
+    const pt = memoryIo({ 'p.json': exampleText });
+    expect(run(['build', 'p.json', '--out', 'saida'], pt.io)).toBe(0);
+    const en = memoryIo({ 'p.json': JSON.stringify({ ...JSON.parse(exampleText), locale: 'pt' }) });
+    expect(run(['build', 'p.json', '--out', 'saida', '--locale', 'en'], en.io)).toBe(0);
+    const outDir = resolve('saida');
+    expect(en.written.get(join(outDir, 'plan.svg'))).toContain(' walls · ');
+    expect(en.written.get(join(outDir, 'panels', '1-W01-P1.svg'))).toContain('>Pieces</text>');
+    expect(pt.written.get(join(outDir, 'panels', '1-W01-P1.svg'))).toContain('>Peças</text>');
+    for (const csv of ['cutlist.csv', 'bom.csv', 'panels.csv']) {
+      expect(en.written.get(join(outDir, csv))).toBe(pt.written.get(join(outDir, csv)));
+    }
+    // O resumo do CLI continua em português (é a língua do operador, não da folha).
+    expect(en.out[0]).toBe(pt.out[0]);
   });
 
   it('avisos do core vão para o stderr sem mudar o código de saída', () => {

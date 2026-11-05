@@ -343,3 +343,11 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   menor número de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma no meio da cavidade até
   241.5"); bloco deitado da seção da parede em todo vão ≥ 1.5" entre peças de altura inteira, fora das zonas de
   abertura e do vão do ladder do T — S31 (a S36 revê junto com as fileiras por altura, P44).
+
+## Novas (abertas em 2026-11-04, S34 — folha em inglês)
+- [ ] **P51 — Idioma padrão da folha e da planta.** As folhas de fabricação e a planta de painéis saem em português
+  desde a S5; a fábrica (EUA) não disse em que idioma quer recebê-las (pergunta do Checkpoint 2). — hipótese:
+  **português** é o padrão até a fábrica responder; inglês existe como opção (`locale: "en"` no arquivo do projeto,
+  `--locale en` no CLI, "Sheet language" nas configurações do projeto no app). Se a fábrica escolher inglês, troca-se
+  só `DEFAULT_SHEET_LOCALE` em `core/src/output/sheet/strings.ts` (e os snapshots em português passam a ser os de
+  `locale: 'pt'` explícito) — S34.

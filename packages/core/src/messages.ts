@@ -330,6 +330,77 @@ export function engineErrorMessagePt(code: EngineErrorCode, params: MessageParam
   return ERROR_PT[code](params, where);
 }
 
+/** "Wall W01, opening J1: …" / "Wall W01: …" / "Opening J1: …" / o corpo com maiúscula. */
+function atEn(w: MessageWhere, body: string): string {
+  const parts: string[] = [];
+  if (w.wallId !== undefined) parts.push(`Wall ${w.wallId}`);
+  if (w.openingId !== undefined) parts.push(parts.length === 0 ? `Opening ${w.openingId}` : `opening ${w.openingId}`);
+  if (parts.length === 0) return body.charAt(0).toUpperCase() + body.slice(1);
+  return `${parts.join(', ')}: ${body}`;
+}
+
+/**
+ * Avisos em inglês para a folha com `locale: 'en'` (S34), montados só de código + parâmetros, como os em
+ * português. As frases acompanham as da tela (`web/lib/messages.en.ts`, S26).
+ */
+const WARNING_EN: Record<WarningCode, Template> = {
+  STUD_LENGTH_MISMATCH: (p, w) =>
+    atEn(
+      { wallId: w.wallId },
+      `wall height ${inch(p.height)} minus 3 plates of ${inch(p.plateThickness)} needs a ${inch(p.studLength)} stud, which is ` +
+        `not one of the precut lengths (${((p.precuts ?? []) as readonly number[]).map((x) => `${x}"`).join(', ')})`,
+    ),
+  HEADER_JACKS_BELOW_TABLE: (p, w) =>
+    p.reason === 'neighbor'
+      ? atEn(w, `1 jack stud per side instead of ${p.wanted} — only ${inch(p.gap)} to the RO of ${p.neighborId}`)
+      : atEn(w, `${p.jacks} jack stud(s) per side, but table ${p.table} asks for ${p.tableJacks} for a ${p.plies}-${p.section} header over ${inch(p.span)}`),
+  HEADER_KINGS_BELOW_TABLE: (p, w) =>
+    p.reason === 'shared'
+      ? atEn(
+          { wallId: w.wallId },
+          `openings ${p.prevId} and ${w.openingId}: ${p.used} shared king stud(s) instead of ${p.wanted} — only ${inch(p.gap)} between the ROs`,
+        )
+      : atEn(
+          w,
+          `${p.kings} king stud(s) per side, but table ${p.table} asks for ${p.tableKings} for a ${inch(p.span)} span at ` +
+            `${p.windSpeed} mph, exposure ${p.exposure}`,
+        ),
+  OPENING_NUDGED: (p, w) =>
+    atEn(
+      w,
+      `moved ${inch(p.distance)} to the ${p.direction === 'left' ? 'left' : 'right'} (RO edge from ${p.from} to ${p.to}) — it touched ` +
+        `${p.touched === 'start' ? 'the start of the wall' : p.touched === 'end' ? 'the end of the wall' : `wall ${p.teeWallId ?? '?'} at a tee`}; check the reading`,
+    ),
+  WIND_SPEED_MISSING: (_p, w) =>
+    atEn(w, 'exterior wall without a wind speed — king studs not checked against table R602.7.5; the panel uses 1 king per side'),
+  SPECIES_NOT_IN_TABLE: (p, w) =>
+    atEn(w, `header from table ${p.table}, which is for SPF No. 2; the project specifies ${p.species} — check the span for that species or use the project header schedule`),
+  DOOR_RO_HEIGHT_MISMATCH: (p, w) =>
+    atEn({ openingId: w.openingId }, `door RO ${inch(p.roughHeight)} tall (from the subfloor) does not match the header base at ${inch(p.headerBase)}`),
+  OPENING_AT_TEE: (p, w) =>
+    atEn(
+      { wallId: w.wallId },
+      `wall ${p.teeWallId} meets it in a tee at x=${p.x} (strip ${p.lo}–${p.hi}), in the zone of opening(s) ${list(p.openingIds)} [${p.start}, ${p.end}] — ` +
+        'king/jack studs and the ladder blocking want the same spot; move the opening or the wall',
+    ),
+  OPENING_NEAR_CORNER: (p, w) =>
+    atEn(w, `king stud ${inch(p.gap)} from the ${p.end === 'start' ? 'start' : 'end'} of the wall — the end stud does not fit (minimum ${inch(p.min)}); move the opening to the corner or away from it`),
+  STUDS_OVERLAP: (p, w) =>
+    atEn({ wallId: w.wallId }, `${p.aRole} at x=${p.aX} and ${p.bRole} at x=${p.bX} overlap by ${inch(p.overlap)} — the shop decides whether to double the stud or skip the mark`),
+  STUD_HEIGHT_ABOVE_LIMIT: (p, w) =>
+    atEn(
+      { wallId: w.wallId },
+      `${inch(p.studLength)} studs exceed the ${inch(p.limit)} limit for a ${p.bearing ? 'bearing' : 'non-bearing'} ${p.section} wall (table R602.3(5)) — needs a structural design`,
+    ),
+  PANEL_OVERWEIGHT: (p) =>
+    `Panel ${p.panelId}: estimated weight ${p.weight} lb is over the ${p.max} lb limit (config.panel.maxWeight) and no break fixes it — check with the shop`,
+};
+
+/** A frase em inglês de um aviso (folha com `locale: 'en'`, S34). */
+export function warningMessageEn(code: WarningCode, params: MessageParams, where: MessageWhere = {}): string {
+  return WARNING_EN[code](params, where);
+}
+
 /**
  * Erro do motor com código: o que o projeto pede e não dá para enquadrar. `message` é a frase em português
  * (CLI); quem traduz lê `code`, `wallId`, `openingId` e `params`. Estende `RangeError` (que é `Error`) para

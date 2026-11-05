@@ -10,7 +10,7 @@ import { formatInches } from '../../units';
 import { layoutMarks } from '../../rules/studs';
 import { memberBox, type ToPx, type ToPy } from './members';
 import { DIM, MUTED, dimensionH, dimensionV, esc, px } from './primitives';
-import { OPENING_DIM, openingLabel } from './strings';
+import type { SheetStrings } from './strings';
 
 /** Altura de uma fileira de rótulos girados da cadeia (até `143 1/4"` em 9 px). */
 export const CHAIN_ROW = 46;
@@ -22,7 +22,8 @@ const CHAIN_MIN_SPACING = 11;
  * na vertical, junto ao jack direito, peitoril (base do RO) e altura do RO em cadeia e a base do header
  * (= topo do RO) ao subfloor em linha própria. Porta (base do RO em 0): uma linha só.
  */
-export function openingDims(o: PanelOpening, panel: Panel, toPx: ToPx, toPy: ToPy): string[] {
+export function openingDims(o: PanelOpening, panel: Panel, toPx: ToPx, toPy: ToPy, S: SheetStrings): string[] {
+  const OPENING_DIM = S.openingDim;
   if (!(o.width > 0) || !(o.height > 0) || !Number.isFinite(o.top)) {
     throw new RangeError(`panelSvg: painel ${panel.id}: abertura ${o.id} com RO inválido (${o.width} × ${o.height}, topo ${o.top})`);
   }
@@ -34,7 +35,7 @@ export function openingDims(o: PanelOpening, panel: Panel, toPx: ToPx, toPy: ToP
   out.push(dimensionH(toPx(o.x), toPx(o.x + o.width), widthY, toPy(o.top), OPENING_DIM.width(o.width)));
   out.push(
     `<text class="opening-id" x="${px(toPx(o.x + o.width / 2))}" y="${px(widthY + 12)}" font-size="10" ` +
-      `fill="${MUTED}" text-anchor="middle">${esc(openingLabel(o))}</text>`,
+      `fill="${MUTED}" text-anchor="middle">${esc(S.openingLabel(o))}</text>`,
   );
   // Alturas: linhas verticais recuadas do jack direito.
   const inset = Math.min(5, o.width / 4);

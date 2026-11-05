@@ -66,11 +66,12 @@ pnpm panelizer build packages/cli/examples/casa-exemplo.json --out saida/
 
 Gera `cutlist.csv`, `bom.csv`, `panels.csv`, `plan.svg` (planta de painéis, só em projeto em planta) e
 `panels/<id>.svg` (a folha de fabricação de cada painel, id `{pavimento}-{parede}-P{n}`; abra e imprima no
-navegador). Entrada: `{ "name", "date"?, "revision"?, "config", "walls": [...], "stockLengths"? }`, medidas em
+navegador). Entrada: `{ "name", "date"?, "revision"?, "locale"?, "config", "walls": [...], "stockLengths"? }`, medidas em
 polegadas decimais ou pés-pol-fração (`"12'-0\""`, `"92 5/8\""`). Parede **em planta** (`start`/`end` no eixo; o
 motor resolve cantos, T e comprimento de plate) ou **solta** (`length`), sem misturar os dois no mesmo arquivo.
 Aberturas direto (`offset`, `roughWidth`…) ou pelo catálogo do projeto (`type`, `center`, `headerMark`). Formato
-completo em `packages/cli/src/project.ts`; exemplos em `packages/cli/examples/`.
+completo em `packages/cli/src/project.ts`; exemplos em `packages/cli/examples/`. Folhas e planta em português por padrão;
+`"locale": "en"` no projeto ou `--locale en` no comando as gera em inglês.
 
 ## Leitura por IA (extract)
 

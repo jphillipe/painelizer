@@ -1,7 +1,7 @@
 'use client';
 
 import type { Dispatch } from 'react';
-import type { DraftConfig, DraftPanelConfig, ProjectDraft } from '@/lib/editor/draft';
+import type { DraftConfig, DraftPanelConfig, ProjectDraft, SheetLocale } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
 import type { EditorAction } from '@/lib/editor/state';
 import type { ExtractOutcome } from '@/types/extract';
@@ -48,6 +48,9 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
           </Field>
           <Field id="p-north" label="North angle (°)" hint="From plan +y, clockwise">
             <NumberInput id="p-north" value={draft.northAngle} placeholder="0" onCommit={(v) => setProject({ northAngle: v })} />
+          </Field>
+          <Field id="p-locale" label="Sheet language" hint="Text on the panel sheets and the plan">
+            <EnumSelect id="p-locale" value={draft.locale} noneLabel="Portuguese (default)" options={LOCALE_OPTIONS} onChange={(v) => setProject({ locale: v as SheetLocale | undefined })} />
           </Field>
         </div>
       </Section>
@@ -139,6 +142,11 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
   );
 }
 
+/** S34: o padrão do motor é português até a fábrica responder (P51); escolher aqui grava `locale` no arquivo. */
+const LOCALE_OPTIONS = [
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'en', label: 'English' },
+] as const;
 const CORNER_OPTIONS = [
   { value: 'california', label: 'California (flat stud)' },
   { value: 'three-stud', label: 'Three studs' },

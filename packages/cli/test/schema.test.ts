@@ -116,6 +116,21 @@ describe('schema strict (S28.2)', () => {
   });
 });
 
+describe('locale (S34)', () => {
+  it('pt ou en na raiz; ausente = sem locale (o core usa o padrão)', () => {
+    expect(projectFrom(project({ locale: 'en' }), 'p').locale).toBe('en');
+    expect(projectFrom(project({ locale: 'pt' }), 'p').locale).toBe('pt');
+    expect(projectFrom(project(), 'p')).not.toHaveProperty('locale');
+  });
+
+  it('outro valor é erro oneOf com os aceitos', () => {
+    expect(() => projectFrom(project({ locale: 'es' }), 'p')).toThrow(/^p.locale: esperado um de pt, en, recebido "es"/);
+    const r = projectFileSchema.safeParse(project({ locale: 'EN' }));
+    expect(r.success).toBe(false);
+    expect((r.error!.issues[0] as { params?: unknown }).params).toEqual({ rule: 'oneOf', received: 'EN', allowed: ['pt', 'en'] });
+  });
+});
+
 describe('fireBlockAt e prices (S31)', () => {
   const cfg = (extra: Record<string, unknown>) => project({ config: { studSpacing: 16, studLength: 92.625, ...extra } });
 

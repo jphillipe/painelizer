@@ -15,6 +15,7 @@
  *   fora (o lado oposto ao centro da planta) e o id da parede, do lado de dentro, no meio da plate.
  * - Cotas externas totais (faces externas) embaixo e à esquerda; seta do norte no canto superior direito quando
  *   `house.northAngle` existe (graus, do +y da planta no sentido horário).
+ * - Idioma (S34): `opts.locale` escolhe as frases de `sheet/strings.ts` (`'pt'` padrão, `'en'`).
  * - Saída determinística: mesma entrada → mesma string.
  */
 
@@ -22,16 +23,19 @@ import type { Panel } from '../panel';
 import { sectionDepth } from '../sections';
 import type { Point } from '../wall';
 import type { House, HouseWall } from '../house/types';
-import { formatFeetInches, formatInches } from '../units';
+import { formatFeetInches } from '../units';
 import { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
+import { sheetStrings, type SheetLocale, type SheetStrings } from './sheet/strings';
 
 export interface PlanSvgOptions {
   /** Pixels por polegada. Padrão 2. */
   scale?: number;
   /** Margem externa em px. Padrão 24. */
   margin?: number;
-  /** Título no topo. Padrão "Planta de painéis". */
+  /** Título no topo. Padrão "Planta de painéis" ("Panel plan" em inglês). */
   title?: string;
+  /** Idioma dos textos (S34). Ausente = `DEFAULT_SHEET_LOCALE` (`'pt'`, hipótese P51). */
+  locale?: SheetLocale;
 }
 
 const FILL_EXTERIOR = '#d9c9a8';
@@ -72,7 +76,8 @@ interface WallGeom {
 export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanSvgOptions = {}): string {
   const scale = opts.scale ?? 2;
   const margin = opts.margin ?? 24;
-  const title = opts.title ?? 'Planta de painéis';
+  const S = sheetStrings(opts.locale);
+  const title = opts.title ?? S.plan.title;
   if (!Number.isFinite(scale) || scale <= 0) {
     throw new RangeError(`housePlanSvg: scale inválido (${scale}); esperado número > 0`);
   }
@@ -126,12 +131,11 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   );
   out.push(
     `<text x="${px(margin)}" y="${px(margin + 34)}" font-size="12" fill="#333">` +
-      `${walls.length} paredes · ${panels.length} painéis · ` +
-      `${esc(formatFeetInches(maxX - minX))} × ${esc(formatFeetInches(maxY - minY))} (faces externas)</text>`,
+      `${esc(S.plan.summary(walls.length, panels.length, maxX - minX, maxY - minY))}</text>`,
   );
 
   if (house.northAngle !== undefined) {
-    out.push(northArrow(house.northAngle, totalW - margin - 22, margin + 22));
+    out.push(northArrow(house.northAngle, totalW - margin - 22, margin + 22, S));
   }
 
   // Paredes (plates com a espessura real).
@@ -144,7 +148,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
     out.push(
       `<rect class="wall ${kind}" x="${px(toPx(r.x0))}" y="${px(toPy(r.y1))}" width="${px((r.x1 - r.x0) * scale)}" ` +
         `height="${px((r.y1 - r.y0) * scale)}" fill="${w.wall.exterior ? FILL_EXTERIOR : FILL_INTERIOR}">` +
-        `<title>${esc(`${w.wall.id} ${w.wall.section} · plate ${formatFeetInches(length)} · ${n} ${n === 1 ? 'painel' : 'painéis'}`)}</title></rect>`,
+        `<title>${esc(S.plan.wallTitle(w.wall.id, w.wall.section, length, n))}</title></rect>`,
     );
   }
   out.push('</g>');
@@ -152,7 +156,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   // Aberturas como vão.
   for (const w of walls) {
     for (const o of w.wall.openings) {
-      out.push(openingMark(w, o.id, o.type, o.offset, o.roughWidth, scale, P));
+      out.push(openingMark(w, o.id, o.type, o.offset, o.roughWidth, scale, P, S));
     }
   }
 
@@ -160,7 +164,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   for (const w of walls) {
     const outward: 1 | -1 = w.axis >= (w.dir === 'x' ? cy : cx) ? 1 : -1;
     for (let i = 0; i + 1 < w.panels.length; i++) {
-      out.push(jointTick(w, w.panels[i]!, w.panels[i + 1]!, scale, P));
+      out.push(jointTick(w, w.panels[i]!, w.panels[i + 1]!, scale, P, S));
     }
     for (const p of w.panels) {
       const plan = p.plan!;
@@ -176,7 +180,7 @@ export function housePlanSvg(house: House, panels: readonly Panel[], opts: PlanS
   out.push('<g class="panel-hits" fill="transparent" stroke="none">');
   for (const w of walls) {
     for (const p of w.panels) {
-      out.push(panelHit(w, p, scale, P));
+      out.push(panelHit(w, p, scale, P, S));
     }
   }
   out.push('</g>');
@@ -255,6 +259,7 @@ function openingMark(
   roughWidth: number,
   scale: number,
   P: (p: Point) => [number, number],
+  S: SheetStrings,
 ): string {
   const a = alongAxis(w, offset);
   const b = alongAxis(w, offset + roughWidth);
@@ -267,7 +272,7 @@ function openingMark(
   const parts: string[] = [`<g class="opening ${type}" stroke="${STROKE}" stroke-width="1">`];
   parts.push(
     `<rect x="${px(x)}" y="${px(y)}" width="${px(width)}" height="${px(height)}" fill="#ffffff" stroke="none">` +
-      `<title>${esc(`${id} ${type === 'window' ? 'janela' : 'porta'} · RO ${formatInches(roughWidth)} · parede ${w.wall.id}`)}</title></rect>`,
+      `<title>${esc(S.plan.openingTitle(id, type, roughWidth, w.wall.id))}</title></rect>`,
   );
   for (const p of [a, b]) {
     const [x1, y1] = P(across(w, p, w.t / 2, -1));
@@ -291,14 +296,21 @@ function openingMark(
 }
 
 /** Tique da junta entre dois painéis vizinhos, atravessando a parede e passando `JOINT_EXT` px de cada face. */
-function jointTick(w: WallGeom, left: Panel, right: Panel, scale: number, P: (p: Point) => [number, number]): string {
+function jointTick(
+  w: WallGeom,
+  left: Panel,
+  right: Panel,
+  scale: number,
+  P: (p: Point) => [number, number],
+  S: SheetStrings,
+): string {
   const at = left.plan!.end;
   const ext = w.t / 2 + JOINT_EXT / scale;
   const [x1, y1] = P(across(w, at, ext, -1));
   const [x2, y2] = P(across(w, at, ext, 1));
   return (
     `<line class="joint" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${DIM}" stroke-width="1.5">` +
-    `<title>${esc(`junta ${left.id} | ${right.id}`)}</title></line>`
+    `<title>${esc(S.plan.jointTitle(left.id, right.id))}</title></line>`
   );
 }
 
@@ -327,7 +339,7 @@ function labelAt(
 }
 
 /** Retângulo transparente do trecho de plate de um painel (faces externas), com `data-panel-id` e `<title>`. */
-function panelHit(w: WallGeom, p: Panel, scale: number, P: (p: Point) => [number, number]): string {
+function panelHit(w: WallGeom, p: Panel, scale: number, P: (p: Point) => [number, number], S: SheetStrings): string {
   const plan = p.plan!;
   const corner: Point =
     w.dir === 'x'
@@ -339,15 +351,15 @@ function panelHit(w: WallGeom, p: Panel, scale: number, P: (p: Point) => [number
   const height = (w.dir === 'x' ? w.t : along) * scale;
   return (
     `<rect class="panel-hit" data-panel-id="${esc(p.id)}" x="${px(x)}" y="${px(y)}" width="${px(width)}" height="${px(height)}">` +
-    `<title>${esc(`${p.id} · ${formatFeetInches(p.length)} · parede ${w.wall.id}`)}</title></rect>`
+    `<title>${esc(S.plan.panelTitle(p.id, p.length, w.wall.id))}</title></rect>`
   );
 }
 
 /** Seta do norte centrada em (cx, cy), girada `angle` graus no sentido horário a partir de "para cima". */
-function northArrow(angle: number, cx: number, cy: number): string {
+function northArrow(angle: number, cx: number, cy: number, S: SheetStrings): string {
   return [
     `<g class="north" transform="rotate(${px(angle)} ${px(cx)} ${px(cy)})" stroke="#000" fill="#000">`,
-    `<title>${esc(`norte: ${px(angle)}° do +y da planta, sentido horário`)}</title>`,
+    `<title>${esc(S.plan.northTitle(px(angle)))}</title>`,
     `<circle cx="${px(cx)}" cy="${px(cy)}" r="16" fill="none" stroke-width="0.75"/>`,
     `<line x1="${px(cx)}" y1="${px(cy + 12)}" x2="${px(cx)}" y2="${px(cy - 6)}" stroke-width="1.5"/>`,
     `<polygon points="${px(cx)},${px(cy - 14)} ${px(cx - 4)},${px(cy - 5)} ${px(cx + 4)},${px(cy - 5)}" stroke="none"/>`,

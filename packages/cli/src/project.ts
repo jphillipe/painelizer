@@ -44,6 +44,9 @@
  * Folha de fabricação (S17): `date` e `revision` na raiz (texto livre) vão para o cabeçalho de cada folha, junto
  * com `name`. A folha nunca lê o relógio — sem `date` sai sem data.
  *
+ * Idioma (S34): `locale` na raiz (`"pt"` ou `"en"`) escolhe as frases das folhas e da planta; ausente = o padrão
+ * do core (`pt`, hipótese P51). `--locale` no CLI passa por cima do arquivo.
+ *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
  * (medidas; o `stockLengths` na raiz do arquivo continua aceito e entra em `config.stockLengths` — os dois juntos é erro). Plate
@@ -55,7 +58,7 @@
  * daqui só se chama `resolveOpenings`, que transforma a forma de catálogo das aberturas em `Opening`.
  */
 
-import { EngineError, resolveOpenings, type Config, type House, type OpeningSpec, type Wall } from 'core';
+import { EngineError, resolveOpenings, type Config, type House, type OpeningSpec, type SheetLocale, type Wall } from 'core';
 import { projectFileSchema, readMeasure, type FieldIssueParams } from './schema';
 
 export interface Project {
@@ -63,6 +66,8 @@ export interface Project {
   /** Data e revisão das folhas de fabricação (S17), como texto livre na raiz do arquivo. Ausentes = sem carimbo. */
   date?: string;
   revision?: string;
+  /** Idioma das folhas e da planta (S34). Ausente = `DEFAULT_SHEET_LOCALE` do core. */
+  locale?: SheetLocale;
   /** Inclui o estoque (`config.stockLengths`), venha ele de `config` ou da raiz do arquivo. */
   config: Config;
   /** Paredes soltas (formato por comprimento). Vazio quando o projeto vem em planta (`house`). */
@@ -123,6 +128,7 @@ export function projectFrom(raw: unknown, source = 'projeto'): Project {
   const project: Project = { name: file.name ?? source, config, walls: [] };
   if (file.date !== undefined) project.date = file.date;
   if (file.revision !== undefined) project.revision = file.revision;
+  if (file.locale !== undefined) project.locale = file.locale;
   const resolve = (openings: OpeningSpec[], wallId: string, i: number) => {
     try {
       return resolveOpenings(openings, config, wallId);

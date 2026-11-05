@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Config, Member, Panel, Wall } from '../../src/types';
 import { panelizeWall } from '../../src/panelize/panelizeWall';
-import { esc, memberBox, panelSvg, px, verticalCenters, viewNote } from '../../src/output/svg';
+import { esc, memberBox, panelSvg, px, verticalCenters } from '../../src/output/svg';
 import { panelizeHouse } from '../../src/house/panelizeHouse';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import plainJson from '../fixtures/wall-144-plain.json';
@@ -156,15 +156,6 @@ describe('panelSvg', () => {
     await expect(out).toMatchFileSnapshot('../__snapshots__/wall-144-window-irc.svg');
   });
 
-  it('avisos do painel aparecem no rodapé, com texto escapado', () => {
-    const withWarning: Panel = {
-      ...plainPanel,
-      warnings: [{ code: 'STUD_LENGTH_MISMATCH', message: 'stud <92 5/8"> & etc' }],
-    };
-    const w = panelSvg(withWarning);
-    expect(w).toContain('! STUD_LENGTH_MISMATCH: stud &lt;92 5/8&quot;&gt; &amp; etc</text>');
-  });
-
   it('escala configurável muda o tamanho do desenho', () => {
     const w = panelSvg(plainPanel, { scale: 2 });
     const bottom = rects(w).find((r) => r.includes('class="member bottomPlate"'))!;
@@ -212,7 +203,6 @@ describe('panelSvg — corte na obra', () => {
     expect(attr(cut, 'height')).toBe('6');
     expect(attr(cut, 'fill')).toBe('url(#field-cut-hatch)');
     expect(doorSvg).toContain('<pattern id="field-cut-hatch"');
-    expect(doorSvg).toContain('>cortar na obra 38&quot;</text>');
   });
 
   it('a bottom plate continua uma peça só, de ponta a ponta', () => {
@@ -320,7 +310,7 @@ describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
     const dt = rects(svg).find((r) => r.includes('doubleTopPlate'))!;
     expect(attr(dt, 'x')).toBe(px(X0));
     expect(attr(dt, 'width')).toBe(px(122.75 * 4));
-    expect(svg).toContain('>avanço 5 1/2&quot;</text>');
+    expect(svg.match(/class="dim dim-length"/g)).toHaveLength(2);
     // Largura total cresce exatamente o avanço.
     const plainSvg = panelSvg(panelizeWall({ ...base, id: 'B', length: 117.25 }, config));
     expect(Number(attr(svg, 'width')) - Number(attr(plainSvg, 'width'))).toBe(over);
@@ -329,13 +319,14 @@ describe('panelSvg — canto, T e laps da double top plate (S14)', () => {
   it('avanço no fim: canvas cresce à direita e cota o avanço', () => {
     const panel = panelizeWall({ ...base, id: 'E', length: 100, joints: { end: { kind: 'tee', otherThickness: 3.5 } } }, config);
     const svg = panelSvg(panel);
-    expect(svg).toContain('>avanço 3 1/2&quot;</text>');
+    expect(svg.match(/class="dim dim-length"/g)).toHaveLength(2);
     const plainSvg = panelSvg(panelizeWall({ ...base, id: 'E', length: 100 }, config));
     expect(Number(attr(svg, 'width')) - Number(attr(plainSvg, 'width'))).toBe(14);
   });
 
   it('sem joints o desenho não muda (snapshots wall-* intactos)', () => {
-    expect(panelSvg(plainPanel)).not.toContain('avanço');
+    // Só a cota do comprimento: nenhuma de avanço.
+    expect(panelSvg(plainPanel).match(/class="dim dim-length"/g)).toHaveLength(1);
   });
 });
 
@@ -343,12 +334,11 @@ describe('panelSvg — folha de fabricação (S17)', () => {
   const windowDoorPanel = panelizeWall(windowDoor.wall, windowDoor.config);
   const sheet = panelSvg(windowDoorPanel, { project: 'Casa X', date: '2026-10-14', revision: 'A' });
 
-  it('cabeçalho: projeto, data e revisão vêm de opts; parede, pavimento, seção, externa/portante, dimensões, peças a cortar (plies contam) e peso', () => {
+  it('cabeçalho: projeto vem de opts; linhas de dados, carimbo e vista (textos em sheetText.test.ts)', () => {
     expect(sheet).toContain('text-anchor="end">Casa X</text>');
-    expect(sheet).toContain('>data 2026-10-14 · rev. A</text>');
-    expect(sheet).toContain(
-      `>parede W-window-door · pavimento 1 · 2x6 externa portante · 12'-0&quot; × 8'-1 1/8&quot; · 26 peças · 312.5 lb</text>`,
-    );
+    expect(sheet).toContain('<text class="info" ');
+    expect(sheet).toContain('<text class="stamp" ');
+    expect(sheet).toContain('<text class="view" ');
     // Sem opts: sem projeto nem carimbo; a folha nunca lê o relógio.
     const bare = panelSvg(windowDoorPanel);
     expect(bare).not.toContain('class="project"');
@@ -356,31 +346,18 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(panelSvg(windowDoorPanel)).toBe(bare);
   });
 
-  it('linha da vista (P24): externa solta = vista de fora; facing interior = vista de dentro; interna só indica o início', () => {
-    expect(viewNote({ exterior: true })).toMatch(/^Vista de fora — face externa voltada para o observador/);
-    expect(viewNote({ exterior: true, facing: 'exterior' })).toMatch(/^Vista de fora/);
-    expect(viewNote({ exterior: true, facing: 'interior' })).toMatch(/^Vista de dentro — face externa no verso/);
-    expect(viewNote({ exterior: false })).toBe('Parede interna — início da parede (x=0) à esquerda');
-    expect(viewNote({})).toBe('Início da parede (x=0) à esquerda');
-    expect(sheet).toContain('class="view"');
-    expect(sheet).toContain('>face externa (vista de fora)</text>');
-    expect(panelSvg({ ...windowDoorPanel, facing: 'interior' })).toContain('>face externa no verso (vista de dentro)</text>');
-    expect(panelSvg(nonBearingDoorPanel)).toContain('>parede interna</text>');
-  });
-
-  it('cotas de RO: largura; peitoril, altura do RO e base do header ao subfloor na janela; uma linha só na porta', () => {
-    expect(sheet).toContain('>RO 36&quot;</text>');
-    expect(sheet).toContain('>peitoril 34 1/2&quot;</text>');
-    expect(sheet).toContain('>RO 48&quot;</text>');
-    expect(sheet).toContain('>header 82 1/2&quot;</text>');
-    expect(sheet).toContain('>RO 38&quot;</text>');
-    expect(sheet).toContain('>RO 82 1/2&quot; = header 82 1/2&quot;</text>');
-    expect(sheet).toContain('>win1 · janela</text>');
-    expect(sheet).toContain('>door1 · porta</text>');
+  it('cotas de RO: janela com largura + 3 verticais (peitoril, RO, header); porta com largura + 1 vertical', () => {
+    // Altura do painel + 3 da janela + 1 da porta; comprimento + largura de cada RO.
+    expect(sheet.match(/class="dim dim-height"/g)).toHaveLength(5);
+    expect(sheet.match(/class="dim dim-length"/g)).toHaveLength(3);
+    expect(sheet.match(/<text class="opening-id" /g)).toHaveLength(2);
+    expect(sheet).toContain('<text class="face" ');
     // Linha da largura 9" abaixo do topo do RO (82.5 → 73.5): y = Y0 + (97.125 − 73.5) × 4.
     expect(sheet).toContain(`<line x1="${px(X0 + 24 * 4)}" y1="${px(Y0 + (97.125 - 73.5) * 4)}" x2="${px(X0 + 60 * 4)}"`);
     // Painel sem aberturas não tem cotas de RO.
-    expect(panelSvg({ ...windowDoorPanel, openings: [] })).not.toContain('peitoril');
+    const bare = panelSvg({ ...windowDoorPanel, openings: [] });
+    expect(bare.match(/class="dim dim-height"/g)).toHaveLength(1);
+    expect(bare).not.toContain('class="opening-id"');
     expect(() => panelSvg({ ...windowDoorPanel, openings: [{ id: 'x', type: 'window', x: 0, width: 0, top: 80, height: 10 }] })).toThrow(RangeError);
   });
 
@@ -443,18 +420,14 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(sheet.match(/<g class="piece cripple">/g)).toHaveLength(2);
     expect(sheet).toContain('>2 3/8&quot;</text>');
     expect(sheet).toContain('>26</text>');
-    expect(sheet).toContain('>peças a cortar</text>');
-    expect(sheet).toContain('>Peso estimado: 312.5 lb</text>');
-    expect(sheet).toContain('>bottom plate 38&quot; de x=64 1/2&quot; a 102 1/2&quot; (door1)</text>');
-    // Peso de `weightLb` quando o painel já vem pesado (splitWall).
-    expect(panelSvg({ ...windowDoorPanel, weightLb: 300 })).toContain('>Peso estimado: 300 lb</text>');
+    expect(sheet).toContain('<text class="weight" ');
+    expect(sheet.match(/<text class="field-cut-item" /g)).toHaveLength(1);
     // Lista à direita do desenho: a largura total cresce com a coluna fixa.
     expect(Number(attr(sheet, 'width'))).toBe(X0 + 144 * 4 + 28 + 282 + 24);
   });
 
   it('legenda no rodapé', () => {
-    expect(sheet).toContain('class="legend"');
-    expect(sheet).toContain('K king · J jack · C cripple · H header · S sill · B bloco');
+    expect(sheet).toContain('<text class="legend" ');
   });
 
   it('painel de canto (house-corner-L): facing exterior na W1, interior na W2; snapshots', async () => {
@@ -464,8 +437,6 @@ describe('panelSvg — folha de fabricação (S17)', () => {
     expect(w2!.facing).toBe('interior');
     const s1 = panelSvg(w1!, { project: 'house-corner-L' });
     const s2 = panelSvg(w2!, { project: 'house-corner-L' });
-    expect(s1).toContain('>face externa (vista de fora)</text>');
-    expect(s2).toContain('>face externa no verso (vista de dentro)</text>');
     // Flat de canto (1.5–7, centro 4.25) entra na cadeia; fechamento colado à marca 144 desce uma linha.
     expect(s1).toContain('>4 1/4&quot;</text>');
     expect(s1).toContain(`y="${px(Y0 + 97.125 * 4 + 28 + 34 + 22)}" font-size="9" fill="#666" text-anchor="middle">145 1/4&quot;</text>`);

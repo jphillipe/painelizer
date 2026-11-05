@@ -10,6 +10,7 @@
  * - `plan.svg` — planta de painéis (só na casa em planta, S16);
  * - `panels/<id>.svg` — folha de fabricação de cada painel (S17): cabeçalho com `name`, `date` e `revision` do
  *   projeto, elevação cotada, lista de peças, peso, cortes na obra e avisos. Abre e imprime no navegador.
+ * - Folhas e planta no idioma de `project.locale` (S34; ausente = português, hipótese P51). CSVs não mudam.
  *
  * Cada parede (solta ou em planta) vira os painéis de `splitWall` (S15), com ids `{level}-{wallId}-P{n}` (S16):
  * `1-W01-P1` quando cabe em `config.panel.maxLength`; `1-W01-P1`, `1-W01-P2`… quando não.
@@ -249,6 +250,7 @@ export function buildProject(project: Project): BuildResult {
         project: project.name,
         ...(project.date === undefined ? {} : { date: project.date }),
         ...(project.revision === undefined ? {} : { revision: project.revision }),
+        ...(project.locale === undefined ? {} : { locale: project.locale }),
       }),
     });
   }
@@ -258,7 +260,7 @@ export function buildProject(project: Project): BuildResult {
     { path: 'bom.csv', content: bomCsv(bom) },
     ...(cost === undefined ? [] : [{ path: 'cost.csv', content: costCsv(cost) }]),
     { path: 'panels.csv', content: panelsCsv(panels) },
-    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name }) }]),
+    ...(project.house === undefined ? [] : [{ path: 'plan.svg', content: housePlanSvg(project.house, panels, { title: project.name, ...(project.locale === undefined ? {} : { locale: project.locale }) }) }]),
   );
 
   const warnings = panels.flatMap((p) => p.warnings.map((warning) => ({ panelId: p.id, warning })));

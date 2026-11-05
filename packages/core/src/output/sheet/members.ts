@@ -13,7 +13,7 @@ import { labelOf, pieceCount, type FieldCut, type Member, type MemberRole, type 
 import { NOMINAL_2X_THICKNESS, sectionDepth, verticalWidth } from '../../sections';
 import { formatInches } from '../../units';
 import { FIELD_CUT, esc, px } from './primitives';
-import { fieldCutLabel } from './strings';
+import type { SheetStrings } from './strings';
 
 /** x em polegadas → px. */
 export type ToPx = (x: number) => number;
@@ -197,7 +197,7 @@ export const FIELD_CUT_HATCH =
  *
  * @throws RangeError se nenhuma peça do papel indicado contém o trecho (painel inconsistente)
  */
-export function fieldCutMark(cut: FieldCut, panel: Panel, scale: number, toPx: ToPx, toPy: ToPy): string {
+export function fieldCutMark(cut: FieldCut, panel: Panel, scale: number, toPx: ToPx, toPy: ToPy, S: SheetStrings): string {
   const host = panel.members.find(
     (m) => m.role === cut.role && m.x <= cut.x + EPS && cut.x + cut.length <= m.x + m.length + EPS,
   );
@@ -212,11 +212,11 @@ export function fieldCutMark(cut: FieldCut, panel: Panel, scale: number, toPx: T
   const yTop = toPy(box.y + box.height);
   const w = cut.length * scale;
   const h = box.height * scale;
-  const label = fieldCutLabel(cut);
+  const label = S.fieldCutLabel(cut);
   return [
     `<rect class="field-cut" x="${px(x)}" y="${px(yTop)}" width="${px(w)}" height="${px(h)}" ` +
       `fill="url(#field-cut-hatch)" stroke="${FIELD_CUT}" stroke-width="1" stroke-dasharray="3 2">` +
-      `<title>${esc(`${label} — ${cut.role}, abertura ${cut.openingId}, x=${formatInches(cut.x)}`)}</title></rect>`,
+      `<title>${esc(S.fieldCutTitle(cut))}</title></rect>`,
     `<text x="${px(x + w / 2)}" y="${px(yTop - 4)}" font-size="10" fill="${FIELD_CUT}" ` +
       `text-anchor="middle">${esc(label)}</text>`,
   ].join('\n');

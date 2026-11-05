@@ -23,6 +23,8 @@
  *   quando dois centros ficam a menos de 11 px), legenda das letras e avisos.
  * - Margem direita: lista de peças da `cutList` (qtd, papel, seção, pés-pol, polegadas), peso estimado
  *   (`weightLb`; madeira sem sheathing, P8) e cortes na obra.
+ * - Idioma (S34): `opts.locale` escolhe as frases de `sheet/strings.ts` (`'pt'` padrão, `'en'`); o desenho é o
+ *   mesmo nos dois.
  * - Saída determinística: mesma entrada → mesma string.
  */
 
@@ -33,12 +35,20 @@ import { TITLE_HEIGHT, sheetHeader } from './sheet/header';
 import { FIELD_CUT_HATCH, fieldCutMark, memberLabels, memberRect, overhang } from './sheet/members';
 import { LIST_WIDTH, pieceList } from './sheet/pieceList';
 import { FONT, LABEL, MUTED, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
-import { LEGEND, faceNote, overhangLabel } from './sheet/strings';
+import { sheetStrings, type SheetLocale, type SheetStrings } from './sheet/strings';
 
 export { verticalCenters } from './sheet/dims';
 export { memberBox, SHORT_LABEL, type MemberBox } from './sheet/members';
 export { DIM, FONT, STROKE, dimensionH, dimensionV, esc, px } from './sheet/primitives';
-export { viewNote } from './sheet/strings';
+export {
+  DEFAULT_SHEET_LOCALE,
+  isSheetLocale,
+  SHEET_LOCALES,
+  sheetStrings,
+  viewNote,
+  type SheetLocale,
+  type SheetStrings,
+} from './sheet/strings';
 
 export interface PanelSvgOptions {
   /** Pixels por polegada. Padrão 4. */
@@ -53,6 +63,11 @@ export interface PanelSvgOptions {
   date?: string;
   /** Revisão da folha, como texto (S17). Ausente = sem revisão. */
   revision?: string;
+  /**
+   * Idioma dos textos da folha (S34). Ausente = `DEFAULT_SHEET_LOCALE` (`'pt'`, hipótese P51). Desenho, cotas e
+   * números não mudam; só as frases.
+   */
+  locale?: SheetLocale;
 }
 
 const DIM_LEFT_WIDTH = 56;
@@ -71,6 +86,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const scale = opts.scale ?? 4;
   const studSpacing = opts.studSpacing ?? 16;
   const margin = opts.margin ?? 24;
+  const S = sheetStrings(opts.locale);
 
   if (!Number.isFinite(scale) || scale <= 0) {
     throw new RangeError(`panelSvg: scale inválido (${scale}); esperado número > 0`);
@@ -113,7 +129,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const warningsY = legendY + 6;
 
   const listX = drawX0 + drawW + overRight * scale + LIST_GAP;
-  const list = pieceList(panel, listX, drawY0);
+  const list = pieceList(panel, listX, drawY0, S);
   const totalW = listX + LIST_WIDTH + margin;
   const totalH = Math.max(warningsY + panel.warnings.length * WARNING_LINE, list.bottom) + margin;
 
@@ -125,7 +141,7 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(`<rect width="${px(totalW)}" height="${px(totalH)}" fill="#ffffff"/>`);
 
   // Cabeçalho.
-  out.push(...sheetHeader(panel, opts, margin, totalW, piecesOf(panel), panel.weightLb));
+  out.push(...sheetHeader(panel, opts, margin, totalW, piecesOf(panel), panel.weightLb, S));
 
   // Contorno do painel.
   out.push(
@@ -149,19 +165,19 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   if (panel.fieldCuts.length > 0) {
     out.push(FIELD_CUT_HATCH);
     for (const cut of panel.fieldCuts) {
-      out.push(fieldCutMark(cut, panel, scale, toPx, toPy));
+      out.push(fieldCutMark(cut, panel, scale, toPx, toPy, S));
     }
   }
 
   // Cotas de cada abertura, dentro do vão (S17).
   for (const o of panel.openings) {
-    out.push(...openingDims(o, panel, toPx, toPy));
+    out.push(...openingDims(o, panel, toPx, toPy, S));
   }
 
   // Nota da face no topo do desenho (P24).
   out.push(
     `<text class="face" x="${px(toPx(panel.length / 2))}" y="${px(toPy(panel.height) - 3)}" font-size="10" ` +
-      `fill="${MUTED}" text-anchor="middle">${esc(faceNote(panel))}</text>`,
+      `fill="${MUTED}" text-anchor="middle">${esc(S.faceNote(panel))}</text>`,
   );
 
   // Cota do comprimento (embaixo).
@@ -169,11 +185,11 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   // Cotas do avanço da double top plate (acima do topo do painel).
   const overY = toPy(panel.height) - 10;
   if (overLeft > 0) {
-    out.push(dimensionH(toPx(-overLeft), toPx(0), overY, toPy(panel.height), overhangLabel(overLeft)));
+    out.push(dimensionH(toPx(-overLeft), toPx(0), overY, toPy(panel.height), S.overhangLabel(overLeft)));
   }
   if (overRight > 0) {
     out.push(
-      dimensionH(toPx(panel.length), toPx(panel.length + overRight), overY, toPy(panel.height), overhangLabel(overRight)),
+      dimensionH(toPx(panel.length), toPx(panel.length + overRight), overY, toPy(panel.height), S.overhangLabel(overRight)),
     );
   }
   // Cota da altura (à esquerda).
@@ -189,18 +205,18 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(list.svg);
 
   // Legenda e avisos.
-  out.push(`<text class="legend" x="${px(margin)}" y="${px(legendY)}" font-size="9" fill="${MUTED}">${LEGEND}</text>`);
+  out.push(`<text class="legend" x="${px(margin)}" y="${px(legendY)}" font-size="9" fill="${MUTED}">${S.legend}</text>`);
   panel.warnings.forEach((w, i) => {
-    out.push(warningLine(w, margin, warningsY + (i + 1) * WARNING_LINE));
+    out.push(warningLine(w, margin, warningsY + (i + 1) * WARNING_LINE, S));
   });
 
   out.push('</svg>');
   return out.join('\n');
 }
 
-function warningLine(w: Warning, x: number, y: number): string {
+function warningLine(w: Warning, x: number, y: number, S: SheetStrings): string {
   return (
     `<text x="${px(x)}" y="${px(y)}" font-size="11" fill="#a33">` +
-    `! ${esc(w.code)}: ${esc(w.message)}</text>`
+    `! ${esc(w.code)}: ${esc(S.warning(w))}</text>`
   );
 }

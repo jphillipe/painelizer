@@ -1,12 +1,12 @@
 # 08 — Revisar com a fábrica
 
-Gerado por `pnpm hipoteses` em 2026-11-04. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
+Gerado por `pnpm hipoteses` em 2026-11-05. Não edite à mão: a fonte é `05-pendencias.md` (pendência aberta = hipótese em vigor) e os comentários do código que citam o número da pendência. Quando a fábrica responder, registre a resposta em `05-pendencias.md`, mude o código nos pontos listados, confirme fixtures e rode o script de novo.
 
-**39 hipóteses em vigor**, 11 pendências respondidas.
+**40 hipóteses em vigor**, 11 pendências respondidas.
 
 | P | Assunto | Hipótese em vigor | Onde mexer quando responderem |
 |---|---|---|---|
-| P1 | Painéis reais | fixtures sintéticos | `packages/cli/examples/casa-exemplo.json:2`, `packages/cli/src/build.ts:15`, `packages/cli/src/build.ts:269`, `packages/cli/test/main.test.ts:202`, `packages/core/src/panel.ts:157` (+19) |
+| P1 | Painéis reais | fixtures sintéticos | `packages/cli/examples/casa-exemplo.json:2`, `packages/cli/src/build.ts:16`, `packages/cli/src/build.ts:271`, `packages/cli/test/main.test.ts:226`, `packages/core/src/panel.ts:157` (+19) |
 | P8 | Peso por peça | tabela fixa em `src/data/lumber.json` | `packages/cli/src/csv.ts:130`, `packages/core/src/data/lumber.json:2`, `packages/core/src/output/sheet/pieceList.ts:3`, `packages/core/src/output/svg.ts:25`, `packages/core/src/panel.ts:179` (+9) |
 | P10 | Tabela IRC em vigor | IRC 2021 sem emenda local em R602.7 | `packages/core/src/data/lumber.json:2`, `packages/core/src/opening.ts:29`, `packages/core/src/rules/headers.ts:3`, `packages/core/src/rules/openingHeader.ts:5` |
 | P15 | Peso máximo do painel | sem limite de peso até a resposta; só comprimento (240") | `packages/core/src/config.ts:49`, `packages/core/src/config.ts:55`, `packages/core/src/rules/breaks.ts:5`, `packages/core/src/rules/weight.ts:8` |
@@ -18,7 +18,7 @@ Gerado por `pnpm hipoteses` em 2026-11-04. Não edite à mão: a fonte é `05-pe
 | P21 | Referência de medida das paredes e canto | eixo; a mais longa atravessa, com sobrescrita por ponta; layout da quina do prédio | `packages/core/src/house/connections.ts:2`, `packages/core/src/house/frame.ts:4`, `packages/core/src/house/types.ts:33`, `packages/core/src/house/types.ts:4`, `packages/core/test/fixtures/house-28x40.json:2` (+1) |
 | P22 | Ladder blocking no T | 3 blocos da seção da parede, deitados, centros em 24, 48 e 72 do subfloor (4 blocos em parede de 9'); stud de ponta comum | `packages/core/src/config.ts:106`, `packages/core/src/rules/corners.ts:13`, `packages/core/src/rules/corners.ts:4`, `packages/core/src/rules/corners.ts:41`, `packages/core/src/wall.ts:112` (+2) |
 | P23 | Lap da double top plate entre painéis da mesma parede | avança 48" presa ao painel, mínimo 24" | `packages/core/src/config.ts:49`, `packages/core/src/config.ts:59`, `packages/core/src/rules/corners.ts:76`, `packages/core/src/rules/laps.ts:2`, `packages/core/src/wall.ts:93` (+4) |
-| P24 | Orientação da folha | vista de fora, face externa indicada no desenho | `packages/core/src/house/panelizeHouse.ts:73`, `packages/core/src/output/sheet/header.ts:2`, `packages/core/src/output/sheet/strings.ts:48`, `packages/core/src/output/svg.ts:16`, `packages/core/src/output/svg.ts:161` (+2) |
+| P24 | Orientação da folha | vista de fora, face externa indicada no desenho | `packages/core/src/house/panelizeHouse.ts:73`, `packages/core/src/output/sheet/header.ts:2`, `packages/core/src/output/sheet/strings.ts:308`, `packages/core/src/output/sheet/strings.ts:40`, `packages/core/src/output/svg.ts:16` (+3) |
 | P25 | Sill dupla: limite e montagem | só quando o projeto pede (`config.doubleSillOver`, ausente = simples), segunda peça sob a primeira | `packages/core/src/rules/openings.ts:14` |
 | P26 | Studs extras agrupados | colados na mesa, 2x apenas; 4x/6x fica para o engenheiro | `packages/core/src/panelize/panelizeWall.ts:18` |
 | P27 | Altura da parede do Ringgold | parede 9'-1 1/8" (stud pré-cortado 104 5/8", piso ~10 7/8") | `packages/cli/examples/ringgold-checkpoint.json:2`, `packages/extract/test/fixtures/ringgold-output.json:2` |
@@ -45,6 +45,7 @@ Gerado por `pnpm hipoteses` em 2026-11-04. Não edite à mão: a fonte é `05-pe
 | P48 | Pregação (texto da folha) | esses valores como `config.nailing` default, impressos na folha com "validar com engenheiro"; nunca geometria | — |
 | P49 | Encaixe painel-painel na mesma parede | stud duplo na junta (S15) e chapa terminando no painel; lap só na double top (P23) | — |
 | P50 | Altura e forma do fire blocking | `config.fireBlockAt` = 120" sobre a cavidade `height − 3·plates`; o menor número de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma no meio da cavidade até 241.5"); bloco deitado da seção da parede em todo vão ≥ 1.5" entre peças de altura inteira, fora das zonas de abertura e do vão do ladder do T | `packages/core/src/config.ts:117`, `packages/core/src/panel.ts:83`, `packages/core/src/panelize/panelizeWall.ts:26`, `packages/core/src/panelize/panelizeWall.ts:263`, `packages/core/src/rules/blocking.ts:11` (+2) |
+| P51 | Idioma padrão da folha e da planta | **português** é o padrão até a fábrica responder; inglês existe como opção (`locale: "en"` no arquivo do projeto, `--locale en` no CLI, "Sheet language" nas configurações do projeto no app). Se a fábrica escolher inglês, troca-se só `DEFAULT_SHEET_LOCALE` em `core/src/output/sheet/strings.ts` (e os snapshots em português passam a ser os de `locale: 'pt'` explícito) | `packages/cli/src/build.ts:13`, `packages/cli/src/project.ts:48`, `packages/cli/src/schema.ts:654`, `packages/core/src/output/planSvg.ts:37`, `packages/core/src/output/sheet/strings.ts:21` (+4) |
 
 ## Respondidas
 

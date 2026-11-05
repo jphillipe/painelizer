@@ -15,6 +15,7 @@ export {
   locusPt,
   noticeOf,
   WARNING_CODES,
+  warningMessageEn,
   warningMessagePt,
   type EngineErrorCode,
   type EngineerReason,

@@ -94,6 +94,22 @@ describe('ida e volta pelo parser do CLI', () => {
 describe('leitura tolerante', () => {
   const base = { name: 'x', config: { studSpacing: 16, studLength: [92.625] } };
 
+  it('locale (S34): pt/en vão e voltam no arquivo (depois de revision) e chegam ao build; outro valor é problem e sai', () => {
+    const ok = draftFromJson({ ...base, revision: 'B', locale: 'en', walls: [] });
+    if (!ok.ok) throw new Error('should open');
+    expect(ok.problems).toEqual([]);
+    expect(ok.draft.locale).toBe('en');
+    expect(Object.keys(jsonFromDraft(ok.draft))).toEqual(['name', 'revision', 'locale', 'config', 'walls']);
+    const withWall = load(JSON.stringify({ ...JSON.parse(EXAMPLES[0]!.text), locale: 'en' }));
+    expect(parseProject(textFromDraft(withWall), 'p').locale).toBe('en');
+    expect(parseProject(textFromDraft(load(EXAMPLES[0]!.text)), 'p')).not.toHaveProperty('locale');
+    const bad = draftFromJson({ ...base, locale: 'es', walls: [] });
+    if (!bad.ok) throw new Error('should open');
+    expect(bad.problems.map((p) => p.path)).toEqual(['locale']);
+    expect(bad.problems[0]?.text).toMatch(/pt, en/);
+    expect(bad.draft).not.toHaveProperty('locale');
+  });
+
   it('JSON inválido ou walls que não é lista: não abre', () => {
     expect(draftFromText('{')).toMatchObject({ ok: false });
     expect(draftFromJson({ ...base, walls: 'nope' })).toMatchObject({ ok: false, problems: [{ path: 'walls' }] });

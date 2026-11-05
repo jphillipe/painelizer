@@ -101,7 +101,7 @@ export type EditorAction =
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'endTransaction' }
-  | { type: 'updateProject'; patch: Patch<Pick<ProjectDraft, 'name' | 'date' | 'revision' | 'northAngle'>> }
+  | { type: 'updateProject'; patch: Patch<Pick<ProjectDraft, 'name' | 'date' | 'revision' | 'locale' | 'northAngle'>> }
   | { type: 'updateConfig'; patch: Patch<Omit<DraftConfig, 'building' | 'openingTypes' | 'headerSchedule' | 'extra'>> }
   | { type: 'updateBuilding'; patch: Patch<DraftBuilding> }
   | { type: 'updateWall'; wallId: string; patch: Patch<Omit<DraftWall, 'id' | 'openings' | 'extra'>> }

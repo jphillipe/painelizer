@@ -24,6 +24,7 @@ import {
   engineeredSection,
   parseEngineeredSection,
   parseFeetInches,
+  SHEET_LOCALES,
   type Building,
   type Config,
   type CornerStyle,
@@ -44,6 +45,7 @@ import {
   type PriceEntry,
   type Point,
   type Section,
+  type SheetLocale,
   type StudSpacing,
   type TeeStyle,
   type Wall,
@@ -649,6 +651,8 @@ export const rootShape = {
   /** Data e revisão das folhas de fabricação (S17), texto livre. */
   date: text.optional(),
   revision: text.optional(),
+  /** Idioma das folhas e da planta (S34): `pt` ou `en`. Ausente = o padrão do core (`pt`, hipótese P51). */
+  locale: oneOf(SHEET_LOCALES).optional(),
   /** Seta do norte da planta (S16), graus; só em projeto em planta. */
   northAngle: degrees.optional(),
   config: node(configShape, REMOVED_CONFIG),
@@ -662,6 +666,7 @@ export type ProjectFile = {
   name?: string;
   date?: string;
   revision?: string;
+  locale?: SheetLocale;
   config: Config;
 } & ({ format: 'loose'; walls: LooseWallFile[] } | { format: 'plan'; walls: PlanWallFile[]; northAngle?: number });
 
@@ -680,7 +685,7 @@ export const projectFileSchema = node(rootShape).transform((p, ctx): ProjectFile
     report(ctx, new Fail({ rule: 'project' }, 'só vale em projeto em planta (paredes com start/end)'), ['northAngle']);
     return z.NEVER;
   }
-  const head = compact({ name: p.name, date: p.date, revision: p.revision });
+  const head = compact({ name: p.name, date: p.date, revision: p.revision, locale: p.locale });
   if (p.walls.format === 'loose') return { ...head, config, format: 'loose', walls: p.walls.walls };
   return { ...head, config, format: 'plan', walls: p.walls.walls, ...compact({ northAngle: p.northAngle }) };
 });

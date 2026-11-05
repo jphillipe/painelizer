@@ -7,15 +7,16 @@ import type { Panel } from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import { cutList } from '../cutlist';
 import { FIELD_CUT, MUTED, esc, px } from './primitives';
-import { CUT_ROLE_NAME, PIECE_LIST, fieldCutItem } from './strings';
+import type { SheetStrings } from './strings';
 
 /** Largura da coluna da lista. */
 export const LIST_WIDTH = 282;
 const LIST_ROW = 13;
 
 /** A lista a partir de (`x`, `y0`). Devolve o SVG e o y onde termina. */
-export function pieceList(panel: Panel, x: number, y0: number): { svg: string; bottom: number } {
+export function pieceList(panel: Panel, x: number, y0: number, S: SheetStrings): { svg: string; bottom: number } {
   const lines = cutList(panel);
+  const PIECE_LIST = S.pieceList;
   const out: string[] = [];
   const col = { qty: x + 18, role: x + 26, section: x + 96, feet: x + 230, inches: x + LIST_WIDTH };
   let y = y0 + 12;
@@ -38,7 +39,7 @@ export function pieceList(panel: Panel, x: number, y0: number): { svg: string; b
     out.push(
       `<g class="piece ${l.role}">` +
         `<text x="${px(col.qty)}" y="${px(y)}" text-anchor="end">${l.qty}</text>` +
-        `<text x="${px(col.role)}" y="${px(y)}">${esc(CUT_ROLE_NAME[l.role])}</text>` +
+        `<text x="${px(col.role)}" y="${px(y)}">${esc(S.cutRoleName[l.role])}</text>` +
         `<text x="${px(col.section)}" y="${px(y)}">${esc(l.section)}</text>` +
         `<text x="${px(col.feet)}" y="${px(y)}" text-anchor="end">${esc(formatFeetInches(l.length))}</text>` +
         `<text x="${px(col.inches)}" y="${px(y)}" text-anchor="end">${esc(formatInches(l.length))}</text></g>`,
@@ -64,7 +65,7 @@ export function pieceList(panel: Panel, x: number, y0: number): { svg: string; b
       y += LIST_ROW;
       out.push(
         `<text class="field-cut-item" x="${px(x)}" y="${px(y)}" fill="${FIELD_CUT}">` +
-          `${esc(fieldCutItem(cut))}</text>`,
+          `${esc(S.fieldCutItem(cut))}</text>`,
       );
     }
   }
