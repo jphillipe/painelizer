@@ -175,3 +175,29 @@ describe('S30: duplicar paredes', () => {
     expect(duplicateWalls(house(), []).ok).toBe(false);
   });
 });
+
+describe('S37: posts ao dividir e juntar', () => {
+  it('cada post vai ao pedaço dele, em x do pedaço; post no corte recusa a divisão', () => {
+    const d0 = withWall(house(), 'W01', (w) => ({ ...w, posts: [{ x: 100, section: '4x6', label: 'P-01' }, { x: 300, section: '6x6' }] }));
+    const d = ok(splitWall(d0, 'W01', 240));
+    const [a, b] = [wallById(d, 'W01')!, wallById(d, 'W06')!];
+    expect([a.posts, b.posts]).toEqual([[{ x: 100, section: '4x6', label: 'P-01' }], [{ x: 60, section: '6x6' }]]);
+    const straddle = withWall(house(), 'W01', (w) => ({ ...w, posts: [{ x: 238, section: '4x4', label: 'P-09' }] }));
+    expect(splitWall(straddle, 'W01', 240)).toEqual({ ok: false, reason: expect.stringContaining('Post P-09 at') });
+  });
+
+  it('juntar com a outra correndo ao contrário inverte o post pela largura dele', () => {
+    const d0 = withWall(house(), 'W01', (w) => ({ ...w, posts: [{ x: 300, section: '4x4' }] }));
+    const split = ok(splitWall(d0, 'W01', 240));
+    const back = ok(joinWalls(split, 'W01', 'W06'));
+    expect(wallById(back, 'W01')!.posts).toEqual([{ x: 300, section: '4x4' }]);
+    const reversed = withWall(split, 'W06', (w) => ({
+      ...w,
+      start: w.end!,
+      end: w.start!,
+      openings: w.openings.map((o) => ({ ...o, offset: 240 - o.offset! - o.roughWidth! })),
+      posts: [{ x: 240 - 60 - 3.5, section: '4x4' }],
+    }));
+    expect(wallById(ok(joinWalls(reversed, 'W01', 'W06')), 'W01')!.posts).toEqual([{ x: 300, section: '4x4' }]);
+  });
+});

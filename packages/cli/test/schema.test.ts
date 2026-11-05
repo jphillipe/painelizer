@@ -148,6 +148,7 @@ describe('fireBlockAt e prices (S31)', () => {
           { section: '2x4', length: '92 5/8"', price: 3.75 },
           { section: '2x6', perFoot: 0.85 },
           { section: { material: 'LVL', width: 1.75, depth: 9.25 }, perFoot: 9.5 },
+          { section: '6x6', length: "8'", price: 42 },
         ],
       }),
       'p',
@@ -157,6 +158,7 @@ describe('fireBlockAt e prices (S31)', () => {
       { section: '2x4', length: 92.625, price: 3.75 },
       { section: '2x6', perFoot: 0.85 },
       { section: 'LVL 1.75x9.25', perFoot: 9.5 },
+      { section: '6x6', length: 96, price: 42 },
     ]);
   });
 
@@ -164,7 +166,8 @@ describe('fireBlockAt e prices (S31)', () => {
     [{ prices: [{ section: '2x4', length: 96, price: -1 }] }, 'p.config.prices[0].price: expected a price'],
     [{ prices: [{ section: '2x4', price: 1 }] }, 'p.config.prices[0].length'],
     [{ prices: [{ section: '2x4', perFoot: 1, length: 96 }] }, 'p.config.prices[0].length: unknown key'],
-    [{ prices: [{ section: '2x5', perFoot: 1 }] }, 'p.config.prices[0].section'],
+    [{ prices: [{ section: '2x5', perFoot: 1 }] }, 'p.config.prices[0].section: expected one of 2x4, 2x6, 2x8, 2x10, 2x12, 4x4, 4x6, 6x6'],
+    [{ prices: [{ section: { material: 'LVL', width: 0, depth: 9.25 }, perFoot: 1 }] }, 'p.config.prices[0].section.width'],
     [
       { prices: [{ section: '2x4', length: 96, price: 1 }, { section: '2x4', length: "8'", price: 2 }] },
       'p.config.prices[1]: duplicate price',
@@ -252,7 +255,7 @@ describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 16 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen)', () => expect(files).toHaveLength(16));
+  it('são 17 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen; S37: wall-144-post)', () => expect(files).toHaveLength(17));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {

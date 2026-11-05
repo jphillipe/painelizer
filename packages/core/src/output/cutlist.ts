@@ -31,6 +31,7 @@ export interface CutLine {
 export const CUT_ROLE_ORDER: readonly CutRole[] = [
   'plates',
   'stud',
+  'post',
   'kingStud',
   'jackStud',
   'header',
@@ -39,8 +40,8 @@ export const CUT_ROLE_ORDER: readonly CutRole[] = [
   'block',
 ];
 
-/** Ordem das seções serradas, da menor para a maior profundidade. */
-export const SECTION_ORDER: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
+/** Ordem das seções serradas: a família 2x da menor para a maior profundidade, depois os posts (S37). */
+export const SECTION_ORDER: readonly Section[] = ['2x4', '2x6', '2x8', '2x10', '2x12', '4x4', '4x6', '6x6'];
 
 /** Posição de ordenação: serradas na ordem da tabela; engenheiradas (LVL/PSL) depois, por profundidade. */
 export function sectionRank(section: Section): number {

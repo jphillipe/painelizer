@@ -70,6 +70,12 @@ export const ENGINE_ERROR_CODES = [
   'EXTRA_STUD_INVALID',
   'EXTRA_STUD_OUT_OF_WALL',
   'EXTRA_STUD_IN_OPENING',
+  // posts (S37)
+  'POST_INVALID',
+  'POST_DEPTH_MISMATCH',
+  'POST_OUT_OF_WALL',
+  'POST_IN_OPENING',
+  'POST_OVERLAP',
   // tipos de parede (S35)
   'WALL_TYPE_UNKNOWN',
   'WALL_FIELD_MISSING',
@@ -333,6 +339,17 @@ const ERROR: Record<EngineErrorCode, Template> = {
     `${lead(w)}extraStuds[${p.index}]: ${p.count} stud(s) from x=${p.x} run past the ${inch(p.length)} wall`,
   EXTRA_STUD_IN_OPENING: (p, w) =>
     `${lead(w)}extraStuds[${p.index}]: stud at x=${p.x} falls in the opening zone [${p.start}, ${p.end}] — extra studs stay clear of kings, jacks and the RO`,
+  POST_INVALID: (p, w) =>
+    `${lead(w)}posts[${p.index}]: ${p.field === 'x' ? 'x must be a finite number' : 'section must be one of 4x4, 4x6, 6x6'} (got ${p.value})`,
+  POST_DEPTH_MISMATCH: (p, w) =>
+    `${lead(w)}posts[${p.index}]: a ${p.section} post has no face equal to the ${inch(p.wallDepth)} depth of the ${p.wallSection} wall — ` +
+    'pick a post that fills the wall thickness (hypothesis P45)',
+  POST_OUT_OF_WALL: (p, w) =>
+    `${lead(w)}posts[${p.index}]: post from x=${p.x} (${inch(p.width)} wide) runs past the ${inch(p.length)} wall`,
+  POST_IN_OPENING: (p, w) =>
+    `${lead(w)}posts[${p.index}]: post at x=${p.x} falls in the opening zone [${p.start}, ${p.end}] — posts stay clear of kings, jacks and the RO`,
+  POST_OVERLAP: (p, w) =>
+    `${lead(w)}posts[${p.index}]: post at x=${p.x} overlaps the ${p.role === 'stud' ? 'extra or corner stud' : String(p.role)} at x=${p.memberX}`,
 
   BLOCKING_PRESET_UNKNOWN: (p, w) =>
     `${lead({ wallId: w.wallId })}blocking[${p.index}]: no blocking preset "${p.preset}" — use one of ${list(p.known)} or add it to config.blockingPresets`,

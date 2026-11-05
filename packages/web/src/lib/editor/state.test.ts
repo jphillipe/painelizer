@@ -497,3 +497,12 @@ describe('Correção da S30: reducer estável sob reaplicação', () => {
     expect([first.loads, editorReducer(first, { ...action }).loads, editorReducer(first, { type: 'reset' }).loads]).toEqual([1, 2, 2]);
   });
 });
+
+describe('S37: posts ao mover o start', () => {
+  it('ficam no lugar em planta, como os studs extras', () => {
+    const s0 = loaded();
+    const withPost = commit(s0, { ...draftOf(s0), walls: draftOf(s0).walls.map((w) => (w.id === 'W01' ? { ...w, posts: [{ x: 100, section: '4x4' as const }] } : w)) });
+    const s1 = editorReducer(withPost, { type: 'moveEndpoint', wallId: 'W01', end: 'start', point: { x: 24, y: 0 } });
+    expect(wallById(draftOf(s1), 'W01')?.posts).toEqual([{ x: 76, section: '4x4' }]);
+  });
+});

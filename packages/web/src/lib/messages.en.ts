@@ -205,6 +205,16 @@ const ENGINE_ERRORS: Record<string, Template> = {
   EXTRA_STUD_OUT_OF_WALL: (p, t) => at(t, `extra stud #${ord(p['index'])}: ${String(p['count'])} stud(s) from x=${String(p['x'])} run past the ${inch(p['length'])} wall.`),
   EXTRA_STUD_IN_OPENING: (p, t) =>
     at(t, `extra stud #${ord(p['index'])}: the stud at x=${String(p['x'])} falls in the opening zone [${String(p['start'])}, ${String(p['end'])}] — extra studs stay clear of kings, jacks and the rough opening.`),
+  POST_INVALID: (p, t) =>
+    at(t, `post #${ord(p['index'])}: ${p['field'] === 'x' ? 'the position must be a number' : 'the size must be 4x4, 4x6 or 6x6'} (got ${String(p['value'])}).`),
+  POST_DEPTH_MISMATCH: (p, t) =>
+    at(t, `post #${ord(p['index'])}: a ${String(p['section'])} post has no face equal to the ${inch(p['wallDepth'])} depth of the ${String(p['wallSection'])} wall — pick a post that fills the wall thickness.`),
+  POST_OUT_OF_WALL: (p, t) =>
+    at(t, `post #${ord(p['index'])}: the post from x=${String(p['x'])} (${inch(p['width'])} wide) runs past the ${inch(p['length'])} wall.`),
+  POST_IN_OPENING: (p, t) =>
+    at(t, `post #${ord(p['index'])}: the post at x=${String(p['x'])} falls in the opening zone [${String(p['start'])}, ${String(p['end'])}] — posts stay clear of kings, jacks and the rough opening.`),
+  POST_OVERLAP: (p, t) =>
+    at(t, `post #${ord(p['index'])}: the post at x=${String(p['x'])} overlaps the ${p['role'] === 'stud' ? 'extra or corner stud' : String(p['role'])} at x=${String(p['memberX'])} — move one of them.`),
   BLOCKING_PRESET_UNKNOWN: (p, t) =>
     at(wallOnly(t), `blocking row #${ord(p['index'])}: there is no blocking preset "${String(p['preset'])}" — pick one of ${list(p['known'], 12)} or add it to the project blocking presets.`),
   BLOCKING_ROW_INVALID: (p, t) =>

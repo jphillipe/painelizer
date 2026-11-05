@@ -4,7 +4,7 @@
  */
 
 import type { Opening } from './opening';
-import type { WallSection } from './sections';
+import type { PostSection, WallSection } from './sections';
 
 /** Ponto em planta, polegadas (S13). Eixos x/y quaisquer — a origem é do arquiteto. */
 export interface Point {
@@ -26,6 +26,24 @@ export interface ExtraStud {
   count?: number;
   /** Texto livre do projeto (ex.: "HDU2 post"); vai para o `<title>` da peça no SVG. */
   label?: string;
+}
+
+/**
+ * Post pedido pelo projeto (S37, hipótese P45): peça maciça 4x4/4x6/6x6 de altura inteira (da bottom à top plate) no
+ * lugar dos studs de layout que ela sobrepõe — canto de escada, apoio de viga LVL. A face do post que fica na
+ * espessura da parede tem de ser a profundidade da parede (2x4 → 3.5", 2x6 → 5.5"); a outra fica em x. Post fora da
+ * parede, em zona de abertura, sobre outra peça de altura inteira ou numa quebra de painel é erro.
+ */
+export interface Post {
+  /** x da borda esquerda do post (na planta, medido do `start`). */
+  x: number;
+  section: PostSection;
+  /** Rótulo do projeto ("P-01"); vai para a folha. */
+  label?: string;
+  /** Conector da base, texto do projeto ("HDU2 hold-down"); só nota na folha, não é peça (P45). */
+  base?: string;
+  /** Conector do topo / o que apoia, texto do projeto ("LUS28 — LVL 1 3/4 x 11 7/8 above"); só nota na folha. */
+  top?: string;
 }
 
 /**
@@ -69,6 +87,8 @@ export interface Wall {
   layoutOrigin?: number;
   /** Studs de altura inteira adicionais pedidos pelo projeto (S12). */
   extraStuds?: ExtraStud[];
+  /** Posts 4x4/4x6/6x6 pedidos pelo projeto (S37, P45). */
+  posts?: Post[];
   /**
    * Quebras de painel forçadas pelo revisor (S29), em x da parede (na planta, medidas do `start` e
    * convertidas pelo motor). Ausente = escolha automática (P35). Presente = a lista **completa**, em ordem

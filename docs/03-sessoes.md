@@ -1525,7 +1525,7 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   renderizadas para PNG (Chrome headless, `out/s36/`). A seção "Blocking" testada no DOM (jsdom). Não conferido: a
   seção e o campo "Fire blocking above" no app rodando, `pnpm e2e`. Não feito (S40): campos para `config.blockingPresets` e para
   o blocking do tipo de parede; (S39) fileiras no bloco "Wall content".
-- [ ] **S37 — Posts (regra de framing; P45).** `wall.posts?: [{ x, section: '4x4' | '4x6' | '6x6', label?, base?,
+- [x] **S37 — Posts (regra de framing; P45).** `wall.posts?: [{ x, section: '4x4' | '4x6' | '6x6', label?, base?,
   top? }]` → `role: 'post'`, altura da cavidade, largura real em x; a profundidade do post tem de ser a da parede
   (senão erro com código; hipótese na P45); stud de layout sobreposto sai (mecanismo dos `extraStuds` em
   `panelizeWall.ts`); post em zona de abertura, fora da parede ou sobre quebra de painel → erro; `splitWall`
@@ -1534,6 +1534,30 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   desenha com rótulo e nota "base: … · top: …" (texto do projeto — conector não é geometria). `extraStuds` continua
   para (2)/(3) 2x; P26 revista. **Web**: lista "Posts" no inspetor (como "Extra studs"). **CLI**: schema. **Fixture
   novo** `wall-144-post`. O cruzamento em + já foi feito na S31 e não muda: a fábrica não respondeu a P46.
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Core**: `Post` e `Wall.posts` (`wall.ts`); `PostSection`, `POST_SECTION_SIZE`, `POST_SECTIONS`, `SawnSection` e
+  `isPostSection`/`isSawnSection` (`sections.ts`; `Section` inclui os posts; `verticalWidth` = `flat ? sectionDepth :
+  sectionThickness`); `PostMember` e o papel `post` (`panel.ts`; `labelOf` lê o rótulo). `rules/posts.ts`: `postFace`
+  (face na espessura = profundidade da parede; 4x6 na 2x4 `flat`), `postMembers` (altura do stud, erros com código) e
+  `postsForSegment`; em `framePanel` depois dos extras e das peças de canto/T, o stud de layout sobreposto sai e o post
+  conta como peça de altura inteira para ladder e blocking. Erros `POST_INVALID`, `POST_DEPTH_MISMATCH`,
+  `POST_OUT_OF_WALL`, `POST_IN_OPENING`, `POST_OVERLAP`; quebra sobre o post = `PANEL_BREAK_INVALID` (motivo
+  `member`). `splitWall` passa a cada trecho os seus posts; `frameWall` converte `x` do `start`. `lumber.json` com
+  4x4 2.98 / 4x6 4.68 / 6x6 7.35 lb/pé; BOM compra o post em comprimento comercial; `post` em `CUT_ROLE_ORDER` (depois
+  de `stud`) e os posts em `SECTION_ORDER`. **Folha**: post com cor própria, letra P, rótulo girado, conectores no
+  `<title>`, seção "Posts" na margem (`P-01 · 4x6 at x=…` e, recuado embaixo, `base: … · top: …` quebrado para caber
+  na coluna; a nota da P45) e "P post" na legenda
+  — só no painel com post (10 snapshots e 16 fixtures sem um byte mudado). **CLI**: `postShape`, `posts` na parede,
+  type lock com `Post`; `config.prices` aceita as seções de post. **Web**: `draft.ts` lê e escreve `posts`;
+  `lib/editor/posts.ts` (largura e frase pela `postFace`); seção "Posts" no inspetor; dividir/juntar/mover tratam os
+  posts; "Posts" na aba Materials; frases e títulos dos 5 códigos. **P45** com o "Em vigor desde a S37", **P26**
+  revista, regra em `02-framing.md`. **Fixture novo** `wall-144-post` (P-01 4x6 e P-02 6x6 na parede do
+  `wall-144-plain`; 13 peças). Testes: core 736 → 758, cli 185 → 188, extract 213 (+ 1 pulado), web 559 → 568.
+  Verde: `pnpm check` duas vezes e `pnpm --filter web build`. Conferido: as folhas do `wall-144-post` e de um 4x6 deitado
+  em parede 2x4 com blocking renderizadas para PNG (Chrome headless, `out/s37/`; a linha dos conectores estourava a
+  coluna e passou a quebrar). Não conferido: a seção "Posts" no app rodando (só testes e DOM/jsdom), `pnpm e2e`. Não
+  feito (S39): posts e conectores no bloco
+  "Wall content"; (backlog) post atravessando a top plate até a viga, posts lidos da planta estrutural pela IA.
 - [ ] **S38 — Sheathing (regra de framing; P47, P48; P8 revista; entra no escopo v1).** `config.sheathing?:
   { thickness: 0.4375, sheet: { width: 48, height: 96 | 108 }, side: 'exterior' | 'interior' | 'both', overhang?:
   { corner?: 'auto' | number, floorTop?: number, floorBottom?: number }, nailing?: { nail, edge, field } }`, ligado

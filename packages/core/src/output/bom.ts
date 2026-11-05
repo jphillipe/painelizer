@@ -22,7 +22,7 @@
 import { DEFAULT_STOCK_LENGTHS } from '../config';
 import { EPS } from '../eps';
 import type { Panel } from '../panel';
-import { isLumberSection, type Section } from '../sections';
+import { isSawnSection, type Section } from '../sections';
 import { DEFAULT_PRECUTS, matchPrecut } from '../rules/precuts';
 import { cutList, sectionRank } from './cutlist';
 import { EngineError } from '../messages';
@@ -89,7 +89,8 @@ export function bom(
 
   for (const panel of panels) {
     for (const cut of cutList(panel)) {
-      const engineered = !isLumberSection(cut.section);
+      // Post 4x4/4x6/6x6 (S37) é serrado: comprimento comercial, como a família 2x.
+      const engineered = !isSawnSection(cut.section);
       const precutLength = PRECUT_SECTIONS.includes(cut.section)
         ? matchPrecut(cut.length, precuts)
         : undefined;

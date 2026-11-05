@@ -27,6 +27,7 @@ const ROLE_LABEL: Readonly<Record<string, string>> = {
   sill: 'Sills',
   cripple: 'Cripples',
   block: 'Blocks',
+  post: 'Posts',
 };
 
 const KIND_LABEL: Readonly<Record<BomRow['kind'], string>> = { commercial: 'stock', precut: 'precut', engineered: 'engineered', oversize: 'oversize' };

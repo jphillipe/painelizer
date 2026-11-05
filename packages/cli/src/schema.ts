@@ -46,6 +46,8 @@ import {
   type OpeningSpec,
   type OpeningType,
   type PanelConfig,
+  type Post,
+  type PostSection,
   type PriceEntry,
   type Point,
   type Section,
@@ -299,6 +301,8 @@ function oneOf<T extends string>(allowed: readonly T[]) {
 
 const WALL_SECTIONS: readonly WallSection[] = ['2x4', '2x6'];
 const LUMBER_SECTIONS: readonly LumberSection[] = ['2x4', '2x6', '2x8', '2x10', '2x12'];
+/** Seções de post (S37, P45). */
+export const POST_SECTION_LIST: readonly PostSection[] = ['4x4', '4x6', '6x6'];
 const OPENING_TYPES: readonly OpeningType[] = ['window', 'door'];
 const FLOOR_SPANS: readonly FloorSpan[] = ['center', 'clear'];
 const EXPOSURES: readonly Exposure[] = ['B', 'C', 'D'];
@@ -505,10 +509,28 @@ export const wallTypeShape = {
   blocking: blocking.optional(),
 };
 
+/** Seção de uma linha de preço: a de header (2x, LVL/PSL) ou a de post (S37: `4x4`, `4x6`, `6x6`). */
+export const priceSection = z.unknown().transform((v, ctx): Section => {
+  if (typeof v === 'string' && (POST_SECTION_LIST as readonly string[]).includes(v)) return v as Section;
+  if (typeof v === 'string' && parseEngineeredSection(v) === undefined && !(LUMBER_SECTIONS as readonly string[]).includes(v)) {
+    report(
+      ctx,
+      new Fail(
+        { rule: 'headerSection', received: v },
+        `expected one of ${[...LUMBER_SECTIONS, ...POST_SECTION_LIST].join(', ')}, "LVL <thickness>x<depth>", "PSL <thickness>x<depth>" or ` +
+          `{ material, width, depth }, got ${show(v)}`,
+      ),
+    );
+    return z.NEVER;
+  }
+  const r = sub(ctx, headerSection, v);
+  return r === undefined ? z.NEVER : r.value;
+});
+
 /** Preço por peça de um comprimento de estoque (S31). */
-export const pieceCostShape = { section: headerSection, length: positiveMeasure, price: money };
+export const pieceCostShape = { section: priceSection, length: positiveMeasure, price: money };
 /** Preço por pé linear da seção (S31). */
-export const footCostShape = { section: headerSection, perFoot: money };
+export const footCostShape = { section: priceSection, perFoot: money };
 const pieceCostNode = node(pieceCostShape);
 const footCostNode = node(footCostShape);
 
@@ -596,6 +618,14 @@ export const openingShape = {
 };
 
 export const extraStudShape = { x: measure, count: count.optional(), label: text.optional() };
+/** Post do projeto (S37, P45): x da borda esquerda (na planta, do `start`), seção e textos do projeto. */
+export const postShape = {
+  x: measure,
+  section: oneOf(POST_SECTION_LIST),
+  label: text.optional(),
+  base: text.optional(),
+  top: text.optional(),
+};
 export const pointShape = { x: signedMeasure, y: signedMeasure };
 export const endsShape = { start: oneOf(END_RULES).optional(), end: oneOf(END_RULES).optional() };
 
@@ -615,6 +645,8 @@ export const wallShape = {
   floorSpan: oneOf(FLOOR_SPANS).optional(),
   level: count.optional(),
   extraStuds: list(node(extraStudShape)).optional(),
+  /** Posts 4x4/4x6/6x6 (S37): x da borda esquerda; conectores são texto. */
+  posts: list(node(postShape)).optional(),
   /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); lista completa, crescente. */
   panelBreaks: list(measure).optional(),
   /** Tag do tipo de parede (S35): com a tag em `config.wallTypes`, o tipo dá seção, posição e carga que faltarem. */
@@ -773,6 +805,7 @@ export type SchemaMatchesCore = [
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof headerShape>>>>, OpeningHeader>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof openingShape>>>>, OpeningSpec>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof extraStudShape>>>>, ExtraStud>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof postShape>>>>, Post>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingRowShape>>>>, BlockingRow>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingPresetShape>>>>, BlockingPreset>>,
   Assert<Same<z.output<typeof blocking>, BlockingEntry[]>>,

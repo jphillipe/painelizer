@@ -109,6 +109,14 @@
 - Studs extras do projeto (S12): `wall.extraStuds = [{ x, count?, label? }]` → studs de altura inteira
   (`role: 'stud'`, `Member.label`) colados a partir de `x`; o stud de layout que os sobrepõe sai, o que só encosta
   fica. Extra dentro de uma zona de abertura ou fora da parede é erro.
+- Posts do projeto (S37, hipótese P45): `wall.posts = [{ x, section: '4x4' | '4x6' | '6x6', label?, base?, top? }]` →
+  `role: 'post'` maciço, de altura inteira (comprimento do stud, em y = plate), `x` = borda esquerda. Reais 3.5×3.5,
+  3.5×5.5, 5.5×5.5: a face na espessura da parede tem de ser a profundidade dela (2x4 = 3.5", 2x6 = 5.5"), a outra fica
+  em x — 4x6 na 2x6 ocupa 3.5"; na 2x4, a face larga vai ao longo da parede (`flat`, 5.5"). Sem face igual (4x4 na 2x6,
+  6x6 na 2x4): erro `POST_DEPTH_MISMATCH`. O stud de layout que o post sobrepõe sai. Fora da parede, na zona de
+  abertura, sobre stud extra/de canto/de encosto ou outro post: erro com código. Nunca é candidato a quebra (peça na
+  faixa da junta); quebra forçada sobre ele é `PANEL_BREAK_INVALID`. Conectores (`base`, `top`) e a viga LVL apoiada
+  são texto do projeto na folha — não são peças nem entram na lista. Peso a 35 pcf (2.98 / 4.68 / 7.35 lb/pé).
 - Cripples abaixo do sill nos studs de layout que caem inteiros dentro do RO, exceto o colado ao jack ou o que
   o invade (ex.: RO em 48 com jack em 46.5–48: o stud da marca 48, em 47.25–48.75, invade o jack e sai) ou a até
   2" de folga livre dele — confirmado pela fábrica (P3, P13).

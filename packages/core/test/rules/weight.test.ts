@@ -8,7 +8,20 @@ const plain = wallFixture(plainJson);
 
 describe('peso da madeira (hipótese P8)', () => {
   it('tabela lb/pé por seção (SPF ~35 pcf) e densidade de LVL/PSL', () => {
-    expect(POUNDS_PER_FOOT).toEqual({ '2x4': 1.28, '2x6': 2.0, '2x8': 2.64, '2x10': 3.37, '2x12': 4.1 });
+    // Posts (S37, P45): a mesma densidade de 35 pcf sobre a seção real (12.25, 19.25 e 30.25 in²).
+    expect(POUNDS_PER_FOOT).toEqual({
+      '2x4': 1.28,
+      '2x6': 2.0,
+      '2x8': 2.64,
+      '2x10': 3.37,
+      '2x12': 4.1,
+      '4x4': 2.98,
+      '4x6': 4.68,
+      '6x6': 7.35,
+    });
+    for (const [section, area] of [['4x4', 12.25], ['4x6', 19.25], ['6x6', 30.25]] as const) {
+      expect(poundsPerFoot(section)).toBeCloseTo((area / 144) * 35, 2);
+    }
     expect(ENGINEERED_PCF).toBe(42);
     expect(poundsPerFoot('2x6')).toBe(2.0);
     // LVL 1 3/4 × 9 1/4 = 16.1875 in² → 16.1875 / 144 × 42

@@ -1,7 +1,7 @@
 /**
  * Peso estimado da madeira de um painel (S15, hipótese P8).
  *
- * - Serrada: lb por pé linear por seção em `src/data/lumber.json` (SPF a ~35 pcf). Header de N plies pesa
+ * - Serrada (2x e posts 4x4/4x6/6x6, S37): lb por pé linear por seção em `src/data/lumber.json` (SPF a ~35 pcf). Header de N plies pesa
  *   N vezes a peça.
  * - Engenheirada (LVL/PSL): seção real (espessura × profundidade) a `engineeredPcf`.
  * - Só a madeira: sem sheathing, pregos ou isolamento (a folha anota). A fábrica pediu o peso estimado em
@@ -10,18 +10,18 @@
  */
 
 import { pieceCount, type Panel } from '../panel';
-import { isLumberSection, parseEngineeredSection, type LumberSection, type Section } from '../sections';
+import { isSawnSection, parseEngineeredSection, type SawnSection, type Section } from '../sections';
 import lumber from '../data/lumber.json';
 
-/** lb por pé linear de cada seção serrada (P8). */
-export const POUNDS_PER_FOOT: Readonly<Record<LumberSection, number>> = lumber.poundsPerFoot;
+/** lb por pé linear de cada seção serrada, 2x e posts (P8, P45). */
+export const POUNDS_PER_FOOT: Readonly<Record<SawnSection, number>> = lumber.poundsPerFoot;
 
 /** Densidade usada para LVL/PSL, lb/ft³ (P8). */
 export const ENGINEERED_PCF: number = lumber.engineeredPcf;
 
 /** lb por pé linear de uma peça da seção (serrada pela tabela; engenheirada pela seção real). */
 export function poundsPerFoot(section: Section): number {
-  if (isLumberSection(section)) return POUNDS_PER_FOOT[section];
+  if (isSawnSection(section)) return POUNDS_PER_FOOT[section];
   const e = parseEngineeredSection(section);
   if (e === undefined) throw new RangeError(`weight: unknown section (${String(section)})`);
   return ((e.width * e.depth) / 144) * ENGINEERED_PCF;

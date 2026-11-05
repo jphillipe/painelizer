@@ -27,7 +27,7 @@
  * Escrita (`textFromDraft`): chaves conhecidas (as das shapes do schema) em ordem fixa, medidas como número (sem
  * perda; pés-pol arredondaria a 1/16"), chaves desconhecidas (`$comment`, `$reviewed`…) devolvidas em `extra` — o
  e recusa as outras. Nós aninhados (`building`, `panel`, catálogo, `header`, `ends`,
- * `extraStuds`, `blocking`, `blockingPresets`) só guardam chaves conhecidas.
+ * `extraStuds`, `posts`, `blocking`, `blockingPresets`) só guardam chaves conhecidas.
  *
  * `lib/editor/*` é a única camada do cliente que importa `core` (docs/10-design.md §7).
  */
@@ -42,6 +42,7 @@ import {
   type LumberSpecies,
   type OpeningType,
   type Point,
+  type PostSection,
   type PriceEntry,
   type TeeStyle,
   type WallSection,
@@ -60,6 +61,7 @@ import {
   isRecord,
   looseWallShape,
   openingShape,
+  postShape,
   openingTypeShape,
   panelShape,
   planWallShape,
@@ -107,6 +109,15 @@ export interface DraftExtraStud {
   label?: string;
 }
 
+/** Post do projeto (S37, P45): borda esquerda (na planta, do `start`), seção e textos do projeto. */
+export interface DraftPost {
+  x?: number;
+  section?: PostSection;
+  label?: string;
+  base?: string;
+  top?: string;
+}
+
 /** Fileira de blocking por altura (S36): centro ao subfloor, trecho opcional (na planta, do `start`) e uso. */
 export interface DraftBlockingRow {
   y?: number;
@@ -144,6 +155,8 @@ export interface DraftWall {
   /** Tag do tipo de parede (S35): com a tag em `config.wallTypes`, o tipo dá seção, posição e carga que faltarem. */
   wallType?: string;
   extraStuds?: DraftExtraStud[];
+  /** Posts 4x4/4x6/6x6 (S37). */
+  posts?: DraftPost[];
   /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); ausente = automático. */
   panelBreaks?: number[];
   /** Fileiras de blocking por altura (S36); ausente = as do tipo de parede. */
@@ -452,6 +465,18 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
     const X = extraStudShape;
     return compact({ x: r.field(X.x, o['x'], `${p}.x`), count: r.field(X.count, o['count'], `${p}.count`), label: r.field(X.label, o['label'], `${p}.label`) });
   });
+  const posts = r.list(w['posts'], `${path}.posts`)?.map((e, i) => {
+    const p = `${path}.posts[${i}]`;
+    const o = r.obj(e, p) ?? {};
+    const X = postShape;
+    return compact({
+      x: r.field(X.x, o['x'], `${p}.x`),
+      section: r.field(X.section, o['section'], `${p}.section`),
+      label: r.field(X.label, o['label'], `${p}.label`),
+      base: r.field(X.base, o['base'], `${p}.base`),
+      top: r.field(X.top, o['top'], `${p}.top`),
+    });
+  });
   const e = r.obj(w['ends'], `${path}.ends`);
   const ends = e === undefined ? undefined : compact({ start: r.field(endsShape.start, e['start'], `${path}.ends.start`), end: r.field(endsShape.end, e['end'], `${path}.ends.end`) });
   return compact({
@@ -471,6 +496,7 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
     level: r.field(W.level, w['level'], `${path}.level`),
     wallType: r.field(W.wallType, w['wallType'], `${path}.wallType`),
     extraStuds,
+    posts,
     panelBreaks: r.field(W.panelBreaks, w['panelBreaks'], `${path}.panelBreaks`),
     blocking: blockingFrom(r, w['blocking'], `${path}.blocking`),
     openings,
@@ -750,6 +776,7 @@ function wallJson(w: DraftWall): Record<string, unknown> {
     level: w.level,
     wallType: w.wallType,
     extraStuds: w.extraStuds === undefined ? undefined : w.extraStuds.map((e) => compact({ ...e })),
+    posts: w.posts === undefined ? undefined : w.posts.map((p) => compact({ ...p })),
     panelBreaks: w.panelBreaks === undefined ? undefined : [...w.panelBreaks],
     blocking: blockingJson(w.blocking),
     openings: w.openings.map(openingJson),

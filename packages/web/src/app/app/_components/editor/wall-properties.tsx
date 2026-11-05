@@ -16,6 +16,7 @@ import { isReviewed, type EditorAction, type Patch, type Selection } from '@/lib
 import { cn } from '@/lib/utils';
 import { splitWall, suggestSplit } from '@/lib/editor/wall-ops';
 import { missingWallFields, typeOfWall, wallTypeHint, wallTypeOptions } from '@/lib/editor/wall-types';
+import { POST_SECTION_OPTIONS, postHint } from '@/lib/editor/posts';
 import { BoolSelect, EnumSelect, Field, MeasureInput, NumberInput, Section, TextInput, WallTypeInput } from './fields';
 import { IssueCallout } from './issue-callout';
 
@@ -161,6 +162,8 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
       <PanelBreaksSection id={id} length={length} breaks={breaks} issue={issues.some((i) => i.code === 'PANEL_BREAK_INVALID' || i.code === 'PANEL_TOO_LONG')} onChange={(list) => dispatch({ type: 'setPanelBreaks', wallId: id, breaks: list })} />
 
       <ExtraStudsSection id={id} length={length} studs={wall.extraStuds} onChange={(extraStuds) => set({ extraStuds })} />
+
+      <PostsSection id={id} draft={draft} wall={wall} length={length} issue={issues.some((i) => (i.code ?? '').startsWith('POST_'))} onChange={(posts) => set({ posts })} />
 
       <BlockingSection id={id} draft={draft} wall={wall} issue={issues.some((i) => (i.code ?? '').startsWith('BLOCKING_'))} onChange={(blocking) => set({ blocking })} />
 
@@ -309,7 +312,7 @@ function ExtraStudsSection({ id, length, studs, onChange }: { id: string; length
       }
     >
       {list.length === 0 ? (
-        <p className="text-[13px] text-ink-3">None. Use for posts and hold-downs the drawings call out (full-height studs beside the layout).</p>
+        <p className="text-[13px] text-ink-3">None. Use for hold-downs and point loads the drawings call out as (2) or (3) 2x studs (full-height studs beside the layout); solid 4x and 6x posts go under Posts.</p>
       ) : (
         <ul className="space-y-2">
           {list.map((s, i) => (
@@ -326,6 +329,66 @@ function ExtraStudsSection({ id, length, studs, onChange }: { id: string; length
               <Button variant="ghost" size="icon-xs" aria-label={`Remove extra stud ${i + 1}`} onClick={() => remove(i)}>
                 <Trash2Icon />
               </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+/**
+ * Posts do projeto (S37, P45): borda esquerda (do `start`), seção 4x4/4x6/6x6, rótulo e os conectores de base e topo
+ * (texto do projeto para a folha; a viga LVL apoiada vai no topo). A frase sob cada post diz quanto ele ocupa.
+ */
+function PostsSection({ id, draft, wall, length, issue, onChange }: { id: string; draft: ProjectDraft; wall: DraftWall; length: number | undefined; issue: boolean; onChange: (posts: DraftWall['posts']) => void }) {
+  const list = wall.posts ?? [];
+  const update = (i: number, patch: Patch<NonNullable<DraftWall['posts']>[number]>): void =>
+    onChange(list.map((p, n) => (n === i ? Object.fromEntries(Object.entries({ ...p, ...patch }).filter(([, v]) => v !== undefined)) : p)));
+  const remove = (i: number): void => {
+    const next = list.filter((_, n) => n !== i);
+    onChange(next.length === 0 ? undefined : next);
+  };
+  const add = (): void => onChange([...list, { x: Math.round(((length ?? 0) / 2) * 16) / 16, section: '4x4' }]);
+  return (
+    <Section
+      title={`Posts (${list.length})`}
+      collapsible
+      defaultOpen={list.length > 0 || issue}
+      actions={
+        <Button variant="outline" size="xs" onClick={add}>
+          <PlusIcon /> Add post
+        </Button>
+      }
+    >
+      {list.length === 0 ? (
+        <p className="text-[13px] text-ink-3">None. Use for solid 4x4, 4x6 and 6x6 posts (stair corners, under a beam). Connectors are notes on the sheet, not pieces.</p>
+      ) : (
+        <ul className="space-y-3">
+          {list.map((p, i) => (
+            <li key={i} className="space-y-2">
+              <div className="grid grid-cols-[1fr_5rem_1fr_auto] items-end gap-2">
+                <Field id={`w-${id}-post-${i}-x`} label={i === 0 ? 'Left edge (from start)' : ''} hint={postHint(draft.config, wall, p)}>
+                  <MeasureInput id={`w-${id}-post-${i}-x`} value={p.x} required onCommit={(v) => v !== undefined && update(i, { x: v })} />
+                </Field>
+                <Field id={`w-${id}-post-${i}-s`} label={i === 0 ? 'Size' : ''}>
+                  <EnumSelect id={`w-${id}-post-${i}-s`} value={p.section} noneLabel="Size" options={POST_SECTION_OPTIONS} onChange={(v) => update(i, { section: v as NonNullable<DraftWall['posts']>[number]['section'] })} />
+                </Field>
+                <Field id={`w-${id}-post-${i}-l`} label={i === 0 ? 'Label' : ''}>
+                  <TextInput id={`w-${id}-post-${i}-l`} value={p.label} placeholder="e.g. P-01" onCommit={(v) => update(i, { label: v })} />
+                </Field>
+                <Button variant="ghost" size="icon-xs" aria-label={`Remove post ${i + 1}`} onClick={() => remove(i)}>
+                  <Trash2Icon />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field id={`w-${id}-post-${i}-b`} label="Base connector">
+                  <TextInput id={`w-${id}-post-${i}-b`} value={p.base} placeholder="e.g. HDU2 hold-down" onCommit={(v) => update(i, { base: v })} />
+                </Field>
+                <Field id={`w-${id}-post-${i}-t`} label="Top connector / beam">
+                  <TextInput id={`w-${id}-post-${i}-t`} value={p.top} placeholder="e.g. LUS28, LVL above" onCommit={(v) => update(i, { top: v })} />
+                </Field>
+              </div>
             </li>
           ))}
         </ul>

@@ -1,0 +1,48 @@
+{
+  "$comment": "S37 (2026-11-05, aprovado por delegação; not confirmed by the human — review; hipótese P45): a parede de wall-144-plain.json (12' 2x6 externa portante, sem abertura) com dois posts do projeto. P-01: 4x6 em x = 46.5 — a face de 5.5\" fica na espessura da parede 2x6, 3.5\" em x: ocupa [46.5, 50] e tira o stud de layout de 47.25 (marca 48). P-02: 6x6 em x = 94 — 5.5\" nas duas faces: ocupa [94, 99.5] e tira o stud de 95.25 (marca 96). Os dois com a altura do stud (92.625, de y = 1.5 à top plate). Conectores (base/top) e a viga LVL são texto do projeto para a folha, não peças. Members: os 13 do original menos os studs de 47.25 e 95.25, mais os 2 posts (13). Peso: 72 (plates) + 8 × 15.4375 (studs) + 92.625/12 × 4.68 + 92.625/12 × 7.35 = 288.36 → 288.4 lb.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625]
+  },
+  "wall": {
+    "id": "W-post",
+    "length": 144,
+    "height": 97.125,
+    "section": "2x6",
+    "exterior": true,
+    "bearing": true,
+    "openings": [],
+    "posts": [
+      { "x": 46.5, "section": "4x6", "label": "P-01", "base": "HDU2 hold-down", "top": "LUS28 — LVL 1 3/4 x 11 7/8 above" },
+      { "x": 94, "section": "6x6", "label": "P-02", "base": "PB66 post base", "top": "HUS" }
+    ]
+  },
+  "expected": {
+    "removedStuds": [47.25, 95.25],
+    "members": [
+      { "role": "bottomPlate", "section": "2x6", "length": 144, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x6", "length": 144, "x": 0, "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 144, "x": 0, "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "post", "section": "4x6", "length": 92.625, "x": 46.5, "y": 1.5, "orientation": "vertical", "label": "P-01", "base": "HDU2 hold-down", "top": "LUS28 — LVL 1 3/4 x 11 7/8 above" },
+      { "role": "post", "section": "6x6", "length": 92.625, "x": 94, "y": 1.5, "orientation": "vertical", "label": "P-02", "base": "PB66 post base", "top": "HUS" }
+    ],
+    "cutList": [
+      { "role": "plates", "section": "2x6", "length": 144, "qty": 3 },
+      { "role": "stud", "section": "2x6", "length": 92.625, "qty": 8 },
+      { "role": "post", "section": "4x6", "length": 92.625, "qty": 1 },
+      { "role": "post", "section": "6x6", "length": 92.625, "qty": 1 }
+    ],
+    "weightLb": 288.4,
+    "warnings": []
+  }
+}

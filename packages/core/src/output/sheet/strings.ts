@@ -8,7 +8,7 @@
  */
 
 import { warningMessage, type Warning } from '../../messages';
-import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening } from '../../panel';
+import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening, PostMember } from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import type { CutRole } from '../cutlist';
 
@@ -20,6 +20,8 @@ export interface SheetStrings {
   cutRoleName: Readonly<Record<CutRole, string>>;
   /** Legenda no rodapé. */
   legend: string;
+  /** Legenda no rodapé do painel com post (S37): a mesma, com a letra P. */
+  legendWithPosts: string;
   /** Dados do painel na segunda linha do cabeçalho. */
   infoLine(panel: Panel, pieces: number, weightLb: number): string;
   /** Data e revisão no canto do cabeçalho; vazio quando não há nenhuma. */
@@ -61,6 +63,16 @@ export interface SheetStrings {
   fieldCutTitle(cut: FieldCut): string;
   /** Linha do corte na obra na lista de peças. */
   fieldCutItem(cut: FieldCut): string;
+  /**
+   * Posts do painel (S37): título; por post, a linha do rótulo/seção/x e a dos conectores (texto do projeto,
+   * "base: … · top: …"; ausente sem conector); a nota da hipótese, em linhas.
+   */
+  posts: {
+    title: string;
+    item(post: Pick<PostMember, 'section' | 'x' | 'label'>): string;
+    connectors(post: Pick<PostMember, 'base' | 'top'>): string | undefined;
+    note: readonly string[];
+  };
   /** Texto do aviso no rodapé (depois do código). */
   warning(w: Warning): string;
   /** Planta (S16). */
@@ -93,6 +105,23 @@ export function roleName(role: MemberRole): string {
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
+const LEGEND_LETTERS = 'K king · J jack · C cripple · H header · S sill · B block';
+const LEGEND_REST = 'red hatch = field cut · bottom: layout marks and center of each vertical piece from x=0';
+
+/** "P-01 · 4x6 at x=48\"" (S37). */
+function postItem(post: Pick<PostMember, 'section' | 'x' | 'label'>): string {
+  return [...(post.label === undefined ? [] : [post.label]), `${post.section} at x=${formatInches(post.x)}`].join(' · ');
+}
+
+/** "base: HDU2 · top: LUS28" (S37): o que o projeto diz dos conectores, sem inventar nenhum. */
+function postConnectors(post: Pick<PostMember, 'base' | 'top'>): string | undefined {
+  const parts = [
+    ...(post.base === undefined ? [] : [`base: ${post.base}`]),
+    ...(post.top === undefined ? [] : [`top: ${post.top}`]),
+  ];
+  return parts.length === 0 ? undefined : parts.join(' · ');
+}
+
 const EN: SheetStrings = {
   cutRoleName: {
     plates: 'plate',
@@ -103,10 +132,10 @@ const EN: SheetStrings = {
     sill: 'sill (S)',
     cripple: 'cripple (C)',
     block: 'block (B)',
+    post: 'post (P)',
   },
-  legend:
-    `K king · J jack · C cripple · H header · S sill · B block · red hatch = field cut · ` +
-    `bottom: layout marks and center of each vertical piece from x=0`,
+  legend: `${LEGEND_LETTERS} · ${LEGEND_REST}`,
+  legendWithPosts: `${LEGEND_LETTERS} · P post · ${LEGEND_REST}`,
   infoLine(panel, pieces, weightLb) {
     const kind = [panel.exterior ? 'exterior' : 'interior', panel.bearing ? 'bearing' : 'non-bearing'];
     return [
@@ -174,6 +203,12 @@ const EN: SheetStrings = {
   fieldCutTitle: (cut) => `${EN.fieldCutLabel(cut)} — ${cut.role}, opening ${cut.openingId}, x=${formatInches(cut.x)}`,
   fieldCutItem: (cut) =>
     `${roleName(cut.role)} ${formatInches(cut.length)} from x=${formatInches(cut.x)} to ${formatInches(cut.x + cut.length)} (${cut.openingId})`,
+  posts: {
+    title: 'Posts',
+    item: postItem,
+    connectors: postConnectors,
+    note: ['connectors as the project gives them, not in the piece list —', 'engineer to verify (hypothesis P45)'],
+  },
   // Com parâmetros, a frase sai de código + parâmetros (vale também para um `message` guardado antes de P51);
   // sem eles (aviso montado à mão), o `message` como veio.
   warning: (w) =>

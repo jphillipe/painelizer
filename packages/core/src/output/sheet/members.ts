@@ -3,7 +3,8 @@
  * peça, corte na obra hachurado e avanço da double top além do contorno.
  *
  * Caixa de cada member na elevação (polegadas):
- * - vertical (stud, king, jack, cripple): 1.5 de largura × `length` de altura (stud flat: `sectionDepth`);
+ * - vertical (stud, king, jack, cripple): 1.5 de largura × `length` de altura (stud flat: `sectionDepth`); post (S37):
+ *   a face da seção que fica em x (`verticalWidth`);
  * - horizontal deitado (plates, sill, header flat, bloco): `length` × 1.5;
  * - header (em pé): `length` × profundidade da seção (`sectionDepth`).
  */
@@ -50,6 +51,7 @@ const FILL: Readonly<Record<MemberRole, string>> = {
   sill: '#d9c9a8',
   cripple: '#f2e6cc',
   block: '#cdb98f',
+  post: '#b98a4e',
 };
 
 /** Rótulo curto de cada papel na folha (S17). Studs e plates não levam letra. */
@@ -60,6 +62,7 @@ export const SHORT_LABEL: Readonly<Partial<Record<MemberRole, string>>> = {
   header: 'H',
   sill: 'S',
   block: 'B',
+  post: 'P',
 };
 
 /** Altura mínima (px) de uma peça vertical para receber a letra dentro. */
@@ -92,9 +95,14 @@ export function memberRect(m: Member, scale: number, toPx: ToPx, toPy: ToPy): st
   const sourceNote = m.role === 'header' ? ` [${m.headerSource}]` : '';
   const label = labelOf(m);
   const labelNote = label === undefined ? '' : ` "${label}"`;
-  const flatNote = m.role === 'stud' && m.flat === true ? ' (flat)' : '';
+  const flatNote = (m.role === 'stud' || m.role === 'post') && m.flat === true ? ' (flat)' : '';
+  // Post (S37): os conectores do projeto também vão ao `<title>`.
+  const postNote =
+    m.role === 'post'
+      ? [...(m.base === undefined ? [] : [` base: ${m.base}`]), ...(m.top === undefined ? [] : [` top: ${m.top}`])].join(' ·')
+      : '';
   const title =
-    `${m.role}${flatNote} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote}${labelNote} — ` +
+    `${m.role}${flatNote} ${m.section} × ${formatInches(m.length)}${pliesNote}${sourceNote}${labelNote}${postNote} — ` +
     `x=${formatInches(m.x)} y=${formatInches(m.y)}`;
 
   const parts: string[] = [];
@@ -119,6 +127,7 @@ export function memberRect(m: Member, scale: number, toPx: ToPx, toPy: ToPy): st
  * - Vertical: letra dentro da peça, logo abaixo do topo; peça mais baixa que `MIN_LABEL_HEIGHT` px fica sem
  *   letra (cripple curto sobre o header). Letras de peças vizinhas (< 7 px) descem 11 px para não se cobrir.
  * - Stud extra: o `label` girado ao longo da peça, no meio da altura.
+ * - Post (S37): a letra P no topo e o `label` girado ao longo da peça.
  * - Header em pé já leva a letra no rótulo interno (`memberRect`); header flat ganha o "H" logo abaixo
  *   (dentro do RO). Sill e bloco: letra logo acima (RO e cavidade estão vazios aí); sill de baixo da sill
  *   dupla fica sem letra.
@@ -136,6 +145,20 @@ export function memberLabels(panel: Panel, scale: number, toPx: ToPx, toPy: ToPy
     const top = toPy(box.y + box.height);
     const h = box.height * scale;
     const label = labelOf(m);
+    if (m.role === 'post') {
+      // Post (S37): letra P no topo, como as outras peças, e o rótulo do projeto ao longo da peça.
+      out.push(`<text class="label post" x="${px(cx)}" y="${px(top + 10)}">${SHORT_LABEL.post!}</text>`);
+      placed.push({ x: cx, y: top + 10 });
+      if (label !== undefined) {
+        const lx = cx + 3;
+        const my = top + h / 2;
+        out.push(
+          `<text class="label post-label" x="${px(lx)}" y="${px(my)}" font-weight="normal" ` +
+            `transform="rotate(-90 ${px(lx)} ${px(my)})">${esc(label)}</text>`,
+        );
+      }
+      continue;
+    }
     if (label !== undefined) {
       // Studs colados com o mesmo label (`count` > 1) levam um rótulo só, centrado no conjunto.
       const prev = verticals[i - 1];

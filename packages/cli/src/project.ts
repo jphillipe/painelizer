@@ -20,6 +20,8 @@
  * Dados do estrutural (S12): `config.building.windSpeed` (mph, Vult) e `exposure` ('B' | 'C' | 'D') para os
  * kings pela Tabela R602.7.5; `config.doubleSillOver` (medida) para a sill dupla; na parede,
  * `extraStuds: [{ x (medida), count?, label? }]` para studs de altura inteira pedidos pelo projeto.
+ * Posts (S37, P45): `posts: [{ x (medida, borda esquerda), section: '4x4' | '4x6' | '6x6', label?, base?, top? }]` —
+ * conectores e a viga apoiada são texto para a folha; quem confere posição e profundidade é o core.
  *
  * Catálogo do projeto (S12.5): `config.openingTypes = { W41: { kind, width, height, frame?, sillHeight?,
  * roughWidth?, roughHeight?, description? } }` (window/door schedule) e `config.headerSchedule = { HDR2:
@@ -30,7 +32,7 @@
  *
  * Casa em planta (S13): cada parede vem com `start: { x, y }` e `end: { x, y }` (eixo da parede; cada
  * coordenada é medida com sinal, número ou pés-pol) em vez de `length`, mais `ends?: { start?, end? }`
- * ('through' | 'butt') e `level?`. `offset`, `center` e `extraStuds[].x` são medidos do `start`; comprimento
+ * ('through' | 'butt') e `level?`. `offset`, `center`, `extraStuds[].x` e `posts[].x` são medidos do `start`; comprimento
  * de plate, cantos, T e origem de layout saem do core (`panelizeHouse`). `length` ou `layoutOrigin` numa
  * parede em planta é erro, e misturar paredes em planta com paredes soltas no mesmo arquivo também.
  *

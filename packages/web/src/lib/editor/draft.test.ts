@@ -239,3 +239,28 @@ describe('S29: panelBreaks', () => {
     expect(r.problems.map((p) => p.path)).toContain('walls[0].panelBreaks[1]');
   });
 });
+
+describe('S37: posts', () => {
+  const base = { name: 'x', config: { studSpacing: 16, studLength: [92.625] } };
+  const wall = { id: 'W1', length: 144, height: 97.125, section: '2x6', exterior: true, bearing: true, openings: [] };
+
+  it('lê pés-pol, devolve em polegadas depois de extraStuds, com os textos do projeto; o CLI aceita', () => {
+    const posts = [{ x: "3'-10 1/2\"", section: '4x6', label: 'P-01', base: 'HDU2', top: 'LUS28' }];
+    const r = draftFromText(JSON.stringify({ ...base, walls: [{ ...wall, extraStuds: [{ x: 10 }], posts }] }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.problems).toEqual([]);
+    expect(r.draft.walls[0]?.posts).toEqual([{ x: 46.5, section: '4x6', label: 'P-01', base: 'HDU2', top: 'LUS28' }]);
+    const text = textFromDraft(r.draft);
+    expect(Object.keys(JSON.parse(text).walls[0])).toEqual(['id', 'length', 'height', 'section', 'exterior', 'bearing', 'extraStuds', 'posts', 'openings']);
+    expect(parseProject(text).walls[0]?.posts).toEqual([{ x: 46.5, section: '4x6', label: 'P-01', base: 'HDU2', top: 'LUS28' }]);
+  });
+
+  it('seção fora de 4x4/4x6/6x6 é problem no caminho; o resto do post fica', () => {
+    const r = draftFromText(JSON.stringify({ ...base, walls: [{ ...wall, posts: [{ x: 40, section: '2x6', zz: 1 }] }] }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.draft.walls[0]?.posts).toEqual([{ x: 40 }]);
+    expect(r.problems.map((p) => p.path)).toContain('walls[0].posts[0].section');
+  });
+});

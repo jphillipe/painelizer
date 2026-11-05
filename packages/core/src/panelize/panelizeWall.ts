@@ -22,6 +22,9 @@
  *   `flat` ou em pé), blocos do ladder ou studs de encosto no T, laps e cortes da double top plate. Stud de
  *   layout que sobrepõe stud de canto ou de encosto sai, como com os extras. Faixa do T dentro de um RO é
  *   `RangeError`; na zona de abertura, aviso `OPENING_AT_TEE` e nenhuma peça de T.
+ * - Posts do projeto (`wall.posts`, S37, `rules/posts.ts`, hipótese P45): `role: 'post'` de altura inteira com a
+ *   largura real da seção em x; o stud de layout que o post sobrepõe sai. Post fora da parede, na zona de abertura,
+ *   sobre stud extra/de canto/de encosto ou outro post, ou sem face igual à profundidade da parede é erro com código.
  * - Fire blocking (S31, `rules/blocking.ts`): cavidade acima de `config.fireBlockAt` (120") leva fileiras de
  *   blocos entre as peças de altura inteira, fora das zonas de abertura e do trecho do ladder (P11, P50).
  * - Fileiras por altura (S36, `rules/blocking.ts`, P44): `wall.blocking` (presets resolvidos) entre as mesmas peças;
@@ -56,6 +59,7 @@ import {
 } from '../rules/corners';
 import { panelWeight } from '../rules/weight';
 import { fireBlocks, heightBlocks, resolveBlockingRows, type BlockingSkip } from '../rules/blocking';
+import { postMembers } from '../rules/posts';
 import { validatePanel } from './validate';
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
@@ -244,7 +248,14 @@ export function framePanel(
     x,
     ...(flat ? { flat: true } : {}),
   }));
-  const occupied = [...extras, ...jointStuds].map((m) => ({ start: m.x, end: m.x + verticalWidth(m) }));
+  // Posts (S37, P45): não podem cair na zona de abertura nem sobre as peças acima; o stud de layout sobreposto sai.
+  const posts = postMembers(wall, {
+    y: plateThickness,
+    length: studLength,
+    zones: plan.zones,
+    obstacles: [...extras, ...jointStuds].map((m) => ({ lo: m.x, hi: m.x + verticalWidth(m), role: m.role })),
+  });
+  const occupied = [...extras, ...jointStuds, ...posts].map((m) => ({ start: m.x, end: m.x + verticalWidth(m) }));
 
   const layoutOrigin = wall.layoutOrigin ?? 0;
   const studs: Member[] = layoutStuds(wall.length, studSpacing, studThickness, layoutOrigin)
@@ -260,7 +271,7 @@ export function framePanel(
   for (const f of framings) warnings.push(...f.warnings);
   warnings.push(...teeWarnings);
 
-  const verticals = [...studs, ...extras, ...jointStuds, ...kings];
+  const verticals = [...studs, ...extras, ...jointStuds, ...posts, ...kings];
   const ladder = ladderBlocks(wall, strips, verticals, config);
   // Fire blocking (S31, P11/P50): entre as peças de altura inteira, fora das zonas e do trecho do ladder.
   const ladderSkip = (config.tee ?? 'ladder') === 'ladder' ? ladderBays(wall, strips, verticals) : [];

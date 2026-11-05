@@ -7,7 +7,7 @@
 
 import { isCount } from './eps';
 import type { HeaderSource, OpeningType } from './opening';
-import type { Section, WallSection } from './sections';
+import type { PostSection, Section, WallSection } from './sections';
 import type { Point } from './wall';
 import type { Warning } from './messages';
 
@@ -24,7 +24,8 @@ export type MemberRole =
   | 'header'
   | 'sill'
   | 'cripple'
-  | 'block';
+  | 'block'
+  | 'post';
 
 /** As três plates: para a serra são a mesma peça (lista de corte); só elas emendam sobre stud (S15). */
 export const PLATE_ROLES: ReadonlySet<MemberRole> = new Set<MemberRole>(['bottomPlate', 'topPlate', 'doubleTopPlate']);
@@ -95,12 +96,30 @@ export interface FlatMember extends MemberBase {
   label?: string;
 }
 
-/** Uma peça do painel. O papel decide os campos: `plies`/`headerSource` só no header, `label` só no stud. */
-export type Member = PlateMember | StudMember | OpeningStudMember | HeaderMember | FlatMember;
+/**
+ * Post do projeto (S37, hipótese P45): maciço, de altura inteira (como o stud), com a largura real da seção em x.
+ * Os conectores (`base`, `top`) são texto do projeto para a folha, não peças.
+ */
+export interface PostMember extends MemberBase {
+  role: 'post';
+  orientation: 'vertical';
+  section: PostSection;
+  /** A face maior do post ao longo da parede (4x6 em parede 2x4): ocupa `sectionDepth` em x. Ausente = a menor. */
+  flat?: boolean;
+  /** Rótulo do projeto (`Post.label`). */
+  label?: string;
+  /** Conector da base (`Post.base`). */
+  base?: string;
+  /** Conector do topo (`Post.top`). */
+  top?: string;
+}
 
-/** Texto do projeto para a peça (stud extra; uso da fileira de blocking, S36), `undefined` nas demais. */
+/** Uma peça do painel. O papel decide os campos: `plies`/`headerSource` só no header, `label` só no stud. */
+export type Member = PlateMember | StudMember | OpeningStudMember | HeaderMember | FlatMember | PostMember;
+
+/** Texto do projeto para a peça (stud extra; uso da fileira de blocking, S36; post, S37), `undefined` nas demais. */
 export function labelOf(m: Member): string | undefined {
-  return m.role === 'stud' || m.role === 'block' ? m.label : undefined;
+  return m.role === 'stud' || m.role === 'block' || m.role === 'post' ? m.label : undefined;
 }
 
 /**

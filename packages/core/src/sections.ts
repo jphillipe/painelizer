@@ -14,8 +14,35 @@ export type EngineeredMaterial = 'LVL' | 'PSL';
  */
 export type EngineeredSection = `${EngineeredMaterial} ${number}x${number}`;
 
-/** Qualquer seção de peça: serrada ou engenheirada. */
-export type Section = LumberSection | EngineeredSection;
+/**
+ * Seção nominal de post (S37, hipótese P45): madeira serrada maciça 4x4, 4x6 e 6x6, separada de `LumberSection` (que é a
+ * família "2x" de studs, plates e headers serrados). Reais 3.5×3.5, 3.5×5.5 e 5.5×5.5.
+ */
+export type PostSection = '4x4' | '4x6' | '6x6';
+
+/** Dimensões reais de cada seção de post: `thickness` = a face menor, `depth` = a maior (polegadas). */
+export const POST_SECTION_SIZE: Readonly<Record<PostSection, { thickness: number; depth: number }>> = {
+  '4x4': { thickness: 3.5, depth: 3.5 },
+  '4x6': { thickness: 3.5, depth: 5.5 },
+  '6x6': { thickness: 5.5, depth: 5.5 },
+};
+
+/** As seções de post, da menor para a maior. */
+export const POST_SECTIONS: readonly PostSection[] = ['4x4', '4x6', '6x6'];
+
+export function isPostSection(section: string): section is PostSection {
+  return section in POST_SECTION_SIZE;
+}
+
+/** Madeira serrada: a família 2x e os posts (S37). Comprada em comprimento comercial; peso pela tabela. */
+export type SawnSection = LumberSection | PostSection;
+
+export function isSawnSection(section: string): section is SawnSection {
+  return isLumberSection(section) || isPostSection(section);
+}
+
+/** Qualquer seção de peça: serrada (2x ou post) ou engenheirada. */
+export type Section = LumberSection | EngineeredSection | PostSection;
 
 /** Seções admitidas para studs e plates de parede. */
 export type WallSection = Extract<LumberSection, '2x4' | '2x6'>;
@@ -59,23 +86,26 @@ export function engineeredSection(material: EngineeredMaterial, width: number, d
 /** Profundidade real da seção. Sempre derivada; nunca é entrada. */
 export function sectionDepth(section: Section): number {
   if (isLumberSection(section)) return SECTION_DEPTH[section];
+  if (isPostSection(section)) return POST_SECTION_SIZE[section].depth;
   const e = parseEngineeredSection(section);
   if (e === undefined) throw new RangeError(`unknown section (${String(section)})`);
   return e.depth;
 }
 
-/** Espessura real de uma peça da seção: 1.5" para serrada, a largura declarada para LVL/PSL. */
+/** Espessura real de uma peça da seção: 1.5" para 2x, a face menor do post, a largura declarada para LVL/PSL. */
 export function sectionThickness(section: Section): number {
   if (isLumberSection(section)) return NOMINAL_2X_THICKNESS;
+  if (isPostSection(section)) return POST_SECTION_SIZE[section].thickness;
   const e = parseEngineeredSection(section);
   if (e === undefined) throw new RangeError(`unknown section (${String(section)})`);
   return e.width;
 }
 
 /**
- * Largura em x que uma peça vertical ocupa na elevação: a espessura da madeira (1.5") em pé, a profundidade
- * da seção quando deitada (`flat`, stud do canto California — S14).
+ * Largura em x que uma peça vertical ocupa na elevação: a espessura da seção (1.5" no 2x; a face menor do post, S37)
+ * em pé, a profundidade quando deitada (`flat`: stud do canto California, S14; 4x6 com a face larga ao longo da
+ * parede 2x4, S37).
  */
 export function verticalWidth(m: { section: Section; flat?: boolean }): number {
-  return m.flat === true ? sectionDepth(m.section) : NOMINAL_2X_THICKNESS;
+  return m.flat === true ? sectionDepth(m.section) : sectionThickness(m.section);
 }

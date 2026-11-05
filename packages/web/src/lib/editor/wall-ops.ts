@@ -1,6 +1,6 @@
 /**
  * Operações de parede do editor (S30): duplicar, dividir e juntar. Puras, sobre o draft; o reducer só as chama.
- * Não mudam regra do motor: redistribuem o que a parede já tinha (aberturas, studs extras, quebras forçadas, fileiras
+ * Não mudam regra do motor: redistribuem o que a parede já tinha (aberturas, studs extras, posts, quebras forçadas, fileiras
  * de blocking, regra das pontas) entre os pedaços, em x do `start` de cada um. Ids de abertura não mudam ao dividir/juntar (são únicos
  * no projeto); a parede nova ganha `nextWallId`. Parede criada ou mudada perde a marca de revisão (`$reviewed`).
  *
@@ -16,11 +16,13 @@ import {
   type DraftBlockingEntry,
   type DraftExtraStud,
   type DraftOpening,
+  type DraftPost,
   type DraftWall,
   type Point,
   type ProjectDraft,
 } from './draft';
 import { formatMeasure } from './measure';
+import { postWidth } from './posts';
 import { configFromDraft, resolveDraftOpening } from './resolve';
 
 export type WallOp = { ok: true; draft: ProjectDraft; wallIds: string[] } | { ok: false; reason: string };
@@ -120,11 +122,22 @@ export function splitWall(d: ProjectDraft, wallId: string, at: number): WallOp {
     else
       return { ok: false, reason: `Extra stud at ${formatMeasure(e.x)} spans ${formatMeasure(cut)}; split beside it` };
   }
+  // Posts (S37): inteiros num pedaço; o que atravessa o corte recusa a divisão, como o stud extra.
+  const postsA: DraftPost[] = [];
+  const postsB: DraftPost[] = [];
+  for (const p of w.posts ?? []) {
+    const width = postWidth(d.config, w, p) ?? 0;
+    if (p.x === undefined || p.x + width <= cut + EPS) postsA.push(p);
+    else if (p.x >= cut - EPS) postsB.push({ ...p, x: round1(p.x - cut) });
+    else return { ok: false, reason: `Post${p.label === undefined ? '' : ` ${p.label}`} at ${formatMeasure(p.x)} spans ${formatMeasure(cut)}; split beside it` };
+  }
   const base = withoutReviewed(w);
   const a: DraftWall = { ...base, openings: first };
   const b: DraftWall = { ...structuredClone(base), id: nextWallId(d), openings: second };
   setOrDrop(a, 'extraStuds', studsA);
   setOrDrop(b, 'extraStuds', studsB);
+  setOrDrop(a, 'posts', postsA);
+  setOrDrop(b, 'posts', postsB);
   if (w.panelBreaks !== undefined) {
     a.panelBreaks = w.panelBreaks.filter((x) => x < cut - EPS);
     b.panelBreaks = w.panelBreaks.filter((x) => x > cut + EPS).map((x) => round1(x - cut));
@@ -226,6 +239,7 @@ export function joinWalls(d: ProjectDraft, aId: string, bId: string): WallOp {
   const t = config.studThickness;
   const openings: DraftOpening[] = [];
   const extraStuds: DraftExtraStud[] = [];
+  const posts: DraftPost[] = [];
   for (const w of [a, b]) {
     const L = wallLength(w)!;
     const wu = { x: (w.end!.x - w.start!.x) / L, y: (w.end!.y - w.start!.y) / L };
@@ -245,10 +259,12 @@ export function joinWalls(d: ProjectDraft, aId: string, bId: string): WallOp {
     }
     for (const e of w.extraStuds ?? [])
       extraStuds.push(e.x === undefined ? e : { ...e, x: map(reversed ? e.x + t * (e.count ?? 1) : e.x) });
+    for (const p of w.posts ?? []) posts.push(p.x === undefined ? p : { ...p, x: map(reversed ? p.x + (postWidth(d.config, w, p) ?? 0) : p.x) });
   }
   const joined: DraftWall = { ...withoutReviewed(a), start, end, openings };
   delete joined.panelBreaks;
   setOrDrop(joined, 'extraStuds', extraStuds);
+  setOrDrop(joined, 'posts', posts);
   const ends = {
     start: farA === 'start' ? a.ends?.start : b.ends?.[farB],
     end: farA === 'start' ? b.ends?.[farB] : a.ends?.end,
@@ -310,7 +326,7 @@ function blockingPiece(list: readonly DraftBlockingEntry[], lo: number, hi: numb
   });
 }
 
-function setOrDrop(w: DraftWall, key: 'extraStuds', list: DraftExtraStud[]): void {
+function setOrDrop<K extends 'extraStuds' | 'posts'>(w: DraftWall, key: K, list: NonNullable<DraftWall[K]>): void {
   if (list.length === 0) delete w[key];
   else w[key] = list;
 }

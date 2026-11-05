@@ -1,6 +1,6 @@
 /**
  * Lista de peças na margem direita da folha (S17): da `cutList`, com comprimento em pés-pol e em polegadas;
- * depois o peso estimado (madeira sem sheathing, P8) e os cortes na obra.
+ * depois o peso estimado (madeira sem sheathing, P8), os posts com os conectores do projeto (S37) e os cortes na obra.
  */
 
 import type { Panel } from '../../panel';
@@ -12,6 +12,25 @@ import type { SheetStrings } from './strings';
 /** Largura da coluna da lista. */
 export const LIST_WIDTH = 282;
 const LIST_ROW = 13;
+/** Recuo e largura (em caracteres de 10 px) da linha de conectores do post (S37), para caber na coluna. */
+const POST_INDENT = 8;
+const POST_LINE_CHARS = 48;
+
+/** Quebra o texto em linhas de até `max` caracteres, nos espaços (palavra maior que a linha fica inteira). */
+export function wrapText(text: string, max: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line !== '' && line.length + 1 + word.length > max) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = line === '' ? word : `${line} ${word}`;
+    }
+  }
+  if (line !== '') lines.push(line);
+  return lines;
+}
 
 /** A lista a partir de (`x`, `y0`). Devolve o SVG e o y onde termina. */
 export function pieceList(panel: Panel, x: number, y0: number, S: SheetStrings): { svg: string; bottom: number } {
@@ -57,6 +76,26 @@ export function pieceList(panel: Panel, x: number, y0: number, S: SheetStrings):
   out.push(`<text class="weight" x="${px(x)}" y="${px(y)}">${PIECE_LIST.weight(panel.weightLb)}</text>`);
   y += LIST_ROW - 2;
   out.push(`<text x="${px(x)}" y="${px(y)}" font-size="9" fill="${MUTED}">${PIECE_LIST.weightNote}</text>`);
+
+  // Posts (S37): o que o projeto diz de cada post (rótulo, seção, x, conectores). Só no painel com post.
+  const posts = panel.members.filter((m) => m.role === 'post');
+  if (posts.length > 0) {
+    y += LIST_ROW + 6;
+    out.push(`<text x="${px(x)}" y="${px(y)}" font-weight="bold">${S.posts.title}</text>`);
+    for (const p of [...posts].sort((a, b) => a.x - b.x)) {
+      y += LIST_ROW;
+      out.push(`<text class="post-item" x="${px(x)}" y="${px(y)}">${esc(S.posts.item(p))}</text>`);
+      const connectors = S.posts.connectors(p);
+      for (const line of connectors === undefined ? [] : wrapText(connectors, POST_LINE_CHARS)) {
+        y += LIST_ROW - 1;
+        out.push(`<text class="post-connectors" x="${px(x + POST_INDENT)}" y="${px(y)}" font-size="10">${esc(line)}</text>`);
+      }
+    }
+    for (const line of S.posts.note) {
+      y += LIST_ROW - 2;
+      out.push(`<text x="${px(x)}" y="${px(y)}" font-size="9" fill="${MUTED}">${esc(line)}</text>`);
+    }
+  }
 
   if (panel.fieldCuts.length > 0) {
     y += LIST_ROW + 6;

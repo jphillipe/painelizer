@@ -138,6 +138,8 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
   if (wall.extraStuds !== undefined) {
     derived.extraStuds = wall.extraStuds.map((e): ExtraStud => ({ ...e, x: e.x - s0 }));
   }
+  // Posts (S37): x medido do `start`, como os extras.
+  if (wall.posts !== undefined) derived.posts = wall.posts.map((p) => ({ ...p, x: p.x - s0 }));
   if (wall.panelBreaks !== undefined) derived.panelBreaks = wall.panelBreaks.map((x) => x - s0);
   // Fileiras de blocking (S36): o trecho é medido do `start`, como os extras; presets e fileira inteira ficam.
   if (wall.blocking !== undefined) {

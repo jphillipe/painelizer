@@ -524,6 +524,19 @@ it("config.corner ('california' | 'three-stud') e config.tee ('ladder' | 'backer
     expect(() => projectFrom(withExtras([{ x: 40, label: '' }]), 'projeto')).toThrow(/extraStuds\[0\]\.label: expected non-empty text/);
   });
 
+  it('wall.posts (S37): x como medida, seção 4x4/4x6/6x6, rótulo e conectores em texto', () => {
+    const withPosts = (posts: unknown) => valid({ walls: [{ ...(valid().walls as object[])[0], posts }] });
+    expect(projectFrom(withPosts([{ x: `3'-10 1/2"`, section: '4x6', label: 'P-01', base: 'HDU2', top: 'LUS28' }])).walls[0]?.posts).toEqual([
+      { x: 46.5, section: '4x6', label: 'P-01', base: 'HDU2', top: 'LUS28' },
+    ]);
+    expect(projectFrom(valid()).walls[0]).not.toHaveProperty('posts');
+    expect(() => projectFrom(withPosts([{ x: 40 }]), 'projeto')).toThrow(/projeto\.walls\[0\]\.posts\[0\]\.section: expected one of 4x4, 4x6, 6x6/);
+    expect(() => projectFrom(withPosts([{ x: 40, section: '2x6' }]), 'projeto')).toThrow(/posts\[0\]\.section: expected one of 4x4, 4x6, 6x6/);
+    expect(() => projectFrom(withPosts([{ section: '4x4' }]), 'projeto')).toThrow(/posts\[0\]\.x: expected a measurement/);
+    expect(() => projectFrom(withPosts([{ x: 40, section: '4x4', hd: 'x' }]), 'projeto')).toThrow(/posts\[0\]\.hd: unknown key/);
+    expect(() => projectFrom(withPosts([{ x: 40, section: '4x4', top: '' }]), 'projeto')).toThrow(/posts\[0\]\.top: expected non-empty text/);
+  });
+
   it('wall.panelBreaks (S29): lista de medidas pés-pol; o core confere ordem e candidatos', () => {
     const withBreaks = (panelBreaks: unknown) => valid({ walls: [{ ...(valid().walls as object[])[0], panelBreaks }] });
     expect(projectFrom(withBreaks(["5'-4\"", 96])).walls[0]?.panelBreaks).toEqual([64, 96]);

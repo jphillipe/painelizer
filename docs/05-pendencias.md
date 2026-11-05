@@ -166,6 +166,9 @@ comentários do código que citam `Pn` e gera `08-revisar.md`, a lista do que me
   colados (`extraStuds.count`), cada um na lista de corte; 4x6 e 6x6 não existem no motor. A fábrica prega o
   post na mesa ou recebe solto? Aceita 2 studs colados no lugar de um 4x? — hipótese: colados na mesa, 2x
   apenas; 4x/6x fica para o engenheiro — S12.
+  **Revista na S37 (2026-11-05, por delegação; revisar):** 4x4/4x6/6x6 maciços passaram a existir (`wall.posts`,
+  P45); `extraStuds` continua para o "(2) 2x" / "(3) 2x" colados. A pergunta que fica: a fábrica aceita os 2x colados
+  onde o projeto pede post maciço, ou o contrário?
 
 ## Novas (abertas em 2026-10-06, preparação do Checkpoint 2 com o 26 Ringgold)
 Entrada em `packages/cli/examples/ringgold-checkpoint.json` (4 painéis do 1º pavimento, lidos de A-100, A-200,
@@ -319,6 +322,17 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   seções 4x4, 4x6 e 6x6 (reais 3.5×3.5, 3.5×5.5, 5.5×5.5) a 35 pcf (≈ 3.0, 4.7, 7.3 lb/pé); o post ocupa o lugar
   do stud que sobrepõe; conectores são texto do projeto na folha, não peça da lista — S37. Revê P26 (4x/6x deixam
   de ficar só com o engenheiro).
+  **Em vigor desde a S37 (2026-11-05, por delegação; revisar):** hipótese: `wall.posts = [{ x, section, label?, base?,
+  top? }]`, `x` = borda esquerda; reais 3.5×3.5, 3.5×5.5, 5.5×5.5 a 35 pcf = 2.98, 4.68, 7.35 lb/pé (`lumber.json`); a
+  face do post na espessura da parede tem de ser a profundidade dela (2x4 = 3.5", 2x6 = 5.5") e a outra fica em x —
+  4x6 na 2x4 deitado com a face larga ao longo da parede; 4x4 na 2x6 (não preenche a espessura) e 6x6 na 2x4 (sai
+  dela) são erro `POST_DEPTH_MISMATCH`; o post ocupa o lugar dos studs de layout que sobrepõe, com a altura do stud
+  (da bottom à top plate; a top e a double top passam por cima); post sobre stud extra, de canto, de encosto ou outro
+  post é erro (`POST_OVERLAP`); conectores de base/topo e a viga LVL apoiada são texto na folha ("base: … · top: …"),
+  fora da lista de corte e da BOM; o post é comprado em comprimento comercial (como a família 2x). Perguntas que ficam
+  para a fábrica: o post vai da bottom à top plate (como o stud) ou atravessa a top plate até a viga? 4x4 na parede
+  2x6 com calço, ou sempre 4x6? O post é pregado na mesa ou vai solto para a obra? O conector de base (hold-down) é
+  instalado na fábrica?
 - [ ] **P46 — Cruzamento em + (T dos dois lados no mesmo ponto).** A prancha mostra "amarração com studs contínuos
   (mín. 2x) no núcleo" e plywood contínuo numa direção. Um núcleo de 2 studs contínuos (backer) serve os dois
   lados, ou ladder dos dois lados? A double top da parede atravessada leva um corte só? — hipótese: um corte da

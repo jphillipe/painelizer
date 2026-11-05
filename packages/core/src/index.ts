@@ -61,6 +61,7 @@ export {
   type ResolvedBlockingRow,
 } from './rules/blocking';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
+export { postFace, postMembers, postsForSegment, type PostContext, type PostFace, type PostObstacle } from './rules/posts';
 export {
   framingForOpening,
   openingKingXs,

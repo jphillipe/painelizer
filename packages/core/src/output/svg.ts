@@ -24,7 +24,7 @@
  * - Fileiras de blocking (S36): entre o desenho e a lista, a cota do subfloor ao centro de cada fileira (fogo e por
  *   altura) e o uso (`sheet/blocking.ts`); só quando o painel tem fileira.
  * - Margem direita: lista de peças da `cutList` (qtd, papel, seção, pés-pol, polegadas), peso estimado
- *   (`weightLb`; madeira sem sheathing, P8) e cortes na obra.
+ *   (`weightLb`; madeira sem sheathing, P8), posts com os conectores do projeto (S37, só com post) e cortes na obra.
  * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
  * - Saída determinística: mesma entrada → mesma string.
  */
@@ -200,7 +200,8 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   out.push(list.svg);
 
   // Legenda e avisos.
-  out.push(`<text class="legend" x="${px(margin)}" y="${px(legendY)}" font-size="9" fill="${MUTED}">${S.legend}</text>`);
+  const legend = panel.members.some((m) => m.role === 'post') ? S.legendWithPosts : S.legend;
+  out.push(`<text class="legend" x="${px(margin)}" y="${px(legendY)}" font-size="9" fill="${MUTED}">${legend}</text>`);
   panel.warnings.forEach((w, i) => {
     out.push(warningLine(w, margin, warningsY + (i + 1) * WARNING_LINE, S));
   });

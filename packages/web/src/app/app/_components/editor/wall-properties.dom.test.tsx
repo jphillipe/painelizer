@@ -56,3 +56,25 @@ describe('WallProperties — Blocking (S36)', () => {
     expect(dispatch).toHaveBeenLastCalledWith({ type: 'updateWall', wallId: 'W01', patch: { blocking: [] } });
   });
 });
+
+/** S37: seção "Posts" do inspetor da parede. */
+describe('WallProperties — Posts (S37)', () => {
+  it('"Add post" acrescenta um 4x4 no meio da parede', async () => {
+    const dispatch = renderWall(wall());
+    expect(screen.getByText('Posts (0)')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /Add post/ }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'updateWall', wallId: 'W01', patch: { posts: [{ x: 72, section: '4x4' }] } });
+  });
+
+  it('mostra rótulo, conectores e quanto o post ocupa; remover o último apaga a lista', async () => {
+    const dispatch = renderWall(wall({ posts: [{ x: 40, section: '4x6', label: 'P-01', base: 'HDU2', top: 'LVL above' }] }));
+    expect(screen.getByText('Posts (1)')).toBeTruthy();
+    expect((document.getElementById('w-W01-post-0-l') as HTMLInputElement).value).toBe('P-01');
+    expect((document.getElementById('w-W01-post-0-b') as HTMLInputElement).value).toBe('HDU2');
+    expect((document.getElementById('w-W01-post-0-t') as HTMLInputElement).value).toBe('LVL above');
+    // 4x6 na parede 2x4: face larga ao longo da parede.
+    expect(screen.getByText(/5 1\/2" along the wall \(wide face along the wall\)/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove post 1' }));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'updateWall', wallId: 'W01', patch: { posts: undefined } });
+  });
+});

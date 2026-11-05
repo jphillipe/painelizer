@@ -8,7 +8,7 @@
  * 2. `chooseBreaks` escolhe as quebras (hipótese P35: menor número de painéis, depois o mais equilibrado,
  *    preferindo marcas múltiplas de `config.panel.module`); com `wall.panelBreaks` (S29) valem as do revisor,
  *    conferidas por `forcedBreaks`. Sem quebra, o painel da parede inteira é o painel.
- * 3. Cada trecho `[a, b]` vira uma `Wall` própria — comprimento `b − a`, aberturas, studs extras e T
+ * 3. Cada trecho `[a, b]` vira uma `Wall` própria — comprimento `b − a`, aberturas, studs extras, posts (S37) e T
  *    deslocados de `−a` (fileiras de blocking com trecho também, cortadas ao painel; S36), `layoutOrigin = origem − a` — com a junta como ligação `{ kind: 'panel', lap }` nas
  *    pontas internas (o painel i avança o lap, o i+1 recua; `rules/corners.ts`). As ligações da parede com as
  *    vizinhas (canto, T) ficam só no primeiro e no último trecho. `panelizeWall` roda de novo por trecho: o
@@ -30,6 +30,7 @@ import type { EndJoint, Wall, WallJoints } from '../wall';
 import type { HeaderTable } from '../rules/headers';
 import type { HeaderTables, ResolvedHeader } from '../rules/openingHeader';
 import { blockingForSegment } from '../rules/blocking';
+import { postsForSegment } from '../rules/posts';
 import { teeStrips, type TeeStrip } from '../rules/corners';
 import { breakCandidates, chooseBreaks, forcedBreaks, validatePanelConfig, whyNotBreak } from '../rules/breaks';
 import { lapEnd, type LapObstacle } from '../rules/laps';
@@ -203,6 +204,8 @@ function segmentWall(
   if (wall.extraStuds !== undefined) {
     segment.extraStuds = wall.extraStuds.filter((e) => inside(e.x)).map((e) => ({ ...e, x: e.x - a }));
   }
+  // Posts (S37): nunca atravessam a quebra (são peça na faixa da junta), logo cada um fica inteiro num trecho.
+  if (wall.posts !== undefined) segment.posts = postsForSegment(wall.posts, a, b);
   // Fileiras por altura (S36): trecho deslocado e cortado ao painel; cada painel gera a sua fileira.
   if (wall.blocking !== undefined) segment.blocking = blockingForSegment(wall.blocking, a, b);
 
