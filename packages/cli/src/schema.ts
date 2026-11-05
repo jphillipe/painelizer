@@ -26,6 +26,9 @@ import {
   engineeredSection,
   parseEngineeredSection,
   parseFeetInches,
+  type BlockingEntry,
+  type BlockingPreset,
+  type BlockingRow,
   type Building,
   type Config,
   type CornerStyle,
@@ -469,12 +472,37 @@ export const headerEntryShape = {
   description: text.optional(),
 };
 
+/**
+ * Fileira de blocking por altura (S36, P44): centro do bloco ao subfloor, trecho opcional (na planta, medido do
+ * `start`) e uso. Se o centro cabe entre as plates, quem confere é o motor (depende da altura da parede).
+ */
+export const blockingRowShape = { y: positiveMeasure, from: measure.optional(), to: measure.optional(), label: text.optional() };
+/** Preset de blocking do projeto (S36): centro e uso. */
+export const blockingPresetShape = { y: positiveMeasure, label: text.optional() };
+const blockingRowNode = node(blockingRowShape);
+
+/** Fileiras de blocking (S36): cada item é um id de preset (texto) ou uma fileira. Preset desconhecido: o motor recusa. */
+export const blocking = z.unknown().transform((v, ctx): BlockingEntry[] => {
+  const items = sub(ctx, list(z.unknown()), v);
+  if (items === undefined) return z.NEVER;
+  const out: BlockingEntry[] = [];
+  let ok = true;
+  items.value.forEach((item, i) => {
+    const r = typeof item === 'string' ? sub(ctx, text, item, [i]) : sub(ctx, blockingRowNode, item, [i]);
+    if (r === undefined) ok = false;
+    else out.push(r.value as BlockingEntry);
+  });
+  return ok ? out : z.NEVER;
+});
+
 /** Linha do catálogo de tipos de parede (S35): tudo opcional — o tipo dá o que a parede não disser. */
 export const wallTypeShape = {
   section: oneOf(WALL_SECTIONS).optional(),
   exterior: boolean.optional(),
   bearing: boolean.optional(),
   description: text.optional(),
+  /** Fileiras de blocking do tipo (S36): valem na parede sem `blocking`. */
+  blocking: blocking.optional(),
 };
 
 /** Preço por peça de um comprimento de estoque (S31). */
@@ -537,6 +565,7 @@ export const configShape = {
   headerSchedule: record(node(headerEntryShape)).optional(),
   wallTypes: record(node(wallTypeShape)).optional(),
   fireBlockAt: positiveMeasure.optional(),
+  blockingPresets: record(node(blockingPresetShape)).optional(),
   prices: prices.optional(),
 };
 
@@ -590,6 +619,8 @@ export const wallShape = {
   panelBreaks: list(measure).optional(),
   /** Tag do tipo de parede (S35): com a tag em `config.wallTypes`, o tipo dá seção, posição e carga que faltarem. */
   wallType: text.optional(),
+  /** Fileiras de blocking por altura (S36): presets e fileiras; ausente = as do tipo de parede. */
+  blocking: blocking.optional(),
 };
 
 /** Parede solta: `length` e, opcionalmente, `layoutOrigin`. */
@@ -742,6 +773,9 @@ export type SchemaMatchesCore = [
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof headerShape>>>>, OpeningHeader>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof openingShape>>>>, OpeningSpec>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof extraStudShape>>>>, ExtraStud>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingRowShape>>>>, BlockingRow>>,
+  Assert<Same<Clean<z.output<ReturnType<typeof node<typeof blockingPresetShape>>>>, BlockingPreset>>,
+  Assert<Same<z.output<typeof blocking>, BlockingEntry[]>>,
   Assert<Same<Clean<z.output<ReturnType<typeof node<typeof pointShape>>>>, Point>>,
   Assert<Same<LooseWallFile, WallInput>>,
   Assert<Same<PlanWallFile, HouseWallInput>>,

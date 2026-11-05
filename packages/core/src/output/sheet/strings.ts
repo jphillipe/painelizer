@@ -8,7 +8,7 @@
  */
 
 import { warningMessage, type Warning } from '../../messages';
-import type { FieldCut, MemberRole, Panel, PanelOpening } from '../../panel';
+import type { BlockingKind, FieldCut, MemberRole, Panel, PanelOpening } from '../../panel';
 import { formatFeetInches, formatInches } from '../../units';
 import type { CutRole } from '../cutlist';
 
@@ -30,6 +30,8 @@ export interface SheetStrings {
   faceNote(panel: FacingInput): string;
   /** Rótulo da cota do avanço da double top plate. */
   overhangLabel(overhang: number): string;
+  /** Rótulo de uma fileira de blocking (S36): letra, uso e centro ao subfloor. */
+  blockingRow(row: { kind: BlockingKind; label?: string; center: number }): string;
   /** Id e tipo da abertura, dentro do vão. */
   openingLabel(o: PanelOpening): string;
   /** Textos das cotas de altura da abertura. Porta (base do RO em 0, ou abaixo): uma linha só. */
@@ -143,6 +145,8 @@ const EN: SheetStrings = {
     return 'start → end';
   },
   overhangLabel: (overhang) => `overhang ${formatInches(overhang)}`,
+  blockingRow: (row) =>
+    `B · ${row.kind === 'fire' ? 'Fire blocking' : (row.label ?? 'Blocking')} (center ${formatInches(row.center)})`,
   openingLabel: (o) => `${o.id} · ${o.type === 'door' ? 'door' : 'window'}`,
   openingDim: {
     width: (w) => `RO ${formatInches(w)}`,

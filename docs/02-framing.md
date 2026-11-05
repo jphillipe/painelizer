@@ -135,6 +135,7 @@
 | Headers não portantes | R602.7.4 | Single flat até 8' |
 | King studs | Tabela R602.7.5 | Parede externa: kings por lado pelo vão do header e vento (Vult, exposição B/C); 4' → 1 … 18' → 4; fora da tabela → engenheiro (`src/data/irc-kings.json`, S12) |
 | Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11). S31: cavidade `height − 3·plates` acima de `config.fireBlockAt` (default 120") leva o menor nº de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma, no meio da cavidade, até 241.5" — P50): blocos `role: 'block'`, `blocking: 'fire'`, deitados, da seção da parede, entre as peças de altura inteira, fora das zonas de abertura e do vão do ladder; não impedem quebra de painel (fixture `wall-144-fireblock`) |
+| Blocking por altura | Prancha da fábrica (P44) | S36: `wall.blocking` (ou `config.wallTypes[tag].blocking`, que vale na parede sem lista própria) = ids de preset (embutidos `kitchen-base` 36, `kitchen-upper-bottom` 54, `kitchen-upper-top` 84, `bath-toilet` 15, `bath-paper` 39, `bath-valve` 42, `bath-towel` 48, `bath-shower` 79; `config.blockingPresets` soma e substitui) e fileiras `{ y, from?, to?, label? }` com o **centro** do bloco ao subfloor. Bloco deitado da seção da parede em todo vão entre peças de altura inteira que toca `(from, to)`; vão em zona de abertura ou no ladder do T sem bloco e com aviso `BLOCKING_SKIPPED`; na mesma altura de outra fileira (fogo incluído) fica a primeira, com aviso. `blocking: 'backing'` + `label`; não impede quebra; cada painel gera a sua (trecho cortado por painel). Folha: cota do subfloor ao centro e uso de cada fileira (fogo também). Fixture `wall-144-kitchen` |
 | Cantos e T | Prática da equipe | Default California corner + ladder (P5); 3-stud e stud de encosto configuráveis |
 
 As tabelas do IRC não são reproduzidas aqui (direitos do ICC). Digitá-las em `src/data/irc-headers.json`
@@ -206,10 +207,11 @@ em mais do que o necessário.
   quando a regra é hipótese, `hypothesis` (`'P30'`, `'P39'`, `'P40'`…). A frase em português é montada a partir
   deles em `messages.ts` (CLI e folha); o app monta a sua em inglês com os mesmos parâmetros
   (`packages/web/src/lib/messages.en.ts`) e nunca lê o português. A folha não imprime "hipótese"; o CLI acrescenta.
-  Os 13 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
+  Os 14 códigos: `STUD_LENGTH_MISMATCH`, `HEADER_JACKS_BELOW_TABLE`, `HEADER_KINGS_BELOW_TABLE`, `OPENING_NUDGED`,
   `WIND_SPEED_MISSING`, `SPECIES_NOT_IN_TABLE`, `DOOR_RO_HEIGHT_MISMATCH`, `OPENING_AT_TEE`, `OPENING_NEAR_CORNER`,
   `STUDS_OVERLAP`, `STUD_HEIGHT_ABOVE_LIMIT`, `PANEL_OVERWEIGHT`, `WALL_TYPE_MISMATCH` (S35: a parede contradiz o tipo
-  dela; a parede manda) (`FIRE_BLOCKING_REQUIRED` saiu na S31: virou peça).
+  dela; a parede manda), `BLOCKING_SKIPPED` (S36: fileira de blocking sem bloco numa zona de abertura, no ladder de um T
+  ou onde já há outra fileira) (`FIRE_BLOCKING_REQUIRED` saiu na S31: virou peça).
 - **Erros que o projeto provoca** (dado do humano ou da leitura) são `EngineError` com código de
   `ENGINE_ERROR_CODES` (planta, catálogo e aberturas, header e kings…) e os mesmos ids e parâmetros; guardas internas
   (estado que nenhuma entrada válida produz) seguem `RangeError`. Fora da tabela continua `requiresEngineer`, nunca

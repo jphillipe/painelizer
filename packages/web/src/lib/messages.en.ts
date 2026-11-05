@@ -130,6 +130,18 @@ const ENGINE_WARNINGS: Record<string, Template> = {
           `${p['field'] === 'section' ? `section ${wallValue(p['field'], p['wall'])}` : `${wallValue(p['field'], p['wall'])} wall`}, but wall type "${String(p['wallType'])}" is ` +
             `${wallValue(p['field'], p['type'])} — the panel follows the wall. Fix the wall or the type.`,
         ),
+  BLOCKING_SKIPPED: (p, t) =>
+    at(
+      wallOnly(t),
+      `the blocking row "${String(p['label'] ?? 'Blocking')}" at ${inch(p['y'])} (center) has no blocks across ` +
+        (p['reason'] === 'opening'
+          ? `the zone of opening(s) ${list(p['openingIds'])}`
+          : p['reason'] === 'tee'
+            ? `the ladder of the tee with wall ${String(p['teeWallId'] ?? '?')}`
+            : `the row "${String(p['otherLabel'] ?? 'Blocking')}"`) +
+        ` [${String(p['lo'])}, ${String(p['hi'])}]` +
+        (p['reason'] === 'overlap' ? ' — another row is already at that height.' : ' — add backing there by hand if needed.'),
+    ),
 };
 
 /** Erros do motor (`ENGINE_ERROR_CODES` do core). */
@@ -193,6 +205,18 @@ const ENGINE_ERRORS: Record<string, Template> = {
   EXTRA_STUD_OUT_OF_WALL: (p, t) => at(t, `extra stud #${ord(p['index'])}: ${String(p['count'])} stud(s) from x=${String(p['x'])} run past the ${inch(p['length'])} wall.`),
   EXTRA_STUD_IN_OPENING: (p, t) =>
     at(t, `extra stud #${ord(p['index'])}: the stud at x=${String(p['x'])} falls in the opening zone [${String(p['start'])}, ${String(p['end'])}] — extra studs stay clear of kings, jacks and the rough opening.`),
+  BLOCKING_PRESET_UNKNOWN: (p, t) =>
+    at(wallOnly(t), `blocking row #${ord(p['index'])}: there is no blocking preset "${String(p['preset'])}" — pick one of ${list(p['known'], 12)} or add it to the project blocking presets.`),
+  BLOCKING_ROW_INVALID: (p, t) =>
+    at(
+      wallOnly(t),
+      `blocking row #${ord(p['index'])}: ` +
+        (p['field'] === 'y'
+          ? `the center height ${String(p['value'])} must put the block between the plates (${String(p['min'])} to ${String(p['max'])}).`
+          : p['field'] === 'range'
+            ? `from ${String(p['from'])} to ${String(p['to'])} must be a range inside the ${inch(p['length'])} wall.`
+            : `${String(p['field'])} must be a number (got ${String(p['value'])}).`),
+    ),
   WALL_TYPE_UNKNOWN: (p, t) =>
     p['fields'] === undefined
       ? String(undefined)
@@ -314,6 +338,9 @@ const FALLBACK: Record<string, string> = {
   WALL_TYPE_MISMATCH: 'The wall differs from its wall type; the panel follows the wall.',
   WALL_TYPE_UNKNOWN: 'The wall type is not in the project wall types and the wall is missing section, position or load.',
   WALL_FIELD_MISSING: 'Section, position or load is missing on the wall and its wall type does not give it.',
+  BLOCKING_SKIPPED: 'A blocking row has no blocks across an opening, a tee ladder or another row at the same height.',
+  BLOCKING_PRESET_UNKNOWN: 'A blocking row uses a preset that is not in the project or the built-in presets.',
+  BLOCKING_ROW_INVALID: 'A blocking row is outside the wall or its center does not fit between the plates.',
 };
 
 const ALL: Record<string, Template> = { ...ENGINE_WARNINGS, ...ENGINE_ERRORS, ...CLI, ...EXTRACT, ...EXTRACT_ERRORS, ...ADAPTERS };

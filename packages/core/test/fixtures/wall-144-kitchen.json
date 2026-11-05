@@ -1,0 +1,69 @@
+{
+  "$comment": "S36 (2026-11-05, aprovado por delegação; not confirmed by the human — review; hipótese P44): a parede de wall-144-window.json (12' 2x6 externa portante, janela RO 36x48 em offset 48, header 2-2x10 do projeto) com 3 fileiras de blocking por altura. Members do original (18) idênticos + 17 blocos 2x6 deitados com `blocking: 'backing'`, centro na cota (base = cota − 0.75). Vãos entre peças de altura inteira (studs 0, 15.25, 31.25, 95.25, 111.25, 127.25, 142.5; kings 45 e 85.5): 13.75 em 1.5, 14.5 em 16.75, 12.25 em 32.75, [46.5, 85.5] na zona da janela [45, 87], 8.25 em 87, 14.5 em 96.75 e 112.75, 13.75 em 128.75. (1) preset embutido `kitchen-base` (36\", 'Base cabinets / countertop'), parede inteira: 7 blocos em y = 35.25, o vão da zona pulado com aviso BLOCKING_SKIPPED. (2) fileira { y: 54, from: 96, to: 144, label: 'Upper cabinets, bottom' }: só os vãos que tocam (96, 144) — 3 blocos em y = 53.25 (96.75, 112.75, 128.75), sem aviso (não toca a zona). (3) preset `kitchen-upper-top` (84\"), parede inteira: 7 blocos em y = 83.25, zona pulada com aviso. 35 peças; 2 avisos (fileiras 1 e 3, zona de win1 [45, 87]).",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "building": { "groundSnowLoad": 50, "buildingWidth": 336, "windSpeed": 120 }
+  },
+  "wall": {
+    "id": "W-kitchen",
+    "length": 144,
+    "height": 97.125,
+    "section": "2x6",
+    "exterior": true,
+    "bearing": true,
+    "openings": [
+      { "id": "win1", "type": "window", "offset": 48, "roughWidth": 36, "roughHeight": 48, "header": { "section": "2x10", "plies": 2 } }
+    ],
+    "blocking": [
+      "kitchen-base",
+      { "y": 54, "from": 96, "to": 144, "label": "Upper cabinets, bottom" },
+      "kitchen-upper-top"
+    ]
+  },
+  "expected": {
+    "members": [
+      { "role": "bottomPlate", "section": "2x6", "length": 144, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x6", "length": 144, "x": 0, "y": 94.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x6", "length": 144, "x": 0, "y": 95.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 127.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x6", "length": 92.625, "x": 142.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 45, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x6", "length": 92.625, "x": 85.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 46.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x6", "length": 83.375, "x": 84, "y": 1.5, "orientation": "vertical" },
+      { "role": "header", "section": "2x10", "length": 39, "x": 46.5, "y": 84.875, "orientation": "horizontal", "plies": 2 },
+      { "role": "sill", "section": "2x6", "length": 36, "x": 48, "y": 35.375, "orientation": "horizontal" },
+      { "role": "cripple", "section": "2x6", "length": 33.875, "x": 63.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x6", "length": 33.875, "x": 79.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 1.5, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 16.75, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 12.25, "x": 32.75, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 8.25, "x": 87, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 96.75, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 112.75, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 128.75, "y": 35.25, "orientation": "horizontal", "blocking": "backing", "label": "Base cabinets / countertop" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 96.75, "y": 53.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, bottom" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 112.75, "y": 53.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, bottom" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 128.75, "y": 53.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, bottom" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 1.5, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 16.75, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 12.25, "x": 32.75, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 8.25, "x": 87, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 96.75, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 14.5, "x": 112.75, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" },
+      { "role": "block", "section": "2x6", "length": 13.75, "x": 128.75, "y": 83.25, "orientation": "horizontal", "blocking": "backing", "label": "Upper cabinets, top" }
+    ],
+    "warnings": [
+      { "code": "BLOCKING_SKIPPED", "wallId": "W-kitchen", "hypothesis": "P44", "params": { "label": "Base cabinets / countertop", "y": 36, "reason": "opening", "lo": 45, "hi": 87, "openingIds": ["win1"] } },
+      { "code": "BLOCKING_SKIPPED", "wallId": "W-kitchen", "hypothesis": "P44", "params": { "label": "Upper cabinets, top", "y": 84, "reason": "opening", "lo": 45, "hi": 87, "openingIds": ["win1"] } }
+    ]
+  }
+}

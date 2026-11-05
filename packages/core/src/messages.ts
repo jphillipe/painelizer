@@ -8,7 +8,7 @@
  * a serra; o CLI acrescenta quando imprime.
  */
 
-/** Os 13 avisos do motor. Nunca interrompem a geração. */
+/** Os 14 avisos do motor. Nunca interrompem a geração. */
 export const WARNING_CODES = [
   'STUD_LENGTH_MISMATCH',
   'HEADER_JACKS_BELOW_TABLE',
@@ -23,6 +23,7 @@ export const WARNING_CODES = [
   'STUD_HEIGHT_ABOVE_LIMIT',
   'PANEL_OVERWEIGHT',
   'WALL_TYPE_MISMATCH',
+  'BLOCKING_SKIPPED',
 ] as const;
 export type WarningCode = (typeof WARNING_CODES)[number];
 
@@ -72,6 +73,9 @@ export const ENGINE_ERROR_CODES = [
   // tipos de parede (S35)
   'WALL_TYPE_UNKNOWN',
   'WALL_FIELD_MISSING',
+  // blocking por altura (S36)
+  'BLOCKING_PRESET_UNKNOWN',
+  'BLOCKING_ROW_INVALID',
   // divisão em painéis, emendas, estoque
   'CANNOT_SPLIT',
   'PANEL_BREAK_INVALID',
@@ -169,6 +173,7 @@ function lead(w: MessageWhere): string {
 
 const inch = (n: ParamValue | undefined): string => `${String(n)}"`;
 
+
 /** Como a frase chama cada campo que o tipo de parede pode dar (S35). */
 const WALL_FIELD_NAME: Readonly<Record<string, string>> = {
   section: 'section',
@@ -181,6 +186,13 @@ const wallFields = (v: ParamValue | undefined): string =>
 const wallFieldValue = (field: ParamValue | undefined, v: ParamValue | undefined): string =>
   field === 'exterior' ? (v === true ? 'exterior' : 'interior') : field === 'bearing' ? (v === true ? 'bearing' : 'non-bearing') : String(v);
 const list = (v: ParamValue | undefined): string => (Array.isArray(v) ? v.join(', ') : String(v));
+
+/** Onde a fileira de blocking foi pulada (S36). */
+function skippedWhere(p: MessageParams): string {
+  if (p.reason === 'opening') return `the zone of opening(s) ${list(p.openingIds)}`;
+  if (p.reason === 'tee') return `the ladder of the tee with wall ${p.teeWallId ?? '?'}`;
+  return `the row "${p.otherLabel ?? 'Blocking'}"`;
+}
 
 type Template = (p: MessageParams, w: MessageWhere) => string;
 
@@ -241,6 +253,12 @@ const WARNING: Record<WarningCode, Template> = {
       { wallId: w.wallId },
       `${p.field === 'section' ? `section ${wallFieldValue(p.field, p.wall)}` : `${wallFieldValue(p.field, p.wall)} wall`}, but wall type "${p.wallType}" is ` +
         `${wallFieldValue(p.field, p.type)} — the panel follows the wall; fix the wall or the type`,
+    ),
+  BLOCKING_SKIPPED: (p, w) =>
+    at(
+      { wallId: w.wallId },
+      `blocking row "${p.label ?? 'Blocking'}" at ${inch(p.y)} (center) skipped across ${skippedWhere(p)} [${p.lo}, ${p.hi}] — ` +
+        (p.reason === 'overlap' ? 'another row is already there' : 'add backing there by hand if needed'),
     ),
 };
 
@@ -315,6 +333,16 @@ const ERROR: Record<EngineErrorCode, Template> = {
     `${lead(w)}extraStuds[${p.index}]: ${p.count} stud(s) from x=${p.x} run past the ${inch(p.length)} wall`,
   EXTRA_STUD_IN_OPENING: (p, w) =>
     `${lead(w)}extraStuds[${p.index}]: stud at x=${p.x} falls in the opening zone [${p.start}, ${p.end}] — extra studs stay clear of kings, jacks and the RO`,
+
+  BLOCKING_PRESET_UNKNOWN: (p, w) =>
+    `${lead({ wallId: w.wallId })}blocking[${p.index}]: no blocking preset "${p.preset}" — use one of ${list(p.known)} or add it to config.blockingPresets`,
+  BLOCKING_ROW_INVALID: (p, w) =>
+    `${lead({ wallId: w.wallId })}blocking[${p.index}]: ` +
+    (p.field === 'y'
+      ? `center height ${p.value} must put the block between the plates (${p.min} to ${p.max})`
+      : p.field === 'range'
+        ? `from ${p.from} to ${p.to} must be a range inside the ${inch(p.length)} wall`
+        : `${p.field} must be a finite number (got ${p.value})`),
 
   WALL_TYPE_UNKNOWN: (p, w) =>
     at({ wallId: w.wallId }, `wall type "${p.tag}" is not in config.wallTypes and the wall does not give ${wallFields(p.fields)}`),

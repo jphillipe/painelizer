@@ -12,8 +12,22 @@
  *
  * Escrita (`textFromDraft`): chaves conhecidas (as das shapes do schema) em ordem fixa, medidas como número (sem
  * perda; pés-pol arredondaria a 1/16"), chaves desconhecidas (`$comment`, `$reviewed`…) devolvidas em `extra` — o
- * CLI ignora as com `$` e recusa as outras. Nós aninhados (`building`, `panel`, catálogo, `header`, `ends`,
- * `extraStuds`) só guardam chaves conhecidas.
+ * CLI ignora as com `/**
+ * Modelo do editor de paredes (S21): espelho do JSON de projeto do CLI (`packages/cli/src/project.ts`), com toda
+ * medida já em polegadas decimais e a forma de catálogo das aberturas (`tag`/`center`/`headerMark`) preservada —
+ * o parser do CLI a resolve e descarta, então o editor não pode trabalhar sobre o `Project` parseado.
+ *
+ * Leitura tolerante pelo **mesmo schema** do CLI (`cli/schema`, S28.2): cada campo passa pelo schema dele
+ * (`readField`, o `safeParse` do campo); o que o CLI recusaria vira `DraftProblem` no caminho (campo fica
+ * `undefined`, frase em inglês pela regra da issue), não exceção — o editor precisa abrir o projeto para o humano
+ * corrigir. Nós (`config`, paredes, aberturas…) são lidos campo a campo para um campo ruim não derrubar os vizinhos;
+ * os defaults do schema não entram no draft (campo ausente fica ausente). Invariante: tudo que `parseProject`
+ * aceita abre sem problems. Só JSON inválido ou `walls` que não é lista impedem a abertura.
+ *
+ * Escrita (`textFromDraft`): chaves conhecidas (as das shapes do schema) em ordem fixa, medidas como número (sem
+ * perda; pés-pol arredondaria a 1/16"), chaves desconhecidas (`$comment`, `$reviewed`…) devolvidas em `extra` — o
+ e recusa as outras. Nós aninhados (`building`, `panel`, catálogo, `header`, `ends`,
+ * `extraStuds`, `blocking`, `blockingPresets`) só guardam chaves conhecidas.
  *
  * `lib/editor/*` é a única camada do cliente que importa `core` (docs/10-design.md §7).
  */
@@ -33,6 +47,8 @@ import {
   type WallSection,
 } from 'core';
 import {
+  blockingPresetShape,
+  blockingRowShape,
   buildingShape,
   configShape,
   endsShape,
@@ -91,6 +107,23 @@ export interface DraftExtraStud {
   label?: string;
 }
 
+/** Fileira de blocking por altura (S36): centro ao subfloor, trecho opcional (na planta, do `start`) e uso. */
+export interface DraftBlockingRow {
+  y?: number;
+  from?: number;
+  to?: number;
+  label?: string;
+}
+
+/** Item da lista de blocking (S36): id de preset ou fileira. */
+export type DraftBlockingEntry = string | DraftBlockingRow;
+
+/** Preset de blocking do projeto (S36). */
+export interface DraftBlockingPreset {
+  y?: number;
+  label?: string;
+}
+
 export interface DraftWall {
   id: string;
   /** Planta (S13): eixo da parede. */
@@ -113,6 +146,8 @@ export interface DraftWall {
   extraStuds?: DraftExtraStud[];
   /** Quebras de painel forçadas (S29): x da parede (na planta, do `start`); ausente = automático. */
   panelBreaks?: number[];
+  /** Fileiras de blocking por altura (S36); ausente = as do tipo de parede. */
+  blocking?: DraftBlockingEntry[];
   openings: DraftOpening[];
   extra?: Extra;
 }
@@ -158,6 +193,8 @@ export interface DraftWallType {
   exterior?: boolean;
   bearing?: boolean;
   description?: string;
+  /** Fileiras de blocking do tipo (S36). */
+  blocking?: DraftBlockingEntry[];
 }
 
 export interface DraftConfig {
@@ -179,6 +216,8 @@ export interface DraftConfig {
   wallTypes?: Record<string, DraftWallType>;
   /** Fire blocking acima desta cavidade (S31). */
   fireBlockAt?: number;
+  /** Presets de blocking do projeto, por id (S36); somados aos embutidos. */
+  blockingPresets?: Record<string, DraftBlockingPreset>;
   /** Tabela de preços do orçamento (S31), como o schema a lê; o editor não a edita, só preserva. */
   prices?: PriceEntry[];
   extra?: Extra;
@@ -280,6 +319,7 @@ function configFrom(r: Reader, raw: unknown, path: string): DraftConfig {
     headerSchedule: r.record(c['headerSchedule'], `${path}.headerSchedule`, headerEntryFrom),
     wallTypes: r.record(c['wallTypes'], `${path}.wallTypes`, wallTypeFrom),
     fireBlockAt: r.field(C.fireBlockAt, c['fireBlockAt'], `${path}.fireBlockAt`),
+    blockingPresets: r.record(c['blockingPresets'], `${path}.blockingPresets`, blockingPresetFrom),
     prices: r.field(C.prices, c['prices'], `${path}.prices`),
     extra: rest(c, CONFIG_KEYS),
   });
@@ -349,6 +389,36 @@ function wallTypeFrom(r: Reader, raw: unknown, path: string): DraftWallType {
     exterior: r.field(T.exterior, t['exterior'], `${path}.exterior`),
     bearing: r.field(T.bearing, t['bearing'], `${path}.bearing`),
     description: r.field(T.description, t['description'], `${path}.description`),
+    blocking: blockingFrom(r, t['blocking'], `${path}.blocking`),
+  });
+}
+
+function blockingPresetFrom(r: Reader, raw: unknown, path: string): DraftBlockingPreset {
+  const p = r.obj(raw, path);
+  if (p === undefined) return {};
+  const B = blockingPresetShape;
+  return compact({ y: r.field(B.y, p['y'], `${path}.y`), label: r.field(B.label, p['label'], `${path}.label`) });
+}
+
+/** Lista de blocking (S36): texto = id de preset (aparado não; vazio é problema), objeto = fileira campo a campo. */
+function blockingFrom(r: Reader, raw: unknown, path: string): DraftBlockingEntry[] | undefined {
+  return r.list(raw, path)?.flatMap((e, i): DraftBlockingEntry[] => {
+    const p = `${path}[${i}]`;
+    if (typeof e === 'string') {
+      const id = r.field(blockingRowShape.label, e, p);
+      return id === undefined ? [] : [id];
+    }
+    const o = r.obj(e, p);
+    if (o === undefined) return [];
+    const B = blockingRowShape;
+    return [
+      compact({
+        y: r.field(B.y, o['y'], `${p}.y`),
+        from: r.field(B.from, o['from'], `${p}.from`),
+        to: r.field(B.to, o['to'], `${p}.to`),
+        label: r.field(B.label, o['label'], `${p}.label`),
+      }),
+    ];
   });
 }
 
@@ -402,6 +472,7 @@ function wallFrom(r: Reader, raw: unknown, path: string, index: number): DraftWa
     wallType: r.field(W.wallType, w['wallType'], `${path}.wallType`),
     extraStuds,
     panelBreaks: r.field(W.panelBreaks, w['panelBreaks'], `${path}.panelBreaks`),
+    blocking: blockingFrom(r, w['blocking'], `${path}.blocking`),
     openings,
     extra: rest(w, WALL_KEYS),
   });
@@ -652,8 +723,10 @@ function configJson(c: DraftConfig): Record<string, unknown> {
     openingTypes: c.openingTypes === undefined ? undefined : mapValues(c.openingTypes, (t) => compact({ ...t })),
     headerSchedule:
       c.headerSchedule === undefined ? undefined : mapValues(c.headerSchedule, (h) => compact({ ...h, section: sectionJson(h.section) })),
-    wallTypes: c.wallTypes === undefined ? undefined : mapValues(c.wallTypes, (t) => compact({ ...t })),
+    wallTypes:
+      c.wallTypes === undefined ? undefined : mapValues(c.wallTypes, (t) => compact({ ...t, blocking: blockingJson(t.blocking) })),
     fireBlockAt: c.fireBlockAt,
+    blockingPresets: c.blockingPresets === undefined ? undefined : mapValues(c.blockingPresets, (p) => compact({ ...p })),
     prices: c.prices?.map((p) => ({ ...p })),
     ...(c.extra ?? {}),
   });
@@ -678,9 +751,14 @@ function wallJson(w: DraftWall): Record<string, unknown> {
     wallType: w.wallType,
     extraStuds: w.extraStuds === undefined ? undefined : w.extraStuds.map((e) => compact({ ...e })),
     panelBreaks: w.panelBreaks === undefined ? undefined : [...w.panelBreaks],
+    blocking: blockingJson(w.blocking),
     openings: w.openings.map(openingJson),
     ...(w.extra ?? {}),
   });
+}
+
+function blockingJson(b: readonly DraftBlockingEntry[] | undefined): unknown[] | undefined {
+  return b?.map((e) => (typeof e === 'string' ? e : compact({ ...e })));
 }
 
 function openingJson(o: DraftOpening): Record<string, unknown> {

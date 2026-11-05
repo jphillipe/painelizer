@@ -5,7 +5,8 @@ import { useState, type Dispatch } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { movedBreak, suggestBreak, withBreak, withoutBreak, type ShownBreaks } from '@/lib/editor/breaks';
-import { isIdFree, isPlanWall, wallLength, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
+import { blockingEntryText, blockingFromType, blockingPresetOptions, withoutBlockingEntry } from '@/lib/editor/blocking';
+import { isIdFree, isPlanWall, wallLength, type DraftBlockingRow, type DraftWall, type ProjectDraft } from '@/lib/editor/draft';
 import { LABELS } from '@/lib/editor/labels';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { Issue } from '@/lib/editor/problems';
@@ -160,6 +161,8 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
       <PanelBreaksSection id={id} length={length} breaks={breaks} issue={issues.some((i) => i.code === 'PANEL_BREAK_INVALID' || i.code === 'PANEL_TOO_LONG')} onChange={(list) => dispatch({ type: 'setPanelBreaks', wallId: id, breaks: list })} />
 
       <ExtraStudsSection id={id} length={length} studs={wall.extraStuds} onChange={(extraStuds) => set({ extraStuds })} />
+
+      <BlockingSection id={id} draft={draft} wall={wall} issue={issues.some((i) => (i.code ?? '').startsWith('BLOCKING_'))} onChange={(blocking) => set({ blocking })} />
 
       <Section
         title={`Openings (${wall.openings.length})`}
@@ -325,6 +328,101 @@ function ExtraStudsSection({ id, length, studs, onChange }: { id: string; length
               </Button>
             </li>
           ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+/**
+ * Fileiras de blocking por altura (S36, P44): presets (embutidos e do projeto) e fileiras com o centro do bloco ao
+ * subfloor, trecho opcional (do `start`) e uso. Sem lista própria, a parede usa a do tipo; editar copia a do tipo.
+ */
+function BlockingSection({ id, draft, wall, issue, onChange }: { id: string; draft: ProjectDraft; wall: DraftWall; issue: boolean; onChange: (blocking: DraftWall['blocking']) => void }) {
+  const config = draft.config;
+  const fromType = blockingFromType(config, wall);
+  const list = wall.blocking ?? [];
+  const presets = blockingPresetOptions(config);
+  const base = (): NonNullable<DraftWall['blocking']> => [...(wall.blocking ?? fromType ?? [])];
+  const update = (i: number, patch: Patch<DraftBlockingRow>): void =>
+    onChange(
+      list.map((e, n) =>
+        n === i && typeof e !== 'string' ? (Object.fromEntries(Object.entries({ ...e, ...patch }).filter(([, v]) => v !== undefined)) as DraftBlockingRow) : e,
+      ),
+    );
+  const count = (wall.blocking ?? fromType ?? []).length;
+  return (
+    <Section
+      title={`Blocking (${count})`}
+      collapsible
+      defaultOpen={count > 0 || issue}
+      actions={
+        <span className="flex items-center gap-2">
+          <EnumSelect
+            id={`w-${id}-bk-preset`}
+            value={undefined}
+            noneLabel="Add preset…"
+            options={presets.map((p) => ({ value: p.id, label: `${p.label} · ${p.y === undefined ? '?' : formatMeasure(p.y)}` }))}
+            onChange={(v) => v !== undefined && onChange([...base(), v])}
+          />
+          <Button variant="outline" size="xs" onClick={() => onChange([...base(), { y: 36 }])}>
+            <PlusIcon /> Add row
+          </Button>
+        </span>
+      }
+    >
+      {fromType !== undefined ? (
+        <div className="space-y-2">
+          <p className="text-[13px] text-ink-3">
+            From wall type {wall.wallType}: {fromType.map((e) => blockingEntryText(e, config)).join('; ')}.
+          </p>
+          <span className="flex gap-2">
+            <Button variant="outline" size="xs" onClick={() => onChange(base())}>
+              Edit for this wall
+            </Button>
+            <Button variant="ghost" size="xs" onClick={() => onChange([])}>
+              None on this wall
+            </Button>
+          </span>
+        </div>
+      ) : list.length === 0 ? (
+        <p className="text-[13px] text-ink-3">
+          {wall.blocking === undefined
+            ? 'None. Add backing for cabinets and bath accessories: blocks between the studs, centered at the height (hypothesis P44).'
+            : 'None on this wall (its wall type has blocking).'}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {list.map((e, i) =>
+            typeof e === 'string' ? (
+              <li key={i} className="flex items-center justify-between gap-2 text-[13px]">
+                <span>
+                  <span className="font-mono text-ink-3">{e}</span> {blockingEntryText(e, config)}
+                </span>
+                <Button variant="ghost" size="icon-xs" aria-label={`Remove blocking row ${i + 1}`} onClick={() => onChange(withoutBlockingEntry(config, wall, i))}>
+                  <Trash2Icon />
+                </Button>
+              </li>
+            ) : (
+              <li key={i} className="grid grid-cols-[1fr_1fr_1fr_1.4fr_auto] items-end gap-2">
+                <Field id={`w-${id}-bk-${i}-y`} label={i === 0 ? 'Center height' : ''}>
+                  <MeasureInput id={`w-${id}-bk-${i}-y`} value={e.y} positive required onCommit={(v) => v !== undefined && update(i, { y: v })} />
+                </Field>
+                <Field id={`w-${id}-bk-${i}-from`} label={i === 0 ? 'From' : ''}>
+                  <MeasureInput id={`w-${id}-bk-${i}-from`} value={e.from} placeholder="start" onCommit={(v) => update(i, { from: v })} />
+                </Field>
+                <Field id={`w-${id}-bk-${i}-to`} label={i === 0 ? 'To' : ''}>
+                  <MeasureInput id={`w-${id}-bk-${i}-to`} value={e.to} placeholder="end" onCommit={(v) => update(i, { to: v })} />
+                </Field>
+                <Field id={`w-${id}-bk-${i}-l`} label={i === 0 ? 'Use' : ''}>
+                  <TextInput id={`w-${id}-bk-${i}-l`} value={e.label} placeholder="e.g. Grab bar" onCommit={(v) => update(i, { label: v })} />
+                </Field>
+                <Button variant="ghost" size="icon-xs" aria-label={`Remove blocking row ${i + 1}`} onClick={() => onChange(withoutBlockingEntry(config, wall, i))}>
+                  <Trash2Icon />
+                </Button>
+              </li>
+            ),
+          )}
         </ul>
       )}
     </Section>

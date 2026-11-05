@@ -13,13 +13,14 @@
  *   arquiteto mesmo quando o catálogo não veio); se falta algum, `WALL_TYPE_UNKNOWN`.
  * - Campo presente na parede **e** no tipo com valores diferentes: a parede manda e sai um aviso
  *   `WALL_TYPE_MISMATCH` por campo (`wallTypeWarnings`, chamado nas validações do painel). `description` não entra.
+ * - `blocking` (S36): o da parede (inclusive `[]`, que desliga); sem ele, o do tipo. Não compara nem avisa.
  * - O catálogo é de entrada parcial: um tipo pode dar só seção e posição (a folha de partition types do arquiteto
  *   não diz se a parede é portante).
  */
 
 import type { Config } from '../config';
 import { EngineError, warning, type Warning } from '../messages';
-import type { Wall, WallTypeEntry, WallTypeField } from '../wall';
+import type { BlockingEntry, Wall, WallTypeEntry, WallTypeField } from '../wall';
 
 /** Os campos que o tipo pode dar, na ordem em que os erros e avisos os citam. */
 export const WALL_TYPE_FIELDS: readonly WallTypeField[] = ['section', 'exterior', 'bearing'];
@@ -27,8 +28,14 @@ export const WALL_TYPE_FIELDS: readonly WallTypeField[] = ['section', 'exterior'
 /** O que a resolução lê de uma parede: o id (para o erro), a tag e os três campos, presentes ou não. */
 export type WallTypeInput = { id?: string; wallType?: string } & Partial<Pick<Wall, WallTypeField>>;
 
+/** O que a comparação lê de uma linha do catálogo (o editor passa a sua, de entrada parcial). */
+type TypeFields = Partial<Pick<WallTypeEntry, WallTypeField>>;
+
 /** A linha do catálogo para a tag da parede; `undefined` sem tag ou com tag fora do catálogo. */
-export function wallTypeOf(wall: Pick<WallTypeInput, 'wallType'>, config: Pick<Config, 'wallTypes'>): WallTypeEntry | undefined {
+export function wallTypeOf<E extends TypeFields = WallTypeEntry>(
+  wall: Pick<WallTypeInput, 'wallType'>,
+  config: { wallTypes?: Record<string, E> | undefined },
+): E | undefined {
   if (wall.wallType === undefined) return undefined;
   const types = config.wallTypes;
   // `Object.hasOwn`: uma tag chamada `constructor` ou `toString` não pode achar a linha no protótipo.
@@ -42,7 +49,10 @@ export function wallTypeOf(wall: Pick<WallTypeInput, 'wallType'>, config: Pick<C
  * @throws EngineError `WALL_TYPE_UNKNOWN` (tag fora do catálogo e campo faltando) ou `WALL_FIELD_MISSING` (campo
  *                     que nem a parede nem o tipo dão)
  */
-export function resolveWallType<W extends WallTypeInput>(wall: W, config: Pick<Config, 'wallTypes'>): W & Pick<Wall, WallTypeField> {
+export function resolveWallType<W extends WallTypeInput & { blocking?: BlockingEntry[] }>(
+  wall: W,
+  config: Pick<Config, 'wallTypes'>,
+): W & Pick<Wall, WallTypeField | 'blocking'> {
   const entry = wallTypeOf(wall, config);
   const section = wall.section ?? entry?.section;
   const exterior = wall.exterior ?? entry?.exterior;
@@ -56,7 +66,9 @@ export function resolveWallType<W extends WallTypeInput>(wall: W, config: Pick<C
     }
     throw new EngineError('WALL_FIELD_MISSING', where, { fields, ...(wall.wallType === undefined ? {} : { wallType: wall.wallType }) });
   }
-  return { ...wall, section, exterior, bearing };
+  // Blocking (S36): o da parede, mesmo `[]`; sem ele, o do tipo. Lista inteira, sem mistura nem aviso.
+  const blocking = wall.blocking ?? entry?.blocking;
+  return { ...wall, section, exterior, bearing, ...(blocking === undefined ? {} : { blocking: [...blocking] }) };
 }
 
 /** Um campo que a parede e o tipo dão com valores diferentes. */
@@ -69,7 +81,7 @@ export interface WallTypeMismatch {
 }
 
 /** Campos em que a parede contradiz o tipo dela, na ordem de `WALL_TYPE_FIELDS`. Sem tag ou sem linha: nenhum. */
-export function wallTypeMismatches(wall: WallTypeInput, config: Pick<Config, 'wallTypes'>): WallTypeMismatch[] {
+export function wallTypeMismatches(wall: WallTypeInput, config: { wallTypes?: Record<string, TypeFields> | undefined }): WallTypeMismatch[] {
   const entry = wallTypeOf(wall, config);
   if (entry === undefined) return [];
   const out: WallTypeMismatch[] = [];

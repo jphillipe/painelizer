@@ -139,6 +139,14 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
     derived.extraStuds = wall.extraStuds.map((e): ExtraStud => ({ ...e, x: e.x - s0 }));
   }
   if (wall.panelBreaks !== undefined) derived.panelBreaks = wall.panelBreaks.map((x) => x - s0);
+  // Fileiras de blocking (S36): o trecho é medido do `start`, como os extras; presets e fileira inteira ficam.
+  if (wall.blocking !== undefined) {
+    derived.blocking = wall.blocking.map((e) =>
+      typeof e === 'string'
+        ? e
+        : { ...e, ...(e.from === undefined ? {} : { from: e.from - s0 }), ...(e.to === undefined ? {} : { to: e.to - s0 }) },
+    );
+  }
   const joints: WallJoints = {};
   const startJoint = endJoint(conns.start, otherThickness(conns.start));
   const endJ = endJoint(conns.end, otherThickness(conns.end));

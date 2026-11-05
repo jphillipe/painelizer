@@ -304,6 +304,16 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   A cota é do centro, da base ou do topo do bloco? Um bloco por uso ou faixa dupla? Mesma seção da parede? —
   hipótese: um bloco por uso, de 1.5" de altura, **centro** na cota (faixa → valor único: 36, 54, 84; 15, 39, 42,
   48, 79), seção da parede, entre todos os studs do trecho; `config.blockingPresets` — S36.
+  **Em vigor desde a S36 (2026-11-05, por delegação; revisar):** hipótese: presets `kitchen-base` 36" ("Base cabinets /
+  countertop"), `kitchen-upper-bottom` 54" ("Upper cabinets, bottom" — leitura do "topo do balcão 54" típico" da
+  prancha), `kitchen-upper-top` 84", `bath-toilet` 15", `bath-paper` 39", `bath-valve` 42", `bath-towel` 48",
+  `bath-shower` 79"; a cota é o **centro** do bloco medida do **subfloor** (base da bottom plate — o A.F.F. da prancha é
+  do piso acabado, uns 3/4" a 1" acima); bloco deitado de 1.5" da seção da parede em todo vão entre peças de altura
+  inteira que toca o trecho; vão em zona de abertura (sob o peitoril, acima do header) ou no ladder do T fica sem bloco,
+  com aviso `BLOCKING_SKIPPED`; fileira na mesma altura de outra (inclusive o fire blocking) cede à primeira, com aviso
+  — S36. Perguntas que ficam para a fábrica: a cota é A.F.F. ou do subfloor? Vai bloco entre os cripples sob o peitoril
+  e acima do header? O 54" é a base dos armários superiores? Bloco contínuo (2x deitado de ponta a ponta, por fora dos
+  studs) ou entre os studs, como o modelo faz?
 - [ ] **P45 — Posts: seções, peso e conectores.** Posts 4x4/4x6/6x6 nos cantos da escada e sob LVL. O post
   substitui o stud de layout ou soma a ele? Conector de base e de topo é peça da fábrica ou da obra? — hipótese:
   seções 4x4, 4x6 e 6x6 (reais 3.5×3.5, 3.5×5.5, 5.5×5.5) a 35 pcf (≈ 3.0, 4.7, 7.3 lb/pé); o post ocupa o lugar

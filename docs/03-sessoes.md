@@ -1489,7 +1489,7 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   para PNG (a linha de dados cabe ao lado do carimbo). Não conferido: o campo na seleção múltipla (só tipos e
   testes), `pnpm e2e`, leitura real pela API. Não feito (fica para a S39): descrição do tipo na folha e legenda da
   planta.
-- [ ] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | presetId)[]` com
+- [x] **S36 — Blocking por altura (regra de framing; P44).** `wall.blocking?: (BlockingRow | presetId)[]` com
   `BlockingRow = { y, from?, to?, label? }` (y = centro do bloco, hipótese P44) e `config.blockingPresets?` somado
   aos embutidos da prancha (cozinha: base, bancada e armário superior; banheiro: vaso, barra/papeleira, válvula,
   toalheiro e ducha — um valor por uso, tirado das faixas de `docs/14`; a sessão fixa os números e registra na P44);
@@ -1502,6 +1502,29 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
   **Web**: seção "Blocking" no inspetor da parede (presets e fileiras) e campo "Fire blocking above" nas
   configurações (`fireBlockAt`, hoje sem campo). **CLI**: schema. **Fixture novo** `wall-144-kitchen` (3 fileiras
   com janela no meio).
+  Feita em 2026-11-05 (sessão encadeada; aprovada por delegação, sem revisão prévia do humano; commit, sem push).
+  **Core**: `BlockingRow`/`BlockingEntry` em `wall.ts`, `Wall.blocking` e `WallTypeEntry.blocking`; `BlockingPreset` e
+  `config.blockingPresets`; `BlockingKind` = `'fire' | 'backing'` e `FlatMember.label` (uso). `rules/blocking.ts`:
+  `BUILTIN_BLOCKING_PRESETS` (8 usos, números fixados na P44: 36/54/84; 15/39/42/48/79), `blockingPresetsOf`,
+  `resolveBlockingRows` (presets → altura e uso; centro entre as plates, trecho tocando a parede), `heightBlocks`
+  (bloco com o **centro** na cota em todo vão entre peças de altura inteira que toca `(from, to)`; zona de abertura e
+  ladder do T pulados com aviso; mesma altura de outra fileira, inclusive o fogo, cede à primeira, com aviso),
+  `blockingForSegment` (trecho por painel) e `blockingYRange`. Aviso `BLOCKING_SKIPPED` (14 avisos) e erros
+  `BLOCKING_PRESET_UNKNOWN`/`BLOCKING_ROW_INVALID`; `whyNotBreak` libera todo bloco com `blocking`; `splitWall` corta
+  os trechos por painel; `frameWall` converte `from`/`to` do `start`; `resolveWallType` dá o blocking do tipo à parede
+  sem lista (a parede manda, `[]` desliga). **Folha** (`sheet/blocking.ts`): coluna entre o desenho e a lista com a cota
+  do subfloor ao centro e `B · <uso> (center 36")` por fileira, também no fire blocking; sem fileira, nada muda.
+  **CLI**: `blockingRowShape`, `blockingPresetShape`, `blocking` (preset ou fileira) na parede e no tipo,
+  `blockingPresets` no config, type locks; `projectFrom` recusa preset desconhecido no caminho do item. **Web**:
+  `draft.ts` lê e escreve `blocking` (parede e tipo) e `blockingPresets`; `lib/editor/blocking.ts`; seção "Blocking"
+  no inspetor (Add preset…, Add row, a lista do tipo com "Edit for this wall"/"None on this wall"); "Fire blocking
+  above" nas configurações; dividir/mover/juntar parede tratam os trechos; frases e títulos dos 3 códigos. **Fixture
+  novo** `wall-144-kitchen` (o `wall-144-window` + 3 fileiras: 17 blocos, 2 avisos). Testes: core 714 → 736, cli 174 →
+  185, extract 213 (+ 1 pulado), web 550 → 559. Verde: `pnpm check` duas vezes e `pnpm --filter web build`; fixtures
+  e snapshots existentes sem um byte mudado. Conferido: folhas de `wall-144-kitchen` e `wall-144-fireblock`
+  renderizadas para PNG (Chrome headless, `out/s36/`). A seção "Blocking" testada no DOM (jsdom). Não conferido: a
+  seção e o campo "Fire blocking above" no app rodando, `pnpm e2e`. Não feito (S40): campos para `config.blockingPresets` e para
+  o blocking do tipo de parede; (S39) fileiras no bloco "Wall content".
 - [ ] **S37 — Posts (regra de framing; P45).** `wall.posts?: [{ x, section: '4x4' | '4x6' | '6x6', label?, base?,
   top? }]` → `role: 'post'`, altura da cavidade, largura real em x; a profundidade do post tem de ser a da parede
   (senão erro com código; hipótese na P45); stud de layout sobreposto sai (mecanismo dos `extraStuds` em

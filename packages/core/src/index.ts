@@ -41,14 +41,24 @@ export {
   type TeeStrip,
 } from './rules/corners';
 export {
+  BUILTIN_BLOCKING_PRESETS,
+  DEFAULT_BLOCKING_LABEL,
   DEFAULT_FIRE_BLOCK_AT,
+  FIRE_BLOCKING_LABEL,
   MIN_BLOCK_LENGTH,
+  blockingForSegment,
+  blockingPresetsOf,
+  blockingYRange,
   blocksBetween,
   fireBlockRows,
   fireBlocks,
   gapsBetween,
+  heightBlocks,
+  resolveBlockingRows,
   type BlockGap,
   type BlockRowOptions,
+  type BlockingSkip,
+  type ResolvedBlockingRow,
 } from './rules/blocking';
 export { DEFAULT_PRECUTS, LENGTH_TOLERANCE, matchPrecut } from './rules/precuts';
 export {

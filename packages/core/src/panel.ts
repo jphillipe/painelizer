@@ -80,25 +80,27 @@ export interface HeaderMember extends MemberBase {
 }
 
 /**
- * Uso de uma fileira de blocos (S31): `'fire'` = fire blocking (R302.11, P11/P50). Ausente = ladder do T. A S36
- * acrescenta as fileiras por altura (P44).
+ * Uso de uma fileira de blocos: `'fire'` = fire blocking (S31; R302.11, P11/P50); `'backing'` = fileira por altura
+ * pedida pelo projeto (S36, P44: armários, acessórios de banheiro), com o uso em `label`. Ausente = ladder do T.
  */
-export type BlockingKind = 'fire';
+export type BlockingKind = 'fire' | 'backing';
 
-/** Sill e bloco (ladder do T, fire blocking): deitados, da seção da parede. */
+/** Sill e bloco (ladder do T, fire blocking, fileira por altura): deitados, da seção da parede. */
 export interface FlatMember extends MemberBase {
   role: 'sill' | 'block';
   orientation: 'horizontal';
   /** Só no bloco: uso da fileira. Ausente = ladder do T. */
   blocking?: BlockingKind;
+  /** Só no bloco de fileira por altura (S36): o uso ("Countertop"); vai para a folha. */
+  label?: string;
 }
 
 /** Uma peça do painel. O papel decide os campos: `plies`/`headerSource` só no header, `label` só no stud. */
 export type Member = PlateMember | StudMember | OpeningStudMember | HeaderMember | FlatMember;
 
-/** Texto do projeto para a peça (stud extra), `undefined` nas demais. */
+/** Texto do projeto para a peça (stud extra; uso da fileira de blocking, S36), `undefined` nas demais. */
 export function labelOf(m: Member): string | undefined {
-  return m.role === 'stud' ? m.label : undefined;
+  return m.role === 'stud' || m.role === 'block' ? m.label : undefined;
 }
 
 /**

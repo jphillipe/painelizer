@@ -24,6 +24,8 @@
  *   `RangeError`; na zona de abertura, aviso `OPENING_AT_TEE` e nenhuma peça de T.
  * - Fire blocking (S31, `rules/blocking.ts`): cavidade acima de `config.fireBlockAt` (120") leva fileiras de
  *   blocos entre as peças de altura inteira, fora das zonas de abertura e do trecho do ladder (P11, P50).
+ * - Fileiras por altura (S36, `rules/blocking.ts`, P44): `wall.blocking` (presets resolvidos) entre as mesmas peças;
+ *   vão em zona de abertura, no ladder ou com bloco na mesma altura é pulado com aviso `BLOCKING_SKIPPED`.
  * - Avisos: os da parede, depois os das aberturas, depois os de T, depois os de `validate.ts` (S10).
  */
 
@@ -53,7 +55,7 @@ import {
   teeStrips,
 } from '../rules/corners';
 import { panelWeight } from '../rules/weight';
-import { fireBlocks } from '../rules/blocking';
+import { fireBlocks, heightBlocks, resolveBlockingRows, type BlockingSkip } from '../rules/blocking';
 import { validatePanel } from './validate';
 
 /** Headers resolvidos, aberturas com jacks/kings definidos e plano de zonas de uma parede. */
@@ -263,7 +265,15 @@ export function framePanel(
   // Fire blocking (S31, P11/P50): entre as peças de altura inteira, fora das zonas e do trecho do ladder.
   const ladderSkip = (config.tee ?? 'ladder') === 'ladder' ? ladderBays(wall, strips, verticals) : [];
   const zoneSkip = plan.zones.map((z) => ({ lo: z.start, hi: z.end }));
-  const blocks = [...ladder, ...fireBlocks(wall, verticals, [...zoneSkip, ...ladderSkip], config)];
+  const fire = fireBlocks(wall, verticals, [...zoneSkip, ...ladderSkip], config);
+  // Fileiras por altura (S36, P44): mesmas peças e faixas puladas, agora com aviso; por cima do ladder e do fogo.
+  const skips: BlockingSkip[] = [
+    ...plan.zones.map((z) => ({ lo: z.start, hi: z.end, reason: 'opening' as const, openingIds: z.openingIds })),
+    ...ladderSkip.map((b, i) => ({ ...b, reason: 'tee' as const, teeWallId: strips[i]!.wallId })),
+  ];
+  const height = heightBlocks(wall, resolveBlockingRows(wall, config), verticals, skips, [...ladder, ...fire], config);
+  warnings.push(...height.warnings);
+  const blocks = [...ladder, ...fire, ...height.members];
 
   // Aberturas como ficam no painel (S17): o topo do RO é a base do header montado.
   const panelOpenings: PanelOpening[] = openings.map((o, i) => {

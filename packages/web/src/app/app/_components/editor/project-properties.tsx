@@ -66,7 +66,9 @@ export function ProjectProperties({ draft, dispatch, outcome, dirty, onOutcome }
           <Field id="c-dso" label="Double sill over" hint="Windows wider than this get a double sill">
             <MeasureInput id="c-dso" value={c.doubleSillOver} positive placeholder="off" onCommit={(v) => setConfig({ doubleSillOver: v })} />
           </Field>
-          <div />
+          <Field id="c-fire" label="Fire blocking above" hint="Stud cavity taller than this gets fire blocking rows">
+            <MeasureInput id="c-fire" value={c.fireBlockAt} positive placeholder={`10'-0"`} onCommit={(v) => setConfig({ fireBlockAt: v })} />
+          </Field>
           <Field id="c-corner" label="Corner">
             <EnumSelect id="c-corner" value={c.corner} noneLabel="California (default)" options={CORNER_OPTIONS} onChange={(v) => setConfig({ corner: v as DraftConfig['corner'] })} />
           </Field>

@@ -70,7 +70,13 @@ export type PriceEntry =
   | { section: Section; /** Comprimento de estoque, polegadas. */ length: number; /** Preço por peça. */ price: number }
   | { section: Section; /** Preço por pé linear. */ perFoot: number };
 
-export const DEFAULT_PANEL_CONFIG: Readonly<PanelConfig> = { maxLength: 240, module: 48, lap: 48, minLap: 24 };
+/** Preset de blocking por altura (S36, P44): o centro da fileira ao subfloor e o uso, para a folha. */
+export interface BlockingPreset {
+  y: number;
+  label?: string;
+}
+
+export const DEFAULT_PANEL_CONFIG:Readonly<PanelConfig> = { maxLength: 240, module: 48, lap: 48, minLap: 24 };
 
 export interface Config {
   /** Espaçamento OC entre studs. */
@@ -119,6 +125,11 @@ export interface Config {
    * (P11); fileiras no meio dos trechos (P50).
    */
   fireBlockAt?: number;
+  /**
+   * Presets de blocking por altura do projeto, por id (S36, P44): somados aos embutidos (`BUILTIN_BLOCKING_PRESETS`);
+   * id igual ao de um embutido o substitui.
+   */
+  blockingPresets?: Record<string, BlockingPreset>;
   /** Tabela de preços para o orçamento (S31, `output/cost.ts`). Ausente = sem orçamento. */
   prices?: PriceEntry[];
 }

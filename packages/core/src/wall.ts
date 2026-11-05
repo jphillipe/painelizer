@@ -28,6 +28,23 @@ export interface ExtraStud {
   label?: string;
 }
 
+/**
+ * Fileira de blocking por altura pedida pelo projeto (S36, hipótese P44): blocos deitados da seção da parede entre os
+ * studs, com o **centro** em `y` (medido do subfloor = base da bottom plate). `from`/`to` limitam o trecho em x da
+ * parede (na planta, medidos do `start`): levam bloco todos os vãos entre peças que tocam `(from, to)`. Ausentes =
+ * a parede inteira.
+ */
+export interface BlockingRow {
+  y: number;
+  from?: number;
+  to?: number;
+  /** Uso da fileira ("Countertop", "Grab bar"); vai para a folha. Ausente = "Blocking". */
+  label?: string;
+}
+
+/** Uma fileira (`BlockingRow`) ou o id de um preset (`config.blockingPresets` ou embutido: `kitchen-base`…). */
+export type BlockingEntry = BlockingRow | string;
+
 export interface Wall {
   id: string;
   length: number;
@@ -68,6 +85,11 @@ export interface Wall {
    */
   wallType?: string;
   /**
+   * Fileiras de blocking por altura (S36, P44): fileiras ou ids de preset. Ausente = as do tipo de parede
+   * (`config.wallTypes[tag].blocking`), se houver; `[]` = nenhuma (a parede manda, como na S35).
+   */
+  blocking?: BlockingEntry[];
+  /**
    * Ligações desta parede com as vizinhas, em x do painel (S14). Derivadas pela planta (`frameWalls`);
    * ausente = parede solta. Definem as peças de canto e T e os laps da double top plate.
    */
@@ -87,6 +109,8 @@ export interface WallTypeEntry {
   bearing?: boolean;
   /** Texto do projeto ("2x6 exterior, 5/8 GWB one side"). */
   description?: string;
+  /** Fileiras de blocking do tipo (S36): valem na parede que não traz `blocking`. */
+  blocking?: BlockingEntry[];
 }
 
 /**

@@ -252,7 +252,7 @@ describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 15 (S31: wall-144-fireblock e house-cross; S35: house-walltypes)', () => expect(files).toHaveLength(15));
+  it('são 16 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen)', () => expect(files).toHaveLength(16));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {
@@ -266,5 +266,61 @@ describe('fixtures do core passam pelo schema', () => {
         : { config: fx.config, walls: fx.house.walls, northAngle: fx.house.northAngle };
     const p = projectFrom(raw, file);
     expect(p.config).toEqual(fx.config);
+  });
+});
+
+describe('blocking por altura (S36)', () => {
+  const cfg = { studSpacing: 16, studLength: 92.625 };
+
+  it('presets e fileiras na parede (medidas pés-pol); presets do projeto no config', () => {
+    const p = projectFrom(
+      project(
+        { config: { ...cfg, blockingPresets: { hood: { y: "5'-6\"", label: 'Range hood' }, grab: { y: 34 } } } },
+        { blocking: ['kitchen-base', 'hood', { y: '3\'-0"', from: 12, to: "4'", label: 'Rail' }] },
+      ),
+      'p',
+    );
+    expect(p.config.blockingPresets).toEqual({ hood: { y: 66, label: 'Range hood' }, grab: { y: 34 } });
+    expect(p.walls[0]!.blocking).toEqual(['kitchen-base', 'hood', { y: 36, from: 12, to: 48, label: 'Rail' }]);
+  });
+
+  it('o tipo de parede dá o blocking da parede que não tem; a parede manda', () => {
+    const wallTypes = { 'WT-4': { section: '2x4', exterior: false, bearing: false, blocking: ['kitchen-base', { y: 54 }] } };
+    const bare = { id: 'W01', length: 144, height: 97.125, openings: [], wallType: 'WT-4' };
+    const p = projectFrom({ config: { ...cfg, wallTypes }, walls: [bare, { ...bare, id: 'W02', blocking: [] }] }, 'p');
+    expect(p.walls[0]!.blocking).toEqual(['kitchen-base', { y: 54 }]);
+    expect(p.walls[1]!.blocking).toEqual([]);
+  });
+
+  it('preset desconhecido: erro de projeto no item, com o código do motor', () => {
+    const fail = (raw: Record<string, unknown>): ProjectError => {
+      try {
+        projectFrom(raw, 'p');
+      } catch (e) {
+        return e as ProjectError;
+      }
+      throw new Error('expected a ProjectError');
+    };
+    const onWall = fail(project({}, { blocking: ['kitchen-base', 'kitchen-sink'] }));
+    expect(onWall.path).toBe('p.walls[0].blocking[1]');
+    expect(onWall.engine?.code).toBe('BLOCKING_PRESET_UNKNOWN');
+    expect(onWall.message).toMatch(/blocking\[1\]: no blocking preset "kitchen-sink" — use one of bath-paper/);
+    const onType = fail({
+      config: { ...cfg, wallTypes: { T: { section: '2x4', exterior: false, bearing: false, blocking: ['nope'] } } },
+      walls: [{ id: 'W01', length: 144, height: 97.125, openings: [], wallType: 'T' }],
+    });
+    expect(onType.path).toBe('p.config.wallTypes.T.blocking[0]');
+  });
+
+  it.each([
+    [project({}, { blocking: 'kitchen-base' }), /^p\.walls\[0\]\.blocking: expected an array/],
+    [project({}, { blocking: [36] }), /^p\.walls\[0\]\.blocking\[0\]: /],
+    [project({}, { blocking: [''] }), /^p\.walls\[0\]\.blocking\[0\]: expected non-empty text/],
+    [project({}, { blocking: [{ y: 36, height: 2 }] }), /^p\.walls\[0\]\.blocking\[0\]\.height: unknown key/],
+    [project({}, { blocking: [{ from: 2 }] }), /^p\.walls\[0\]\.blocking\[0\]\.y: /],
+    [project({}, { blocking: [{ y: -3 }] }), /^p\.walls\[0\]\.blocking\[0\]\.y: /],
+    [project({ config: { ...cfg, blockingPresets: { a: { y: 30, use: 'x' } } } }), /^p\.config\.blockingPresets\.a\.use: unknown key/],
+  ])('entrada inválida aponta o campo (%#)', (raw, message) => {
+    expect(() => projectFrom(raw, 'p')).toThrow(message);
   });
 });

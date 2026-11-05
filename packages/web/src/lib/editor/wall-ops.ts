@@ -1,7 +1,7 @@
 /**
  * Operações de parede do editor (S30): duplicar, dividir e juntar. Puras, sobre o draft; o reducer só as chama.
- * Não mudam regra do motor: redistribuem o que a parede já tinha (aberturas, studs extras, quebras forçadas, regra
- * das pontas) entre os pedaços, em x do `start` de cada um. Ids de abertura não mudam ao dividir/juntar (são únicos
+ * Não mudam regra do motor: redistribuem o que a parede já tinha (aberturas, studs extras, quebras forçadas, fileiras
+ * de blocking, regra das pontas) entre os pedaços, em x do `start` de cada um. Ids de abertura não mudam ao dividir/juntar (são únicos
  * no projeto); a parede nova ganha `nextWallId`. Parede criada ou mudada perde a marca de revisão (`$reviewed`).
  *
  * Recusas voltam com a frase em inglês para o inspetor (`reason`), nunca exceção.
@@ -13,6 +13,7 @@ import {
   nextWallId,
   wallLength,
   withoutReviewed,
+  type DraftBlockingEntry,
   type DraftExtraStud,
   type DraftOpening,
   type DraftWall,
@@ -128,6 +129,11 @@ export function splitWall(d: ProjectDraft, wallId: string, at: number): WallOp {
     a.panelBreaks = w.panelBreaks.filter((x) => x < cut - EPS);
     b.panelBreaks = w.panelBreaks.filter((x) => x > cut + EPS).map((x) => round1(x - cut));
   }
+  // Blocking (S36): preset e fileira da parede inteira ficam nos dois pedaços; fileira com trecho vai cortada a cada um.
+  if (w.blocking !== undefined) {
+    a.blocking = blockingPiece(w.blocking, 0, cut);
+    b.blocking = blockingPiece(w.blocking, cut, length);
+  }
   splitEnds(w, a, b);
   if (isPlanWall(w) && w.start !== undefined && w.end !== undefined) {
     const p = round(pointAt(w.start, w.end, cut));
@@ -206,6 +212,11 @@ export function joinWalls(d: ProjectDraft, aId: string, bId: string): WallOp {
   const differ = JOIN_FIELDS.filter((k) => a[k] !== b[k]);
   if (differ.length > 0)
     return { ok: false, reason: `${a.id} and ${b.id} differ in ${differ.join(', ')}; make them match first` };
+  // Blocking (S36): só junta com as mesmas fileiras e nenhuma com trecho (o trecho de uma não vale na outra).
+  if (JSON.stringify(a.blocking ?? []) !== JSON.stringify(b.blocking ?? []))
+    return { ok: false, reason: `${a.id} and ${b.id} differ in blocking; make them match first` };
+  if ((a.blocking ?? []).some((e) => typeof e !== 'string' && (e.from !== undefined || e.to !== undefined)))
+    return { ok: false, reason: `${a.id} has blocking rows with a from/to range; make them whole-wall first` };
   // A primeira manda no sentido: a de fora dela é o start (ou o end) da parede junta.
   const start = farA === 'start' ? a.start : b[farB]!;
   const end = farA === 'start' ? b[farB]! : a.end;
@@ -285,6 +296,18 @@ function shifted(o: DraftOpening, delta: number): DraftOpening {
   if (out.center !== undefined) out.center = round1(out.center + delta);
   if (out.offset !== undefined) out.offset = round1(out.offset + delta);
   return out;
+}
+
+/** As fileiras de blocking do pedaço `[lo, hi]` (x do `start` da parede), em x do pedaço; trecho fora sai. */
+function blockingPiece(list: readonly DraftBlockingEntry[], lo: number, hi: number): DraftBlockingEntry[] {
+  return list.flatMap((e): DraftBlockingEntry[] => {
+    if (typeof e === 'string' || (e.from === undefined && e.to === undefined)) return [e];
+    if ((e.to ?? Infinity) <= lo + EPS || (e.from ?? -Infinity) >= hi - EPS) return [];
+    const row = { ...e };
+    if (e.from !== undefined) row.from = round1(Math.max(e.from, lo) - lo);
+    if (e.to !== undefined) row.to = round1(Math.min(e.to, hi) - lo);
+    return [row];
+  });
 }
 
 function setOrDrop(w: DraftWall, key: 'extraStuds', list: DraftExtraStud[]): void {

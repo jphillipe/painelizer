@@ -21,6 +21,8 @@
  * - Rodapé: cota do comprimento, marcas de layout (`layoutOrigin + k·studSpacing`, mais 0 e o fechamento) e
  *   a cadeia acumulada do centro de cada peça vertical a partir de x=0 (rótulos girados; segunda fileira
  *   quando dois centros ficam a menos de 11 px), legenda das letras e avisos.
+ * - Fileiras de blocking (S36): entre o desenho e a lista, a cota do subfloor ao centro de cada fileira (fogo e por
+ *   altura) e o uso (`sheet/blocking.ts`); só quando o painel tem fileira.
  * - Margem direita: lista de peças da `cutList` (qtd, papel, seção, pés-pol, polegadas), peso estimado
  *   (`weightLb`; madeira sem sheathing, P8) e cortes na obra.
  * - Textos sempre em inglês (`sheet/strings.ts`; P51 resolvida).
@@ -29,6 +31,7 @@
 
 import { piecesOf, type Panel, type Warning } from '../panel';
 import { formatFeetInches } from '../units';
+import { blockingColumnWidth, blockingDims, blockingRows } from './sheet/blocking';
 import { CHAIN_ROW, layoutMarksSvg, openingDims, studChain } from './sheet/dims';
 import { TITLE_HEIGHT, sheetHeader } from './sheet/header';
 import { FIELD_CUT_HATCH, fieldCutMark, memberLabels, memberRect, overhang } from './sheet/members';
@@ -114,7 +117,10 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   const legendY = chainY + 6 + CHAIN_ROW * chain.rows + LEGEND_GAP;
   const warningsY = legendY + 6;
 
-  const listX = drawX0 + drawW + overRight * scale + LIST_GAP;
+  // Fileiras de blocking (S36): coluna de cotas e rótulos entre o desenho e a lista; sem fileira, nada muda.
+  const rows = blockingRows(panel);
+  const rightX = drawX0 + drawW + overRight * scale;
+  const listX = rightX + blockingColumnWidth(rows, S) + LIST_GAP;
   const list = pieceList(panel, listX, drawY0, S);
   const totalW = listX + LIST_WIDTH + margin;
   const totalH = Math.max(warningsY + panel.warnings.length * WARNING_LINE, list.bottom) + margin;
@@ -159,6 +165,9 @@ export function panelSvg(panel: Panel, opts: PanelSvgOptions = {}): string {
   for (const o of panel.openings) {
     out.push(...openingDims(o, panel, toPx, toPy, S));
   }
+
+  // Cota ao subfloor e uso de cada fileira de blocking (S36).
+  out.push(...blockingDims(rows, rightX, toPx(panel.length), toPy, S));
 
   // Nota da face no topo do desenho (P24).
   out.push(

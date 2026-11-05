@@ -53,6 +53,11 @@
  * rótulo quando a parede traz os três campos, e erro quando falta algum. A tag sai na folha, na planta e no
  * `panels.csv`.
  *
+ * Blocking por altura (S36, P44): `blocking: ["kitchen-base", { y, from?, to?, label? }]` na parede (ou em
+ * `config.wallTypes[tag].blocking`, que vale na parede sem `blocking`) — ids de preset (embutidos ou de
+ * `config.blockingPresets = { id: { y, label? } }`) e fileiras com o centro do bloco ao subfloor; `from`/`to` na planta
+ * medidos do `start`. Preset desconhecido ou centro fora da cavidade: erro do motor com código.
+ *
  * Divisão em painéis (S15): `config.panel = { maxLength?, maxWeight?, module?, lap?, minLap? }` (medidas; peso
  * em lb; cada campo ausente vale o default do core: 240, sem limite, 48, 48, 24) e `config.stockLengths`
  * (medidas; o `stockLengths` na raiz do arquivo continua aceito e entra em `config.stockLengths` — os dois juntos é erro). Plate
@@ -62,13 +67,16 @@
  * campo, e mora no schema zod de `schema.ts` (S28.2) — o mesmo que o editor do web usa em modo tolerante. Chaves
  * com `$` (`$comment`) passam sem ser lidas. Regras de framing não são validadas aqui: isso é papel do core (S10);
  * daqui só se chamam `resolveOpenings`, que transforma a forma de catálogo das aberturas em `Opening`, e
- * `resolveWallType`, que completa a parede pelo tipo dela.
+ * `resolveWallType`, que completa a parede pelo tipo dela; e se confere que cada id de preset de blocking existe
+ * (S36), para o erro apontar o item da lista.
  */
 
 import {
   EngineError,
+  blockingPresetsOf,
   resolveOpenings,
   resolveWallType,
+  type BlockingEntry,
   type Config,
   type House,
   type OpeningSpec,
@@ -155,12 +163,22 @@ export function projectFrom(raw: unknown, source = 'project'): Project {
     }
   };
   /** Seção, posição e carga da parede: as dela, senão as do tipo (S35). O que faltar é erro de projeto, com código. */
-  const typed = <W extends WallTypeInput>(w: W, i: number): W & Pick<Wall, WallTypeField> => {
+  const presets = blockingPresetsOf(config);
+  const typed = <W extends WallTypeInput & { blocking?: BlockingEntry[] }>(w: W, i: number): W & Pick<Wall, WallTypeField> => {
+    let out: W & Pick<Wall, WallTypeField | 'blocking'>;
     try {
-      return resolveWallType(w, config);
+      out = resolveWallType(w, config);
     } catch (e) {
       throw new ProjectError(`${source}.walls[${i}]`, (e as Error).message, e instanceof EngineError ? e : undefined);
     }
+    // Id de preset de blocking (S36): o da parede, senão o do tipo — o erro aponta o item de onde ele veio.
+    (out.blocking ?? []).forEach((entry, j) => {
+      if (typeof entry !== 'string' || Object.hasOwn(presets, entry)) return;
+      const e = new EngineError('BLOCKING_PRESET_UNKNOWN', { wallId: w.id }, { index: j, preset: entry, known: Object.keys(presets).sort() });
+      const where = w.blocking === undefined ? `${source}.config.wallTypes.${w.wallType}.blocking[${j}]` : `${source}.walls[${i}].blocking[${j}]`;
+      throw new ProjectError(where, e.message, e);
+    });
+    return out;
   };
   if (file.format === 'loose') {
     project.walls = file.walls.map((w, i) => ({ ...typed(w, i), openings: resolve(w.openings, w.id, i) }));

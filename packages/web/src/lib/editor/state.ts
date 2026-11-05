@@ -523,7 +523,7 @@ function mapOpening(d: ProjectDraft, wallId: string, openingId: string, f: (o: D
   return mapWall(d, wallId, (w) => ({ ...w, openings: w.openings.map((o) => (o.id === openingId ? f(o) : o)) }));
 }
 
-/** Desloca offsets, centros, studs extras e quebras forçadas ao longo do eixo (o `start` mudou de lugar). */
+/** Desloca offsets, centros, studs extras, quebras forçadas e trechos de blocking ao longo do eixo (o `start` mudou de lugar). */
 function shiftAlong(w: DraftWall, delta: number): DraftWall {
   if (delta === 0) return w;
   const openings = w.openings.map((o) => {
@@ -535,6 +535,18 @@ function shiftAlong(w: DraftWall, delta: number): DraftWall {
   const next: DraftWall = { ...w, openings };
   if (w.extraStuds !== undefined) next.extraStuds = w.extraStuds.map((e) => (e.x === undefined ? e : { ...e, x: round1(e.x + delta) }));
   if (w.panelBreaks !== undefined) next.panelBreaks = w.panelBreaks.map((x) => round1(x + delta));
+  // Fileiras de blocking com trecho (S36): o trecho fica no lugar em planta, como os studs extras.
+  if (w.blocking !== undefined) {
+    next.blocking = w.blocking.map((e) =>
+      typeof e === 'string'
+        ? e
+        : {
+            ...e,
+            ...(e.from === undefined ? {} : { from: round1(e.from + delta) }),
+            ...(e.to === undefined ? {} : { to: round1(e.to + delta) }),
+          },
+    );
+  }
   return next;
 }
 

@@ -74,6 +74,7 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   SPECIES_NOT_IN_TABLE: 'Species not covered by the IRC table',
   WIND_SPEED_MISSING: 'Wind speed is missing (king stud table)',
   WALL_TYPE_MISMATCH: 'Wall differs from its wall type',
+  BLOCKING_SKIPPED: 'Blocking row skipped at an opening, tee or other row',
   // motor (packages/core) — erros que um projeto provoca; o CLI e o parser
   HEADER_DATA_MISSING: 'Bearing wall needs snow load and building width (IRC header table)',
   HEADER_OUT_OF_TABLE: 'Header outside the IRC table — engineer required',
@@ -108,6 +109,8 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   SPLICE_NO_STUD: 'No stud to splice the plate',
   EXTRA_STUD_IN_OPENING: 'Extra stud inside an opening',
   EXTRA_STUD_OUT_OF_WALL: 'Extra stud outside the wall',
+  BLOCKING_PRESET_UNKNOWN: 'Blocking preset not found',
+  BLOCKING_ROW_INVALID: 'Blocking row outside the wall or between-plates range',
   PIECE_OVER_STOCK: 'Piece longer than any stock length',
   PANEL_FILE_CLASH: 'Two panels would write the same file',
   PROJECT_INVALID: 'Invalid value in the project file',

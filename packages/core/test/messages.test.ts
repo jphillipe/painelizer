@@ -15,8 +15,8 @@ import {
 const PORTUGUESE = /[ãçéêíóôõúà]|\b(parede|painel|abertura|não|deve|inválid|esperado|recebido|sem|com|entre|tabela)\b/i;
 
 describe('catálogo de mensagens (S26)', () => {
-  it('13 avisos (S31: FIRE_BLOCKING_REQUIRED virou peça; S35: WALL_TYPE_MISMATCH); todo código de aviso e de erro tem frase em inglês', () => {
-    expect(WARNING_CODES).toHaveLength(13);
+  it('14 avisos (S31: FIRE_BLOCKING_REQUIRED virou peça; S35: WALL_TYPE_MISMATCH; S36: BLOCKING_SKIPPED); todo código de aviso e de erro tem frase em inglês', () => {
+    expect(WARNING_CODES).toHaveLength(14);
     for (const c of WARNING_CODES) expect(warningMessage(c, {}, { wallId: 'W1', openingId: 'J1' })).not.toMatch(PORTUGUESE);
     for (const c of ENGINE_ERROR_CODES) {
       expect(engineErrorMessage(c, {}, { wallId: 'W1' }), c).not.toMatch(PORTUGUESE);
