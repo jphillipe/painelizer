@@ -7,7 +7,7 @@ const { deepHealth, MIGRATION_OF } = await import('./health.service');
 type DeepDeps = import('./health.service').DeepDeps;
 
 const user = { id: 'u1', email: 'a@x.com' };
-const team = { ok: true as const, team: { id: 't1', name: 'National Lumber', role: 'admin' as const, members: [] } };
+const team = { ok: true as const, team: { id: 't1', name: 'National Lumber', role: 'admin' as const, myName: undefined, members: [], invites: [] } };
 
 function deps(over: Partial<DeepDeps> = {}): DeepDeps {
   let t = 0;

@@ -19,7 +19,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       email={user.email}
       userId={user.id}
       team={team}
-      invitesEnabled={secretKey() !== undefined}
+      accountsEnabled={secretKey() !== undefined}
       {...(notice === undefined ? {} : { notice })}
     />
   );

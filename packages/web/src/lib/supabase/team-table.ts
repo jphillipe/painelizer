@@ -5,7 +5,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AddTeamMemberResult, Database, TeamMemberRow, TeamRole } from '@/types/database';
+import type { AddTeamMemberResult, Database, TeamInviteInsert, TeamInviteRow, TeamMemberRow, TeamRole } from '@/types/database';
 
 export interface Membership {
   teamId: string;
@@ -22,6 +22,17 @@ export interface TeamTable {
   /** `false` se nenhuma linha mudou (não é admin, ou a pessoa não está no time). */
   setRole(teamId: string, userId: string, role: TeamRole): Promise<boolean>;
   remove(teamId: string, userId: string): Promise<boolean>;
+  /** S41: nome de alguém do time (admin; RLS + grant por coluna). `false` se nenhuma linha mudou. */
+  setName(teamId: string, userId: string, name: string | null): Promise<boolean>;
+  /** S41: o próprio nome (`public.set_my_name`). */
+  setMyName(name: string | null): Promise<boolean>;
+  /** S41: convites ainda não aceitos nem revogados (vencidos inclusive), do mais antigo ao mais novo. Só admin lê. */
+  pendingInvites(teamId: string): Promise<TeamInviteRow[]>;
+  /** S41: revoga os pendentes de um e-mail (antes de gerar outro). */
+  revokePendingFor(teamId: string, email: string): Promise<void>;
+  createInvite(row: Pick<TeamInviteInsert, 'team_id' | 'email' | 'name' | 'role' | 'token_hash' | 'created_by' | 'created_by_email'>): Promise<TeamInviteRow>;
+  /** `false` se não havia o convite pendente (ou quem chama não é admin). */
+  revokeInvite(teamId: string, id: string): Promise<boolean>;
 }
 
 export type TeamTableErrorCode = 'LAST_ADMIN' | 'MISSING' | 'DB_ERROR';
@@ -80,6 +91,35 @@ export function supabaseTeamTable(client: SupabaseClient<Database>): TeamTable {
     },
     async remove(teamId, userId) {
       const { data, error } = await client.from('team_members').delete().eq('team_id', teamId).eq('user_id', userId).select('user_id');
+      if (error !== null) throw teamError(error);
+      return (data?.length ?? 0) > 0;
+    },
+    async setName(teamId, userId, name) {
+      const { data, error } = await client.from('team_members').update({ name }).eq('team_id', teamId).eq('user_id', userId).select('user_id');
+      if (error !== null) throw teamError(error);
+      return (data?.length ?? 0) > 0;
+    },
+    async setMyName(name) {
+      const { data, error } = await client.rpc('set_my_name', { new_name: name ?? '' });
+      if (error !== null) throw teamError(error);
+      return data;
+    },
+    async pendingInvites(teamId) {
+      const { data, error } = await client.from('team_invites').select('*').eq('team_id', teamId).is('accepted_at', null).is('revoked_at', null).order('created_at', { ascending: true });
+      if (error !== null) throw teamError(error);
+      return data ?? [];
+    },
+    async revokePendingFor(teamId, email) {
+      const { error } = await client.from('team_invites').update({ revoked_at: new Date().toISOString() }).eq('team_id', teamId).eq('email', email).is('accepted_at', null).is('revoked_at', null);
+      if (error !== null) throw teamError(error);
+    },
+    async createInvite(row) {
+      const { data, error } = await client.from('team_invites').insert(row).select('*').single();
+      if (error !== null) throw teamError(error);
+      return data;
+    },
+    async revokeInvite(teamId, id) {
+      const { data, error } = await client.from('team_invites').update({ revoked_at: new Date().toISOString() }).eq('team_id', teamId).eq('id', id).is('accepted_at', null).is('revoked_at', null).select('id');
       if (error !== null) throw teamError(error);
       return (data?.length ?? 0) > 0;
     },

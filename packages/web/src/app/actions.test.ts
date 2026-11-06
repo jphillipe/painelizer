@@ -25,8 +25,20 @@ const m = vi.hoisted(() => ({
     listRevisions: vi.fn(),
     restoreRevision: vi.fn(),
   },
-  team: { inviteMember: vi.fn(), setMemberRole: vi.fn(), removeMember: vi.fn() },
-  adminInvites: vi.fn(),
+  team: {
+    inviteMember: vi.fn(),
+    setMemberRole: vi.fn(),
+    removeMember: vi.fn(),
+    setMemberName: vi.fn(),
+    setMyName: vi.fn(),
+    memberResetLink: vi.fn(),
+    setMemberDisabled: vi.fn(),
+    deleteMemberAccount: vi.fn(),
+    renewInvite: vi.fn(),
+    revokeInvite: vi.fn(),
+    acceptInvite: vi.fn(),
+  },
+  admin: vi.fn(),
   panels: { generate: vi.fn(), check: vi.fn(), listExamples: vi.fn() },
   sheetsPdf: vi.fn(),
   jobs: { cancelJob: vi.fn(), jobProgress: vi.fn(), takeResult: vi.fn() },
@@ -48,7 +60,7 @@ vi.mock('@/services/auth.service', async (importOriginal) => ({
 }));
 vi.mock('@/services/projects.service', () => m.projects);
 vi.mock('@/services/team.service', () => ({ ...m.team, defaultDeps: { table: async () => undefined } }));
-vi.mock('@/lib/supabase/admin', () => ({ supabaseAdminInvites: m.adminInvites }));
+vi.mock('@/lib/supabase/admin', () => ({ supabaseAdmin: m.admin }));
 vi.mock('@/services/panels.service', () => m.panels);
 vi.mock('@/services/pdf.service', () => ({
   sheetsPdf: m.sheetsPdf,
@@ -82,7 +94,11 @@ const { saveProjectAction } = await import('./app/_actions/save-project');
 const { restoreProjectAction, trashProjectAction } = await import('./app/_actions/trash-project');
 const { changePasswordAction } = await import('./app/account/_actions/change-password');
 const { inviteMemberAction } = await import('./app/account/_actions/invite-member');
-const { removeMemberAction, setMemberRoleAction } = await import('./app/account/_actions/team-members');
+const { deleteMemberAccountAction, memberResetLinkAction, removeMemberAction, setMemberDisabledAction, setMemberNameAction, setMemberRoleAction } =
+  await import('./app/account/_actions/team-members');
+const { renewInviteAction, revokeInviteAction } = await import('./app/account/_actions/invites');
+const { setMyNameAction } = await import('./app/account/_actions/profile');
+const { acceptInviteAction } = await import('./invite/[token]/_actions/accept-invite');
 const { requestPasswordResetAction } = await import('./login/_actions/request-password-reset');
 const { signInAction } = await import('./login/_actions/sign-in');
 const { signOutAction } = await import('./login/_actions/sign-out');
@@ -90,6 +106,7 @@ const { signOutAction } = await import('./login/_actions/sign-out');
 const USER = { id: '11111111-1111-4111-8111-111111111111', email: 'pat@example.com' };
 const ID = '22222222-2222-4222-8222-222222222222';
 const OTHER = '33333333-3333-4333-8333-333333333333';
+const TOKEN = 'A'.repeat(43);
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>';
 const ok = { ok: true as const };
 const fail = { ok: false as const, reason: 'not_found' as const, message: 'gone' };
@@ -146,6 +163,13 @@ const AUTH_ACTIONS: [string, (input: never) => Promise<unknown>, unknown, Return
   ['inviteMember', inviteMemberAction as never, { email: 'new@example.com', role: 'editor' }, m.team.inviteMember],
   ['setMemberRole', setMemberRoleAction as never, { userId: OTHER, role: 'admin' }, m.team.setMemberRole],
   ['removeMember', removeMemberAction as never, { userId: OTHER }, m.team.removeMember],
+  ['setMemberName', setMemberNameAction as never, { userId: OTHER, name: 'Ed' }, m.team.setMemberName],
+  ['setMyName', setMyNameAction as never, { name: 'Pat' }, m.team.setMyName],
+  ['memberResetLink', memberResetLinkAction as never, { userId: OTHER }, m.team.memberResetLink],
+  ['setMemberDisabled', setMemberDisabledAction as never, { userId: OTHER, disabled: true }, m.team.setMemberDisabled],
+  ['deleteMemberAccount', deleteMemberAccountAction as never, { userId: OTHER }, m.team.deleteMemberAccount],
+  ['renewInvite', renewInviteAction as never, { id: ID }, m.team.renewInvite],
+  ['revokeInvite', revokeInviteAction as never, { id: ID }, m.team.revokeInvite],
   [
     'applyProjectData',
     applyProjectData as never,
@@ -227,6 +251,23 @@ describe('entrada inválida volta em validationErrors, sem chamar o service', ()
       m.team.setMemberRole,
     ],
     ['signIn: sem senha', () => signInAction({ email: 'pat@example.com', password: '' }), m.signIn],
+    ['setMemberName: nome longo', () => setMemberNameAction({ userId: OTHER, name: 'x'.repeat(81) }), m.team.setMemberName],
+    [
+      'setMemberDisabled: sem booleano',
+      () => setMemberDisabledAction({ userId: OTHER, disabled: 'yes' as unknown as boolean }),
+      m.team.setMemberDisabled,
+    ],
+    ['revokeInvite: id', () => revokeInviteAction({ id: 'nope' }), m.team.revokeInvite],
+    [
+      'acceptInvite: senhas diferentes',
+      () => acceptInviteAction({ token: TOKEN, password: 'long-enough', confirm: 'long-enougH' }),
+      m.team.acceptInvite,
+    ],
+    [
+      'acceptInvite: token',
+      () => acceptInviteAction({ token: 'short', password: 'long-enough', confirm: 'long-enough' }),
+      m.team.acceptInvite,
+    ],
   ] as const)('%s', async (_name, call, service) => {
     const r = await call();
     expect(r.validationErrors).toBeDefined();
@@ -287,6 +328,21 @@ describe('revalidatePath só quando deu certo', () => {
     ],
     ['setMemberRole', () => setMemberRoleAction({ userId: OTHER, role: 'editor' }), m.team.setMemberRole, ACCOUNT_HREF],
     ['removeMember', () => removeMemberAction({ userId: OTHER }), m.team.removeMember, ACCOUNT_HREF],
+    ['setMemberName', () => setMemberNameAction({ userId: OTHER, name: 'Ed' }), m.team.setMemberName, ACCOUNT_HREF],
+    ['setMyName', () => setMyNameAction({ name: 'Pat' }), m.team.setMyName, ACCOUNT_HREF],
+    [
+      'setMemberDisabled',
+      () => setMemberDisabledAction({ userId: OTHER, disabled: false }),
+      m.team.setMemberDisabled,
+      ACCOUNT_HREF,
+    ],
+    [
+      'deleteMemberAccount',
+      () => deleteMemberAccountAction({ userId: OTHER }),
+      m.team.deleteMemberAccount,
+      ACCOUNT_HREF,
+    ],
+    ['revokeInvite', () => revokeInviteAction({ id: ID }), m.team.revokeInvite, ACCOUNT_HREF],
     [
       'inviteMember',
       () => inviteMemberAction({ email: 'new@example.com', role: 'editor' }),
@@ -311,21 +367,46 @@ describe('revalidatePath só quando deu certo', () => {
 });
 
 describe('links de e-mail montados dos headers da requisição', () => {
-  it('convite: origem do proxy (Cloud Run) e a chave secret só aqui', async () => {
+  it('convite e link de senha: origem do proxy (Cloud Run) e a chave secret só aqui', async () => {
     m.headers.mockResolvedValue(
       headersOf({ host: 'internal:8080', 'x-forwarded-host': 'panelizer.run.app', 'x-forwarded-proto': 'https' }),
     );
-    m.adminInvites.mockReturnValue({ invite: 'secret-client' });
-    m.team.inviteMember.mockResolvedValue({ ok: true, status: 'invited' });
-    await inviteMemberAction({ email: ' new@example.com ', role: 'admin' });
+    m.admin.mockReturnValue({ admin: 'secret-client' });
+    m.team.inviteMember.mockResolvedValue({ ok: true, status: 'invite_link' });
+    await inviteMemberAction({ email: ' new@example.com ', name: 'Nova', role: 'admin' });
     const [input, user, deps] = m.team.inviteMember.mock.calls[0]!;
-    expect(input).toEqual({
-      email: 'new@example.com',
-      role: 'admin',
-      redirectTo: expect.stringMatching(/^https:\/\/panelizer\.run\.app\/auth\/confirm\?next=/),
-    });
+    expect(input).toEqual({ email: 'new@example.com', name: 'Nova', role: 'admin', origin: 'https://panelizer.run.app' });
     expect(user).toBe(USER);
-    expect(deps.invites).toEqual({ invite: 'secret-client' });
+    expect(deps.admin).toEqual({ admin: 'secret-client' });
+    m.team.memberResetLink.mockResolvedValue({ ok: true, email: 'e', url: 'u' });
+    await memberResetLinkAction({ userId: OTHER });
+    expect(m.team.memberResetLink.mock.calls[0]!.slice(0, 2)).toEqual([
+      { userId: OTHER, origin: 'https://panelizer.run.app' },
+      USER,
+    ]);
+    m.team.renewInvite.mockResolvedValue({ ok: false, reason: 'not_found', message: 'x' });
+    await renewInviteAction({ id: ID });
+    expect(m.team.renewInvite.mock.calls[0]![0]).toEqual({ id: ID, origin: 'https://panelizer.run.app' });
+  });
+
+  it('aceitar convite: sem sessão; cria a conta e entra com a senha escolhida', async () => {
+    m.requireUser.mockRejectedValue(new SignedOutError());
+    m.admin.mockReturnValue({ admin: 'secret-client' });
+    m.team.acceptInvite.mockResolvedValue({ ok: true, email: 'fresh@x.com' });
+    m.signIn.mockResolvedValue({ ok: true, user: USER });
+    const r = await acceptInviteAction({ token: TOKEN, name: 'Fresh', password: 'long-enough', confirm: 'long-enough' });
+    expect(r.data).toEqual({ ok: true, email: 'fresh@x.com', signedIn: true });
+    expect(m.team.acceptInvite).toHaveBeenCalledWith(
+      TOKEN,
+      { name: 'Fresh', password: 'long-enough' },
+      { admin: { admin: 'secret-client' } },
+    );
+    expect(m.signIn).toHaveBeenCalledWith('fresh@x.com', 'long-enough');
+    m.team.acceptInvite.mockResolvedValue({ ok: false, reason: 'used', message: 'already used' });
+    m.signIn.mockClear();
+    const again = await acceptInviteAction({ token: TOKEN, password: 'long-enough', confirm: 'long-enough' });
+    expect(again.data).toEqual({ ok: false, reason: 'used', message: 'already used' });
+    expect(m.signIn).not.toHaveBeenCalled();
   });
 
   it('"esqueci a senha": localhost fica em http', async () => {

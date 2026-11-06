@@ -374,3 +374,16 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
 - 2026-11-05 — S40: **exemplo `phase8-sample`** (`packages/cli/examples/`, em `EXAMPLES` e nos cartões do app): a casa 28x40 com wall types WT-1S/WT-2/WT-3 em todas as paredes, W06 (cozinha, `kitchen-base` e `kitchen-upper-top`) e W07 (banheiro, `bath-towel` e "Grab bar" num trecho) formando um T e um + com W05, post P-01 4x6 na W01, sheathing nas externas com 4x9 descendo 10 7/8" sobre a rim, e 6 linhas de preço — 7 paredes, 15 painéis, sem aviso. Não é projeto da fábrica nem fixture (o `$comment` diz que não foi confirmado).
 - 2026-11-05 — S40: **rótulo da parede na planta desvia dos encontros**. Conferindo a planta do exemplo, `W03 · WT-1S` (no meio da parede) caía em cima do selo T da W05; o rótulo agora fica no meio salvo quando a faixa dele ao longo da parede cobre um encontro dela (espessura da parede + selo), e aí vai ao ponto livre mais perto do meio entre as pontas (`wallLabelSpot` em `planSvg.ts`); sem ponto livre, fica no meio. Os 15 snapshots não mudaram (nenhuma planta dos fixtures tinha a colisão). Não desvia de junta de painéis nem de abertura (registrado em `docs/15`).
 - 2026-11-05 — S40: **Materials**: subtotal de seção sem nenhuma linha com preço mostra "—" (antes "$0.00"). **`docs/15-fase8-revisar.md`** é a lista única para o humano antes do push (decisões por delegação, fixtures novos, hipóteses, defeitos, o que não foi verificado, capturas de `out/s40/`); `docs/14` ganhou a tabela "pedido → entregue → como ligar → o que falta".
+- 2026-11-05 — **S41: convite é um link do app, não e-mail.** O e-mail embutido do Supabase só entrega a membros da
+  organização no Supabase (e poucos por hora); a fábrica não está lá e SMTP próprio não existe. O admin gera
+  `<site>/invite/<token>` e manda por WhatsApp/e-mail dele; o banco guarda o sha256 do token, então o link aparece
+  uma vez ("New link" troca). Validade 7 dias (default da coluna). Aceitar cria a conta já confirmada com a chave
+  secret (`auth.admin.createUser`), o que funciona com o cadastro público desligado. Os modelos de e-mail e a Site URL
+  da S32 ficam só para o "esqueci a senha" por e-mail.
+- 2026-11-05 — S41: **admin gere contas com a chave secret, sob guarda**: link de nova senha (`generateLink` →
+  `/auth/confirm`, 1 h), desativar (ban + `team_members.disabled_at`, que tira a pessoa da RLS na hora, sem esperar o
+  JWT vencer) e apagar (`deleteUser`; projetos ficam). Nunca sobre a própria conta, nunca sobre conta que esteja em
+  outro time (a chave age na conta inteira). O link de nova senha dá ao admin acesso à conta da pessoa — aceito para
+  uma ferramenta interna de uma fábrica. Nome de exibição em `team_members.name` (um time por pessoa no app).
+- 2026-11-05 — S41: **grant por coluna em `team_members`** (`authenticated` só atualiza `role` e `name`): antes a
+  política de admin deixava mudar `email`/`team_id` pela API. O último admin conta só os **ativos**.

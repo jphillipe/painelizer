@@ -68,6 +68,10 @@ export type TeamMemberRow = {
   role: TeamRole;
   invited_by: string | null;
   created_at: string;
+  /** S41: nome de exibição (o admin ou a própria pessoa, por `set_my_name`). */
+  name: string | null;
+  /** S41: conta desativada pelo admin (só o servidor grava, com a chave secret). */
+  disabled_at: string | null;
 };
 
 export type TeamMemberInsert = {
@@ -77,6 +81,41 @@ export type TeamMemberInsert = {
   role?: TeamRole;
   invited_by?: string | null;
   created_at?: string;
+  name?: string | null;
+  disabled_at?: string | null;
+};
+
+/** S41: convite por link (supabase/migrations/20261106000000_accounts.sql). Só o hash do token fica no banco. */
+export type TeamInviteRow = {
+  id: string;
+  team_id: string;
+  email: string;
+  name: string | null;
+  role: TeamRole;
+  token_hash: string;
+  created_by: string | null;
+  created_by_email: string | null;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  revoked_at: string | null;
+};
+
+export type TeamInviteInsert = {
+  id?: string;
+  team_id: string;
+  email: string;
+  name?: string | null;
+  role?: TeamRole;
+  token_hash: string;
+  created_by?: string | null;
+  created_by_email?: string | null;
+  created_at?: string;
+  expires_at?: string;
+  accepted_at?: string | null;
+  accepted_by?: string | null;
+  revoked_at?: string | null;
 };
 
 /** S32: retrato de um projeto a cada 20 gravações (20261104000300), sem `$panelizer` nem `$underlay`. Só leitura. */
@@ -155,6 +194,12 @@ export interface Database {
         Update: Partial<TeamMemberInsert>;
         Relationships: [];
       };
+      team_invites: {
+        Row: TeamInviteRow;
+        Insert: TeamInviteInsert;
+        Update: Partial<TeamInviteInsert>;
+        Relationships: [];
+      };
       project_revisions: {
         Row: ProjectRevisionRow;
         /** Só o trigger grava; o cliente não insere (RLS). */
@@ -168,6 +213,10 @@ export interface Database {
       add_team_member: {
         Args: { team: string; member_email: string; member_role?: TeamRole };
         Returns: AddTeamMemberResult;
+      };
+      set_my_name: {
+        Args: { new_name: string };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;

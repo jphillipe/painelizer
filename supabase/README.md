@@ -24,7 +24,8 @@ segurança). As chaves já estão em `packages/web/.env.local`; cadastro desliga
 4. **SQL Editor → New query**: cole `supabase/migrations/20261022000000_projects.sql` e **Run**; depois
    `20261103000000_drawings.sql` (bucket dos desenhos), `20261104000000_extraction_jobs.sql` (leituras da IA) e
    `20261104000100_drawings_cleanup.sql` (limpeza do bucket; o agendamento fica desligado — ver abaixo), depois
-   `20261104000200_teams.sql` e `20261104000300_projects_team.sql` (times, S32). (Com a CLI: `supabase link` e
+   `20261104000200_teams.sql` e `20261104000300_projects_team.sql` (times, S32), depois
+   `20261106000000_accounts.sql` (nome, desativar e convites por link, S41). (Com a CLI: `supabase link` e
    `supabase db push`.) Num projeto novo, faça os passos 5 e 6 ANTES das migrações da S32: o backfill põe no time
    as contas que já existem — conta criada depois entra pelo convite do app (`/app/account`).
 5. **Authentication → Sign In / Providers → Email**: deixe ligado. Em **Authentication → Settings**, desligue
@@ -65,8 +66,14 @@ login não foi configurado — para um deploy esquecido não expor a chave da AP
   cada 20 gravações (os 20 mais recentes), sem `$panelizer` nem `$underlay`; só leitura para o cliente.
   `sweep_trashed_projects(ttl)` apaga o que está na lixeira há 30 dias. Bucket `drawings`: só quem está num time.
   `orphan_drawings` também conta `data -> '$drawings'` (desenhos postos num projeto sem leitura).
+- Contas (S41, `20261106000000_accounts.sql`): `team_members.name` (nome de exibição; admin muda o de qualquer um,
+  cada pessoa o próprio por `set_my_name`) e `team_members.disabled_at` (desativado pelo admin: fora de todas as
+  checagens de `private`, na hora; só o servidor grava, com a chave secret, junto com o ban no Auth). Grant por
+  coluna: `authenticated` só atualiza `role` e `name`. O último admin **ativo** não sai, não é rebaixado nem
+  desativado. `team_invites`: convite por link — o banco guarda só o sha256 do token (`token_hash`), validade de 7
+  dias, um pendente por e-mail e time; o admin lê, cria e revoga (grant só em `revoked_at`); aceitar é do servidor.
 
-## S24 — aplicar (passos do humano; nada disto foi aplicado)
+## S24 — aplicar (aplicado em 2026-11-05 pelo conector MCP)
 
 **Antes do push do código da S24** (o deploy pelo Actions sai no push da `main`): sem a tabela, a leitura roda mas
 o job não é gravado e, com uma instância, o F5 durante a leitura deixa de recolher o resultado.
@@ -94,7 +101,7 @@ o job não é gravado e, com uma instância, o F5 durante a leitura deixa de rec
 5. Agendar (o bloco comentado no fim de `20261104000100_drawings_cleanup.sql`):
    `select cron.schedule('panelizer-drawings-cleanup', '17 7 * * *', $job$ select public.sweep_orphan_drawings(); select public.sweep_extraction_jobs(); $job$);`
 
-## S32 — aplicar (passos do humano; nada disto foi aplicado)
+## S32 — aplicar (migrações aplicadas em 2026-11-05 pelo conector MCP)
 
 **Antes do push do código da S32.** O deploy passa a depender destas migrações: a lista de projetos filtra por
 `deleted_at` e o editor só grava em projeto fora da lixeira — sem as colunas, a lista e a gravação falham (o
@@ -110,6 +117,10 @@ estas duas.
    - `select count(*) from public.projects where team_id is null;` → 0.
    - **Database → Tables**: `teams`, `team_members`, `project_revisions` com RLS ligada; **Advisors → Security** sem
      aviso novo (as funções de `private` são `security definer` de propósito: o schema não é exposto pela API).
+_Desde a S41 os passos 3 e 4 só servem ao "esqueci a senha" por e-mail do `/login` (e o e-mail embutido do Supabase
+só entrega a membros da organização no Supabase); convite e link de nova senha saem do app, sem e-mail. O passo 5
+(chave secret) passou a ser necessário para convidar quem não tem conta e para gerir contas — ver "S41 — aplicar"._
+
 3. **Authentication → URL Configuration**: **Site URL** = a URL do Cloud Run (`https://panelizer-….run.app`); em
    **Redirect URLs** acrescente `https://panelizer-….run.app/auth/confirm**` e `http://localhost:3000/auth/confirm**`.
 4. **Authentication → Emails → Templates** (os links do app abrem a sessão por `token_hash`, que funciona em qualquer
@@ -137,6 +148,28 @@ em Authentication → Users.
 **Desfazer** (se precisar voltar ao código anterior à S32 com o banco já migrado): o código antigo funciona com as
 colunas novas (ignora `deleted_at`), mas a RLS por time vale para ele também — quem não está em time não vê nada.
 
+## S41 — aplicar (contas geridas pelo admin e convites por link)
+
+**Antes do push do código da S41**: a tela de conta lê `team_members.name`/`disabled_at` e `team_invites` — sem a
+migração, `/app/account` diz para aplicá-la (a lista de projetos e o editor não dependem dela).
+
+1. `migrations/20261106000000_accounts.sql` (SQL Editor → Run, `supabase db push` ou o conector MCP).
+2. Conferir: `select email, role, name, disabled_at from public.team_members;` (ninguém desativado);
+   **Database → Tables → team_invites** com RLS e 3 políticas; **Advisors → Security** sem aviso novo.
+3. **Chave secret** (necessária para o convite por link, o link de nova senha, desativar e apagar): Settings → API Keys
+   → Secret keys → **New secret key** `panelizer-invites`, montada no Cloud Run como `SUPABASE_SECRET_KEY`
+   (`docs/12-hospedagem-cloud-run.md`, "Chave secret do Supabase"). `/api/health` passa a dizer `"invites": true`.
+4. Push / deploy. Conferir logado como admin em `/app/account`: "Add someone" com um e-mail sem conta mostra o link;
+   aberto numa janela anônima, `/invite/<token>` cria a conta e entra; no menu da pessoa, "Disable account…" barra o
+   login, "Enable account" devolve, "Password reset link" abre a conta dela em `/app/account?reset=1`.
+
+Como funciona: o link do convite é `<site>/invite/<token>` (token de 32 bytes; o banco guarda o hash, então o link
+aparece uma vez — perdeu, "New link"). Quem abre escolhe nome e senha; o servidor marca o convite como aceito
+(atômico), cria a conta já confirmada (`auth.admin.createUser`; funciona com o cadastro público desligado) e põe no
+time. O link de nova senha é o `hashed_token` de `auth.admin.generateLink` levado direto ao `/auth/confirm`; vale
+pela expiração de OTP do Auth (1 hora por padrão; **Authentication → Providers → Email → Email OTP Expiration** muda).
+Desativar = ban no Auth + `disabled_at`. Apagar = `auth.admin.deleteUser` (os projetos ficam; autor vira vazio). A
+chave nunca age sobre a própria conta de quem pede nem sobre conta que esteja em outro time.
 
 ## Testes contra o Supabase local (S33)
 

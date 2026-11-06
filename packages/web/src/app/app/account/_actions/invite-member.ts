@@ -2,20 +2,20 @@
 
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { emailLinkRedirect } from '@/lib/auth/routes';
+import { requestOrigin } from '@/lib/auth/routes';
 import { ACCOUNT_HREF } from '@/lib/site-nav';
 import { authActionClient } from '@/lib/safe-action';
-import { supabaseAdminInvites } from '@/lib/supabase/admin';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { inviteMemberSchema } from '@/schemas/account';
 import { defaultDeps, inviteMember } from '@/services/team.service';
 
 /**
- * S32: admin põe alguém no time. A chave *secret* do Supabase entra SÓ aqui (`supabaseAdminInvites`), para o
- * `inviteUserByEmail` de quem ainda não tem conta; o resto usa a sessão de quem convida e a RLS.
+ * Admin põe alguém no time (S32) ou gera o convite por link (S41). A chave *secret* entra só nas actions de conta
+ * (`supabaseAdmin`); a inclusão em si usa a sessão de quem convida e a RLS. O link volta uma vez, para copiar.
  */
 export const inviteMemberAction = authActionClient.inputSchema(inviteMemberSchema).action(async ({ parsedInput, ctx }) => {
-  const redirectTo = emailLinkRedirect(await headers(), 'invite');
-  const result = await inviteMember({ ...parsedInput, redirectTo }, ctx.user, { ...defaultDeps, invites: supabaseAdminInvites() });
+  const origin = requestOrigin(await headers());
+  const result = await inviteMember({ ...parsedInput, origin }, ctx.user, { ...defaultDeps, admin: supabaseAdmin() });
   if (result.ok) revalidatePath(ACCOUNT_HREF);
   return result;
 });

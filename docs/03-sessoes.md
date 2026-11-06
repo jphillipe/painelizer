@@ -1668,3 +1668,24 @@ fixtures nesta fase e revisa depois; cada sessão commita, **sem push**. Hipóte
 
 Backlog da Fase 8 (sem sessão): `tee: 'u-block'` e espaçadores no 3-stud (só se a fábrica pedir), aproveitamento
 de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL do piso como item de lista.
+
+## Contas (fora das fases)
+
+- [x] **S41 — Convite por link e admin que gerencia as contas (web + Supabase; sem regra de framing).** Pedido do
+  humano em 2026-11-05: "convites para criar conta… contas de admin, que podem gerenciar outras contas, gerar
+  convites, alterar dados". Respostas dele: convite como link gerado no app; admin edita nome, gera link de nova
+  senha, desativa/reativa e apaga conta; no fim, migração pelo MCP e push.
+  Feita em 2026-11-05. **Migração** `20261106000000_accounts.sql`: `team_members.name` e `disabled_at`, grant por
+  coluna (`role`, `name`), checagens de `private` ignoram desativado, último admin **ativo**, `set_my_name`,
+  `team_invites` (hash do token, 7 dias, um pendente por e-mail). **Servidor**: `lib/supabase/admin.ts` vira
+  `supabaseAdmin()` (`AdminApi`: criar/apagar/banir conta, `generateLink` de recuperação, convite pelo hash, outras
+  equipes da conta); `team.service` ganha `inviteMember` por link, `renewInvite`, `revokeInvite`, `invitePreview`,
+  `acceptInvite` (marca atômica, desfaz se a conta não sai), `setMemberName`, `setMyName`, `memberResetLink`,
+  `setMemberDisabled`, `deleteMemberAccount` e a guarda `manageable` (admin ativo pela sessão, alvo do time e só
+  dele, nunca a própria conta). `inviteUserByEmail` saiu. **Telas**: `/app/account` com "Your name", tabela
+  Person/Role/Status e menu do admin (Edit name, Password reset link, Disable/Enable, Remove, Delete account com o
+  e-mail digitado), "Add someone" com nome, diálogo do link (aparece uma vez, copiar) e "Pending invitations" (New
+  link, Withdraw); página pública `/invite/<token>` (nome e senha → conta criada e login). `/login`: "ou peça o link
+  ao admin". **Testes**: web 591 → 632; integração (Supabase local, Docker) 33 em 5 arquivos, com
+  `accounts.int.test.ts` (grants, desativado fora da RLS, `team_invites`, e o caminho convite → aceitar → entrar →
+  desativar → reativar → link de senha → apagar com a chave secret local); e2e com Supabase local: 4 passaram, 2 pulados e 4 falharam por motivos anteriores à S41 — o `waitSaved` procura `/^Saved/`, mas o texto agora é "Ready · 12 panels Saved · just now" (o salvamento acontece), e dois testes da lista caem no `/login` porque a sessão gravada no setup se perde no meio da rodada; esses testes não rodam no CI desde a S33 (o `ci.yml` não roda em push na `main`). Conferido no app (next dev ligado ao Supabase local): convite → link → `/invite/<token>` → conta criada e logada como editor com o nome do convite.

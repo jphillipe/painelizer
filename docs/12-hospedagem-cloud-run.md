@@ -168,11 +168,12 @@ tabela que o app usa e o bucket, com a sessão de quem pede, e diz o time e o pa
 Uma tabela que falta vem com `"migration": "20261104000200_teams.sql"` (migração não aplicada) e a resposta é 503.
 Fonte: `src/services/health.service.ts`.
 
-### 3d. Chave secret do Supabase (S32, convites por e-mail)
+### 3d. Chave secret do Supabase (S32; S41: convites por link e gestão de contas)
 
-Para um admin convidar quem ainda não tem conta, o servidor precisa da chave *secret* do Supabase (só a action de
-convite a usa; `packages/web/src/lib/supabase/admin.ts`). Sem ela, o app funciona e o admin adiciona apenas contas já
-criadas no painel. Uma vez, no PowerShell (crie antes a chave `panelizer-invites` em Supabase › Settings › API Keys ›
+Para um admin convidar quem ainda não tem conta (link do app) e gerir contas (link de nova senha, desativar, apagar), o
+servidor precisa da chave *secret* do Supabase (só as actions de conta e a de aceitar convite a usam;
+`packages/web/src/lib/supabase/admin.ts`). Sem ela, o app funciona e o admin adiciona apenas contas já criadas no
+painel, troca papel e nome. Uma vez, no PowerShell (crie antes a chave `panelizer-invites` em Supabase › Settings › API Keys ›
 Secret keys e cole-a no arquivo temporário):
 
 ```powershell
@@ -184,7 +185,8 @@ gcloud run services update panelizer --region us-east1 --update-secrets "SUPABAS
 
 O deploy pelo Actions mantém o segredo montado (vem da revisão anterior). O `scripts/deploy-cloud-run.ps1` só monta
 `ANTHROPIC_API_KEY`: se rodar o script, rode o `update-secrets` acima de novo. `/api/health` passa a dizer
-`"invites": true`. Os modelos de e-mail e as Redirect URLs do Supabase estão em `supabase/README.md`, "S32 — aplicar".
+`"invites": true`. Os modelos de e-mail e as Redirect URLs do Supabase (só para o "esqueci a senha" por e-mail) estão em
+`supabase/README.md`, "S32 — aplicar"; o resto, em "S41 — aplicar".
 
 Atenção ao build da imagem: ele roda **sem** `.env.local` e sem variáveis. Uma página que lê `process.env` ou o
 usuário sem passar por `cookies()`/`headers()` é pré-renderizada estática nesse build, e o site serve o HTML

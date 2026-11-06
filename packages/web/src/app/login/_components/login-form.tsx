@@ -141,7 +141,7 @@ function ForgotPasswordForm({ tone, className, onBack }: { tone: 'light' | 'dark
     return (
       <div className={cn('space-y-5', className)} role="status">
         <p className={cn('text-sm', dark ? 'text-paper/85' : 'text-ink-2')}>
-          If there is an account for <strong>{sentTo}</strong>, an email with a link to choose a new password is on its way. The link works once and expires in an hour.
+          If there is an account for <strong>{sentTo}</strong>, an email with a link to choose a new password is on its way. The link works once and expires in an hour. No email? Ask a team admin for a password reset link.
         </p>
         {back}
       </div>
@@ -150,7 +150,7 @@ function ForgotPasswordForm({ tone, className, onBack }: { tone: 'light' | 'dark
   return (
     <Form {...form}>
       <form className={cn('space-y-5', className)} onSubmit={form.handleSubmit((v) => execute(v))} noValidate>
-        <p className={cn('text-sm', dark ? 'text-paper/75' : 'text-ink-2')}>Enter the email you sign in with. We’ll send a link to choose a new password.</p>
+        <p className={cn('text-sm', dark ? 'text-paper/75' : 'text-ink-2')}>Enter the email you sign in with. We’ll send a link to choose a new password, or ask a team admin for a reset link.</p>
         <FormField
           control={form.control}
           name="email"

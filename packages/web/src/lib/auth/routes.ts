@@ -77,6 +77,15 @@ export function requestOrigin(headers: HeadersLike): string {
  * `supabase/README.md` (S32) o link já vem com `token_hash`; com o modelo padrão, o Supabase devolve um `code` aqui.
  * A URL precisa estar em Authentication › URL Configuration › Redirect URLs.
  */
+/**
+ * Link de nova senha que o admin gera para alguém do time (S41): o `hashed_token` do `generateLink` do Supabase
+ * direto na nossa rota `/auth/confirm` (`verifyOtp`). Não passa por modelo de e-mail nem por Redirect URL.
+ */
+export function recoveryLink(origin: string, tokenHash: string): string {
+  const params = new URLSearchParams({ token_hash: tokenHash, type: 'recovery', next: AFTER_RECOVERY });
+  return `${origin}${AUTH_CONFIRM_PATH}?${params.toString()}`;
+}
+
 export function emailLinkRedirect(headers: HeadersLike, kind: 'invite' | 'recovery'): string {
   const next = kind === 'invite' ? AFTER_INVITE : AFTER_RECOVERY;
   return `${requestOrigin(headers)}${AUTH_CONFIRM_PATH}?next=${encodeURIComponent(next)}`;

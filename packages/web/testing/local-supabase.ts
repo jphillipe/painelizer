@@ -133,8 +133,8 @@ export async function seedAccounts(env: LocalSupabaseEnv): Promise<SeededAccount
     if (id === undefined) {
       id = await findUserId(admin, spec.email);
       if (id === undefined) throw new Error(`conta ${spec.email}: ${created.error?.message ?? 'sem id'}`);
-      // Reaproveitada: a senha pode ter mudado num teste de troca de senha.
-      const { error } = await admin.auth.admin.updateUserById(id, { password: TEST_PASSWORD, email_confirm: true });
+      // Reaproveitada: a senha pode ter mudado num teste de troca de senha, e a conta pode ter ficado banida (S41).
+      const { error } = await admin.auth.admin.updateUserById(id, { password: TEST_PASSWORD, email_confirm: true, ban_duration: 'none' });
       if (error !== null) throw new Error(`conta ${spec.email}: ${error.message}`);
     }
     ids[account] = id;
@@ -147,7 +147,7 @@ export async function seedAccounts(env: LocalSupabaseEnv): Promise<SeededAccount
     const { error } = await admin
       .from('team_members')
       .upsert(
-        { team_id: teamId, user_id: ids[account], email: spec.email, role: spec.role },
+        { team_id: teamId, user_id: ids[account], email: spec.email, role: spec.role, name: null, disabled_at: null },
         { onConflict: 'team_id,user_id' },
       );
     if (error !== null) throw new Error(`membro ${spec.email}: ${error.message}`);
