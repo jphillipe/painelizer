@@ -1,0 +1,127 @@
+{
+  "$comment": "S42 (2026-11-11, pedido do humano no Matilda Pines; hipótese P54): emenda em T — três pontas no mesmo ponto P = (120, 0). N 2x6 externa de (0,0) a (120,0) chega em P; A 2x6 externa sobe de P a (120,60); B 2x4 interna desce de P a (120,−96), na mesma linha de A. Antes da S42 o motor recusava a casa (\"the end end meets two walls (A and B)\"). Agora A e B são a linha que N encontra: N encosta em A (canto, N encosta), A atravessa o canto — mesmo sendo a mais curta, porque é a da linha (externa como N) — e B continua A: plate começando na face de N mais longe de A, onde a plate de A acaba. N: plate 0 → 117.25 (face de A), studs 0, 15.25 … 111.25 e 115.75 (9), double top avançando t_A = 5.5 sobre a top plate de A → 122.75 = 12 peças. A: plate de (120,−2.75) a (120,60) = 62.75, studs 0, 15.25, 31.25, 47.25 e 61.25, stud California deitado em x = 1.5 (o canto pregado em N), double top recuada t_N = 5.5 (x = 5.5, 57.25) = 9 peças. B: plate de (120,−2.75) a (120,−96) = 93.25, livre nas duas pontas para o motor, studs 0, 15.25 … 79.25 e 91.75 (7), double top inteira = 10 peças. Nenhuma parede portante (sem header).",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [92.625, 104.625],
+    "headerHeight": 82.5
+  },
+  "house": {
+    "walls": [
+      { "id": "N", "start": { "x": 0, "y": 0 }, "end": { "x": 120, "y": 0 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": false, "openings": [] },
+      { "id": "A", "start": { "x": 120, "y": 0 }, "end": { "x": 120, "y": 60 }, "height": 97.125, "section": "2x6", "exterior": true, "bearing": false, "openings": [] },
+      { "id": "B", "start": { "x": 120, "y": 0 }, "end": { "x": 120, "y": -96 }, "height": 97.125, "section": "2x4", "exterior": false, "bearing": false, "openings": [] }
+    ]
+  },
+  "expected": {
+    "frames": [
+      {
+        "wallId": "N",
+        "plateStart": { "x": 0, "y": 0 },
+        "plateEnd": { "x": 117.25, "y": 0 },
+        "length": 117.25,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "free" },
+          "end": { "kind": "corner", "wallId": "A", "through": false, "at": { "x": 120, "y": 0 } },
+          "tees": []
+        },
+        "openingOffsets": {}
+      },
+      {
+        "wallId": "A",
+        "plateStart": { "x": 120, "y": -2.75 },
+        "plateEnd": { "x": 120, "y": 60 },
+        "length": 62.75,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "corner", "wallId": "N", "through": true, "at": { "x": 120, "y": 0 } },
+          "end": { "kind": "free" },
+          "tees": []
+        },
+        "openingOffsets": {}
+      },
+      {
+        "wallId": "B",
+        "plateStart": { "x": 120, "y": -2.75 },
+        "plateEnd": { "x": 120, "y": -96 },
+        "length": 93.25,
+        "layoutOrigin": 0,
+        "connections": {
+          "start": { "kind": "continues", "wallId": "A", "cornerWallId": "N", "at": { "x": 120, "y": 0 } },
+          "end": { "kind": "free" },
+          "tees": []
+        },
+        "openingOffsets": {}
+      }
+    ],
+    "panelIds": ["1-N-P1", "1-A-P1", "1-B-P1"],
+    "panels": {
+      "1-N-P1": {
+        "wallId": "N",
+        "level": 1,
+        "plan": { "start": { "x": 0, "y": 0 }, "end": { "x": 117.25, "y": 0 } },
+        "members": 12,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 95.25, 111.25, 115.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x6", "length": 117.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 117.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 122.75, "x": 0, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 95.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 111.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 115.75, "y": 1.5 }
+        ]
+      },
+      "1-A-P1": {
+        "wallId": "A",
+        "level": 1,
+        "plan": { "start": { "x": 120, "y": -2.75 }, "end": { "x": 120, "y": 60 } },
+        "members": 9,
+        "studs": [0, 15.25, 31.25, 47.25, 61.25],
+        "flat": [1.5],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x6", "length": 62.75, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x6", "length": 62.75, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x6", "length": 57.25, "x": 5.5, "y": 95.625 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 1.5, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x6", "length": 92.625, "x": 61.25, "y": 1.5 }
+        ]
+      },
+      "1-B-P1": {
+        "wallId": "B",
+        "level": 1,
+        "plan": { "start": { "x": 120, "y": -2.75 }, "end": { "x": 120, "y": -96 } },
+        "members": 10,
+        "studs": [0, 15.25, 31.25, 47.25, 63.25, 79.25, 91.75],
+        "flat": [],
+        "warnings": [],
+        "expectedMembers": [
+          { "role": "bottomPlate", "section": "2x4", "length": 93.25, "x": 0, "y": 0 },
+          { "role": "topPlate", "section": "2x4", "length": 93.25, "x": 0, "y": 94.125 },
+          { "role": "doubleTopPlate", "section": "2x4", "length": 93.25, "x": 0, "y": 95.625 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 0, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 15.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 31.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 47.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 63.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 79.25, "y": 1.5 },
+          { "role": "stud", "section": "2x4", "length": 92.625, "x": 91.75, "y": 1.5 }
+        ]
+      }
+    }
+  }
+}

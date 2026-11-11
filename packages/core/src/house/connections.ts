@@ -10,7 +10,15 @@
  *   se cruzam — erro. Nada em nenhuma ponta: `free`.
  * - Paredes paralelas cujos corpos se sobrepõem (eixos a menos de `(t_a + t_b)/2` e trechos que se
  *   sobrepõem) são erro: é a mesma parede escrita duas vezes. Colineares ponta a ponta são duas paredes livres.
- * - Uma ponta com duas ligações (três pontas num ponto, canto e T no mesmo lugar) é erro.
+ * - **Emenda em T** (S42, hipótese P54): uma ponta que chega onde duas paredes da **mesma linha** se emendam (três
+ *   pontas num ponto — as duas da linha colineares, de lados opostos, com os corpos se tocando na espessura) não é
+ *   erro: a linha é tratada como contínua. A que chega faz canto com uma das duas e **sempre encosta**; essa da linha
+ *   **atravessa** o canto (o stud de canto dela recebe a que chega); a outra **continua** (`kind: 'continues'`): plate
+ *   começando na face da que chega mais longe da que atravessa, onde a plate da que atravessa acaba, e livre para o
+ *   motor. Quem atravessa: a da linha com `ends` "through" > a externa (a outra interna) > a mais grossa > a mais longa
+ *   > a primeira do arquivo; a da linha com `ends` "butt" cede a vez; a que chega com `ends` "through", ou as duas da
+ *   linha com "butt", é erro (`SPLIT_TEE_ENDS`).
+ * - Fora disso, uma ponta com duas ligações (quatro pontas num ponto, canto e T no mesmo lugar) é erro.
  * - **Cruzamento em +** (S31, hipótese P46): dois T na mesma parede, chegando por lados opostos com faixas que se
  *   sobrepõem (do mesmo lado seriam corpos sobrepostos, `WALLS_OVERLAP`), viram um T só com `sides: 2`, faixa =
  *   união das duas (`at` no centro, `width`), e as duas pontas que encostam ganham `cross: true`. Uma parede que
@@ -46,6 +54,17 @@ export type Connection =
       at: Point;
       /** Outra parede encosta no mesmo ponto pelo lado oposto (cruzamento em +, S31). */
       cross?: true;
+    }
+  | {
+      /**
+       * Emenda em T (S42, P54): esta ponta continua a parede `wallId`, da mesma linha, que atravessa o canto com
+       * `cornerWallId`. A plate para `t_corner/2` antes do cruzamento (onde a de `wallId` acaba); para o motor é livre.
+       */
+      kind: 'continues';
+      wallId: string;
+      cornerWallId: string;
+      /** Cruzamento do eixo desta parede com o de `cornerWallId`. */
+      at: Point;
     };
 
 /** Parede que encosta em T no interior desta. */
@@ -110,18 +129,11 @@ export function findConnections(
     tees: [],
   }));
 
-  const attach = (i: number, end: WallEnd, conn: Connection): void => {
-    const cur = out[i]![end];
-    if (cur.kind !== 'free') {
-      const other = conn.kind === 'free' ? '?' : conn.wallId;
-      const prev = cur.wallId;
-      throw new EngineError(
-        'WALL_END_TWO_JOINTS',
-        { wallId: axes[i]!.id, alsoWalls: [prev, other].filter((w) => w !== '?') },
-        { end, first: prev, second: other },
-      );
-    }
-    out[i]![end] = conn;
+  // Ligações candidatas de cada ponta; resolvidas depois de ver todos os pares (a emenda em T precisa das três).
+  const candidates = new Map<string, Candidate[]>();
+  const offer = (i: number, end: WallEnd, c: Candidate): void => {
+    const k = key(i, end);
+    candidates.set(k, [...(candidates.get(k) ?? []), c]);
   };
 
   for (let i = 0; i < axes.length; i++) {
@@ -141,14 +153,13 @@ export function findConnections(
       const bEnd = hb === 'start' || hb === 'end';
 
       if (aEnd && bEnd) {
-        const through = throughAt(a, ha as WallEnd, b, hb as WallEnd);
-        attach(i, ha as WallEnd, { kind: 'corner', wallId: b.id, through, at: x });
-        attach(j, hb as WallEnd, { kind: 'corner', wallId: a.id, through: !through, at: x });
+        offer(i, ha as WallEnd, { kind: 'corner', other: j, otherEnd: hb as WallEnd, at: x });
+        offer(j, hb as WallEnd, { kind: 'corner', other: i, otherEnd: ha as WallEnd, at: x });
       } else if (aEnd && hb === 'inside') {
-        attach(i, ha as WallEnd, { kind: 'tee', wallId: b.id, at: x });
+        offer(i, ha as WallEnd, { kind: 'tee', other: j, at: x });
         out[j]!.tees.push({ wallId: a.id, at: x });
       } else if (bEnd && ha === 'inside') {
-        attach(j, hb as WallEnd, { kind: 'tee', wallId: a.id, at: x });
+        offer(j, hb as WallEnd, { kind: 'tee', other: i, at: x });
         out[i]!.tees.push({ wallId: b.id, at: x });
       } else if (ha === 'inside' && hb === 'inside') {
         throw new EngineError('WALLS_CROSS', { wallId: a.id, alsoWalls: [b.id] }, { otherWallId: b.id, x: x.x, y: x.y });
@@ -156,9 +167,131 @@ export function findConnections(
       // Demais combinações: os eixos se cruzam fora de uma das paredes; não há ligação.
     }
   }
+  resolveEnds(axes, candidates, out, tolerance);
   const byId = new Map(axes.map((a, i) => [a.id, i]));
   for (const [i, c] of out.entries()) c.tees = mergeCrossTees(axes[i]!, c.tees, axes, byId, out);
   return out;
+}
+
+/** Ligação candidata de uma ponta: canto com a ponta `otherEnd` de `other`, ou T no interior de `other`. */
+type Candidate =
+  | { kind: 'corner'; other: number; otherEnd: WallEnd; at: Point }
+  | { kind: 'tee'; other: number; at: Point };
+
+const key = (i: number, end: WallEnd): string => `${i}:${end}`;
+const ENDS = ['start', 'end'] as const;
+
+/**
+ * Decide a ligação de cada ponta a partir das candidatas, na ordem do arquivo: uma só vira canto ou T; duas que formam
+ * a emenda em T (S42, P54) viram canto + continuação; o resto é `WALL_END_TWO_JOINTS`. A ponta da linha que tem uma só
+ * candidata (o canto com a que chega) espera a resolução da que chega.
+ */
+function resolveEnds(
+  axes: readonly Axis[],
+  candidates: ReadonlyMap<string, Candidate[]>,
+  out: WallConnections[],
+  tolerance: number,
+): void {
+  const done = new Set<string>();
+  const listOf = (i: number, end: WallEnd): Candidate[] => candidates.get(key(i, end)) ?? [];
+  for (let i = 0; i < axes.length; i++) {
+    for (const end of ENDS) {
+      if (done.has(key(i, end))) continue;
+      const list = listOf(i, end);
+      if (list.length === 0) continue;
+      if (list.length > 1) {
+        if (list.length === 2 && splitTee(axes, i, end, list, listOf, out, tolerance, done)) continue;
+        const [first, second] = list.map((c) => axes[c.other]!.id);
+        throw new EngineError(
+          'WALL_END_TWO_JOINTS',
+          { wallId: axes[i]!.id, alsoWalls: [first!, second!] },
+          { end, first: first!, second: second! },
+        );
+      }
+      const c = list[0]!;
+      if (c.kind === 'tee') {
+        out[i]![end] = { kind: 'tee', wallId: axes[c.other]!.id, at: c.at };
+        done.add(key(i, end));
+        continue;
+      }
+      // Canto: se a outra ponta tem mais de uma candidata, quem resolve (ou acusa o erro) é ela.
+      if (listOf(c.other, c.otherEnd).length !== 1) continue;
+      // `throughAt` com a primeira do arquivo como `a` (o desempate é dela).
+      const [lo, loEnd, hi, hiEnd] = i < c.other ? [i, end, c.other, c.otherEnd] : [c.other, c.otherEnd, i, end];
+      const through = throughAt(axes[lo]!, loEnd, axes[hi]!, hiEnd);
+      out[lo]![loEnd] = { kind: 'corner', wallId: axes[hi]!.id, through, at: c.at };
+      out[hi]![hiEnd] = { kind: 'corner', wallId: axes[lo]!.id, through: !through, at: c.at };
+      done.add(key(lo, loEnd));
+      done.add(key(hi, hiEnd));
+    }
+  }
+}
+
+/**
+ * Emenda em T (S42, P54): a ponta `end` de `axes[s]` tem dois cantos, com duas paredes da mesma linha que se emendam
+ * nesse ponto. Grava canto (a que chega encosta, a da linha escolhida atravessa) e a continuação da outra, e devolve
+ * `true`; devolve `false` se não for esse o caso (o chamador acusa as duas ligações).
+ *
+ * @throws EngineError `SPLIT_TEE_ENDS` `ends` que contradiz a emenda
+ */
+function splitTee(
+  axes: readonly Axis[],
+  s: number,
+  end: WallEnd,
+  list: readonly Candidate[],
+  listOf: (i: number, end: WallEnd) => Candidate[],
+  out: WallConnections[],
+  tolerance: number,
+  done: Set<string>,
+): boolean {
+  const [c1, c2] = list;
+  if (c1?.kind !== 'corner' || c2?.kind !== 'corner') return false;
+  const p = axes[c1.other]!;
+  const q = axes[c2.other]!;
+  // As duas da linha: cada uma só com este canto na ponta, corpos que se tocam na espessura, de lados opostos do ponto.
+  if (listOf(c1.other, c1.otherEnd).length !== 1 || listOf(c2.other, c2.otherEnd).length !== 1) return false;
+  if (p.dir !== q.dir || Math.abs(across(p, q.start)) >= (p.thickness + q.thickness) / 2 - tolerance - EPS) return false;
+  // Lado de cada uma: para onde vai a outra ponta, medido no eixo de `p` (os dois eixos são paralelos).
+  const side = (a: Axis, e: WallEnd, at: Point): number => Math.sign(along(p, e === 'start' ? a.end : a.start) - along(p, at));
+  const sideP = side(p, c1.otherEnd, c1.at);
+  const sideQ = side(q, c2.otherEnd, c2.at);
+  if (sideP === 0 || sideQ === 0 || sideP === sideQ) return false;
+
+  const stem = axes[s]!;
+  const rule = (a: Axis, e: WallEnd): EndRule | undefined => a.wall.ends?.[e];
+  const line = [
+    { i: c1.other, end: c1.otherEnd, at: c1.at },
+    { i: c2.other, end: c2.otherEnd, at: c2.at },
+  ];
+  const ids = { end, first: p.id, second: q.id };
+  if (rule(stem, end) === 'through') {
+    throw new EngineError('SPLIT_TEE_ENDS', { wallId: stem.id, alsoWalls: [p.id, q.id] }, { ...ids, reason: 'stem' });
+  }
+  const open = line.filter((l) => rule(axes[l.i]!, l.end) !== 'butt');
+  if (open.length === 0) {
+    throw new EngineError('SPLIT_TEE_ENDS', { wallId: stem.id, alsoWalls: [p.id, q.id] }, { ...ids, reason: 'line' });
+  }
+  const rank = (l: (typeof line)[number]): number[] => {
+    const a = axes[l.i]!;
+    return [rule(a, l.end) === 'through' ? 1 : 0, a.wall.exterior ? 1 : 0, a.thickness, a.length, -l.i];
+  };
+  const cross = [...open].sort((x, y) => compareDesc(rank(x), rank(y)))[0]!;
+  const rest = line.find((l) => l !== cross)!;
+  const crossId = axes[cross.i]!.id;
+  out[s]![end] = { kind: 'corner', wallId: crossId, through: false, at: cross.at };
+  out[cross.i]![cross.end] = { kind: 'corner', wallId: stem.id, through: true, at: cross.at };
+  out[rest.i]![rest.end] = { kind: 'continues', wallId: crossId, cornerWallId: stem.id, at: rest.at };
+  for (const k of [key(s, end), key(cross.i, cross.end), key(rest.i, rest.end)]) done.add(k);
+  return true;
+}
+
+/** Ordem decrescente, critério a critério. */
+function compareDesc(a: readonly number[], b: readonly number[]): number {
+  for (let k = 0; k < a.length; k++) {
+    const d = (b[k] ?? 0) - (a[k] ?? 0);
+    if (Math.abs(d) > EPS) return d;
+  }
+  return 0;
 }
 
 /**

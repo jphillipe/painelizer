@@ -428,3 +428,13 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   usuário vê no software também (folhas, planta, avisos e erros do motor, CLI, relatório da leitura). O português e a
   opção de idioma da S34 (`locale`, `--locale`, "Sheet language") saíram; a chave `locale` de arquivos gravados entre
   a S34 e esta resposta é aceita e ignorada. Comentários de código e `docs/` continuam em português.
+
+## Novas (abertas em 2026-11-11, S42 — emenda em T)
+- [ ] **P54 — Emenda em T: parede que chega onde duas da mesma linha se emendam.** No Matilda Pines a leitura parte a
+  linha onde a parede muda (externa → interna, 2x4 → 2x6) e outra parede chega bem nesse ponto (N2 com W3/I11, E3 com
+  EN/I29, I19 com I16/I29…). Como a fábrica monta? — hipótese: a linha é contínua; a que chega encosta e faz canto com
+  uma das duas, que atravessa (stud California recebe a que chega, double top recuada, a da que chega avança sobre ela);
+  a outra da linha começa onde a plate da que atravessa acaba, sem peça nem lap próprio (a junta da linha fica sob o
+  lap da que chega). Atravessa a externa, senão a mais grossa, senão a mais longa. Em aberto: amarrar a double top da
+  linha por cima da junta (lap de uma sobre a outra) e se, quando a linha muda de espessura, a que chega deve encostar
+  na face mais grossa — S42.

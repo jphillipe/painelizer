@@ -32,7 +32,7 @@
   eixos da planta; mesma regra para externa e interna. Tudo se decide no **cruzamento dos eixos** de duas paredes
   perpendiculares, nunca no ponto digitado (a ponta "está" no cruzamento a até `t_outra/2 + 0.5"` dele): ponta
   de uma e ponta da outra = **canto**; ponta de uma no interior da outra = **T**; nada = livre. Paredes que se
-  cruzam, corpos que se sobrepõem ou ponta com duas ligações são erro. No canto, quem **atravessa** leva a plate
+  cruzam, corpos que se sobrepõem ou ponta com duas ligações são erro — salvo a emenda em T (S42, abaixo). No canto, quem **atravessa** leva a plate
   `t_outra/2` além do cruzamento (até a face externa da outra); quem **encosta** (canto ou T) para `t_outra/2`
   antes (na face da outra); ponta livre acaba no ponto. Quem atravessa: `ends` declarado > a mais longa > a
   primeira do arquivo. Offsets de abertura, `extraStuds[].x` e o x do T são medidos do `start` e convertidos para
@@ -59,6 +59,16 @@
     backers. Nas que encostam (`cross: true`): plate na face, como no T, e double top avançando só `t_outra/2` — as
     duas se encontram no eixo da atravessada. Parede contínua cruzando outra no interior das duas segue
     `WALLS_CROSS`: o + exige partir uma delas no cruzamento. Fixture `house-cross`.
+  - **Emenda em T** (S42, hipótese P54): três pontas no mesmo ponto — uma parede chega onde duas da **mesma linha**
+    (colineares, de lados opostos, corpos se tocando na espessura; o eixo pode desencontrar, ex. face alinhada) se
+    emendam. A linha é tratada como contínua: a que chega faz **canto** com uma delas e sempre **encosta**; essa da
+    linha **atravessa** (plate até a face da que chega mais longe, stud California recebendo a que chega, double top
+    recuada) e a outra **continua** (`Connection.kind: 'continues'`): plate começando onde a da que atravessa acaba
+    (`t_chega/2` além do cruzamento) e livre para o motor (sem peça, sem lap; a junta da linha fica sob o lap da que
+    chega). Quem atravessa: a da linha com `ends` "through" > a externa (a outra interna) > a mais grossa > a mais
+    longa > a primeira do arquivo; "butt" numa da linha passa a vez à outra; "through" na que chega ou "butt" nas
+    duas da linha é `SPLIT_TEE_ENDS`. Quatro pontas no mesmo ponto seguem `WALL_END_TWO_JOINTS`. Fixture
+    `house-split-tee` (Matilda: N2/W3/I11, E3/EN/I29, I19/I16/I29…).
   - **Laps** (R602.3.2, só a double top plate; bottom e top não mudam): no canto, a de quem encosta avança
     `t_outra` sobre a top plate da outra (`x = −t_outra`) e a de quem atravessa recua `t_outra`; no T, a de quem
     encosta avança `t_outra` e a da atravessada é cortada em duas peças na faixa; no +, cada uma das que

@@ -256,8 +256,8 @@ describe('fixtures do core passam pelo schema', () => {
   const dir = new URL('../../core/test/fixtures/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
 
-  it('são 19 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen; S37: wall-144-post; S38: wall-144-sheathed e house-corner-L-sheathed)', () =>
-    expect(files).toHaveLength(19));
+  it('são 20 (S31: wall-144-fireblock e house-cross; S35: house-walltypes; S36: wall-144-kitchen; S37: wall-144-post; S38: wall-144-sheathed e house-corner-L-sheathed; S42: house-split-tee)', () =>
+    expect(files).toHaveLength(20));
 
   it.each(files)('%s: config e paredes válidas no strict; config sai igual ao fixture', (file) => {
     const fx = JSON.parse(readFileSync(new URL(file, dir), 'utf8')) as Record<string, unknown> & {

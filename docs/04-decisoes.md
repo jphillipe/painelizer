@@ -397,3 +397,14 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   não entrega a um usuário o que outro baixou; sem usuário, sem cache). **O PDF continua no Storage**: o Cloud Run
   corta pedidos em 32 MB (S22.3) e o projeto reaberto em outra máquina ou após F5 precisa dos desenhos para a planta
   por baixo; guardar não altera os bytes, a leitura da IA recebe o arquivo idêntico.
+
+- **2026-11-11 — Emenda em T (S42, hipótese P54; pedido do humano no Matilda Pines).** Três pontas no mesmo ponto
+  deixam de ser erro quando duas são da mesma linha (colineares, de lados opostos, corpos se tocando na espessura):
+  a linha é contínua, a que chega encosta e faz canto com uma delas, que atravessa, e a outra continua
+  (`Connection.kind: 'continues'`, livre para o motor). Atravessa a da linha com `ends` "through" > a externa > a mais
+  grossa > a mais longa > a primeira do arquivo — a regra "a mais longa atravessa" do canto comum **não** vale aqui: a
+  que chega nunca atravessa, porque a outra da linha ficaria sem onde pregar e a quina perderia o stud de canto.
+  `findConnections` agora junta as candidatas de cada ponta antes de decidir (antes lançava na segunda). O teste
+  "três pontas no mesmo ponto" (que esperava erro) foi trocado com a confirmação do humano; quatro pontas num ponto
+  seguem `WALL_END_TWO_JOINTS`; `ends` que contradiz a emenda é `SPLIT_TEE_ENDS`. Era o que impedia o Matilda de fechar
+  (6 pontos, todos assim).

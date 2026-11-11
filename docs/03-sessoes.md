@@ -1689,3 +1689,21 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   ao admin". **Testes**: web 591 → 632; integração (Supabase local, Docker) 33 em 5 arquivos, com
   `accounts.int.test.ts` (grants, desativado fora da RLS, `team_invites`, e o caminho convite → aceitar → entrar →
   desativar → reativar → link de senha → apagar com a chave secret local); e2e com Supabase local: 4 passaram, 2 pulados e 4 falharam por motivos anteriores à S41 — o `waitSaved` procura `/^Saved/`, mas o texto agora é "Ready · 12 panels Saved · just now" (o salvamento acontece), e dois testes da lista caem no `/login` porque a sessão gravada no setup se perde no meio da rodada; esses testes não rodam no CI desde a S33 (o `ci.yml` não roda em push na `main`). Conferido no app (next dev ligado ao Supabase local): convite → link → `/invite/<token>` → conta criada e logada como editor com o nome do convite.
+
+## Planta real (fora das fases)
+
+- [x] **S42 — Emenda em T: três pontas no mesmo ponto (core; regra de framing nova, hipótese P54).** Pedido do humano
+  em 2026-11-11 testando o Matilda Pines (nível 1, 44 paredes): a planta não fechava ("The plan does not close": N2,
+  W3, I11) e arrastar a ponta só deixava folga. Varredura de todas as pontas: 6 pontos, todos o mesmo caso — uma parede
+  chega onde duas da mesma linha se emendam (N2/W3/I11, E3/EN/I29, E3/ES/I30, S1/W4/I25, I19/I16/I29, I26/I17/I30).
+  Abordagem confirmada pelo humano. **Core**: `findConnections` junta as candidatas de cada ponta e resolve depois;
+  `splitTee` reconhece a emenda (colineares de lados opostos, corpos se tocando na espessura, cada uma só com esse
+  canto) e grava canto (a que chega encosta) + `kind: 'continues'` na outra da linha; `frameWalls` mede a plate da
+  continuação da face da que chega e não gera `joints` para ela. Erro novo `SPLIT_TEE_ENDS` (`ends` em conflito);
+  textos de `WALL_END_TWO_JOINTS` e da issue `plan.open` falam em quatro pontas. **Testes**: fixture
+  `house-split-tee` (frames e peças à mão: 12, 9 e 10), 5 casos em `connections.test.ts` (inclusive os dois do
+  Matilda e eixo desencontrado de 1"), o caso antigo "três pontas" trocado. **Conferido** com a planta salva do
+  Matilda: fecha, 53 painéis (com headers provisórios só na cópia de teste), os 6 encaixes conferidos na planta SVG.
+  Fora da regra e ainda bloqueando os painéis do Matilda (avisado ao humano): 15 portas internas com header deitado a
+  24 1/8" da top plate (limite 24", R602.7.4), largura do prédio gravada como 50" (digitada sem apóstrofo) e emenda
+  da top plate de I2 sem stud livre com estoque de 16'.

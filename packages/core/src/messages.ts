@@ -38,6 +38,7 @@ export const ENGINE_ERROR_CODES = [
   'WALLS_CROSS',
   'WALLS_OVERLAP',
   'CORNER_ENDS_CONFLICT',
+  'SPLIT_TEE_ENDS',
   'PLATE_NO_LENGTH',
   'OPENING_OFF_PLATE',
   // catálogo e aberturas
@@ -277,11 +278,15 @@ const ERROR: Record<EngineErrorCode, Template> = {
     at(w, `not parallel to the plan axes (from ${p.x0}, ${p.y0} to ${p.x1}, ${p.y1}) — walls must run along x or y`),
   WALL_DUPLICATE_ID: (_p, w) => at(w, 'duplicate wall id'),
   WALL_END_TWO_JOINTS: (p, w) =>
-    at(w, `the ${p.end} end meets two walls (${p.first} and ${p.second}) — three ends at one point, or a corner and a tee at the same spot`),
+    at(w, `the ${p.end} end meets two walls (${p.first} and ${p.second}) — four ends at one point, or a corner and a tee at the same spot`),
   WALLS_CROSS: (p, w) => `Walls ${w.wallId} and ${p.otherWallId} cross at (${p.x}, ${p.y}) — split one of them at the crossing`,
   WALLS_OVERLAP: (p, w) => `Walls ${w.wallId} and ${p.otherWallId} overlap by ${inch(p.overlap)} — is it the same wall twice?`,
   CORNER_ENDS_CONFLICT: (p, w) =>
     `Walls ${w.wallId} (${p.end}) and ${p.otherWallId} (${p.otherEnd}) both declare ends "${p.rule}" at the same corner`,
+  SPLIT_TEE_ENDS: (p, w) =>
+    p.reason === 'stem'
+      ? at(w, `the ${p.end} end meets ${p.first} and ${p.second} where they join in line — it butts the line and cannot cross it (remove ends "through")`)
+      : at(w, `the ${p.end} end meets ${p.first} and ${p.second} where they join in line — one of them must cross the corner, but both declare ends "butt"`),
   PLATE_NO_LENGTH: (p, w) => at(w, `the plate has no length (${inch(p.length)}) — the walls at its ends take it all`),
   OPENING_OFF_PLATE: (p, w) =>
     at(w, `the RO from ${inch(p.from)} to ${inch(p.to)} from start does not fit on the plate (${inch(p.s0)} to ${inch(p.s1)} from start)`),

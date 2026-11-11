@@ -4,7 +4,8 @@
  * Regras (docs/02-framing.md, docs/04-decisoes.md 2026-10-13; hipótese P21):
  * - A plate é medida do **cruzamento dos eixos**, nunca do ponto digitado. Na ponta que atravessa um canto,
  *   avança `t_outra/2` além do cruzamento (até a face externa da outra parede); na que encosta (canto ou T),
- *   para `t_outra/2` antes (na face da outra). Ponta livre: a plate acaba no ponto.
+ *   para `t_outra/2` antes (na face da outra). Ponta livre: a plate acaba no ponto. Continuação da emenda em T (S42,
+ *   P54): para `t/2` antes do cruzamento com a parede que chega (onde a plate da que atravessa acaba).
  * - x do painel: 0 no início da plate, crescendo de `start` para `end`. Offset de abertura, x de stud extra
  *   e cruzamento de T são medidos do ponto `start` ao longo do eixo e convertidos subtraindo o deslocamento
  *   da plate (`plateStart` em relação a `start`).
@@ -128,8 +129,9 @@ function markOutside(frames: WallFrame[], axes: ReadonlyMap<string, Axis>): void
 
 function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string, Axis>): WallFrame {
   const { wall } = axis;
+  // Na continuação da emenda em T (S42) a plate para na face da parede que chega, não na da linha.
   const otherThickness = (c: Connection): number =>
-    c.kind === 'free' ? 0 : axes.get(c.wallId)!.thickness;
+    c.kind === 'free' ? 0 : axes.get(c.kind === 'continues' ? c.cornerWallId : c.wallId)!.thickness;
 
   const s0 = plateOffset(axis, conns.start, 'start', otherThickness(conns.start));
   const s1 = plateOffset(axis, conns.end, 'end', otherThickness(conns.end));
@@ -194,9 +196,12 @@ function frameWall(axis: Axis, conns: WallConnections, axes: ReadonlyMap<string,
   };
 }
 
-/** Ligação de uma ponta para o motor (`Wall.joints`); ponta livre não gera nada. */
+/**
+ * Ligação de uma ponta para o motor (`Wall.joints`); ponta livre não gera nada, e a continuação da emenda em T (S42,
+ * P54) também não: o canto é pregado no stud de canto da parede da linha que atravessa, e esta só encosta nela.
+ */
 function endJoint(c: Connection, tOther: number): EndJoint | undefined {
-  if (c.kind === 'free') return undefined;
+  if (c.kind === 'free' || c.kind === 'continues') return undefined;
   if (c.kind === 'corner') return { kind: 'corner', through: c.through, otherThickness: tOther, wallId: c.wallId };
   return { kind: 'tee', otherThickness: tOther, wallId: c.wallId, ...(c.cross === true ? { cross: true } : {}) };
 }

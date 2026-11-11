@@ -125,7 +125,7 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   'config.building': { what: 'Bearing walls with openings get their headers from the IRC table, which needs the ground snow load and the building width.', fix: 'Fill in the project data.' },
   'wall.floorsSupported': { what: 'The IRC header table needs how many floors the wall carries.', fix: 'Fill in the project data, or set it per wall.' },
   'opening.position': { what: 'The opening has no center and no left edge.', fix: 'Select it and type the position, or drag it on the plan.' },
-  'plan.open': { what: 'The walls do not close into a house: two walls cross, or three ends meet at a point.', fix: 'Fix the end of one of the walls named; drag it on the plan or edit start / end.' },
+  'plan.open': { what: 'The walls do not close into a house: two walls cross, or four ends meet at a point.', fix: 'Fix the end of one of the walls named; drag it on the plan or edit start / end.' },
   'wall.noAxis': { what: 'The wall is not parallel to the x or y axis.', fix: 'Edit start / end so one coordinate is the same on both.' },
 };
 

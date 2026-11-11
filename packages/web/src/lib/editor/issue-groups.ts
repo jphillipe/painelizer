@@ -98,6 +98,7 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   WALLS_OVERLAP: 'Two walls overlap',
   WALL_END_TWO_JOINTS: 'A wall end meets two walls',
   CORNER_ENDS_CONFLICT: 'Both walls claim the same corner',
+  SPLIT_TEE_ENDS: 'Wall end rules conflict where two walls join in line',
   WALL_OFF_AXIS: 'Wall is not parallel to an axis',
   WALL_ZERO_LENGTH: 'Wall start and end are the same point',
   TEE_IN_OPENING: 'A tee lands inside an opening',

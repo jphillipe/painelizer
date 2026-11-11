@@ -1,7 +1,7 @@
 /**
  * Geometria da planta para o canvas do editor (S21.2), sem painéis: cada parede como o motor a enquadra —
  * plates medidas pelo `frameWalls` do core (quem atravessa e quem encosta no canto, T) — e as aberturas como
- * vãos ao longo do eixo. Quando o core recusa a casa (paredes cruzadas, três pontas num ponto, fora do eixo),
+ * vãos ao longo do eixo. Quando o core recusa a casa (paredes cruzadas, quatro pontas num ponto, fora do eixo),
  * a planta não some: cada parede cai no retângulo do próprio eixo ± t/2 (`framed: false`), e, com `lastGood`,
  * as paredes não citadas no erro mantêm as plates da última geometria válida (anti-flicker no arraste, S21.3).
  *

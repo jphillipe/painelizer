@@ -151,11 +151,15 @@ const ENGINE_ERRORS: Record<string, Template> = {
   WALL_OFF_AXIS: (p, t) => at(t, `not parallel to the x or y axis (from ${String(p['x0'])}, ${String(p['y0'])} to ${String(p['x1'])}, ${String(p['y1'])}).`),
   WALL_DUPLICATE_ID: (_p, t) => at(t, 'duplicate wall id.'),
   WALL_END_TWO_JOINTS: (p, t) =>
-    at(t, `the ${String(p['end'])} end meets two walls (${String(p['first'])} and ${String(p['second'])}) — three ends at one point, or a corner and a tee at the same spot.`),
+    at(t, `the ${String(p['end'])} end meets two walls (${String(p['first'])} and ${String(p['second'])}) — four ends at one point, or a corner and a tee at the same spot.`),
   WALLS_CROSS: (p, t) => `Walls ${String(t.wallId)} and ${String(p['otherWallId'])} cross at (${String(p['x'])}, ${String(p['y'])}) — split one of them at the crossing.`,
   WALLS_OVERLAP: (p, t) => `Walls ${String(t.wallId)} and ${String(p['otherWallId'])} overlap by ${inch(p['overlap'])} — is it the same wall twice?`,
   CORNER_ENDS_CONFLICT: (p, t) =>
     `Walls ${String(t.wallId)} (${String(p['end'])}) and ${String(p['otherWallId'])} (${String(p['otherEnd'])}) both declare ends "${String(p['rule'])}" at the same corner.`,
+  SPLIT_TEE_ENDS: (p, t) =>
+    p['reason'] === 'stem'
+      ? at(t, `the ${String(p['end'])} end meets ${String(p['first'])} and ${String(p['second'])} where they join in line — it butts the line and cannot cross it (remove ends "through").`)
+      : at(t, `the ${String(p['end'])} end meets ${String(p['first'])} and ${String(p['second'])} where they join in line — one of them must cross the corner, but both declare ends "butt".`),
   PLATE_NO_LENGTH: (p, t) => at(t, `the plate has no length (${inch(p['length'])}) — the walls at its ends take it all.`),
   OPENING_OFF_PLATE: (p, t) =>
     at(t, `the rough opening from ${inch(p['from'])} to ${inch(p['to'])} (measured from start) does not fit on the plate (${inch(p['s0'])} to ${inch(p['s1'])}).`),
