@@ -35,6 +35,15 @@ describe('useDrawingsUpload (S22.3)', () => {
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
+  it('refs mantêm a identidade entre renders (a prévia depende delas e não pode rodar em laço)', async () => {
+    const { result, rerender } = renderHook(() => useDrawingsUpload(env, [file('a.pdf')]));
+    await waitFor(() => expect(result.current.refs).toHaveLength(1));
+    const first = result.current.refs;
+    rerender();
+    rerender();
+    expect(result.current.refs).toBe(first);
+  });
+
   it('sem Storage não sobe nada e não está habilitado', () => {
     const { result } = renderHook(() => useDrawingsUpload(undefined, [file('a.pdf')]));
     expect(result.current).toMatchObject({ enabled: false, refs: undefined, uploading: undefined });

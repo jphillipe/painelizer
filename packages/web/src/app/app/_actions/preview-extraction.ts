@@ -6,8 +6,8 @@ import { preview } from '@/services/extract.service';
 import { readUploadForm } from './extract-walls';
 
 /** Prévia do que será enviado à IA (M7): páginas escolhidas, folhas fora, tamanho — sem chamar a API. */
-export const previewExtraction = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form }) => {
-  const { files, storageError, pages, pagesByFile, level } = await readUploadForm(form);
+export const previewExtraction = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form, ctx }) => {
+  const { files, storageError, pages, pagesByFile, level } = await readUploadForm(form, ctx.user?.id);
   if (storageError !== undefined) return { ok: false as const, message: storageError };
   return preview(files, { ...(pages === undefined ? {} : { pages }), pagesByFile, ...(level === undefined ? {} : { hints: { level } }) });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DRAWINGS_BUCKET, drawingPath, newUploadId, type DrawingRef } from '@/lib/drawings';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { SupabaseEnv } from '@/lib/supabase/env';
@@ -93,6 +93,9 @@ export function useDrawingsUpload(storage: SupabaseEnv | undefined, files: reado
   }, [storage, signature, attempt]);
 
   const complete = enabled && error === undefined && progress === undefined && files.every((f) => done.has(fileKey(f)));
-  const refs = complete ? files.map((f) => done.get(fileKey(f))!) : undefined;
+  // Mesma identidade enquanto lista e uploads não mudam: a prévia do passo 01 depende de `refs`, e um array novo a
+  // cada render a fazia rodar em laço (cada volta baixava o conjunto inteiro do Storage — estourou a cota de egress).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const refs = useMemo(() => (complete ? files.map((f) => done.get(fileKey(f))!) : undefined), [complete, signature, done]);
   return { enabled, refs, uploading: progress, error, retry: () => setAttempt((a) => a + 1) };
 }

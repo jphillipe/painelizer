@@ -387,3 +387,13 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   uma ferramenta interna de uma fábrica. Nome de exibição em `team_members.name` (um time por pessoa no app).
 - 2026-11-05 — S41: **grant por coluna em `team_members`** (`authenticated` só atualiza `role` e `name`): antes a
   política de admin deixava mudar `email`/`team_id` pela API. O último admin conta só os **ativos**.
+- 2026-11-10 — **Cota de egress do Supabase estourada** (Free, 5 GB/mês de *cached egress*; projeto restringido, login
+  parou). **Causa**: a prévia do passo 01 rodava em laço — `useDrawingsUpload` devolvia `refs` como array novo a cada
+  render, o efeito da prévia tem `upload.refs` nas deps, e cada `setPreview` re-renderizava e agendava outra prévia.
+  Cada volta baixava o conjunto inteiro do bucket para o servidor (até 40 MB), e o passo 01 fica montado, escondido,
+  durante os ~10 min da leitura. **Correção**: `refs` memorizado (mesma identidade enquanto lista e uploads não mudam).
+  **Cache de downloads no servidor** (`drawings.service`): prévia e leitura do mesmo envio baixam uma vez; em memória
+  da instância, 64 MB, 15 min, chave = usuário + caminho + tamanho (o download passa pela RLS da sessão, então o cache
+  não entrega a um usuário o que outro baixou; sem usuário, sem cache). **O PDF continua no Storage**: o Cloud Run
+  corta pedidos em 32 MB (S22.3) e o projeto reaberto em outra máquina ou após F5 precisa dos desenhos para a planta
+  por baixo; guardar não altera os bytes, a leitura da IA recebe o arquivo idêntico.

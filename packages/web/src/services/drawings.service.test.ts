@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DrawingsStore } from '@/lib/supabase/drawings-store';
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/supabase/server', () => ({ supabaseServer: async () => undefined }));
-const { copyDrawings, downloadDrawings, removeDrawings } = await import('./drawings.service');
+const { copyDrawings, createDownloadCache, downloadDrawings, removeDrawings } = await import('./drawings.service');
 
 function fakeStore(seed: Record<string, number[]>) {
   const objects = new Map(Object.entries(seed).map(([k, v]) => [k, new Uint8Array(v)]));
@@ -49,6 +49,38 @@ describe('drawings.service (S22.3)', () => {
     ]);
     const missing = await downloadDrawings([{ name: 'B.pdf', path: 'u1/B.pdf', size: 1, type: '' }], deps);
     expect(missing).toMatchObject({ ok: false, reason: 'failed', message: expect.stringContaining('B.pdf') });
+  });
+
+  it('cache por usuário: prévia e leitura do mesmo envio baixam do Storage uma vez só', async () => {
+    const { store } = fakeStore({ 'u1/A_100.pdf': [1, 2], 'u1/foto.png': [3] });
+    const download = vi.spyOn(store, 'download');
+    let t = 0;
+    const cache = createDownloadCache({ maxBytes: 100, ttlMs: 1000, now: () => t });
+    const deps = { store: async () => store, cache };
+    await downloadDrawings(refs, deps, 'ana');
+    const again = await downloadDrawings(refs, deps, 'ana');
+    expect(download).toHaveBeenCalledTimes(2); // um por arquivo, só na primeira
+    if (!again.ok) throw new Error(again.message);
+    expect(again.files.map((f) => [...f.bytes])).toEqual([[1, 2], [3]]);
+    await downloadDrawings(refs, deps, 'bia'); // outro usuário passa pela RLS de novo
+    expect(download).toHaveBeenCalledTimes(4);
+    await downloadDrawings(refs, deps); // sem usuário, sem cache
+    expect(download).toHaveBeenCalledTimes(6);
+    t = 1001; // venceu
+    await downloadDrawings(refs, deps, 'ana');
+    expect(download).toHaveBeenCalledTimes(8);
+  });
+
+  it('cache respeita o teto de bytes: sai o mais antigo, e objeto maior que o teto não entra', () => {
+    const cache = createDownloadCache({ maxBytes: 4, ttlMs: 1000, now: () => 0 });
+    cache.set('k1', new Uint8Array(2));
+    cache.set('k2', new Uint8Array(2));
+    cache.get('k1'); // usado agora: o mais antigo passa a ser k2
+    cache.set('k3', new Uint8Array(2));
+    expect([cache.get('k1')?.length, cache.get('k2'), cache.get('k3')?.length]).toEqual([2, undefined, 2]);
+    cache.set('big', new Uint8Array(5));
+    expect(cache.get('big')).toBeUndefined();
+    expect(cache.get('k1')?.length).toBe(2);
   });
 
   it('apagar limpa a pasta inteira (também o que a lista não cita) e deixa as outras; erro vira false', async () => {

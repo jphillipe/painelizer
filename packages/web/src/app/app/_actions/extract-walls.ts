@@ -13,8 +13,9 @@ export type UploadFormInput = Awaited<ReturnType<typeof readUploadForm>>;
  * Campos de texto e arquivos de um FormData de upload (compartilhado com a prévia, M7). S22.3: quando o
  * navegador subiu os desenhos ao Storage, vem `drawings` (JSON com os caminhos) e nenhum arquivo no corpo — o
  * servidor baixa os bytes do bucket. Sem Storage (desenvolvimento sem chaves), os arquivos vêm no corpo como antes.
+ * `userId` liga o cache de downloads (a prévia e a leitura do mesmo envio baixam uma vez).
  */
-export async function readUploadForm(form: FormData) {
+export async function readUploadForm(form: FormData, userId?: string) {
   const text = (k: string) => (typeof form.get(k) === 'string' ? (form.get(k) as string) : '');
   const fields = uploadFieldsSchema.parse({
     level: text('level'),
@@ -35,7 +36,7 @@ export async function readUploadForm(form: FormData) {
   const files: UploadedFile[] = [];
   let storageError: string | undefined;
   if (drawings.length > 0) {
-    const downloaded = await downloadDrawings(drawings);
+    const downloaded = await downloadDrawings(drawings, undefined, userId);
     if (downloaded.ok) files.push(...downloaded.files);
     else storageError = downloaded.message;
   } else {
@@ -59,7 +60,7 @@ export async function readUploadForm(form: FormData) {
  * A leitura que deu certo leva os desenhos consigo (vão para o `.panelizer.json` e para o banco).
  */
 export const extractWalls = authActionClient.inputSchema(z.instanceof(FormData)).action(async ({ parsedInput: form, ctx }) => {
-  const { fields, files, drawings, storageError, pages, pagesByFile, level, jobId } = await readUploadForm(form);
+  const { fields, files, drawings, storageError, pages, pagesByFile, level, jobId } = await readUploadForm(form, ctx.user?.id);
   if (storageError !== undefined) return { ok: false as const, reason: 'input' as const, message: storageError };
   const given = pickProjectData(fields);
   // S24: o job é do usuário da sessão, e os desenhos entram no resultado guardado (vale também para o recolhido após F5).
