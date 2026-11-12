@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { ISSUE_HELP as ALL_HELP } from './issue-help';
+import { ISSUE_TITLES } from './issue-groups';
+import { WARNING_CODES } from 'core';
 import { draftFromJson } from './draft';
 import { helpFor, quickFixFor, readingWarningResolved } from './issue-help';
 import { legacyNotice } from 'extract/notices';
@@ -19,7 +22,9 @@ describe('issue-help', () => {
     expect(helpFor(parseWarning('1-S1-P1 WIND_SPEED_MISSING: parede S1, abertura S1-A2-1: parede externa sem config.building.windSpeed', ids))?.fix).toMatch(/wind speed/);
     expect(helpFor({ severity: 'problem', source: 'draft', kind: 'wall.height', text: 'x' })?.what).toMatch(/wall height/);
     expect(helpFor(engineProblem({ code: 'HEADER_OUT_OF_TABLE', message: 'x', wallId: 'S1', openingId: 'S1-A2-1', params: { why: 'span', span: 58.5, table: 'R602.7(1)' } }, ids))?.fix).toMatch(/engineer/);
-    expect(helpFor(engineProblem({ code: 'ENGINE_INTERNAL', message: 'parede S1: algo inédito', wallId: 'S1' }, ids))).toBeUndefined();
+    // S47: toda família conhecida tem ajuda (até o erro interno do motor); só um código que o app ainda não conhece fica sem.
+    expect(helpFor(engineProblem({ code: 'ENGINE_INTERNAL', message: 'parede S1: algo inédito', wallId: 'S1' }, ids))?.fix).toMatch(/Details/);
+    expect(helpFor(engineProblem({ code: 'SOME_NEW_CODE', message: 'parede S1: algo inédito', wallId: 'S1' }, ids))).toBeUndefined();
   });
 
   it('conserto rápido: vento, altura de header e a abertura que a leitura não posicionou (id e tag do aviso)', () => {
@@ -101,5 +106,25 @@ describe('ajuda pelo motivo (S26)', () => {
     const table = issueFromNotice({ code: 'HEADER_JACKS_BELOW_TABLE', message: 'x', wallId: 'S2', openingId: 'S2-A', params: { reason: 'table' } }, 'warning', index);
     expect(helpFor(neighbor)?.what).toMatch(/so close/);
     expect(helpFor(table)?.what).toMatch(/asks for fewer jack studs/);
+  });
+});
+
+/** S47: toda família que a lista pode mostrar diz o que é e como resolver. */
+describe('ajuda para toda família (S47)', () => {
+  it('toda chave de ISSUE_TITLES e todo aviso do motor tem "what" e "fix"', () => {
+    const keys = [...new Set([...Object.keys(ISSUE_TITLES), ...WARNING_CODES])];
+    const missing = keys.filter((k) => {
+      const h = ALL_HELP[k];
+      return h === undefined || h.what.trim() === '' || h.fix.trim() === '';
+    });
+    expect(missing).toEqual([]);
+  });
+
+  it('as frases terminam com ponto e não repetem o título', () => {
+    for (const [key, h] of Object.entries(ALL_HELP)) {
+      expect(h.what, key).toMatch(/[.!?]$/);
+      expect(h.fix, key).toMatch(/[.!?]$/);
+      expect(h.what, key).not.toBe(ISSUE_TITLES[key]);
+    }
   });
 });

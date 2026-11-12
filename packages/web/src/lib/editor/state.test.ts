@@ -42,6 +42,32 @@ describe('editorReducer: carga e seleção', () => {
   });
 });
 
+describe('S47: a seleção carrega o campo a focar', () => {
+  const opening = { kind: 'opening', wallId: 'W01', openingId: 'J1' } as const;
+
+  it('select com focus grava os ids; sem focus, limpa', () => {
+    const s = editorReducer(loaded(), { type: 'select', selection: opening, focus: ['o-J1-center', 'o-J1-offset'] });
+    expect(s.selection).toEqual(opening);
+    expect(s.focus).toEqual({ fieldIds: ['o-J1-center', 'o-J1-offset'] });
+    expect(editorReducer(s, { type: 'select', selection: opening }).focus).toBeUndefined();
+  });
+
+  it('o mesmo clique duas vezes dá um focus novo (o efeito roda de novo); editar não mexe nele', () => {
+    const first = editorReducer(loaded(), { type: 'select', selection: opening, focus: ['o-J1-hby'] });
+    const second = editorReducer(first, { type: 'select', selection: opening, focus: ['o-J1-hby'] });
+    expect(second.focus).toEqual(first.focus);
+    expect(second.focus).not.toBe(first.focus);
+    const edited = editorReducer(second, { type: 'updateOpening', wallId: 'W01', openingId: 'J1', patch: { headerHeight: 80 } });
+    expect(edited.focus).toBe(second.focus);
+  });
+
+  it('carregar outro projeto ou zerar apaga o focus', () => {
+    const s = editorReducer(loaded(), { type: 'select', selection: opening, focus: ['o-J1-hby'] });
+    expect(editorReducer(s, { type: 'load', text: EXAMPLES[2]!.text, source: 'file' }).focus).toBeUndefined();
+    expect(editorReducer(s, { type: 'reset' }).focus).toBeUndefined();
+  });
+});
+
 describe('commit, undo, redo', () => {
   it('commit empilha, undo volta, redo refaz; seleção de peça sumida é corrigida', () => {
     const s0 = editorReducer(loaded(), { type: 'select', selection: { kind: 'wall', wallId: 'W05' } });

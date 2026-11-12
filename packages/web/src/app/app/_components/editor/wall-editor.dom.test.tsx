@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useReducer } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { editorReducer, initialEditorState, type EditorState } from '@/lib/editor/state';
@@ -224,5 +225,70 @@ describe('WallEditor: contagem por causa (S46)', () => {
     expect(screen.queryByText(/\d+ warnings?$/)).toBeNull();
     expect((screen.getByRole('button', { name: /Generate panels/ }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues1');
+  });
+});
+
+/**
+ * S47: o clique numa issue leva ao campo que a resolve — seleciona a abertura, abre a seção e põe o cursor no campo.
+ * Aqui o editor é de verdade (reducer), não um estado fixo: o clique precisa mudar a seleção.
+ */
+describe('WallEditor: clique que leva ao campo (S47)', () => {
+  function Live({ initial, checked }: { initial: EditorState; checked: CheckState }) {
+    const [state, dispatch] = useReducer(editorReducer, initial);
+    return (
+      <ProjectIOContext value={io}>
+        <WallEditor state={state} dispatch={dispatch} check={checked} />
+      </ProjectIOContext>
+    );
+  }
+  const headerOut = (wallId: string, openingId: string) => ({
+    source: 'engine' as const,
+    code: 'HEADER_OUT_OF_TABLE',
+    message: 'x',
+    wallId,
+    openingId,
+    stage: 'wall' as const,
+    params: { why: 'span' },
+  });
+  const overlap = {
+    source: 'engine' as const,
+    code: 'STUDS_OVERLAP',
+    message: 'z',
+    panelId: '1-W04-P1',
+    params: { overlap: 0.375 },
+  };
+  const failed: CheckState = {
+    status: 'done',
+    revision: 0,
+    stale: false,
+    result: { ok: false, problems: [headerOut('W01', 'J1'), headerOut('W02', 'J2')], warnings: [overlap] },
+  };
+  const openIssues = (): void => {
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+  };
+
+  it('chip da abertura: seleciona, abre a seção do header e foca o campo "Header"; o mesmo clique de novo foca de novo', async () => {
+    render(<Live initial={{ ...load(initialEditorState, 1), revision: 0 }} checked={failed} />);
+    openIssues();
+    fireEvent.click(screen.getByRole('button', { name: 'J2' }));
+    await waitFor(() => expect(document.activeElement?.id).toBe('o-J2-hby'));
+    expect(document.getElementById('o-J2-hby')!.closest('details')!.open).toBe(true);
+    expect(document.getElementById('o-J2-hby')!.closest('[data-field]')!.hasAttribute('data-field-focus')).toBe(true);
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement?.id).not.toBe('o-J2-hby');
+    fireEvent.click(screen.getByRole('button', { name: 'J2' }));
+    await waitFor(() => expect(document.activeElement?.id).toBe('o-J2-hby'));
+  });
+
+  it('família sem campo que a resolva: só seleciona a parede, sem quebrar', async () => {
+    render(<Live initial={{ ...load(initialEditorState, 1), revision: 0 }} checked={failed} />);
+    openIssues();
+    fireEvent.click(screen.getByText(/Fine to leave \(1\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Studs overlap' }));
+    await waitFor(() => expect(document.querySelector('aside[aria-label="Properties"]')?.textContent).toContain('W04'));
+    expect(document.querySelector('[data-field-focus]')).toBeNull();
   });
 });

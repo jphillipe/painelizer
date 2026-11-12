@@ -200,6 +200,22 @@
   transform-origin: center;
   animation: var(--animate-pop);
 }
+/* S47: campo revelado pelo clique numa issue — contorno parado enquanto dura, fundo que esmaece. */
+[data-field-focus] {
+  border-radius: 6px;
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+  animation: field-focus 1.8s var(--ease-site) both;
+}
+@keyframes field-focus {
+  0%,
+  45% {
+    background-color: color-mix(in oklab, var(--gold-100) 70%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
 @utility commit-flash {
   animation: commit-flash 600ms var(--ease-site) both;
 }

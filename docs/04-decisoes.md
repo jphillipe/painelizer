@@ -454,3 +454,11 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   todo aviso — na folha do painel e no `panels.csv`. Rejeitado: subdividir a família por valores (a linha continua
   uma só) e um botão para esconder avisos (esconde sem resolver). Desenho inteiro (clique até o campo, conserto em
   grupo, "revisado") em `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md`.
+- **2026-11-12 — O clique numa issue leva ao campo que a resolve (S47; pedido do humano).** Cada família de issue
+  tem um alvo declarado em `lib/editor/issue-targets.ts`: a seleção e o `id` de DOM do campo (os mesmos `id` que o
+  inspetor já usa nos rótulos). O clique nunca edita: seleciona, abre a seção recolhida, rola, foca e destaca. A
+  ação `select` carrega os ids em `focus`; o workspace reage à identidade do objeto, então repetir o clique foca de
+  novo. Família sem alvo seleciona a parede / abertura como antes; alvo de projeto só vale para o botão de ação (o
+  chip de parede de uma issue de projeto continua selecionando a parede). Toda família passa a ter "como resolver"
+  citando o campo pelo nome da tela, garantido por teste. Rejeitado: um formulário dentro de cada issue (duplicaria
+  o inspetor) e controlar as seções do inspetor por estado React (bastou abrir o `<details>` pelo DOM).

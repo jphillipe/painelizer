@@ -1772,3 +1772,21 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   fine to leave", frases com os valores, 18 chips de porta recolhidos. Seguem, do mesmo desenho: S47 (clique que
   leva ao campo e "como resolver" para toda família), S48 (motor lista todas as aberturas com erro de uma parede),
   S49 (conserto em grupo), S50 ("Mark as reviewed").
+
+- [x] **S47 — Clique que leva ao campo e "como resolver" para toda família (web; não é regra de framing).** Pedido do
+  humano em 2026-11-12: "ao clicar aí já devia selecionar automaticamente o campo a ser alterado". Desenho §2 de
+  `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md`; plano em
+  `docs/superpowers/plans/2026-11-12-issue-click-to-field-s47.md`. **Mapa** (`lib/editor/issue-targets.ts`,
+  `focusFor`): 53 famílias → seleção (abertura, parede ou projeto) + `id` do campo que já existe no inspetor
+  (`o-<abertura>-hby`, `w-<parede>-height`, `b-wind`…); posição da abertura dá dois candidatos (`center`, `offset`).
+  **Estado**: `select` ganha `focus` (ids), guardado em `EditorState.focus` como objeto novo a cada clique.
+  **Tela**: `revealFirst` / `revealField` (`lib/editor/field-focus.ts`) esperam o campo aparecer, abrem os
+  `<details>` em volta, rolam, focam e marcam `data-field-focus` por 1,8 s; `Field` ganhou `data-field`. Chip, título
+  e linhas de "Details" usam o alvo; "Open project settings" abre o diálogo no campo. **Ajuda**: `what`/`fix` para
+  as 60 famílias que faltavam, com teste que exige ajuda para toda chave de `ISSUE_TITLES` e todo aviso do motor.
+  **Testes** (vistos falhar antes): mapa (53 casos + sem alvo), estado, `revealField` / `revealFirst` (jsdom, timers
+  falsos), editor de verdade com reducer (clique no chip foca `o-J2-hby`; segundo clique foca de novo; família sem
+  alvo só seleciona), cobertura da ajuda. O teste antigo "desconhecido fica sem ajuda" passou a usar um código que
+  o app não conhece (`ENGINE_INTERNAL` agora tem ajuda). **Conferido** na tela com a planta do Matilda (`out/s47/`):
+  o chip `W1-E2-1` leva ao campo "Header" (`o-W1-E2-1-hby`) visível e destacado; a porta `I1-123.2` no aviso de
+  altura leva a "Top of RO".

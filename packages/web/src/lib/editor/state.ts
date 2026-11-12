@@ -71,6 +71,11 @@ export interface EditorState {
   loadError: string | undefined;
   source: DraftSource | undefined;
   selection: Selection;
+  /**
+   * Campo a revelar no inspetor (S47), vindo do clique numa issue. Objeto novo a cada `select` com `focus` — o
+   * workspace reage à identidade, então o mesmo clique repetido foca de novo; some em `select` sem `focus`.
+   */
+  focus?: { fieldIds: string[] } | undefined;
   past: ProjectDraft[];
   future: ProjectDraft[];
   /** Transação aberta (um arraste): commits com o mesmo id substituem o draft sem empilhar histórico. */
@@ -98,7 +103,8 @@ export type EditorAction =
   /** `dirty` (M2): sessão retomada do navegador que já tinha edições — continua marcada como editada. */
   | { type: 'load'; text: string; source: DraftSource; dirty?: boolean }
   | { type: 'reset' }
-  | { type: 'select'; selection: Selection }
+  /** `focus` (S47): ids de DOM do campo que resolve a issue clicada, em ordem de preferência. */
+  | { type: 'select'; selection: Selection; focus?: readonly string[] }
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'endTransaction' }
@@ -218,7 +224,7 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
     case 'reset':
       return { ...initialEditorState, revision: state.revision + 1, loads: state.loads + 1 };
     case 'select':
-      return { ...state, selection: action.selection, txn: undefined };
+      return { ...state, selection: action.selection, txn: undefined, focus: action.focus === undefined ? undefined : { fieldIds: [...action.focus] } };
     case 'endTransaction':
       return state.txn === undefined ? state : { ...state, txn: undefined };
     case 'undo': {

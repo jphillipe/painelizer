@@ -4,6 +4,7 @@ import { ChevronRightIcon, CircleCheckIcon, Loader2Icon, OctagonXIcon, PlusIcon,
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { helpFor, quickFixFor, type QuickFix } from '@/lib/editor/issue-help';
+import { focusFor } from '@/lib/editor/issue-targets';
 import { LABELS } from '@/lib/editor/labels';
 import { causeCounts, type IssueAction, type IssueGroup, type IssueTier } from '@/lib/editor/issue-groups';
 import { hasOriginal, issueMessage, type Issue } from '@/lib/editor/problems';
@@ -20,9 +21,10 @@ export interface IssueGroupsListProps {
   stale: boolean;
   checking: boolean;
   selection: Selection;
-  onSelect: (selection: Selection) => void;
-  /** Ação do grupo: dados do projeto (card de setup) ou configurações. `openWall` é resolvido aqui mesmo. */
-  onAction: (action: Exclude<IssueAction, 'openWall'>) => void;
+  /** `focus` (S47): ids do campo que resolve a issue clicada — o inspetor abre a seção e põe o cursor nele. */
+  onSelect: (selection: Selection, focus?: readonly string[]) => void;
+  /** Ação do grupo: dados do projeto (card de setup) ou configurações (com o campo a focar). `openWall` é resolvido aqui mesmo. */
+  onAction: (action: Exclude<IssueAction, 'openWall'>, focus?: readonly string[]) => void;
   /** Conserto rápido confirmado (vento, altura de header, abertura que faltava). */
   onQuickFix?: ((fix: QuickFixCommit) => void) | undefined;
   /** Valores atuais para os campos de conserto rápido. */
@@ -44,6 +46,12 @@ const ACTION_LABEL: Record<Exclude<IssueAction, 'openWall'>, string> = {
 function targetOf(i: Issue): Selection | undefined {
   if (i.wallId === undefined) return undefined;
   return i.openingId === undefined ? { kind: 'wall', wallId: i.wallId } : { kind: 'opening', wallId: i.wallId, openingId: i.openingId };
+}
+
+/** Campo do projeto (Project settings) que resolve a issue, quando a família é de projeto (S47). */
+function projectFocus(i: Issue): readonly string[] | undefined {
+  const f = focusFor(i);
+  return f?.selection.kind === 'project' ? f.fieldIds : undefined;
 }
 
 /**
@@ -108,18 +116,28 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
   const help = helpFor(first);
   const fix = quickFixFor(first);
   const single = g.items.length === 1 ? targetOf(first) : undefined;
+  /**
+   * S47: o clique leva ao campo que resolve a issue — a seleção do alvo e os ids do campo. Sem alvo (ou alvo de
+   * projeto, que é do botão de ação), seleciona a parede / abertura como sempre. `wallOnly`: chip de parede não
+   * troca a seleção para a abertura.
+   */
+  const go = (issue: Issue | undefined, fallback: Selection, wallOnly = false): void => {
+    const f = issue === undefined ? undefined : focusFor(issue);
+    if (f === undefined || f.selection.kind === 'project' || (wallOnly && f.selection.kind !== 'wall')) onSelect(fallback);
+    else onSelect(f.selection, f.fieldIds);
+  };
   // Chips: uma por item quando a issue é de abertura (vai direto nela); senão uma por parede.
   const byOpening = g.items.every((i) => i.openingId !== undefined);
-  const chips: { label: string; target: Selection; selected: boolean }[] = byOpening
-    ? g.items.map((i) => ({ label: i.openingId!, target: targetOf(i)!, selected: selectedOpening === i.openingId }))
-    : g.wallIds.map((w) => ({ label: w, target: { kind: 'wall', wallId: w }, selected: selectedWall === w }));
+  const chips: { label: string; target: Selection; selected: boolean; issue: Issue | undefined; wallOnly: boolean }[] = byOpening
+    ? g.items.map((i) => ({ label: i.openingId!, target: targetOf(i)!, selected: selectedOpening === i.openingId, issue: i, wallOnly: false }))
+    : g.wallIds.map((w) => ({ label: w, target: { kind: 'wall', wallId: w }, selected: selectedWall === w, issue: g.items.find((i) => i.wallId === w), wallOnly: true }));
   const chipButtons = (
     <div className="flex flex-wrap gap-1">
       {chips.map((c, n) => (
         <button
           key={`${n}-${c.label}`}
           type="button"
-          onClick={() => onSelect(c.target)}
+          onClick={() => go(c.issue, c.target, c.wallOnly)}
           aria-pressed={c.selected}
           title={c.target.kind === 'opening' ? 'Go to the opening' : 'Go to the wall'}
           className={cn('rounded-sm border px-1.5 font-mono text-[11px] transition-colors hover:border-line-strong', c.selected ? 'border-navy-900 bg-navy-900 text-paper' : 'border-line text-ink-2')}
@@ -136,7 +154,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
         <div className="min-w-0 flex-1 space-y-1.5">
           <p className="text-sm font-semibold">
             {single !== undefined ? (
-              <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => onSelect(single)}>
+              <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => go(first, single)}>
                 {g.title}
               </button>
             ) : (
@@ -164,7 +182,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
           ) : null}
           {fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
           {g.action !== undefined && g.action !== 'openWall' && fix === undefined ? (
-            <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(g.action as Exclude<IssueAction, 'openWall'>)}>
+            <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(g.action as Exclude<IssueAction, 'openWall'>, projectFocus(first))}>
               {ACTION_LABEL[g.action]}
             </Button>
           ) : null}
@@ -178,7 +196,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
                     {t === undefined ? (
                       <span className="font-sans">{issueMessage(i)}</span>
                     ) : (
-                      <button type="button" className="text-left font-sans underline-offset-2 hover:underline" onClick={() => onSelect(t)}>
+                      <button type="button" className="text-left font-sans underline-offset-2 hover:underline" onClick={() => go(i, t)}>
                         {issueMessage(i)}
                       </button>
                     )}

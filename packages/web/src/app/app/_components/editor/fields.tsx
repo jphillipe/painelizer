@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 export function Field({ id, label, hint, error, children, className }: { id: string; label: ReactNode; hint?: string; error?: string; children: ReactNode; className?: string }) {
   return (
-    <div className={cn('space-y-1', className)}>
+    <div className={cn('space-y-1', className)} data-field>
       <Label htmlFor={id} className="text-[13px] text-ink-2">
         {label}
       </Label>

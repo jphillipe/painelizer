@@ -131,6 +131,152 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   'opening.position': { what: 'The opening has no center and no left edge.', fix: 'Select it and type the position, or drag it on the plan.' },
   'plan.open': { what: 'The walls do not close into a house: two walls cross, or four ends meet at a point.', fix: 'Fix the end of one of the walls named; drag it on the plan or edit start / end.' },
   'wall.noAxis': { what: 'The wall is not parallel to the x or y axis.', fix: 'Edit start / end so one coordinate is the same on both.' },
+
+  // S47: toda família tem "o que é" e "como resolver", citando o campo pelo nome da tela.
+  // editor — parede
+  'wall.section': { what: 'The wall has no stud section and its wall type does not give one.', fix: 'Select the wall and set Section (2x4 or 2x6), or give it a wall type.' },
+  'wall.exterior': { what: 'The wall does not say whether it is exterior or interior.', fix: 'Select the wall and set Position.' },
+  'wall.bearing': { what: 'The wall does not say whether it carries load.', fix: 'Select the wall and set Load: bearing walls get IRC headers, non-bearing walls get a flat header.' },
+  'wall.wallType': {
+    what: 'The wall uses a wall type that is not in the project wall types, and the wall itself does not give section, position or load.',
+    fix: 'Select the wall and pick an existing Wall type, or add the type to the project wall types.',
+  },
+  'wall.length': { what: 'A wall given by length has no length.', fix: 'Select the wall and type its Length.' },
+  'wall.ends': { what: 'A wall drawn in plan needs both a start and an end point.', fix: 'Select the wall and fill in Start and End, or drag its ends on the plan.' },
+  'wall.planLength': {
+    what: 'A wall drawn in plan also carries a length; in plan the length comes from its start and end.',
+    fix: 'This comes from a hand-edited project file: remove "length" from that wall in the file and open it again.',
+  },
+  'wall.planLayoutOrigin': {
+    what: 'A wall drawn in plan also carries a layout origin; in plan the layout comes from the corners.',
+    fix: 'This comes from a hand-edited project file: remove "layoutOrigin" from that wall in the file and open it again.',
+  },
+  'wall.duplicateId': { what: 'Two walls have the same id.', fix: 'Select one of them and change its Id.' },
+  'walls.mixed': {
+    what: 'Some walls are drawn in plan (start / end) and others only have a length; a project uses one form.',
+    fix: 'Give every wall a start and an end, or keep them all by length.',
+  },
+  'walls.empty': { what: 'There is nothing to frame yet.', fix: 'Draw a wall on the plan (Draw wall) or add one with Add wall.' },
+  // editor — abertura
+  'opening.size': { what: 'The opening has no schedule type and no rough opening size.', fix: 'Select the opening and type RO width and RO height, or pick a type in Size by.' },
+  'opening.type': { what: 'The opening has no schedule type and does not say whether it is a window or a door.', fix: 'Select the opening and set Type, or pick a type in Size by.' },
+  'opening.tag': { what: 'The opening uses a type that is not in the opening schedule.', fix: 'Select the opening and pick an existing type in Size by, or add the type to the schedule.' },
+  'opening.headerMark': {
+    what: 'The opening points to a header mark that is not in the header schedule.',
+    fix: 'Select the opening and pick another option in Header, or add the mark to the header schedule.',
+  },
+  'opening.duplicateId': { what: 'Two openings have the same id; opening ids are unique in the project.', fix: 'Select one of them and change its Id.' },
+  // editor — projeto
+  'config.studSpacing': { what: 'The project does not say how far apart the studs are.', fix: 'Open Project settings and set Stud spacing (16" is the usual value).' },
+
+  // motor — avisos
+  WALL_TYPE_MISMATCH: {
+    what: 'The wall sets a section, position or load different from its wall type; the panel follows the wall.',
+    fix: 'If that is intended, leave it. Otherwise select the wall and clear the field, or pick another Wall type.',
+  },
+  BLOCKING_SKIPPED: {
+    what: 'A blocking row has no blocks across an opening, a tee ladder or another row at the same height.',
+    fix: 'Leave it if the row is meant to stop there; otherwise select the wall and change the row Center height or its From / To.',
+  },
+
+  // motor — erros de abertura e header
+  HEADER_DATA_MISSING: {
+    what: 'A bearing wall with openings gets its headers from the IRC table, which needs the ground snow load, the building width and the floors the wall carries.',
+    fix: 'Fill in the building data in Project settings and the floors above on the wall, or give the opening its own Header.',
+  },
+  KINGS_OUT_OF_TABLE: {
+    what: 'The wind table (R602.7.5) has no king stud count for this opening width and wind speed.',
+    fix: 'Select the opening and type the King studs per side the engineer gives you.',
+  },
+  OPENING_OUT_OF_WALL: { what: 'With its king and jack studs the opening runs past the end of the wall.', fix: 'Select the opening and move it in from the end, or make the wall longer.' },
+  CORNER_STUD_OFF_PLATE: {
+    what: 'The corner stud does not fit on the wall plate: the wall is too short for its corner.',
+    fix: 'Check the wall ends on the plan: lengthen the wall, or change which wall runs through the corner (Start corner / End corner).',
+  },
+  HEADER_TOO_THICK: { what: 'The header given for the opening is thicker than the wall.', fix: 'Select the opening and reduce Plies or change Header section, or make the wall 2x6.' },
+  HEADER_ABOVE_TOP_PLATE: {
+    what: 'The header sits so high that it would pass the top plate.',
+    fix: 'Select the opening and lower Top of RO, pick a shallower header, or raise the wall Height.',
+  },
+  HEADER_NO_ROOM_FOR_JACK: { what: 'The top of the rough opening is so low that no jack stud fits under the header.', fix: 'Select the opening and raise Top of RO.' },
+  SILL_NO_ROOM: { what: 'The bottom of the rough opening is so low that the sill does not fit on the bottom plate.', fix: 'Select the opening and raise Sill height, or make it a door.' },
+  OPENINGS_TOO_CLOSE: {
+    what: 'Two openings are too close for their jack studs and a shared king stud.',
+    fix: 'Select one of them and move it away, or replace the two with one wider opening.',
+  },
+  OPENING_TAG_UNKNOWN: { what: 'The opening uses a type that is not in the opening schedule.', fix: 'Select the opening and pick an existing type in Size by, or add the type to the schedule.' },
+  HEADER_MARK_UNKNOWN: {
+    what: 'The opening points to a header mark that is not in the header schedule.',
+    fix: 'Select the opening and pick another option in Header, or add the mark to the header schedule.',
+  },
+  OPENING_TYPE_MISSING: { what: 'The opening has no schedule type and does not say whether it is a window or a door.', fix: 'Select the opening and set Type, or pick a type in Size by.' },
+  OPENING_SIZE_MISSING: { what: 'The opening has no schedule type and no rough opening size.', fix: 'Select the opening and type RO width and RO height, or pick a type in Size by.' },
+  OPENING_POSITION_MISSING: { what: 'The opening has no center and no left edge.', fix: 'Select it and type the position, or drag it on the plan.' },
+
+  // motor — erros da planta
+  WALLS_CROSS: { what: 'Two walls cross each other.', fix: 'Select one of them and split it at the crossing (Split at), so the walls meet end to side.' },
+  WALLS_OVERLAP: { what: 'Two walls lie on top of each other along the same line.', fix: 'Remove the duplicate, or shorten one so they meet end to end.' },
+  WALL_END_TWO_JOINTS: {
+    what: 'One wall end meets two walls at the same point: four ends at a point, or a corner and a tee together.',
+    fix: 'Move one of the walls so each end meets a single wall.',
+  },
+  CORNER_ENDS_CONFLICT: {
+    what: 'Both walls of a corner are told the same thing: both run through it, or both stop at it.',
+    fix: 'Select one of the walls and set its Start corner / End corner back to Auto.',
+  },
+  SPLIT_TEE_ENDS: {
+    what: 'A wall meets two walls right where they join in line, and the corner rule set on it cannot be honoured there.',
+    fix: 'Select the wall and set that end (Start corner / End corner) back to Auto.',
+  },
+  WALL_OFF_AXIS: { what: 'The wall is not parallel to the x or y axis.', fix: 'Edit start / end so one coordinate is the same on both.' },
+  WALL_ZERO_LENGTH: { what: 'Start and end of the wall are the same point.', fix: 'Select the wall and move one end, or remove the wall.' },
+  TEE_IN_OPENING: { what: 'An interior wall meets this wall inside a rough opening.', fix: 'Move the opening or the interior wall so the tee lands on studs, not in the opening.' },
+  TEE_WITHOUT_STUD: {
+    what: 'Where an interior wall meets this wall there is no stud on one side to hold the ladder blocking.',
+    fix: 'Move the interior wall or the opening next to it by a few inches.',
+  },
+
+  // motor — erros de painel e de plate
+  CANNOT_SPLIT: {
+    what: 'The wall is longer than the panel limit and has no free layout stud where it could be split.',
+    fix: 'Select the wall and add a break on the plan, raise Max panel length in Project settings, or move the opening that covers the split zone.',
+  },
+  LAP_NO_ROOM: {
+    what: 'After a panel break there is no room for the double top plate to lap onto the next panel.',
+    fix: 'Select the wall and move the break, or lower Top plate lap / Min lap in Project settings.',
+  },
+  SPLICE_NO_STUD: {
+    what: 'A plate is longer than the longest stock length and there is no stud where it could be spliced.',
+    fix: 'Select the wall and add a panel break, or add a longer length to Stock lengths in Project settings.',
+  },
+  PIECE_OVER_STOCK: { what: 'A piece in the material list is longer than the longest stock length.', fix: 'Add a longer length to Stock lengths in Project settings.' },
+  PANEL_FILE_CLASH: { what: 'Two panels would be written to the same file name.', fix: 'Rename one of the walls so the panel ids differ.' },
+
+  // motor — erros de studs extras, posts, blocking e sheathing
+  EXTRA_STUD_IN_OPENING: {
+    what: 'An extra stud falls on the king studs, jack studs or rough opening of an opening.',
+    fix: 'Select the wall and move the extra stud (Left edge), or remove it.',
+  },
+  EXTRA_STUD_OUT_OF_WALL: { what: 'An extra stud runs past the end of the wall.', fix: 'Select the wall and correct the extra stud Left edge or Count.' },
+  POST_INVALID: { what: 'A post has no valid position or size.', fix: 'Select the wall and set the post Left edge and Size (4x4, 4x6 or 6x6).' },
+  POST_DEPTH_MISMATCH: { what: 'The post has no face equal to the wall depth.', fix: 'Select the wall and pick a post Size that fills the wall thickness.' },
+  POST_OUT_OF_WALL: { what: 'A post runs past the end of the wall.', fix: 'Select the wall and correct the post Left edge.' },
+  POST_IN_OPENING: { what: 'A post falls on the king studs, jack studs or rough opening of an opening.', fix: 'Select the wall and move the post, or move the opening.' },
+  POST_OVERLAP: { what: 'A post lands on another full-height stud.', fix: 'Select the wall and move the post or the stud it lands on.' },
+  BLOCKING_PRESET_UNKNOWN: {
+    what: 'A blocking row uses a preset that the project does not have.',
+    fix: 'Select the wall and pick another preset for the row, or add the preset to the project blocking presets.',
+  },
+  BLOCKING_ROW_INVALID: {
+    what: 'A blocking row is outside the wall, or its center does not fit between the plates.',
+    fix: 'Select the wall and correct the row Center height and its From / To.',
+  },
+  SHEATHING_INVALID: { what: 'A sheathing setting is out of range (thickness, sheet size, overhang or nailing).', fix: 'Open Project settings and correct the sheathing values.' },
+
+  // arquivo e motor
+  PROJECT_INVALID: { what: 'A value in the project file is not valid.', fix: 'See Details for the field; correct it in the editor or in the file and open it again.' },
+  PROJECT_JSON_INVALID: { what: 'The file is not valid JSON, so it cannot be opened as a project.', fix: 'Fix the syntax in a text editor, or download the project file again from the app.' },
+  ENGINE_INTERNAL: { what: 'The engine stopped on an internal check.', fix: 'See Details for the engine message and send it to support with the project file.' },
 };
 
 /** Ajuda pela família do editor ou pelo código (S26: nada pelo texto). */

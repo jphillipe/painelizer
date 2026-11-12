@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
 import { wallById } from '@/lib/editor/draft';
@@ -15,6 +15,7 @@ import { useEditor, useProjectIO } from './editor-context';
 import { EditorToolbar } from './editor-toolbar';
 import { EditorTopBar, type TopBarMenuItem } from './editor-top-bar';
 import { Inspector } from './inspector';
+import { revealFirst } from '@/lib/editor/field-focus';
 import { IssueGroupsList } from './issue-groups-list';
 import { Navigator, type NavigatorTab } from './navigator';
 import { PlanCanvas, type PlanCanvasHandle } from './plan-canvas';
@@ -73,15 +74,19 @@ export function Workspace() {
     : undefined;
   useEditorShortcuts(state, dispatch, true, { onHelp: () => setHelpOpen(true), onToggleDraw: toggleDraw, drawing: drawing && showPlan });
 
-  const select = (selection: Selection): void => dispatch({ type: 'select', selection });
+  const select = (selection: Selection, focus?: readonly string[]): void => dispatch({ type: 'select', selection, ...(focus === undefined ? {} : { focus }) });
+  // S47: o clique numa issue pede um campo — o inspetor (ou o diálogo de configurações) acabou de renderizar com a
+  // seleção nova; `revealFirst` espera o campo aparecer, abre a seção, rola até ele, foca e destaca.
+  const focus = state.focus;
+  useEffect(() => (focus === undefined ? undefined : revealFirst(focus.fieldIds)), [focus]);
   /** Seleção vinda de uma lista: traz a parede para a vista e, em tela estreita, abre o inspetor. */
-  const selectFromList = (selection: Selection): void => {
-    select(selection);
+  const selectFromList = (selection: Selection, focus?: readonly string[]): void => {
+    select(selection, focus);
     const last = selectedWallIds(selection).at(-1);
     if (last !== undefined) canvas.current?.focusWall(last);
     if (!wide) setTab('inspector');
   };
-  const openSettings = (): void => select({ kind: 'project' });
+  const openSettings = (focus?: readonly string[]): void => select({ kind: 'project' }, focus);
   const settingsOpen = state.selection.kind === 'project';
   const setupVisible = needsData && outcome !== undefined && !dismissed;
 
@@ -157,9 +162,9 @@ export function Workspace() {
           checking={check.status === 'checking'}
           selection={state.selection}
           onSelect={selectFromList}
-          onAction={(a) => {
+          onAction={(a, focus) => {
             if (a === 'projectData' && outcome !== undefined) setDismissed(false);
-            else openSettings();
+            else openSettings(focus);
           }}
           current={{ windSpeed: draft.config.building?.windSpeed, headerHeight: draft.config.headerHeight }}
           partial={partial}

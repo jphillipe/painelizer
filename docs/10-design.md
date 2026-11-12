@@ -230,6 +230,11 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   não ocorrências; o chip do topo idem, com as paredes no `title`. "Fine to leave" não acende parede na planta nem
   conta na lista de paredes, mas aparece no inspetor com a etiqueta. Enquanto há problema e alguma parede foi
   montada, a lista termina com "Walls with a problem are not framed yet — they may add warnings once fixed."
+  **O clique leva ao campo** (S47): chip, título de linha única e linha de "Details" selecionam a parede / abertura
+  e pedem o campo que resolve a issue (`lib/editor/issue-targets.ts`: família → `id` do campo); o inspetor abre a
+  seção, rola até o campo, põe o cursor nele e o destaca por 1,8 s (contorno gold parado + fundo gold-100 que
+  esmaece; `[data-field-focus]` em `globals.css`). Issue de projeto: o botão "Open project settings" abre o
+  diálogo no campo. Toda família tem "o que é" e "como resolver" (teste de cobertura em `issue-help.test.ts`).
   Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
 - **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;
