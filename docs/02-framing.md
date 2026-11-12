@@ -88,6 +88,10 @@
     divisões, a de painel mais longo menor, só com marcas múltiplas de `module` da marca 0 e, se não há, qualquer
     marca; empate pela divisão mais próxima das partes iguais. Ids `W01-P1`, `W01-P2`…; parede de um painel só
     mantém o id (S16 fecha a numeração).
+  - **Divisão que não emenda** (S43): se um painel da divisão escolhida tem plate acima do estoque sem stud onde
+    emendar (`SPLICE_NO_STUD`), o trecho é descartado e vale a divisão seguinte pelo mesmo critério — inclusive
+    dividir a parede que cabia num painel só. Sem divisão que emende, o erro é o da emenda. Quebras forçadas
+    (`panelBreaks`) não são trocadas.
   - **Lap da double top** (hipótese P23): a do painel i avança `lap` sobre o seguinte e a do i+1 começa aí;
     dentro de um header ou faixa de T encurta para `minLap`, senão vai à marca seguinte ao obstáculo. Faixa de T
     que cai no lap é cortada no painel da esquerda.

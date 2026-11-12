@@ -211,7 +211,8 @@ Valem quando nem o schedule nem o fabricante dão o RO (`DEFAULT_ROUGH_OFFSET` e
   comprimentos parecidos, ou enche o primeiro até 20' e deixa o resto (toco de 4'-5" no fim)? Quebra sempre em
   múltiplo de 48" da quina, mesmo que isso faça um painel a mais? — hipótese: equilibrado — menor número de
   painéis que cabe em 240" (e no peso), depois o painel mais longo menor, usando só marcas múltiplas de 48" e, se
-  não há divisão com elas, qualquer marca; `rules/split.ts` (`chooseBreaks`) — S15. Trocar o critério é mexer só
+  não há divisão com elas, qualquer marca; divisão com painel que não emenda é descartada e vale a seguinte (S43,
+  2026-11-11); `rules/split.ts` (`chooseBreaks`) — S15. Trocar o critério é mexer só
   em `chooseBreaks` e recalcular `house-28x40` e `wall-480-split`.
 - [ ] **P36 — Posição das emendas de plate.** Dentro do que P14 respondeu (sobre stud; top e double top
   defasadas ≥ 24", 48" se possível): a fábrica prefere a peça maior à esquerda (como o motor faz), peças

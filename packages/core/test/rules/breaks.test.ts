@@ -204,3 +204,25 @@ describe('forcedBreaks (S29: lista completa do revisor)', () => {
     expect(codeOf(() => forced([Number.NaN]))).toMatchObject({ code: 'VALUE_INVALID', field: 'panelBreaks' });
   });
 });
+
+describe('chooseBreaks — trecho descartado (S43: painel que não emenda)', () => {
+  const choose = (length: number, candidates: number[], rejected: (a: number, b: number) => boolean) =>
+    chooseBreaks({ length, candidates, isModule: marks16, wallId: 'W', rejected }, cfg);
+  const pair = (a: number, b: number) => (x: number, y: number) => x === a && y === b;
+
+  it('divisão com trecho descartado não serve: vale a seguinte pelo mesmo critério', () => {
+    // 342 com as marcas da I2: sem descarte 48/288; com o trecho 48–288 descartado não sobra divisão só com
+    // múltiplas de 48, e entre todas as marcas ganha a de menor painel mais longo (80/256 → 176).
+    const marks = [16, 32, 48, 64, 80, 256, 272, 288, 304, 320, 336];
+    expect(choose(342, marks, () => false)).toEqual([48, 288]);
+    expect(choose(342, marks, pair(48, 288))).toEqual([80, 256]);
+  });
+
+  it('parede inteira descartada: divide mesmo cabendo no comprimento', () => {
+    expect(choose(240, every16(224), pair(0, 240))).toEqual([96]);
+  });
+
+  it('todos os trechos descartados: CANNOT_SPLIT', () => {
+    expect(() => choose(240, every16(224), () => true)).toThrow(expect.objectContaining({ code: 'CANNOT_SPLIT' }));
+  });
+});

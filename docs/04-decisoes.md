@@ -408,3 +408,16 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   "três pontas no mesmo ponto" (que esperava erro) foi trocado com a confirmação do humano; quatro pontas num ponto
   seguem `WALL_END_TWO_JOINTS`; `ends` que contradiz a emenda é `SPLIT_TEE_ENDS`. Era o que impedia o Matilda de fechar
   (6 pontos, todos assim).
+
+- **2026-11-11 — Divisão em painéis que não emenda é descartada (S43; ajuste do critério P35, pedido do humano no
+  Matilda Pines).** A escolha das quebras não sabia se o painel resultante emendava: na I2 (342") as múltiplas de
+  48 davam 48/288 e o painel de 240" — três faixas de T e duas portas — não tinha stud a 24" de todas as juntas da
+  double top (`SPLICE_NO_STUD`), embora 80/256 (176" no maior, sem emenda nenhuma) existisse. Agora `splitWall`
+  monta a divisão escolhida e, se um trecho não emenda, descarta **o trecho** (`chooseBreaks` com `rejected`) e pede
+  a seguinte pelo mesmo critério (menor número de painéis → só múltiplas de `module` → menor painel mais longo);
+  parede que cabia num painel só e não emenda é dividida. Sem divisão que emende, o erro mostrado é o da emenda da
+  primeira escolha (o revisor resolve com estoque maior ou quebra à mão), não `CANNOT_SPLIT`. Quebras forçadas
+  (`panelBreaks`) não são trocadas. O descarte é por trecho, não por divisão: a emenda de um trecho depende pouco
+  dos vizinhos (só do lap que entra e sai), e descartar o trecho inteiro é conservador e termina (cada volta
+  descarta um trecho novo). Rejeitado: limitar o painel ao maior estoque (mudaria `wall-480-split`, 2 × 240 com
+  emenda, confirmado pela fábrica na P14) e emendar sobre cripple (não é stud de altura inteira). Nenhum fixture mudou.

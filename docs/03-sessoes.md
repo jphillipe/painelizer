@@ -1707,3 +1707,16 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   Fora da regra e ainda bloqueando os painéis do Matilda (avisado ao humano): 15 portas internas com header deitado a
   24 1/8" da top plate (limite 24", R602.7.4), largura do prédio gravada como 50" (digitada sem apóstrofo) e emenda
   da top plate de I2 sem stud livre com estoque de 16'.
+
+- [x] **S43 — Divisão em painéis que não emenda é descartada (core; ajuste do critério P35).** Pedido do humano em
+  2026-11-11, ainda no Matilda Pines: a I2 (342", três paredes em T e duas portas no meio) parava em
+  `SPLICE_NO_STUD`. Causa (investigada antes de mexer): `chooseBreaks` escolhia 48/288 (múltiplas de 48) sem saber
+  se o painel de 240" emendava; nele as três faixas de T cortam a double top e nenhum stud fica a 24" de todas as
+  juntas (o king mais próximo falha por 1"). Das 15 divisões em três painéis, 8 funcionam. Abordagem confirmada pelo
+  humano. **Core**: `chooseBreaks` ganhou `rejected(a, b)` (trecho que não serve, como o que passa do comprimento
+  ou do peso); `splitWall` monta a divisão escolhida e, se um trecho lança `SPLICE_NO_STUD`, descarta o trecho e
+  pede a divisão seguinte — até montar ou não sobrar divisão (aí o erro é o da emenda da primeira escolha). Parede
+  de um painel só que não emenda passa a ser dividida. Quebras forçadas não são trocadas. **Testes** (escritos
+  antes e vistos falhar): 4 casos em `splitWall.test.ts` (a I2, a forçada, a de um painel, sem divisão) e 3 em
+  `breaks.test.ts`. Nenhum fixture mudou. **Conferido** com a planta salva do Matilda (estoque padrão de 16'): I2 sai
+  em 80 / 176 / 86, sem plate emendada; a casa inteira gera (headers provisórios só na cópia de teste).

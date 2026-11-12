@@ -14,7 +14,9 @@
  *   parede cabe (todos ≤ `maxLength` e, se houver, ≤ `maxWeight`); entre as divisões com esse número, a que
  *   minimiza o painel mais longo, preferindo só marcas múltiplas de `module` contadas da marca 0 do layout e,
  *   se com elas não há divisão, qualquer marca. Empate: quebras mais próximas da divisão em partes iguais.
- *   Sem divisão possível → `RangeError` com a parede e o trecho sem candidato.
+ *   Sem divisão possível → `RangeError` com a parede e o trecho sem candidato. Trecho `rejected` (S43: painel
+ *   cuja plate não tem stud para emendar, descoberto por `splitWall`) não serve, como o que passa do comprimento
+ *   ou do peso — inclusive a parede inteira, que então é dividida.
  * - **Quebras forçadas** (`forcedBreaks`, S29): `wall.panelBreaks` é a lista completa — o motor não escolhe nem
  *   acrescenta. Cada uma tem de ser candidata (`whyNotBreak` diz por que não é: ordem, ponta, marca, abertura,
  *   T ou peça) e nenhum trecho pode passar de `maxLength`; peso acima de `maxWeight` continua só aviso.
@@ -165,6 +167,8 @@ export interface BreakOptions {
   isModule: (c: number) => boolean;
   /** Peso estimado do trecho `[a, b]`, lb. Ausente = sem limite de peso. */
   weightOf?: (a: number, b: number) => number;
+  /** Trecho `[a, b]` que não serve como painel (S43: a plate dele não tem stud para emendar). */
+  rejected?: (a: number, b: number) => boolean;
   /** Para as mensagens de erro. */
   wallId?: string;
 }
@@ -175,9 +179,11 @@ export interface BreakOptions {
  * @throws RangeError sem divisão possível
  */
 export function chooseBreaks(opts: BreakOptions, cfg: PanelConfig): number[] {
-  const { length, candidates, isModule, weightOf } = opts;
+  const { length, candidates, isModule, weightOf, rejected } = opts;
   const segmentOk = (a: number, b: number): boolean =>
-    b - a <= cfg.maxLength + EPS && (cfg.maxWeight === undefined || weightOf === undefined || weightOf(a, b) <= cfg.maxWeight + EPS);
+    b - a <= cfg.maxLength + EPS &&
+    (cfg.maxWeight === undefined || weightOf === undefined || weightOf(a, b) <= cfg.maxWeight + EPS) &&
+    rejected?.(a, b) !== true;
 
   if (segmentOk(0, length)) return [];
 

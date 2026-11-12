@@ -17,6 +17,9 @@
  * 4. `splicePlates` emenda as plates mais longas que o maior `config.stockLengths` (P14) e `panelWeight`
  *    estima o peso (P8; com a chapa, S38 — cada trecho monta as suas chapas, que acabam na junta, P49). Painel acima de `config.panel.maxWeight` só pelo peso real (a escolha das quebras usa
  *    uma estimativa por trecho) ganha o aviso `PANEL_OVERWEIGHT`.
+ * 5. Divisão automática com painel que não emenda (`SPLICE_NO_STUD`) é descartada (S43): o trecho sai da escolha e
+ *    `chooseBreaks` dá a divisão seguinte pelo mesmo critério — inclusive dividir a parede que cabia num painel só.
+ *    Sem divisão que emende, o erro é o da emenda da primeira escolha. Quebras forçadas não são trocadas.
  *
  * Ids (S16): `{level}-{wallId}-P{n}` — pavimento (`Wall.level`, default 1), parede e ordem do painel de start
  * para end, sempre com `-P1`, mesmo em parede de um painel só (`1-W01-P1`). `Panel.wallOffset` = `a`.
@@ -100,23 +103,63 @@ function splitNudged(
       { length: wall.length, reject: (x) => whyNotBreak(x, whole, config, ctx), wallId: wall.id },
       cfg,
     );
-    return { panels: panelsAt(forced, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
+    // A lista do revisor não é trocada: trecho que não emenda é o erro da emenda.
+    try {
+      return { panels: panelsAt(forced, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
+    } catch (e) {
+      throw e instanceof UnspliceableSegment ? e.error : e;
+    }
   }
   const isModule = (c: number): boolean => {
     const k = (c - origin) / cfg.module;
     return Math.abs(k - Math.round(k)) < 1e-6;
   };
-  const breaks = chooseBreaks(
-    {
-      length: wall.length,
-      candidates,
-      isModule,
-      wallId: wall.id,
-      ...(cfg.maxWeight === undefined ? {} : { weightOf: (a: number, b: number) => estimateWeight(whole, a, b, config, cfg) }),
-    },
-    cfg,
-  );
-  return { panels: panelsAt(breaks, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
+  // Divisão com painel que não emenda é descartada (S43): o trecho sai da escolha e vale a divisão seguinte pelo
+  // mesmo critério. Cada volta descarta um trecho novo, logo termina.
+  const rejected: [number, number][] = [];
+  let firstError: EngineError | undefined;
+  for (;;) {
+    let breaks: number[];
+    try {
+      breaks = chooseBreaks(
+        {
+          length: wall.length,
+          candidates,
+          isModule,
+          wallId: wall.id,
+          ...(cfg.maxWeight === undefined ? {} : { weightOf: (a: number, b: number) => estimateWeight(whole, a, b, config, cfg) }),
+          ...(rejected.length === 0
+            ? {}
+            : { rejected: (a: number, b: number) => rejected.some(([x, y]) => Math.abs(x - a) < EPS && Math.abs(y - b) < EPS) }),
+        },
+        cfg,
+      );
+    } catch (e) {
+      // Nenhuma divisão emenda: o erro que o revisor resolve é o da emenda (estoque maior ou quebra à mão).
+      if (firstError !== undefined && e instanceof EngineError && e.code === 'CANNOT_SPLIT') throw firstError;
+      throw e;
+    }
+    try {
+      return { panels: panelsAt(breaks, wall, whole, config, tables, headers, strips, stock, level, cfg), candidates };
+    } catch (e) {
+      if (!(e instanceof UnspliceableSegment)) throw e;
+      firstError ??= e.error;
+      rejected.push([e.a, e.b]);
+    }
+  }
+}
+
+/** O trecho `[a, b]` da parede tem plate acima do estoque sem stud onde emendar (`SPLICE_NO_STUD`). */
+class UnspliceableSegment extends Error {
+  readonly a: number;
+  readonly b: number;
+  readonly error: EngineError;
+  constructor(a: number, b: number, error: EngineError) {
+    super(error.message);
+    this.a = a;
+    this.b = b;
+    this.error = error;
+  }
 }
 
 /** Os painéis da parede com as quebras dadas: lap da double top em cada junta, trechos, emendas e peso. */
@@ -133,7 +176,16 @@ function panelsAt(
   cfg: PanelConfig,
 ): Panel[] {
   const origin = wall.layoutOrigin ?? 0;
-  if (breaks.length === 0) return [finish({ ...whole, id: panelId(level, wall.id, 1), level }, wall.id, 0, stock, cfg)];
+  // Emenda impossível sai com o trecho, para a escolha automática descartar a divisão (S43).
+  const finishAt = (panel: Panel, a: number, b: number): Panel => {
+    try {
+      return finish(panel, wall.id, a, stock, cfg);
+    } catch (e) {
+      if (e instanceof EngineError && e.code === 'SPLICE_NO_STUD') throw new UnspliceableSegment(a, b, e);
+      throw e;
+    }
+  };
+  if (breaks.length === 0) return [finishAt({ ...whole, id: panelId(level, wall.id, 1), level }, 0, wall.length)];
 
   const marks = [...new Set([...layoutMarks(wall.length, config.studSpacing, origin), ...supportCenters(whole.members)])].sort(
     (a, b) => a - b,
@@ -162,7 +214,7 @@ function panelsAt(
       strips,
     });
     const { panel } = framePanel(segment.wall, config, tables, segment.headers);
-    return finish({ ...panel, id: ids[i]!, wallId: wall.id, level }, wall.id, a, stock, cfg);
+    return finishAt({ ...panel, id: ids[i]!, wallId: wall.id, level }, a, b);
   });
 }
 

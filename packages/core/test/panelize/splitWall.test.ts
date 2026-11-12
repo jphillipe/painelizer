@@ -288,3 +288,67 @@ describe('wallBreakCandidates (S29: o que o editor oferece)', () => {
     expect(wallBreakCandidates({ ...split480.wall, panelBreaks: [192] }, config)).toEqual(wallBreakCandidates(split480.wall, config));
   });
 });
+
+describe('splitWall — divisão que não emenda é descartada (S43)', () => {
+  // A I2 real do Matilda Pines (2026-11-11): 342", três paredes em T (I3, I1, I5) e duas portas no meio.
+  const door = (id: string, offset: number) =>
+    ({ id, type: 'door', offset, roughWidth: 34, roughHeight: 81.5, header: { section: '2x6', plies: 2 } }) as const;
+  const i2: Wall = {
+    id: 'I2',
+    length: 342,
+    height: 97.125,
+    section: '2x4',
+    exterior: false,
+    bearing: false,
+    openings: [door('D1', 90.75), door('D2', 170)],
+    joints: {
+      tees: [
+        { x: 136.5, width: 3.5, wallId: 'I3' },
+        { x: 165.25, width: 3.5, wallId: 'I1' },
+        { x: 231, width: 3.5, wallId: 'I5' },
+      ],
+    },
+  };
+  const plates = (ms: Member[]) => ms.filter((m) => /Plate$/.test(m.role));
+
+  it('48/288 (múltiplas de 48) deixa o painel de 240 sem stud para emendar: o motor passa à divisão seguinte, 80/256', () => {
+    // No painel 48–288 as três faixas de T cortam a double top e nenhum stud fica a 24" de todas as juntas.
+    const panels = splitWall(i2, config);
+    expect(panels.map((p) => [p.wallOffset, p.length])).toEqual([[0, 80], [80, 176], [256, 86]]);
+    // Nenhum painel passa de 192: nenhuma plate emendada.
+    for (const p of panels) for (const m of plates(p.members)) expect(m.length, `${p.id} ${m.role}`).toBeLessThanOrEqual(192);
+  });
+
+  it('quebra forçada que não emenda continua erro: a lista do revisor não é trocada', () => {
+    expect(() => splitWall({ ...i2, panelBreaks: [48, 288] }, config)).toThrow(
+      expect.objectContaining({ code: 'SPLICE_NO_STUD' }),
+    );
+  });
+
+  it('parede de um painel só que não emenda é dividida em dois', () => {
+    // 240" com as três faixas de T e as portas: a top plate de 240 não acha stud a 24" das juntas da double top.
+    const one: Wall = {
+      ...i2,
+      length: 240,
+      openings: [door('D1', 42.75), door('D2', 122)],
+      joints: { tees: [{ x: 88.5, width: 3.5, wallId: 'I3' }, { x: 117.25, width: 3.5, wallId: 'I1' }, { x: 183, width: 3.5, wallId: 'I5' }] },
+    };
+    const panels = splitWall(one, config);
+    expect(panels.length).toBe(2);
+    expect(panels.reduce((s, p) => s + p.length, 0)).toBe(240);
+  });
+
+  it('sem nenhuma divisão que emende, o erro é o da emenda (SPLICE_NO_STUD), não o de divisão', () => {
+    // 100" com estoque de 96": a janela toma as marcas (sem candidato a quebra) e os kings ficam a < 24" das pontas.
+    const short: Wall = {
+      id: 'W',
+      length: 100,
+      height: 97.125,
+      section: '2x4',
+      exterior: false,
+      bearing: false,
+      openings: [{ id: 'J1', type: 'window', offset: 20, roughWidth: 60, roughHeight: 36, header: { section: '2x6', plies: 2 } }],
+    };
+    expect(() => splitWall(short, { ...config, stockLengths: [96] })).toThrow(expect.objectContaining({ code: 'SPLICE_NO_STUD' }));
+  });
+});
