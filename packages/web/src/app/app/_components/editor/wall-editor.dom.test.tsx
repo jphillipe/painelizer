@@ -222,7 +222,7 @@ describe('WallEditor: contagem por causa (S46)', () => {
     render(<Editor state={{ ...s, revision: 0 }} checked={fine} />);
     expect(selectedTab()).toMatch(/Walls/);
     expect(screen.getByText(/Ready ·/)).toBeTruthy();
-    expect(screen.queryByText(/\d+ warnings?$/)).toBeNull();
+    expect(screen.queryByText(/\d+ to review$/)).toBeNull();
     expect((screen.getByRole('button', { name: /Generate panels/ }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues1');
   });
@@ -290,5 +290,49 @@ describe('WallEditor: clique que leva ao campo (S47)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Studs overlap' }));
     await waitFor(() => expect(document.querySelector('aside[aria-label="Properties"]')?.textContent).toContain('W04'));
     expect(document.querySelector('[data-field-focus]')).toBeNull();
+  });
+});
+
+/** S46 (revisão): a frase de lista parcial sai da própria checagem — problema + alguma parede montada + alguma não. */
+describe('WallEditor: lista parcial (S46)', () => {
+  const sentence = 'Walls with a problem are not framed yet — they may add warnings once fixed.';
+  const problem = {
+    source: 'engine' as const,
+    code: 'HEADER_OUT_OF_TABLE',
+    message: 'x',
+    wallId: 'W02',
+    openingId: 'J2',
+    stage: 'wall' as const,
+    params: { why: 'span' },
+  };
+  const framed = (wallId: string) => ({ wallId, breaks: [], candidates: [], manual: false });
+  const notFramed = (wallId: string) => ({ wallId, candidates: [], manual: false });
+  const show = (walls: { wallId: string; breaks?: number[]; candidates: number[]; manual: boolean }[]): void => {
+    const failed: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: false, problems: [problem], warnings: [], walls },
+    };
+    render(<Editor state={{ ...load(initialEditorState, 1), revision: 0 }} checked={failed} />);
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+  };
+
+  it('uma parede parou no erro e outra foi montada: a lista avisa que ainda podem surgir avisos', () => {
+    show([notFramed('W02'), framed('W03')]);
+    expect(screen.getByText(sentence)).toBeTruthy();
+  });
+
+  it('todas as paredes foram montadas (erro só na lista de materiais): a frase não aparece', () => {
+    show([framed('W02'), framed('W03')]);
+    expect(screen.queryByText(sentence)).toBeNull();
+  });
+
+  it('nenhuma parede foi montada: não há aviso nenhum a esperar de outra parede, a frase não aparece', () => {
+    show([notFramed('W02'), notFramed('W03')]);
+    expect(screen.queryByText(sentence)).toBeNull();
   });
 });

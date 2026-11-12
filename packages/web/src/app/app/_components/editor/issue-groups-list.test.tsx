@@ -78,7 +78,7 @@ describe('IssueGroupsList — por causa (S46)', () => {
     expect(html.slice(html.indexOf('Fine to leave (1)'))).toContain('Studs overlap');
     expect(html.slice(0, html.indexOf('Fine to leave (1)'))).not.toContain('Studs overlap');
     // frases com os valores em comum
-    expect(html).toContain("The building is 50'-0\" wide, outside IRC table R602.7(1).");
+    expect(html).toContain("The building is 50'-0\" wide with 30 psf ground snow, outside IRC table R602.7(1).");
     expect(html).toContain('18 doors (types A, B, C): flat header 24 1/8" below the top plate, over the 24" limit.');
     expect(html).toContain("18 doors (types A, B, C): RO height 6'-10 1/2\", header at 6'-9 1/2\".");
     // 18 chips de abertura (não 15 de parede), recolhidos
@@ -109,5 +109,24 @@ describe('IssueGroupsList — por causa (S46)', () => {
     const sentence = 'Walls with a problem are not framed yet — they may add warnings once fixed.';
     expect(render([...headers, ...cripples(2)], true)).toContain(sentence);
     expect(render([...headers, ...cripples(2)])).not.toContain(sentence);
+  });
+});
+
+/** S46 (revisão): a abertura que a leitura não posicionou não existe no draft — botão "Add", sem chip quebrado, em "To review". */
+describe('IssueGroupsList — abertura citada que não está no projeto (S46)', () => {
+  const walls: IdIndex = { walls: ['W1', 'W2'], openings: new Map([['W1', []], ['W2', []]]) };
+  const unplaced = (wallId: string, openingId: string): Issue =>
+    issueFromNotice({ source: 'extraction', code: 'OPENING_UNPLACED', message: 'x', wallId, openingId, params: { tag: 'U2' } }, 'warning', walls);
+
+  it('duas aberturas sem posição: um botão "Add" por abertura, chips das paredes (não de aberturas que não existem)', () => {
+    const html = renderToStaticMarkup(
+      <IssueGroupsList groups={groupIssues([unplaced('W1', 'W1-U2-1'), unplaced('W2', 'W2-U2-1')], walls)} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} onQuickFix={() => {}} />,
+    );
+    expect(html).toContain('1 to review');
+    expect(html).toContain('To review');
+    expect(html).not.toContain('Must fix');
+    expect(html.match(/<button[^>]*title="Add W\d-U2-1 at the center of W\d[^"]*"/g)).toHaveLength(2);
+    expect(html.match(/<button[^>]*>W\d<\/button>/g)).toHaveLength(2);
+    expect(html.match(/<button[^>]*>W\d-U2-1<\/button>/g)).toBeNull();
   });
 });

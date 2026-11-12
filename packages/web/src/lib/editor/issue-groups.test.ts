@@ -140,7 +140,13 @@ describe('issues por causa (S46)', () => {
     const width = { why: 'width', width: 600, snow: 30, table: 'R602.7(1)' };
     const same = groupIssues([outOfTable('X1', width), outOfTable('X2', width)], doorIds, { openings: info });
     expect(same[0]).toMatchObject({ tier: 'fix', tags: ['E2', 'F'] });
-    expect(same[0]!.summary).toBe("The building is 50'-0\" wide, outside IRC table R602.7(1).");
+    expect(same[0]!.summary).toBe("The building is 50'-0\" wide with 30 psf ground snow, outside IRC table R602.7(1).");
+    // a mesma razão do motor ('width') vale quando é a neve que sai da tabela: a frase cita as duas medidas
+    const snowy = groupIssues([outOfTable('X1', { why: 'width', width: 288, snow: 90, table: 'R602.7(1)' })], doorIds, { openings: info });
+    expect(snowy[0]!.summary).toBe("The building is 24'-0\" wide with 90 psf ground snow, outside IRC table R602.7(1).");
+    // tabela de parede interna: sem neve no parâmetro
+    const interior = groupIssues([outOfTable('X1', { why: 'width', width: 600, table: 'R602.7(2)' })], doorIds, { openings: info });
+    expect(interior[0]!.summary).toBe("The building is 50'-0\" wide, outside IRC table R602.7(2).");
     const twoTables = groupIssues([outOfTable('X1', width), outOfTable('X2', { why: 'width', width: 600, table: 'R602.7(2)' })], doorIds, { openings: info });
     expect(twoTables[0]!.summary).toBe("The building is 50'-0\" wide, outside the IRC header tables.");
     const span = groupIssues([outOfTable('X1', { why: 'span' })], doorIds, { openings: info });

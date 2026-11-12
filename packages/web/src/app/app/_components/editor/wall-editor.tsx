@@ -103,8 +103,10 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
   const causes = causeCounts(groups);
   const problemWalls = new Set(issues.filter((i) => i.severity === 'problem').flatMap((i) => [i.wallId, ...(i.alsoWalls ?? [])].filter((w) => w !== undefined))).size;
   const counts = { problems: causes.fix, warnings: causes.review, problemWalls };
-  // A checagem achou problema mas montou alguma parede: as que têm problema ainda podem trazer avisos.
-  const partial = check.result?.ok === false && (check.result.walls ?? []).some((w) => w.breaks !== undefined);
+  // A checagem achou problema, montou alguma parede e deixou outra sem montar: essa ainda pode trazer avisos.
+  // (Erro só na lista de materiais ou nos arquivos: todas foram montadas, não há o que esperar.)
+  const checkedWalls = check.result?.ok === false ? (check.result.walls ?? []) : [];
+  const partial = checkedWalls.some((w) => w.breaks !== undefined) && checkedWalls.some((w) => w.breaks === undefined);
   // O que o motor vai exigir, lido do próprio draft (antes da checagem): o card de setup pede tudo de uma vez.
   const needs = projectDataNeeds(draft);
   const value: EditorContextValue = {

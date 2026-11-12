@@ -230,7 +230,7 @@ function StatusChip({ check, problems, problemWalls, warnings }: { check: CheckS
       </Badge>
       {warnings > 0 ? (
         <Badge key="warnings" variant="warning" className="animate-pop">
-          <TriangleAlertIcon /> {warnings} warning{warnings === 1 ? '' : 's'}
+          <TriangleAlertIcon /> {warnings} to review
         </Badge>
       ) : null}
     </>

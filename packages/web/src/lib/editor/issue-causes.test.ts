@@ -100,7 +100,7 @@ describe('issues por causa, pela checagem real (S46)', () => {
     ]);
     expect(causeCounts(groups)).toEqual({ fix: 1, review: 2, fine: 1 });
     expect(groups.map((g) => g.summary)).toEqual([
-      'The building is 50\'-0" wide, outside IRC table R602.7(1).',
+      'The building is 50\'-0" wide with 30 psf ground snow, outside IRC table R602.7(1).',
       '3 doors (types A, B): flat header 24 1/8" below the top plate, over the 24" limit.',
       '3 doors (types A, B): RO height 6\'-10 1/2", header at 6\'-9 1/2".',
       undefined,

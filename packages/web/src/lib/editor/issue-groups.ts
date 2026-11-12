@@ -253,7 +253,9 @@ const SUMMARIES: Readonly<Record<string, (s: SummaryInput) => string | undefined
     const width = num(common['width']);
     if (common['why'] !== 'width' || width === undefined) return undefined;
     const table = typeof common['table'] === 'string' ? `IRC table ${common['table']}` : 'the IRC header tables';
-    return `The building is ${formatMeasure(width)} wide, outside ${table}.`;
+    // O motor dá a razão 'width' também quando é a neve que sai da tabela: a frase cita as duas medidas.
+    const snow = num(common['snow']);
+    return `The building is ${formatMeasure(width)} wide${snow === undefined ? '' : ` with ${snow} psf ground snow`}, outside ${table}.`;
   },
   FLAT_HEADER_CRIPPLES: ({ common, subject }) => {
     const gap = num(common['gap']);

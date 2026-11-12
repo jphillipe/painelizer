@@ -32,7 +32,8 @@ describe('EditorTopBar (SSR)', () => {
     const check: CheckState = { status: 'done', result: { ok: true, projectName: 'Ringgold St', panels: [{ id: '1-W01-P1', wallId: 'W01', pieces: 1 }] as never, warnings: [{ code: 'STUDS_OVERLAP', message: 'w' }] }, revision: 1, stale: false };
     const html = renderToStaticMarkup(<EditorTopBar {...base} check={check} problems={0} warnings={1} ready />);
     expect(html).toContain('Ready · 1 panels');
-    expect(html).toContain('1 warning');
+    expect(html).toContain('1 to review');
+    expect(html).not.toContain('1 warning');
     expect(html).not.toMatch(/<button[^>]* disabled=""[^>]*>Generate panels/);
     const data = renderToStaticMarkup(<EditorTopBar {...base} needsData check={check} problems={30} warnings={0} ready={false} />);
     expect(data).toContain('Fill in the project data first.');
