@@ -462,3 +462,9 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   chip de parede de uma issue de projeto continua selecionando a parede). Toda família passa a ter "como resolver"
   citando o campo pelo nome da tela, garantido por teste. Rejeitado: um formulário dentro de cada issue (duplicaria
   o inspetor) e controlar as seções do inspetor por estado React (bastou abrir o `<details>` pelo DOM).
+- **2026-11-12 — Erro de header é relatado para todas as aberturas da parede (S48; pedido do humano).** O motor
+  continua lançando no primeiro erro e a parede continua sem painel; o que muda é o relato: `headerErrors` (core)
+  resolve o header de cada abertura num `try` e o CLI usa a lista quando o erro lançado é um dos de header. Só os
+  erros de header entram assim, porque são os únicos independentes por abertura — geometria e vizinhança dependem
+  das outras aberturas e continuam um por parede. Rejeitado: fazer `panelizeWall` seguir depois do erro e montar a
+  parede "sem" a abertura (seria um painel que não corresponde ao projeto).

@@ -1790,3 +1790,17 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   o app não conhece (`ENGINE_INTERNAL` agora tem ajuda). **Conferido** na tela com a planta do Matilda (`out/s47/`):
   o chip `W1-E2-1` leva ao campo "Header" (`o-W1-E2-1-hby`) visível e destacado; a porta `I1-123.2` no aviso de
   altura leva a "Top of RO".
+
+- [x] **S48 — O motor lista todas as aberturas com erro de header de uma parede (core, cli; não é regra de framing).**
+  Pedido do humano em 2026-11-12 (o app mostrava 10 aberturas no Matilda quando são 13: uma por parede). O header de
+  cada abertura é resolvido sozinho (`resolveOpeningHeader`), mas `resolveHeaders` para no primeiro erro. Plano em
+  `docs/superpowers/plans/2026-11-12-all-header-errors-s48.md`. **Core**: `headerErrors(wall, config, tables?)`
+  (`panelize/panelizeWall.ts`), pura, devolve um `EngineError` por abertura que falha, com parede e abertura; não
+  esconde `TypeError`. **CLI** (`build.ts`, `panelize`): quando a parede para num erro de abertura que é um dos de
+  header, entram os de todas as aberturas; erro de outra natureza (aberturas coladas, planta) continua um por
+  parede. Nenhuma peça, medida ou aviso de painel muda; fixtures e snapshots intactos. **Testes** (vistos falhar
+  antes): `headerErrors` (duas fora da tabela, uma com header do projeto, dado faltando, parede resolvida, parede
+  não portante, `TypeError`); `panelizeProject` (parede solta, dado faltando, janelas coladas, casa em planta com as
+  seis aberturas das externas portantes); checagem do app. **Conferido** com a planta salva do Matilda: 13
+  `HEADER_OUT_OF_TABLE` (antes 10) e os mesmos 40 avisos. Feito sem a confirmação prévia do humano, que pediu para
+  seguir sem esperar; não é regra de framing.

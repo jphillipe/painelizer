@@ -92,6 +92,27 @@ export function resolveHeaders(
 }
 
 /**
+ * Os erros de header de TODAS as aberturas da parede (S48). `resolveHeaders` para no primeiro; como o header de
+ * cada abertura é resolvido sozinho, dá para relatar todos de uma vez — quem revisa vê as 13 aberturas que pedem
+ * header do engenheiro, não só a primeira de cada parede. Não muda framing nenhum: a parede continua sem painel.
+ *
+ * @returns um `EngineError` por abertura que falha, na ordem de `wall.openings`, com `wallId` e `openingId`
+ * @throws o que não é erro de regra (`TypeError` de dado quebrado); `RangeError` avulso fica com o caminho normal
+ */
+export function headerErrors(wall: Wall, config: Config, tables?: readonly HeaderTable[] | HeaderTables): EngineError[] {
+  const errors: EngineError[] = [];
+  for (const o of wall.openings) {
+    try {
+      resolveOpeningHeader(o, wall, config, tables);
+    } catch (e) {
+      if (e instanceof EngineError) errors.push(e.at({ wallId: wall.id, openingId: o.id }));
+      else if (!(e instanceof RangeError)) throw e;
+    }
+  }
+  return errors;
+}
+
+/**
  * O header vem antes da geometria: os jacks (NJ) e os kings dele definem a largura de cada zona.
  * Usado por `panelizeWall` e por `panelizeHouse` (tee na zona de abertura, S13).
  *

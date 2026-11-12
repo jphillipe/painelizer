@@ -434,3 +434,63 @@ describe('panelizeProject.walls (S29: quebras e candidatos para o editor)', () =
     expect(w2).toMatchObject({ wallId: 'W2', breaks: [], manual: false });
   });
 });
+
+/**
+ * S48: quando a parede para no erro de header de uma abertura, o relato traz o de todas as aberturas da parede
+ * (cada header é resolvido sozinho). Erro que não é de header continua um por parede.
+ */
+describe('panelizeProject: todas as aberturas com erro de header (S48)', () => {
+  const HOUSE = new URL('../examples/house-28x40.json', import.meta.url);
+  const house = (): Project => parseProject(readFileSync(HOUSE, 'utf8'), 'house-28x40.json');
+  const loose = (openings: object[], building: object | null = { groundSnowLoad: 30, buildingWidth: 600 }): Project =>
+    parseProject(
+      JSON.stringify({
+        name: 'x',
+        config: { studSpacing: 16, studLength: [92.625], headerHeight: 82.5, ...(building === null ? {} : { building }) },
+        walls: [{ id: 'W1', length: 240, height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 1, openings }],
+      }),
+      'x.json',
+    );
+  const win = (id: string, offset: number, extra: object = {}): object => ({ id, type: 'window', offset, roughWidth: 36, roughHeight: 48, ...extra });
+
+  it('parede solta com duas janelas num prédio fora da tabela: um problema por abertura', () => {
+    const { problems } = panelizeProject(loose([win('A', 24), win('B', 120)]));
+    expect(problems.map((p) => [p.code, p.wallId, p.openingId, p.stage])).toEqual([
+      ['HEADER_OUT_OF_TABLE', 'W1', 'A', 'wall'],
+      ['HEADER_OUT_OF_TABLE', 'W1', 'B', 'wall'],
+    ]);
+    expect(problems[1]!.message).toMatch(/^Wall W1, opening B: /);
+  });
+
+  it('a abertura que já tem header do projeto não entra', () => {
+    const { problems } = panelizeProject(loose([win('A', 24, { header: { section: '2x10', plies: 2 } }), win('B', 120)]));
+    expect(problems.map((p) => p.openingId)).toEqual(['B']);
+  });
+
+  it('dado do projeto faltando: uma linha por abertura, sem repetir', () => {
+    const { problems } = panelizeProject(loose([win('A', 24), win('B', 120)], null));
+    expect(problems.map((p) => [p.code, p.openingId])).toEqual([
+      ['HEADER_DATA_MISSING', 'A'],
+      ['HEADER_DATA_MISSING', 'B'],
+    ]);
+  });
+
+  it('erro que não é de header (janelas coladas) continua um problema só', () => {
+    const p = loose([win('A', 24), win('B', 62)], { groundSnowLoad: 30, buildingWidth: 288 });
+    const { problems } = panelizeProject(p);
+    expect(problems.map((x) => x.code)).toEqual(['OPENINGS_TOO_CLOSE']);
+  });
+
+  it('casa em planta: todas as aberturas sem header das paredes portantes, com o id da parede certa', () => {
+    const p = house();
+    p.config.building = { ...p.config.building, groundSnowLoad: 30, buildingWidth: 600 };
+    // o exemplo traz header do projeto em todas as aberturas: sem ele, as externas portantes dependem da tabela
+    const exterior = p.house!.walls.filter((w) => w.exterior && w.bearing);
+    for (const w of exterior) for (const o of w.openings) delete o.header;
+    const expected = exterior.flatMap((w) => w.openings.map((o) => w.id + '/' + o.id));
+    expect(expected).toEqual(['W01/P1', 'W01/J1', 'W02/J2', 'W02/J3', 'W03/P2', 'W04/J4']);
+    const { problems } = panelizeProject(p);
+    expect(problems.every((x) => x.code === 'HEADER_OUT_OF_TABLE' && x.stage === 'wall')).toBe(true);
+    expect(problems.map((x) => x.wallId + '/' + x.openingId)).toEqual(expected);
+  });
+});

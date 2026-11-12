@@ -26,6 +26,7 @@ import {
   costOf,
   cutList,
   EngineError,
+  headerErrors,
   frameWalls,
   housePlanSvg,
   noticeOf,
@@ -154,9 +155,21 @@ function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]
   const problems: BuildProblem[] = [];
   const walls: WallBreaks[] = [];
 
-  /** Erro de uma parede: ganha a parede como contexto (`parede W01, abertura J1: …`). */
-  const problem = (wallId: string, e: unknown): void => {
-    problems.push(problemOf(e, 'wall', wallId));
+  /**
+   * Erro de uma parede: ganha a parede como contexto (`parede W01, abertura J1: …`). S48: quando o erro é o de
+   * header de uma abertura, entram os de header de todas as aberturas da parede (cada um é resolvido sozinho) — o
+   * revisor vê de uma vez tudo o que pede header, em vez de uma abertura por parede a cada conserto.
+   */
+  const problem = (wall: Wall, e: unknown): void => {
+    const thrown = problemOf(e, 'wall', wall.id);
+    if (e instanceof EngineError && thrown.openingId !== undefined) {
+      const headers = headerErrors(wall, project.config).map((x) => problemOf(x, 'wall', wall.id));
+      if (headers.some((p) => p.code === thrown.code && p.openingId === thrown.openingId)) {
+        problems.push(...headers);
+        return;
+      }
+    }
+    problems.push(thrown);
   };
   /**
    * Quebras e candidatos da parede (S29), em x do arquivo (`s0` = início da plate a partir do `start`). Os
@@ -198,7 +211,7 @@ function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]
         panels.push(...r.panels);
         record(w.id, manual, s0, r.panels, r.candidates);
       } catch (e) {
-        problem(frame.wallId, e);
+        problem(frame.wall, e);
         record(w.id, manual, s0, undefined, candidatesAfterError(frame.wall));
       }
     }
@@ -210,7 +223,7 @@ function panelize(project: Project): { panels: Panel[]; problems: BuildProblem[]
         panels.push(...r.panels);
         record(wall.id, manual, 0, r.panels, r.candidates);
       } catch (e) {
-        problem(wall.id, e);
+        problem(wall, e);
         record(wall.id, manual, 0, undefined, candidatesAfterError(wall));
       }
     }

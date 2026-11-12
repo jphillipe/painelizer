@@ -133,6 +133,29 @@ describe('panels.service.check', () => {
     expect(r.warnings).toEqual([expect.objectContaining({ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', wallId: 'W2', openingId: 'D1', panelId: expect.stringContaining('W2') })]);
   });
 
+  it('S48: a checagem traz o erro de header de todas as aberturas da parede', () => {
+    const text = JSON.stringify({
+      name: 'x',
+      config: { studSpacing: 16, studLength: [92.625], headerHeight: 82.5, building: { groundSnowLoad: 30, buildingWidth: 600 } },
+      walls: [
+        {
+          id: 'W1', length: 240, height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 1,
+          openings: [
+            { id: 'A', type: 'window', offset: 24, roughWidth: 36, roughHeight: 48 },
+            { id: 'B', type: 'window', offset: 120, roughWidth: 36, roughHeight: 48 },
+          ],
+        },
+      ],
+    });
+    const r = check(text);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.problems.map((p) => [p.code, p.wallId, p.openingId])).toEqual([
+      ['HEADER_OUT_OF_TABLE', 'W1', 'A'],
+      ['HEADER_OUT_OF_TABLE', 'W1', 'B'],
+    ]);
+  });
+
   it('S45: planta que não fecha: só o problema da planta, avisos vazios', () => {
     const wall = { height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] };
     const text = JSON.stringify({
