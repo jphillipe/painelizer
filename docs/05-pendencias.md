@@ -439,3 +439,11 @@ ou o engenheiro dizer outra coisa. Toda peça gerada por estas regras sai na fol
   lap da que chega). Atravessa a externa, senão a mais grossa, senão a mais longa. Em aberto: amarrar a double top da
   linha por cima da junta (lap de uma sobre a outra) e se, quando a linha muda de espessura, a que chega deve encostar
   na face mais grossa — S42.
+
+## Novas (abertas em 2026-11-12, S44 — peça deitada longe da top plate)
+- [ ] **P55 — Peça deitada a mais de 24" da top plate em parede não portante.** A R602.7.4 só cobre a peça deitada
+  sozinha até 24" da top plate, e a resposta da P17b foi "fora dos limites, header caso a caso". É o caso comum de
+  porta interna em parede de 9' (Matilda Pines: 18 portas a 24 1/8"). A fábrica monta peça deitada com cripples
+  acima, ou header de pé (qual seção e quantos plies)? — hipótese: peça deitada da seção da parede + cripples nas
+  marcas de layout do RO até a top plate, com o aviso `FLAT_HEADER_CRIPPLES` na abertura; `rules/openings.ts`
+  (`openingCripples`) — S44.

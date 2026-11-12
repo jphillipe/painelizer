@@ -20,8 +20,10 @@
  * - Cripples nas marcas de layout que caem dentro do RO. Marca colada ao jack ou a até 2" de folga livre
  *   dele não ganha cripple (P3/P13), salvo se sem ela o vão livre entre o jack e o apoio seguinte passar
  *   de 24" — a mesma regra vale abaixo do sill e acima do header. Só entram se o vão for ≥ 1.5".
- * - Parede não portante (R602.7.4): header é uma peça deitada (`flat`, 1.5" de altura) a até 24" da top
- *   plate — acima disso, `Error` pedindo o header do projeto; sem cripples acima da peça.
+ * - Parede não portante (R602.7.4): header é uma peça deitada (`flat`, 1.5" de altura). Até 24" entre o topo dela
+ *   e a top plate, sem cripples acima. Acima de 24" (S44, hipótese P55) a R602.7.4 não cobre: a peça fica e ganha
+ *   cripples acima nas marcas do RO (a superfície de pregação que o limite existe para garantir), com o aviso
+ *   `FLAT_HEADER_CRIPPLES` para a fábrica revisar.
  * - Aberturas vizinhas compartilham king (`rules/zones.ts`); aí os kings vêm da fusão e esta função
  *   é chamada com `{ kings: false }`.
  *
@@ -124,7 +126,8 @@ export function openingKingXs(
 
 /**
  * Peças da abertura: kings (salvo `{ kings: false }`), jacks, header, sill e cripples; para porta,
- * também o corte da bottom plate na obra e o aviso de RO incompatível com o header.
+ * também o corte da bottom plate na obra e o aviso de RO incompatível com o header. Peça deitada a mais de 24" da
+ * top plate sai com o aviso `FLAT_HEADER_CRIPPLES` (S44, P55).
  * Não remove studs de layout — isso é papel de `panelizeWall`, que conhece todas as zonas.
  *
  * @throws Error      header sem como escolher (ver `resolveOpeningHeader`)
@@ -145,6 +148,16 @@ export function framingForOpening(
   const members = [...openingFrame(o, wall, config, header, g, options.kings ?? true), ...openingCripples(o, wall, config, header, g)];
   const fieldCuts: FieldCut[] = [];
   const warnings: Warning[] = [...header.warnings];
+  if (flatHeaderNeedsCripples(header, g)) {
+    warnings.push(
+      warning(
+        'FLAT_HEADER_CRIPPLES',
+        { wallId: wall.id, openingId: o.id },
+        { top: g.headerTop, gap: g.topPlateY - g.headerTop, topPlate: g.topPlateY, max: FLAT_HEADER_MAX_GAP },
+        'P55',
+      ),
+    );
+  }
   if (o.type === 'door') {
     fieldCuts.push({ role: 'bottomPlate', openingId: o.id, x: o.offset, length: o.roughWidth });
     if (Math.abs(o.roughHeight - g.headerBase) >= LENGTH_TOLERANCE) {
@@ -198,13 +211,6 @@ function openingGeometry(opening: Opening, wall: Wall, config: Config, header: R
       'HEADER_ABOVE_TOP_PLATE',
       { openingId: opening.id },
       { section: String(header.section), base: headerBase, top: headerTop, topPlate: topPlateY },
-    );
-  }
-  if (header.flat && topPlateY - headerTop > FLAT_HEADER_MAX_GAP + EPS) {
-    throw new EngineError(
-      'FLAT_HEADER_GAP',
-      { wallId: wall.id, openingId: opening.id },
-      { top: headerTop, gap: topPlateY - headerTop, topPlate: topPlateY, max: FLAT_HEADER_MAX_GAP },
     );
   }
   if (headerBase <= p + EPS) {
@@ -275,7 +281,17 @@ function openingFrame(
   return members;
 }
 
-/** Cripples nas marcas de layout do RO: abaixo da sill e, salvo header deitado (R602.7.4), acima do header. */
+/**
+ * A peça deitada ficou a mais de 24" da top plate: fora do que a R602.7.4 cobre sem cripples (S44, hipótese P55).
+ */
+function flatHeaderNeedsCripples(header: ResolvedHeader, g: OpeningGeometry): boolean {
+  return header.flat && g.topPlateY - g.headerTop > FLAT_HEADER_MAX_GAP + EPS;
+}
+
+/**
+ * Cripples nas marcas de layout do RO: abaixo da sill e acima do header — salvo sobre a peça deitada a até 24" da
+ * top plate (R602.7.4).
+ */
 function openingCripples(opening: Opening, wall: Wall, config: Config, header: ResolvedHeader, g: OpeningGeometry): Member[] {
   const t = config.studThickness;
   const p = config.plateThickness;
@@ -296,9 +312,9 @@ function openingCripples(opening: Opening, wall: Wall, config: Config, header: R
     }
   }
 
-  // R602.7.4: sobre a peça deitada não vão cripples.
+  // R602.7.4: sobre a peça deitada não vão cripples — até 24" da top plate. Acima disso entram (S44, P55).
   const above = g.topPlateY - g.headerTop;
-  if (!header.flat && above >= MIN_CRIPPLE_LENGTH - EPS) {
+  if ((!header.flat || flatHeaderNeedsCripples(header, g)) && above >= MIN_CRIPPLE_LENGTH - EPS) {
     for (const x of marks) members.push({ role: 'cripple', ...vertical, length: above, x, y: g.headerTop });
   }
   return members;

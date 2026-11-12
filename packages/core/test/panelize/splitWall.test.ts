@@ -7,6 +7,7 @@ import { expectSameMembers, type MemberKeyFields } from '../helpers/members';
 import split480Json from '../fixtures/wall-480-split.json';
 import spliced240Json from '../fixtures/wall-240-spliced.json';
 import plainJson from '../fixtures/wall-144-plain.json';
+import tallDoorJson from '../fixtures/wall-120-door-nonbearing-tall.json';
 import { wallFixture } from '../helpers/fixtures';
 
 const split480 = wallFixture(split480Json);
@@ -350,5 +351,16 @@ describe('splitWall — divisão que não emenda é descartada (S43)', () => {
       openings: [{ id: 'J1', type: 'window', offset: 20, roughWidth: 60, roughHeight: 36, header: { section: '2x6', plies: 2 } }],
     };
     expect(() => splitWall(short, { ...config, stockLengths: [96] })).toThrow(expect.objectContaining({ code: 'SPLICE_NO_STUD' }));
+  });
+});
+
+describe('splitWall — peça deitada com cripples (S44)', () => {
+  const tallDoor = wallFixture(tallDoorJson);
+
+  it('parede dividida: o aviso FLAT_HEADER_CRIPPLES fica só no painel que tem a porta', () => {
+    const panels = splitWall({ ...tallDoor.wall, length: 300 }, tallDoor.config);
+    expect(panels.length).toBe(2);
+    const codes = panels.map((p) => p.warnings.map((w) => w.code));
+    expect(codes).toEqual([['FLAT_HEADER_CRIPPLES'], []]);
   });
 });

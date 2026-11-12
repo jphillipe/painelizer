@@ -6,12 +6,14 @@ import windowJson from '../fixtures/wall-144-window.json';
 import lowJson from '../fixtures/wall-144-window-82.5.json';
 import doorFxJson from '../fixtures/wall-120-door.json';
 import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import tallDoorJson from '../fixtures/wall-120-door-nonbearing-tall.json';
 import { wallFixture } from '../helpers/fixtures';
 
 const window = wallFixture(windowJson);
 const low = wallFixture(lowJson);
 const doorFx = wallFixture(doorFxJson);
 const nonBearingDoor = wallFixture(nonBearingDoorJson);
+const tallDoor = wallFixture(tallDoorJson);
 
 const wall = window.wall;
 const config = window.config;
@@ -272,16 +274,48 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
     expect(byRole(members, 'jackStud')[0]?.length).toBe(91.125);
   });
 
-  it('topo da peça a exatamente 24" da top plate passa; a mais, Error pedindo o header do projeto', () => {
+  it('topo da peça a exatamente 24" da top plate: sem cripples acima e sem aviso (R602.7.4)', () => {
     // top plate em 94.125; topo = base + 1.5 → base 68.625 dá 24"
-    expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.625 }, nbWall, config)).not.toThrow();
-    expect(() => frame({ ...noHeader, roughHeight: 40, headerHeight: 68.5 }, nbWall, config)).toThrow(
-      /Wall W-window, opening win1: flat header \(R602\.7\.4\) with its top at 70".*24\.125" below the top plate.*opening header/,
-    );
-    // com header do projeto a mesma abertura passa, em pé e com cripples acima
-    const members = frame({ ...win, roughHeight: 40, headerHeight: 68.5 }, nbWall, config);
+    const { members, warnings } = framingForOpening({ ...noHeader, roughHeight: 40, headerHeight: 68.625 }, nbWall, config);
+    expect(byRole(members, 'cripple').filter((c) => c.y > 1.5)).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
+  it('a mais de 24" (S44, P55): peça deitada + cripples acima nas marcas do RO e aviso FLAT_HEADER_CRIPPLES', () => {
+    // base 68.5 → topo 70, a 24.125" da top plate (94.125)
+    const { members, warnings } = framingForOpening({ ...noHeader, roughHeight: 40, headerHeight: 68.5 }, nbWall, config);
+    expect(byRole(members, 'header')[0]).toMatchObject({ y: 68.5, flat: true, plies: 1, headerSource: 'R602.7.4' });
+    const cripples = byRole(members, 'cripple');
+    // acima da peça, nas mesmas marcas dos de baixo da sill (63.25 e 79.25)
+    expect(cripples.filter((c) => c.y > 1.5).map((c) => [c.x, c.y, c.length])).toEqual([
+      [63.25, 70, 24.125],
+      [79.25, 70, 24.125],
+    ]);
+    expect(xs(cripples.filter((c) => c.y === 1.5))).toEqual([63.25, 79.25]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({
+      code: 'FLAT_HEADER_CRIPPLES',
+      wallId: 'W-window',
+      openingId: 'win1',
+      hypothesis: 'P55',
+      params: { top: 70, gap: 24.125, topPlate: 94.125, max: 24 },
+    });
+    expect(warnings[0]!.message).toMatch(/Wall W-window, opening win1: flat header \(R602\.7\.4\) with its top at 70".*24\.125" below the top plate.*cripples above; factory to review/);
+  });
+
+  it('a mais de 24" com header do projeto: em pé, com cripples acima e sem aviso', () => {
+    const { members, warnings } = framingForOpening({ ...win, roughHeight: 40, headerHeight: 68.5 }, nbWall, config);
     expect(byRole(members, 'header')[0]).toMatchObject({ y: 68.5, section: '2x10' });
     expect(byRole(members, 'cripple').some((c) => c.y > 1.5)).toBe(true);
+    expect(warnings).toEqual([]);
+  });
+
+  it('a mais de 24" em RO estreito sem marca de layout dentro: nenhum cripple, mas o aviso sai', () => {
+    // RO [49, 63]: as marcas 48 e 64 (bordas 47.25 e 63.25) ficam fora.
+    const narrow = { ...noHeader, offset: 49, roughWidth: 14, roughHeight: 40, headerHeight: 68.5 };
+    const { members, warnings } = framingForOpening(narrow, nbWall, config);
+    expect(byRole(members, 'cripple')).toEqual([]);
+    expect(warnings.map((w) => w.code)).toEqual(['FLAT_HEADER_CRIPPLES']);
   });
 
   it('RO acima de 96" em parede não portante: Error pedindo o header do projeto', () => {
@@ -298,6 +332,19 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
     expect(byRole(members, 'header')[0]).toMatchObject({ flat: true, plies: 1 });
     expect(fieldCuts).toEqual(nonBearingDoor.expected.fieldCuts);
     expect(warnings).toEqual([]);
+  });
+
+  it('porta alta: fixture wall-120-door-nonbearing-tall (16 peças, 2 cripples de 24.125 acima da peça, aviso)', () => {
+    const w = tallDoor.wall;
+    const { members, fieldCuts, warnings } = framingForOpening(w.openings[0]!, w, tallDoor.config);
+    const expected = (tallDoor.expected.members as Member[]).filter((m) => OPENING_ROLES.has(m.role));
+    expectSameMembers(members, expected);
+    expect(byRole(members, 'cripple').map((c) => [c.x, c.y, c.length])).toEqual([
+      [47.25, 83, 24.125],
+      [63.25, 83, 24.125],
+    ]);
+    expect(fieldCuts).toEqual(tallDoor.expected.fieldCuts);
+    expect(warnings.map((x) => ({ code: x.code }))).toEqual(tallDoor.expected.warnings);
   });
 
   it.each([

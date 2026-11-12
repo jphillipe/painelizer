@@ -9,6 +9,7 @@ import doorJson from '../fixtures/wall-120-door.json';
 import windowDoorJson from '../fixtures/wall-144-window-door.json';
 import ircJson from '../fixtures/wall-144-window-irc.json';
 import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import tallDoorJson from '../fixtures/wall-120-door-nonbearing-tall.json';
 import { loadHeaderTables } from '../../src/rules/headers';
 import { fakeHeaderJson } from '../helpers/fakeHeaderTables';
 import { wallFixture } from '../helpers/fixtures';
@@ -20,6 +21,7 @@ const door = wallFixture(doorJson);
 const windowDoor = wallFixture(windowDoorJson);
 const irc = wallFixture(ircJson);
 const nonBearingDoor = wallFixture(nonBearingDoorJson);
+const tallDoor = wallFixture(tallDoorJson);
 
 /** Header do projeto usado nas aberturas montadas à mão (o mesmo dos fixtures). */
 const H = { section: '2x10', plies: 2 } as const;
@@ -305,6 +307,36 @@ describe('panelizeWall — header pela tabela (S9.2)', () => {
     expect(panel.members).toHaveLength(14);
     expect(panel.fieldCuts).toEqual(nonBearingDoor.expected.fieldCuts);
     expect(panel.warnings).toEqual(nonBearingDoor.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('fixture wall-120-door-nonbearing-tall passa exatamente (16 peças; S44: cripples sobre a peça deitada e aviso)', () => {
+    const panel = panelizeWall(tallDoor.wall, tallDoor.config);
+    expectSameMembers(panel.members, tallDoor.expected.members as Member[]);
+    expect(panel.members).toHaveLength(16);
+    expect(panel.fieldCuts).toEqual(tallDoor.expected.fieldCuts);
+    expect(panel.warnings.map((w) => ({ code: w.code }))).toEqual(tallDoor.expected.warnings);
+    expectNoVerticalOverlap(panel.members);
+  });
+
+  it('duas portas altas com king compartilhado (S44): cripples sobre as duas peças deitadas e um aviso por porta', () => {
+    const d = tallDoor.wall.openings[0]!;
+    const two: Wall = {
+      ...tallDoor.wall,
+      length: 144,
+      openings: [
+        { ...d, id: 'd1', offset: 30, roughWidth: 30 },
+        { ...d, id: 'd2', offset: 64.5, roughWidth: 30 },
+      ],
+    };
+    const panel = panelizeWall(two, tallDoor.config);
+    const flagged = panel.warnings.filter((w) => w.code === 'FLAT_HEADER_CRIPPLES');
+    expect(flagged.map((w) => w.openingId)).toEqual(['d1', 'd2']);
+    const above = panel.members.filter((m) => m.role === 'cripple' && m.y === 83);
+    expect(above.map((c) => [c.x, c.length])).toEqual([
+      [47.25, 24.125],
+      [79.25, 24.125],
+    ]);
     expectNoVerticalOverlap(panel.members);
   });
 

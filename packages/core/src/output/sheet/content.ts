@@ -64,7 +64,19 @@ export function wallContentGroups(panel: Panel, input: WallContentInput, S: Shee
     lines: [{ text: C.wall(panel, input.description) }, { text: C.kind(panel) }, { text: C.span(panel) }],
   });
 
-  groups.push({ key: 'openings', lines: panel.openings.length === 0 ? none : panel.openings.map((o) => ({ text: C.opening(o) })) });
+  // Abertura montada por hipótese leva ▲: peça deitada a mais de 24" da top plate, com cripples (S44, P55).
+  const openingHypothesis = (id: string): string | undefined =>
+    panel.warnings.find((w) => w.code === 'FLAT_HEADER_CRIPPLES' && w.openingId === id)?.hypothesis;
+  groups.push({
+    key: 'openings',
+    lines:
+      panel.openings.length === 0
+        ? none
+        : panel.openings.map((o): ContentLine => {
+            const hypothesis = openingHypothesis(o.id);
+            return { text: C.opening(o), ...(hypothesis === undefined ? {} : { hypothesis }) };
+          }),
+  });
 
   // Ligações: pontas e T, de start para end (P46 no +, P47 no avanço da chapa, P49 na junta de painéis).
   const sh = panel.sheathing;

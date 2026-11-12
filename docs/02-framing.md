@@ -177,7 +177,7 @@
 | Top plate dupla, emendas | R602.3.2 | Emendas defasadas ≥ 24"; lap em cantos e T |
 | Headers externos portantes | Tabela R602.7(1) | Entrada: largura da edificação, neve, pavimentos → seção, plies, nº de jacks |
 | Headers internos portantes | Tabela R602.7(2) | Idem sem neve |
-| Headers não portantes | R602.7.4 | Single flat até 8' |
+| Headers não portantes | R602.7.4 | Single flat até 8' e até 24" da top plate; acima de 24", cripples sobre a peça + aviso (P55) |
 | King studs | Tabela R602.7.5 | Parede externa: kings por lado pelo vão do header e vento (Vult, exposição B/C); 4' → 1 … 18' → 4; fora da tabela → engenheiro (`src/data/irc-kings.json`, S12) |
 | Fire blocking | R302.11 | Bloqueio horizontal a cada 10' de altura; a fábrica só coloca com cavidade > 120" (P11). S31: cavidade `height − 3·plates` acima de `config.fireBlockAt` (default 120") leva o menor nº de fileiras que deixa cada trecho ≤ limite, igualmente espaçadas (uma, no meio da cavidade, até 241.5" — P50): blocos `role: 'block'`, `blocking: 'fire'`, deitados, da seção da parede, entre as peças de altura inteira, fora das zonas de abertura e do vão do ladder; não impedem quebra de painel (fixture `wall-144-fireblock`) |
 | Blocking por altura | Prancha da fábrica (P44) | S36: `wall.blocking` (ou `config.wallTypes[tag].blocking`, que vale na parede sem lista própria) = ids de preset (embutidos `kitchen-base` 36, `kitchen-upper-bottom` 54, `kitchen-upper-top` 84, `bath-toilet` 15, `bath-paper` 39, `bath-valve` 42, `bath-towel` 48, `bath-shower` 79; `config.blockingPresets` soma e substitui) e fileiras `{ y, from?, to?, label? }` com o **centro** do bloco ao subfloor. Bloco deitado da seção da parede em todo vão entre peças de altura inteira que toca `(from, to)`; vão em zona de abertura ou no ladder do T sem bloco e com aviso `BLOCKING_SKIPPED`; na mesma altura de outra fileira (fogo incluído) fica a primeira, com aviso. `blocking: 'backing'` + `label`; não impede quebra; cada painel gera a sua (trecho cortado por painel). Folha: cota do subfloor ao centro e uso de cada fileira (fogo também). Fixture `wall-144-kitchen` |
@@ -207,9 +207,13 @@ A tabela assume espécie/grau (#2 DF-L, Hem-fir, SPF, SP); conferir com a madeir
   `headerFor` com `config.building` (neve, largura), `wall.buildingWidth` (sobrescreve a largura),
   `wall.floorsSupported`, `wall.floorSpan` e a seção da parede (origem = id da tabela) → parede não portante:
   peça deitada da seção da parede, 1 ply, `Member.flat`, apoiada em 1 jack por lado (origem `R602.7.4`;
-  seção e jacks são hipóteses P18). Vale para RO ≤ 96" e ≤ 24" entre o topo da peça e a top plate; fora
-  disso, erro pedindo `opening.header`. Sem cripples acima da peça deitada.
-  Fixture: `test/fixtures/wall-120-door-nonbearing.json` (porta interna 2x4, 14 peças).
+  seção e jacks são hipóteses P18). Vale para RO ≤ 96" (acima, erro pedindo `opening.header`). Até 24" entre o
+  topo da peça e a top plate, sem cripples acima. **Acima de 24"** (S44, hipótese P55) a R602.7.4 não cobre a peça
+  sozinha: ela fica e ganha cripples acima nas marcas de layout do RO, e a abertura sai com o aviso
+  `FLAT_HEADER_CRIPPLES` ("factory to review"; ▲ na linha da abertura da folha). Com `opening.header` vale o header
+  do projeto, sem aviso.
+  Fixtures: `test/fixtures/wall-120-door-nonbearing.json` (porta interna 2x4, 14 peças) e
+  `wall-120-door-nonbearing-tall.json` (parede de 9'-2 1/8", peça a 24 1/8" da top plate, 16 peças).
 - Fora da tabela ou dado faltando: `Error` com parede, abertura e motivo. Nunca header chutado.
 - Jacks por lado: `opening.jackStuds` → `opening.header.jackStuds` → NJ da tabela → 1. `opening.jackStuds`
   menor que o NJ: aviso `HEADER_JACKS_BELOW_TABLE`. O número de jacks entra na zona e na fusão de zonas

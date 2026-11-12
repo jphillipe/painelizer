@@ -19,6 +19,8 @@ import kitchenJson from '../fixtures/wall-144-kitchen.json';
 import postJson from '../fixtures/wall-144-post.json';
 import fireJson from '../fixtures/wall-144-fireblock.json';
 import splitJson from '../fixtures/wall-480-split.json';
+import nonBearingDoorJson from '../fixtures/wall-120-door-nonbearing.json';
+import tallDoorJson from '../fixtures/wall-120-door-nonbearing-tall.json';
 import cornerLJson from '../fixtures/house-corner-L.json';
 import sheathedJson from '../fixtures/house-corner-L-sheathed.json';
 import teeJson from '../fixtures/house-tee.json';
@@ -131,6 +133,13 @@ describe('wallContentGroups — o que vai nesta parede', () => {
     expect(lines(w1!, f.config.wallTypes!['WT-1S']!.description)['wall']![0]).toBe('W1 · type WT-1S — 2x6 exterior bearing wall, sheathed');
     const groups = wallContentGroups(cornerW1!, { nailing: resolveNailing({ wallJoint: { count: 2, fastener: '16d nails', spacing: 8 } }) }, S);
     expect(groups.find((g) => g.key === 'nailing')!.lines[0]!.text).toBe('wall joints: 2× 16d nails @ 8" OC');
+  });
+
+  it('peça deitada com cripples (S44): a linha da abertura leva ▲ (P55); a peça dentro dos 24" não', () => {
+    expect(lines(loose(tallDoorJson))['openings']).toEqual(['door1 door · RO 38" × 81 1/2" · x=40" to 78" · header 81 1/2" ▲']);
+    expect(lines(loose(nonBearingDoorJson))['openings']).toEqual(['door1 door · RO 38" × 82 1/2" · x=40" to 78" · header 82 1/2"']);
+    const groups = wallContentGroups(loose(tallDoorJson), { nailing: NAILING }, S);
+    expect(contentHypotheses(groups)).toContain('P55');
   });
 
   it('hipóteses do rodapé: sem repetir, em ordem numérica', () => {

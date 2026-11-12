@@ -9,7 +9,8 @@
  * 3. Parede não portante: uma peça deitada da seção da parede, 1 ply (R602.7.4 do IRC 2021; resposta P17b
  *    e hipóteses P18), válida para RO até 96". Origem `R602.7.4`. RO maior: `Error` pedindo o header do
  *    projeto (a fábrica dimensiona caso a caso). O limite de 24" até a top plate é conferido em
- *    `framingForOpening`, que conhece a altura do header.
+ *    `framingForOpening`, que conhece a altura do header: acima dele a peça ganha cripples e o aviso
+ *    `FLAT_HEADER_CRIPPLES` (S44, hipótese P55).
  *
  * Jacks de cada lado: `opening.jackStuds` → `opening.header.jackStuds` → NJ da tabela → 1.
  * `opening.jackStuds` menor que o NJ da tabela gera aviso `HEADER_JACKS_BELOW_TABLE` (o painel sai com o
@@ -58,7 +59,7 @@ export interface HeaderTables {
 /** R602.7.4: a peça deitada vale para aberturas de até 8'-0". */
 export const FLAT_HEADER_MAX_SPAN = 96;
 
-/** R602.7.4: e até 24" entre a peça e a superfície de pregação paralela acima (top plate). */
+/** R602.7.4: e até 24" entre a peça e a superfície de pregação paralela acima (top plate); acima, cripples + aviso (P55). */
 export const FLAT_HEADER_MAX_GAP = 24;
 
 /**

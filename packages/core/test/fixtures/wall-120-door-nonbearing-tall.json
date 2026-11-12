@@ -1,0 +1,48 @@
+{
+  "$comment": "S44 (2026-11-12, hipótese P55) — not confirmed by the human — review. A porta interna do Matilda Pines: parede interna NÃO portante 10' 2x4 de 9'-2 1/8\" (110.125) com porta RO 38x81.5 em offset 40 e cabeça a 81.5\" do subfloor (A202: 6'-9 1/2\"). Sem header no projeto, a parede não portante leva a peça deitada da R602.7.4: 2x4 deitado de 41\" em x=38.5, y=81.5, topo em 83. Do topo da peça à top plate (107.125) vão 24.125\" > 24\": fora do limite da R602.7.4. Em vez de erro (até a S43), o painel mantém a peça deitada e ganha cripples acima dela nas marcas de layout do RO — 48 e 64 (bordas 47.25 e 63.25; a marca 80 cai no jack) —, de 24.125\" (83 → 107.125), mais o aviso FLAT_HEADER_CRIPPLES para a fábrica revisar. O resto é o wall-120-door-nonbearing com a parede mais alta: studs e kings de 105.625, jacks de 80 (1.5 → 81.5), kings 37 e 79.5, zona [37, 81] sem os studs das marcas 48, 64 e 80; bottom plate inteira com corte na obra de 40 a 78. 16 peças.",
+  "config": {
+    "studSpacing": 16,
+    "studThickness": 1.5,
+    "plateThickness": 1.5,
+    "studLength": [105.625],
+    "headerHeight": 81.5
+  },
+  "wall": {
+    "id": "W-door-nonbearing-tall",
+    "length": 120,
+    "height": 110.125,
+    "section": "2x4",
+    "exterior": false,
+    "bearing": false,
+    "openings": [
+      { "id": "door1", "type": "door", "offset": 40, "roughWidth": 38, "roughHeight": 81.5 }
+    ]
+  },
+  "expected": {
+    "header": { "section": "2x4", "plies": 1, "jackStuds": 1, "kingStuds": 1, "source": "R602.7.4", "flat": true },
+    "members": [
+      { "role": "bottomPlate", "section": "2x4", "length": 120, "x": 0, "y": 0, "orientation": "horizontal" },
+      { "role": "topPlate", "section": "2x4", "length": 120, "x": 0, "y": 107.125, "orientation": "horizontal" },
+      { "role": "doubleTopPlate", "section": "2x4", "length": 120, "x": 0, "y": 108.625, "orientation": "horizontal" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 0, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 15.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 31.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 95.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 111.25, "y": 1.5, "orientation": "vertical" },
+      { "role": "stud", "section": "2x4", "length": 105.625, "x": 118.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x4", "length": 105.625, "x": 37, "y": 1.5, "orientation": "vertical" },
+      { "role": "kingStud", "section": "2x4", "length": 105.625, "x": 79.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x4", "length": 80, "x": 38.5, "y": 1.5, "orientation": "vertical" },
+      { "role": "jackStud", "section": "2x4", "length": 80, "x": 78, "y": 1.5, "orientation": "vertical" },
+      { "role": "header", "section": "2x4", "length": 41, "x": 38.5, "y": 81.5, "orientation": "horizontal", "plies": 1, "flat": true },
+      { "role": "cripple", "section": "2x4", "length": 24.125, "x": 47.25, "y": 83, "orientation": "vertical" },
+      { "role": "cripple", "section": "2x4", "length": 24.125, "x": 63.25, "y": 83, "orientation": "vertical" }
+    ],
+    "fieldCuts": [
+      { "role": "bottomPlate", "openingId": "door1", "x": 40, "length": 38 }
+    ],
+    "warnings": [
+      { "code": "FLAT_HEADER_CRIPPLES" }
+    ]
+  }
+}

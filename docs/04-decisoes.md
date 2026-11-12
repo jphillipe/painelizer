@@ -421,3 +421,17 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   dos vizinhos (só do lap que entra e sai), e descartar o trecho inteiro é conservador e termina (cada volta
   descarta um trecho novo). Rejeitado: limitar o painel ao maior estoque (mudaria `wall-480-split`, 2 × 240 com
   emenda, confirmado pela fábrica na P14) e emendar sobre cripple (não é stud de altura inteira). Nenhum fixture mudou.
+
+- **2026-11-12 — Peça deitada a mais de 24" da top plate: cripples + aviso, não erro (S44, hipótese P55; decisão
+  do humano no Matilda Pines).** A fábrica respondeu (P17b) que fora dos limites da R602.7.4 o header é dimensionado
+  caso a caso, e o motor parava em `FLAT_HEADER_GAP` — no Matilda, 18 portas internas a 24 1/8" (1/8" acima do
+  limite). O humano preferiu não travar a geração: acima de 24" o painel mantém a peça deitada, ganha cripples nas
+  marcas de layout do RO até a top plate (a superfície de pregação que o limite existe para garantir) e a abertura
+  sai com o aviso `FLAT_HEADER_CRIPPLES` ("factory to review"), que aparece no app, no `panels.csv` e na folha (linha
+  do aviso e ▲ na linha da abertura). Vão ≤ 24" não muda; RO > 96" continua `FLAT_HEADER_SPAN`; `opening.header` do
+  projeto vale como antes, sem aviso. O erro `FLAT_HEADER_GAP` deixou de existir. O teste "a mais de 24", Error" foi
+  trocado com a aprovação do humano; nenhum fixture existente mudou; fixture novo `wall-120-door-nonbearing-tall`
+  (não confirmado pelo humano). Rejeitado: header padrão por projeto para esse caso (um cadastro a mais por projeto;
+  a hipótese `config.defaultHeader*` já tinha sido substituída em 2026-10-05) e tolerância no limite de 24" (o
+  motor não arredonda regra de código). Se a fábrica responder header de pé, troca-se só `openingCripples` /
+  `resolveOpeningHeader` e o fixture novo.

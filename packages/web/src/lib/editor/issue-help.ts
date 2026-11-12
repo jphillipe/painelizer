@@ -61,6 +61,10 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   PANEL_OVERWEIGHT: { what: 'The panel is heavier than the limit in Project settings.', fix: 'Lower the max panel length in Project settings or raise the weight limit.' },
   STUD_LENGTH_MISMATCH: { what: 'The stud this wall needs is not one of the precut lengths.', fix: 'Add the length to the precut list in Project settings, or change the wall height.' },
   STUD_HEIGHT_ABOVE_LIMIT: { what: 'The studs are taller than the IRC limit for this section and spacing.', fix: 'Use 2x6 or a tighter spacing, or get an engineer to sign off.' },
+  FLAT_HEADER_CRIPPLES: {
+    what: 'A non-bearing opening whose flat header sits more than 24" below the top plate. The panel keeps the flat header and adds cripples above it.',
+    fix: 'Have the factory review it, or select the opening and specify a header.',
+  },
   DOOR_RO_HEIGHT_MISMATCH: { what: 'The door rough opening does not match the header height.', fix: 'Check the door height and the header height in Project settings.' },
   SPECIES_NOT_IN_TABLE: { what: 'The IRC header table is for SPF No. 2; the project specifies another species.', fix: 'Fine to leave if the engineer accepts the SPF sizes, else set the species in Project settings.' },
   // motor — erros

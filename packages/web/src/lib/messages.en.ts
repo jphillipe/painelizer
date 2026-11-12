@@ -109,6 +109,12 @@ const ENGINE_WARNINGS: Record<string, Template> = {
     ),
   WIND_SPEED_MISSING: (_p, t) => at(t, 'exterior wall without a wind speed — king studs are not checked against table R602.7.5; the panel uses 1 king per side.'),
   SPECIES_NOT_IN_TABLE: (p, t) => at(t, `header from table ${String(p['table'])}, which is for SPF No. 2; the project specifies ${String(p['species'])}.`),
+  FLAT_HEADER_CRIPPLES: (p, t) =>
+    at(
+      t,
+      `the flat header (R602.7.4) tops out at ${inch(p['top'])}, ${inch(p['gap'])} below the top plate (${inch(p['topPlate'])}) — over the ${inch(p['max'])} limit. ` +
+        'The panel is framed with cripples above it; factory to review.',
+    ),
   DOOR_RO_HEIGHT_MISMATCH: (p, t) =>
     at(openingOnly(t), `the door rough opening is ${inch(p['roughHeight'])} tall (from the subfloor) but the header sits at ${inch(p['headerBase'])}.`),
   OPENING_AT_TEE: (p, t) =>
@@ -187,8 +193,6 @@ const ENGINE_ERRORS: Record<string, Template> = {
     at(t, `the project header (${String(p['plies'])} plies of ${String(p['section'])}, ${inch(p['thickness'])}) is thicker than the ${String(p['wallSection'])} wall (${inch(p['depth'])}).`),
   FLAT_HEADER_SPAN: (p, t) =>
     at(t, `non-bearing wall with a ${inch(p['span'])} rough opening — a flat header (R602.7.4) only covers up to ${inch(p['max'])}; specify the header.`),
-  FLAT_HEADER_GAP: (p, t) =>
-    at(t, `the flat header (R602.7.4) tops out at ${inch(p['top'])}, ${inch(p['gap'])} below the top plate (${inch(p['topPlate'])}) — over the ${inch(p['max'])} limit; specify the header.`),
   HEADER_DATA_MISSING: (p, t) =>
     at(
       t,

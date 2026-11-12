@@ -8,7 +8,7 @@
  * a serra; o CLI acrescenta quando imprime.
  */
 
-/** Os 14 avisos do motor. Nunca interrompem a geração. */
+/** Os 15 avisos do motor. Nunca interrompem a geração. */
 export const WARNING_CODES = [
   'STUD_LENGTH_MISMATCH',
   'HEADER_JACKS_BELOW_TABLE',
@@ -24,6 +24,7 @@ export const WARNING_CODES = [
   'PANEL_OVERWEIGHT',
   'WALL_TYPE_MISMATCH',
   'BLOCKING_SKIPPED',
+  'FLAT_HEADER_CRIPPLES',
 ] as const;
 export type WarningCode = (typeof WARNING_CODES)[number];
 
@@ -58,7 +59,6 @@ export const ENGINE_ERROR_CODES = [
   'HEADER_SECTION_UNKNOWN',
   'HEADER_TOO_THICK',
   'FLAT_HEADER_SPAN',
-  'FLAT_HEADER_GAP',
   'HEADER_DATA_MISSING',
   'HEADER_OUT_OF_TABLE',
   'HEADER_TABLE_NOT_APPLICABLE',
@@ -240,6 +240,12 @@ const WARNING: Record<WarningCode, Template> = {
     at(w, `header from table ${p.table}, which is for SPF No. 2; the project specifies ${p.species} — check the span for that species or use the project header schedule`),
   DOOR_RO_HEIGHT_MISMATCH: (p, w) =>
     at({ openingId: w.openingId }, `door RO ${inch(p.roughHeight)} tall (from the subfloor) does not match the header base at ${inch(p.headerBase)}`),
+  FLAT_HEADER_CRIPPLES: (p, w) =>
+    at(
+      w,
+      `flat header (R602.7.4) with its top at ${inch(p.top)} sits ${inch(p.gap)} below the top plate (${inch(p.topPlate)}), over the ${inch(p.max)} limit — ` +
+        'framed with cripples above; factory to review',
+    ),
   OPENING_AT_TEE: (p, w) =>
     at(
       { wallId: w.wallId },
@@ -319,12 +325,6 @@ const ERROR: Record<EngineErrorCode, Template> = {
     at(w, `project header with ${p.plies} plies of ${p.section} (${inch(p.thickness)}) does not fit a ${p.wallSection} wall (${inch(p.depth)})`),
   FLAT_HEADER_SPAN: (p, w) =>
     at(w, `non-bearing wall with a ${inch(p.span)} RO — a flat header (R602.7.4) only covers up to ${inch(p.max)}; specify the opening header`),
-  FLAT_HEADER_GAP: (p, w) =>
-    at(
-      w,
-      `flat header (R602.7.4) with its top at ${inch(p.top)} sits ${inch(p.gap)} below the top plate (${inch(p.topPlate)}), over the ${inch(p.max)} limit; ` +
-        'specify the opening header',
-    ),
   HEADER_DATA_MISSING: (p, w) =>
     at(
       w,

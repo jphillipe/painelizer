@@ -1720,3 +1720,20 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   antes e vistos falhar): 4 casos em `splitWall.test.ts` (a I2, a forçada, a de um painel, sem divisão) e 3 em
   `breaks.test.ts`. Nenhum fixture mudou. **Conferido** com a planta salva do Matilda (estoque padrão de 16'): I2 sai
   em 80 / 176 / 86, sem plate emendada; a casa inteira gera (headers provisórios só na cópia de teste).
+
+- [x] **S44 — Peça deitada a mais de 24" da top plate: cripples + aviso (core, web; regra de framing nova, hipótese
+  P55).** Pedido do humano em 2026-11-12, ainda no Matilda Pines: as portas internas (cabeça a 6'-9 1/2", parede de
+  9'-2 1/8") ficam com a peça deitada a 24 1/8" da top plate — 1/8" acima do limite da R602.7.4 — e cada uma parava
+  em `FLAT_HEADER_GAP`. A resposta da fábrica (P17b) é "fora dos limites, header caso a caso"; o humano escolheu não
+  travar: o painel sai e a abertura leva um aviso para a fábrica revisar. Plano em
+  `docs/superpowers/plans/2026-11-12-flat-header-cripples.md`. **Core**: `openingGeometry` não lança mais;
+  `openingCripples` põe cripples sobre a peça deitada quando o vão passa de 24"; `framingForOpening` acrescenta o
+  aviso `FLAT_HEADER_CRIPPLES` (P55, 15º aviso); o erro `FLAT_HEADER_GAP` deixou de existir; a linha da abertura no
+  bloco "Wall content" ganha ▲. **Web**: frase, título e ajuda do aviso. **Testes** (escritos antes e vistos
+  falhar): fixture `wall-120-door-nonbearing-tall` (16 peças, à mão), fronteira de 24", janela (cripples acima e
+  abaixo), RO estreito sem marca, duas portas com king compartilhado, parede dividida (aviso só no painel da porta),
+  folha. O caso antigo "a mais de 24", Error" foi trocado com a aprovação do humano. **Conferido** com a planta salva
+  do Matilda (largura 50'): nenhum erro de header deitado; com header provisório só nas 13 aberturas de parede
+  portante (cópia de teste) a casa gera 53 painéis, com 18 avisos `FLAT_HEADER_CRIPPLES` em 15 paredes; folha do
+  1-I1-P1 conferida como PNG. Ainda bloqueando o Matilda: os headers das 13 aberturas de parede portante (o app
+  lista um erro por parede, por isso mostrava 10), que vêm do estrutural.
