@@ -75,6 +75,57 @@ describe('S47: a seleção carrega o campo a focar', () => {
   });
 });
 
+describe('S49: applyEdits — várias edições, um passo de desfazer', () => {
+  const header = { section: '2x12', plies: 3 };
+
+  it('aberturas, tipo e dados do prédio numa ação só; um undo desfaz tudo', () => {
+    const before = loaded();
+    const after = editorReducer(before, {
+      type: 'applyEdits',
+      edits: [
+        { target: 'opening', wallId: 'W01', openingId: 'J1', patch: { header, headerMark: undefined } },
+        { target: 'opening', wallId: 'W02', openingId: 'J3', patch: { header } },
+        { target: 'openingType', tag: 'A', patch: { roughHeight: 81.5 } },
+        { target: 'building', patch: { windSpeed: 130 } },
+        { target: 'wall', wallId: 'W03', patch: { height: 109.125 } },
+        { target: 'config', patch: { headerHeight: 80 } },
+      ],
+    });
+    const opening = (s: typeof after, wallId: string, id: string) => s.draft!.walls.find((w) => w.id === wallId)!.openings.find((o) => o.id === id)!;
+    expect(opening(after, 'W01', 'J1').header).toEqual(header);
+    expect(opening(after, 'W02', 'J3').header).toEqual(header);
+    expect(after.draft!.config.openingTypes?.['A']).toEqual({ roughHeight: 81.5 });
+    expect(after.draft!.config.building?.windSpeed).toBe(130);
+    expect(after.draft!.walls.find((w) => w.id === 'W03')!.height).toBe(109.125);
+    expect(after.draft!.config.headerHeight).toBe(80);
+    expect(after.past).toHaveLength(before.past.length + 1);
+    expect(after.dirty).toBe(true);
+    const undone = editorReducer(after, { type: 'undo' });
+    expect(undone.draft).toEqual(before.draft);
+  });
+
+  it('alvo que não existe mais é ignorado; se nenhum existe, nada muda e não entra passo de desfazer', () => {
+    const before = loaded();
+    const partial = editorReducer(before, {
+      type: 'applyEdits',
+      edits: [
+        { target: 'opening', wallId: 'W01', openingId: 'GONE', patch: { header } },
+        { target: 'opening', wallId: 'W01', openingId: 'J1', patch: { header } },
+      ],
+    });
+    expect(partial.past).toHaveLength(before.past.length + 1);
+    const none = editorReducer(before, {
+      type: 'applyEdits',
+      edits: [
+        { target: 'opening', wallId: 'W01', openingId: 'GONE', patch: { header } },
+        { target: 'wall', wallId: 'GONE', patch: { height: 100 } },
+      ],
+    });
+    expect(none).toBe(before);
+    expect(editorReducer(before, { type: 'applyEdits', edits: [] })).toBe(before);
+  });
+});
+
 describe('commit, undo, redo', () => {
   it('commit empilha, undo volta, redo refaz; seleção de peça sumida é corrigida', () => {
     const s0 = editorReducer(loaded(), { type: 'select', selection: { kind: 'wall', wallId: 'W05' } });

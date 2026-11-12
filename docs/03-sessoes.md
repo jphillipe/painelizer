@@ -1804,3 +1804,19 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   seis aberturas das externas portantes); checagem do app. **Conferido** com a planta salva do Matilda: 13
   `HEADER_OUT_OF_TABLE` (antes 10) e os mesmos 40 avisos. Feito sem a confirmação prévia do humano, que pediu para
   seguir sem esperar; não é regra de framing.
+
+- [x] **S49 — Conserto em grupo (web; não é regra de framing).** Desenho §3 de
+  `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md`; plano em
+  `docs/superpowers/plans/2026-11-12-group-fix-s49.md`. **Estado**: ação `applyEdits` (lista de `DraftEdit` —
+  abertura, parede, tipo de abertura, config, building — num commit só; alvo que não existe mais é ignorado), que a
+  sugestão por IA também vai usar. **Modelo** (`lib/editor/group-fixes.ts`): `groupFixFor` oferece "Set header"
+  para `HEADER_OUT_OF_TABLE`, `FLAT_HEADER_CRIPPLES` e `FLAT_HEADER_SPAN` (escopo: todas as aberturas da linha ou
+  por tipo) e as duas saídas de `DOOR_RO_HEIGHT_MISMATCH` quando as medidas são iguais em todas as ocorrências;
+  `setHeaderEdits` grava `header` direto na abertura e tira a `headerMark`; `doorHeightEdits` edita o tipo de porta
+  só quando todas as aberturas do tipo estão na linha, senão a abertura. **Tela**: formulário na própria linha e
+  dois botões para a porta (o que muda o framing diz isso). **Testes** (vistos falhar antes): `applyEdits` (um undo
+  desfaz tudo), `groupFixFor` / edições, a checagem real no projeto das quatro causas (o erro de header some; subir
+  o header tira os dois avisos de porta; igualar o RO tira só o de altura), editor de verdade (seção inválida não
+  aplica; válida vai para as aberturas; undo). **Conferido** na tela com a planta do Matilda (`out/s49/`): 13
+  aberturas, "Set header" 2x12 × 2 no tipo E2 (ficam 10) e depois em todas → sem "Must fix", "Ready · 53 panels",
+  Generate ligado; um Ctrl+Z desfaz o último conserto inteiro.

@@ -468,3 +468,10 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   erros de header entram assim, porque são os únicos independentes por abertura — geometria e vizinhança dependem
   das outras aberturas e continuam um por parede. Rejeitado: fazer `panelizeWall` seguir depois do erro e montar a
   parede "sem" a abertura (seria um painel que não corresponde ao projeto).
+- **2026-11-12 — Conserto em grupo: uma edição para todas as aberturas da causa (S49; pedido do humano).** O header
+  do engenheiro vai direto em cada abertura (`header`), nunca pelo header schedule: a entrada do schedule exige
+  kings, e os kings dela passariam por cima da tabela de vento (R602.7.5) nas paredes externas — mudaria o framing
+  sem avisar. Só as aberturas listadas na linha são editadas (com a S48 a linha lista todas). Para a altura de
+  porta × header o app oferece as duas saídas e diz qual muda o framing, porque só o humano sabe qual medida vale;
+  o tipo de porta só é editado quando todas as aberturas dele estão na linha. Tudo entra por `applyEdits`, um
+  commit só: um Ctrl+Z desfaz o conserto inteiro. Nada é aplicado sem clique.

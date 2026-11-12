@@ -63,6 +63,17 @@ export type DraftSource = 'extraction' | 'sample' | 'file';
 /** Patch de edição: chave presente com `undefined` apaga o campo. */
 export type Patch<T> = { [K in keyof T]?: T[K] | undefined };
 
+/**
+ * Uma edição do projeto como dado (S49): o conserto em grupo e a sugestão por IA montam uma lista destas e o editor
+ * a aplica de uma vez (`applyEdits`: um commit, um Ctrl+Z).
+ */
+export type DraftEdit =
+  | { target: 'opening'; wallId: string; openingId: string; patch: Patch<Omit<DraftOpening, 'id' | 'extra'>> }
+  | { target: 'wall'; wallId: string; patch: Patch<Omit<DraftWall, 'id' | 'openings' | 'extra'>> }
+  | { target: 'openingType'; tag: string; patch: Patch<DraftOpeningType> }
+  | { target: 'config'; patch: Patch<Omit<DraftConfig, 'building' | 'openingTypes' | 'headerSchedule' | 'wallTypes' | 'extra'>> }
+  | { target: 'building'; patch: Patch<DraftBuilding> };
+
 export interface EditorState {
   draft: ProjectDraft | undefined;
   /** Problemas da leitura tolerante do arquivo (`draftFromText`). */
@@ -146,6 +157,8 @@ export type EditorAction =
   | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
   | { type: 'removeOpening'; wallId: string; openingId: string }
   | { type: 'updateOpening'; wallId: string; openingId: string; patch: Patch<Omit<DraftOpening, 'id' | 'extra'>> }
+  /** Várias edições num commit só (S49): alvo que não existe mais é ignorado; sem nenhum, nada muda. */
+  | { type: 'applyEdits'; edits: readonly DraftEdit[] }
   | { type: 'renameOpening'; wallId: string; openingId: string; newId: string }
   /** Borda esquerda do RO em `s0` (do `start`); escreve `center` ou `offset` conforme a forma da abertura. */
   | { type: 'moveOpening'; wallId: string; openingId: string; s0: number; roughWidth: number; txn?: string }
@@ -410,6 +423,10 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
     }
     case 'updateOpening':
       return commit(state, mapOpening(d, action.wallId, action.openingId, (o) => applyPatch(o, action.patch)));
+    case 'applyEdits': {
+      const next = action.edits.reduce(applyEdit, d);
+      return next === d ? state : commit(state, next);
+    }
     case 'renameOpening': {
       const newId = action.newId.trim();
       if (newId === '' || newId === action.openingId || !isIdFree(d, newId, 'opening')) return state;
@@ -519,6 +536,27 @@ function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
   const out = { ...obj };
   delete out[key];
   return out;
+}
+
+/** Uma edição sobre o draft; devolve o MESMO objeto quando o alvo (parede, abertura) não existe. */
+export function applyEdit(d: ProjectDraft, edit: DraftEdit): ProjectDraft {
+  switch (edit.target) {
+    case 'opening': {
+      const wall = d.walls.find((w) => w.id === edit.wallId);
+      if (wall === undefined || !wall.openings.some((o) => o.id === edit.openingId)) return d;
+      return mapOpening(d, edit.wallId, edit.openingId, (o) => applyPatch(o, edit.patch));
+    }
+    case 'wall':
+      return d.walls.some((w) => w.id === edit.wallId) ? mapWall(d, edit.wallId, (w) => applyPatch(w, edit.patch)) : d;
+    case 'openingType':
+      return { ...d, config: withEntry(d.config, 'openingTypes', edit.tag, applyPatch(d.config.openingTypes?.[edit.tag] ?? {}, edit.patch)) };
+    case 'config':
+      return { ...d, config: applyPatch(d.config, edit.patch) };
+    case 'building': {
+      const building = applyPatch(d.config.building ?? {}, edit.patch);
+      return { ...d, config: Object.keys(building).length === 0 ? omit(d.config, 'building') : { ...d.config, building } };
+    }
+  }
 }
 
 function mapWall(d: ProjectDraft, wallId: string, f: (w: DraftWall) => DraftWall): ProjectDraft {

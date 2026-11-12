@@ -432,3 +432,103 @@ describe('WallEditor: clique que leva ao campo — menu, projeto, seção fechad
     expect(missing('', ids('project'))).toEqual([]);
   });
 });
+
+/** S49: o conserto em grupo aplica a mesma edição a todas as aberturas da linha, num passo só de desfazer. */
+describe('WallEditor: conserto em grupo (S49)', () => {
+  function Live({ initial, checked }: { initial: EditorState; checked: CheckState }) {
+    const [state, dispatch] = useReducer(editorReducer, initial);
+    const openings =
+      state.draft?.walls.flatMap((w) =>
+        w.openings.map((o) => ({ id: o.id, header: o.header, headerMark: o.headerMark, headerHeight: o.headerHeight })),
+      ) ?? [];
+    return (
+      <ProjectIOContext value={io}>
+        <WallEditor state={state} dispatch={dispatch} check={checked} />
+        <output data-testid="openings">{JSON.stringify(openings)}</output>
+        <button type="button" onClick={() => dispatch({ type: 'undo' })}>
+          test-undo
+        </button>
+      </ProjectIOContext>
+    );
+  }
+  const base = (): EditorState => ({ ...load(initialEditorState, 1), revision: 0 });
+  const openingsNow = (): {
+    id: string;
+    header?: { section?: unknown; plies?: number; jackStuds?: number };
+    headerHeight?: number;
+  }[] => JSON.parse(screen.getByTestId('openings').textContent ?? '[]');
+  const headerOf = (id: string) => openingsNow().find((o) => o.id === id)?.header;
+  const openIssues = (): void => {
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+  };
+  const headerOut = (wallId: string, openingId: string) => ({
+    source: 'engine' as const,
+    code: 'HEADER_OUT_OF_TABLE',
+    message: 'x',
+    wallId,
+    openingId,
+    stage: 'wall' as const,
+    params: { why: 'width', width: 600 },
+  });
+
+  it('"Set header": seção inválida não aplica; válida vai para as duas aberturas; um undo desfaz as duas', async () => {
+    const user = userEvent.setup();
+    const failed: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: false, problems: [headerOut('W01', 'J1'), headerOut('W02', 'J3')], warnings: [] },
+    };
+    render(<Live initial={base()} checked={failed} />);
+    openIssues();
+    const before = [headerOf('J1'), headerOf('J3')];
+    await user.click(screen.getByRole('button', { name: 'Set header…' }));
+    await user.type(screen.getByLabelText('Header section'), '2x13');
+    await user.clear(screen.getByLabelText('Plies'));
+    await user.type(screen.getByLabelText('Plies'), '3');
+    await user.click(screen.getByRole('button', { name: 'Apply to all 2 openings' }));
+    expect(screen.getByRole('alert').textContent).toMatch(/2x4|LVL/);
+    expect([headerOf('J1'), headerOf('J3')]).toEqual(before);
+
+    await user.clear(screen.getByLabelText('Header section'));
+    await user.type(screen.getByLabelText('Header section'), '2x12');
+    await user.click(screen.getByRole('button', { name: 'Apply to all 2 openings' }));
+    expect(headerOf('J1')).toEqual({ section: '2x12', plies: 3 });
+    expect(headerOf('J3')).toEqual({ section: '2x12', plies: 3 });
+    expect(screen.queryByLabelText('Header section')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'test-undo' }));
+    expect([headerOf('J1'), headerOf('J3')]).toEqual(before);
+  });
+
+  it('altura de porta: os dois botões dizem a medida; o que muda o framing diz isso e sobe o topo do RO', async () => {
+    const user = userEvent.setup();
+    const mismatch = (wallId: string, openingId: string) => ({
+      source: 'engine' as const,
+      code: 'DOOR_RO_HEIGHT_MISMATCH',
+      message: 'x',
+      panelId: '1-' + wallId + '-P1',
+      wallId,
+      openingId,
+      params: { roughHeight: 82.5, headerBase: 81.5 },
+    });
+    const warned: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: true, projectName: 'x', panels: [], warnings: [mismatch('W01', 'P1'), mismatch('W03', 'P2')] },
+    };
+    render(<Live initial={base()} checked={warned} />);
+    openIssues();
+    expect(screen.getByRole('button', { name: 'Use 6\'-9 1/2" as the door RO height' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Set the header at 6\'-10 1/2" (changes framing)' }));
+    expect(
+      openingsNow()
+        .filter((o) => o.id === 'P1' || o.id === 'P2')
+        .map((o) => o.headerHeight),
+    ).toEqual([82.5, 82.5]);
+  });
+});

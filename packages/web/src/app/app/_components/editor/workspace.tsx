@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { downloadText } from '@/lib/download';
 import { wallById } from '@/lib/editor/draft';
@@ -16,6 +16,8 @@ import { EditorToolbar } from './editor-toolbar';
 import { EditorTopBar, type TopBarMenuItem } from './editor-top-bar';
 import { Inspector } from './inspector';
 import { revealFirst } from '@/lib/editor/field-focus';
+import { groupFixFor, type GroupFix } from '@/lib/editor/group-fixes';
+import { openingInfo } from '@/lib/editor/issue-groups';
 import { IssueGroupsList } from './issue-groups-list';
 import { Navigator, type NavigatorTab } from './navigator';
 import { PlanCanvas, type PlanCanvasHandle } from './plan-canvas';
@@ -77,6 +79,16 @@ export function Workspace() {
   const select = (selection: Selection, focus?: readonly string[]): void => dispatch({ type: 'select', selection, ...(focus === undefined ? {} : { focus }) });
   // S47: o clique numa issue pede um campo — o inspetor (ou o diálogo de configurações) acabou de renderizar com a
   // seleção nova; `revealFirst` espera o campo aparecer, abre a seção, rola até ele, foca e destaca.
+  // S49: o conserto em grupo que cada causa oferece (header para todas as aberturas da linha, altura de porta).
+  const fixes = useMemo(() => {
+    const info = openingInfo(draft);
+    const out = new Map<string, GroupFix>();
+    for (const g of groups) {
+      const fix = groupFixFor(g, info);
+      if (fix !== undefined) out.set(g.key, fix);
+    }
+    return out;
+  }, [groups, draft]);
   const focus = state.focus;
   useEffect(() => (focus === undefined ? undefined : revealFirst(focus.fieldIds)), [focus]);
   /** Seleção vinda de uma lista: traz a parede para a vista e, em tela estreita, abre o inspetor. */
@@ -168,6 +180,9 @@ export function Workspace() {
           }}
           current={{ windSpeed: draft.config.building?.windSpeed, headerHeight: draft.config.headerHeight }}
           partial={partial}
+          fixes={fixes}
+          draft={draft}
+          onApplyEdits={(edits) => dispatch({ type: 'applyEdits', edits })}
           onQuickFix={(fix) => {
             if (fix.kind === 'wind') dispatch({ type: 'updateBuilding', patch: { windSpeed: fix.value } });
             else if (fix.kind === 'headerHeight') dispatch({ type: 'updateConfig', patch: { headerHeight: fix.value } });

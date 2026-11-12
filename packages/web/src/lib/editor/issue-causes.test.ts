@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { draftFromJson } from './draft';
+import { draftFromJson, textFromDraft, withoutEditorKeys, type ProjectDraft } from './draft';
+import { doorHeightEdits, groupFixFor, setHeaderEdits } from './group-fixes';
 import { causeCounts, groupIssues, openingInfo } from './issue-groups';
 import { idIndex, parseEngineResult } from './problems';
+import { applyEdit, type DraftEdit } from './state';
 
 // `server-only` lança fora do React Server; nos testes vira módulo vazio.
 vi.mock('server-only', () => ({}));
@@ -105,5 +107,52 @@ describe('issues por causa, pela checagem real (S46)', () => {
       '3 doors (types A, B): RO height 6\'-10 1/2", header at 6\'-9 1/2".',
       undefined,
     ]);
+  });
+});
+
+/** S49: o conserto em grupo resolve a causa de verdade — as edições passam pela checagem real. */
+describe('conserto em grupo, pela checagem real (S49)', () => {
+  const start = (): ProjectDraft => {
+    const load = draftFromJson(project);
+    if (!load.ok) throw new Error('draft should load');
+    return load.draft;
+  };
+  const groupsOf = (draft: ProjectDraft) => {
+    const result = check(textFromDraft(withoutEditorKeys(draft)));
+    const ids = idIndex(draft);
+    const info = openingInfo(draft);
+    const issues = result.ok ? parseEngineResult({ warnings: result.warnings }, ids) : parseEngineResult(result, ids);
+    return { info, groups: groupIssues(issues, ids, { openings: info }) };
+  };
+  const apply = (draft: ProjectDraft, edits: DraftEdit[]): ProjectDraft => edits.reduce(applyEdit, draft);
+  const keys = (draft: ProjectDraft): string[] => groupsOf(draft).groups.map((g) => g.key);
+
+  it('"Set header" em todas as aberturas da linha: o erro de header some', () => {
+    const draft = start();
+    const { info, groups } = groupsOf(draft);
+    const fix = groupFixFor(
+      groups.find((g) => g.key === 'HEADER_OUT_OF_TABLE')!,
+      info,
+    );
+    if (fix?.kind !== 'setHeader') throw new Error('expected a header fix');
+    const fixed = apply(draft, setHeaderEdits(fix.scopes[0]!, { section: '2x12', plies: 3 }));
+    expect(keys(fixed)).not.toContain('HEADER_OUT_OF_TABLE');
+    expect(keys(fixed)).toContain('FLAT_HEADER_CRIPPLES');
+  });
+
+  it('porta: subir o header até o RO tira os dois avisos; usar a altura do header como RO tira só o da altura', () => {
+    const draft = start();
+    const { info, groups } = groupsOf(draft);
+    const fix = groupFixFor(
+      groups.find((g) => g.key === 'DOOR_RO_HEIGHT_MISMATCH')!,
+      info,
+    );
+    if (fix?.kind !== 'doorHeight') throw new Error('expected a door height fix');
+    const raised = keys(apply(draft, doorHeightEdits(fix, 'headerFromRo', draft)));
+    expect(raised).not.toContain('DOOR_RO_HEIGHT_MISMATCH');
+    expect(raised).not.toContain('FLAT_HEADER_CRIPPLES');
+    const matched = keys(apply(draft, doorHeightEdits(fix, 'roFromHeader', draft)));
+    expect(matched).not.toContain('DOOR_RO_HEIGHT_MISMATCH');
+    expect(matched).toContain('FLAT_HEADER_CRIPPLES');
   });
 });

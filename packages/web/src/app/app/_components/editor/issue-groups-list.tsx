@@ -3,7 +3,14 @@
 import { ChevronRightIcon, CircleCheckIcon, Loader2Icon, OctagonXIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { headerSection, readField } from 'cli/schema';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import type { ProjectDraft } from '@/lib/editor/draft';
+import { doorHeightEdits, setHeaderEdits, type GroupFix, type HeaderScope } from '@/lib/editor/group-fixes';
 import { helpFor, quickFixFor, type QuickFix } from '@/lib/editor/issue-help';
+import { formatMeasure } from '@/lib/editor/measure';
+import type { DraftEdit } from '@/lib/editor/state';
 import { focusFor } from '@/lib/editor/issue-targets';
 import { LABELS } from '@/lib/editor/labels';
 import { causeCounts, type IssueAction, type IssueGroup, type IssueTier } from '@/lib/editor/issue-groups';
@@ -31,6 +38,12 @@ export interface IssueGroupsListProps {
   current?: { windSpeed?: number | undefined; headerHeight?: number | undefined } | undefined;
   /** A checagem achou problema mas montou alguma parede: as paredes com problema ainda podem trazer avisos (S46). */
   partial?: boolean | undefined;
+  /** Conserto em grupo de cada causa (S49), pela chave do grupo. */
+  fixes?: ReadonlyMap<string, GroupFix> | undefined;
+  /** O conserto confirmado: as edições entram no projeto num passo só de desfazer. */
+  onApplyEdits?: ((edits: DraftEdit[]) => void) | undefined;
+  /** O projeto como está: o conserto da altura de porta decide por ele se edita o tipo ou a abertura. */
+  draft?: ProjectDraft | undefined;
 }
 
 /** Chips à vista por linha; acima disso ficam atrás de "Show openings (N)" (S46). */
@@ -61,7 +74,7 @@ function projectFocus(i: Issue): readonly string[] | undefined {
  * CHIPS_IN_VIEW ficam recolhidos), conserto rápido quando há um e a ação quando há uma. Os textos originais do
  * motor / da extração ficam em "Details", nunca somem. A contagem do topo é de causas, não de ocorrências.
  */
-export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial }: IssueGroupsListProps) {
+export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial, fixes, onApplyEdits, draft }: IssueGroupsListProps) {
   if (groups.length === 0) {
     return (
       <div className="flex items-start gap-2 px-4 py-4 text-sm" aria-live="polite">
@@ -75,7 +88,9 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   }
   const counts = causeCounts(groups);
   const tally = [counts.fix > 0 ? `${counts.fix} to fix` : '', counts.review > 0 ? `${counts.review} to review` : '', counts.fine > 0 ? `${counts.fine} fine to leave` : ''].filter((s) => s !== '').join(' · ');
-  const row = (g: IssueGroup) => <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} />;
+  const row = (g: IssueGroup) => (
+    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} />
+  );
   const fine = groups.filter((g) => g.tier === 'fine');
   return (
     <div className={cn('workspace-pane h-full', stale && 'opacity-70')} aria-live="polite" aria-busy={checking}>
@@ -105,10 +120,10 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   );
 }
 
-type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current'> & { group: IssueGroup };
+type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft'> & { group: IssueGroup; groupFix: GroupFix | undefined };
 
 /** Uma causa: título, frase, chips, conserto rápido, ação e "Details". */
-function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current }: GroupRowProps) {
+function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft }: GroupRowProps) {
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
   const selectedOpening = selection.kind === 'opening' ? selection.openingId : undefined;
   const problem = g.severity === 'problem';
@@ -183,6 +198,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
             )
           ) : null}
           {fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
+          {groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} /> : null}
           {settingsAction !== undefined && fix === undefined ? (
             <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(settingsAction, projectFocus(first))}>
               {ACTION_LABEL[settingsAction]}
@@ -211,6 +227,109 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
         </div>
       </div>
     </li>
+  );
+}
+
+/**
+ * Conserto em grupo (S49): uma edição para todas as aberturas da causa. Nada entra sem o clique; o que muda o framing
+ * diz isso no botão.
+ */
+function GroupFixRow({ fix, groupKey, draft, onApply }: { fix: GroupFix; groupKey: string; draft: ProjectDraft | undefined; onApply: (edits: DraftEdit[]) => void }) {
+  if (fix.kind === 'setHeader') return <SetHeaderForm scopes={fix.scopes} groupKey={groupKey} onApply={onApply} />;
+  if (draft === undefined) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      <Button variant="outline" size="xs" title="The door rough opening follows the header; the framing does not change" onClick={() => onApply(doorHeightEdits(fix, 'roFromHeader', draft))}>
+        Use {formatMeasure(fix.headerBase)} as the door RO height
+      </Button>
+      <Button variant="outline" size="xs" title="Moves the header of these openings to the door rough opening height" onClick={() => onApply(doorHeightEdits(fix, 'headerFromRo', draft))}>
+        Set the header at {formatMeasure(fix.roughHeight)} (changes framing)
+      </Button>
+    </div>
+  );
+}
+
+/** "Set header…": seção, plies e (opcional) jacks do engenheiro, para todas as aberturas da linha ou só as de um tipo. */
+function SetHeaderForm({ scopes, groupKey, onApply }: { scopes: readonly HeaderScope[]; groupKey: string; onApply: (edits: DraftEdit[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [section, setSection] = useState('');
+  const [plies, setPlies] = useState('2');
+  const [jacks, setJacks] = useState('');
+  const [scopeKey, setScopeKey] = useState('all');
+  const [error, setError] = useState<string | undefined>(undefined);
+  if (!open) {
+    return (
+      <Button variant="outline" size="xs" onClick={() => setOpen(true)}>
+        Set header…
+      </Button>
+    );
+  }
+  const scope = scopes.find((s) => s.key === scopeKey) ?? scopes[0]!;
+  const id = (name: string): string => `gf-${groupKey}-${name}`;
+  const whole = (text: string): number | undefined => (/^[1-9]\d*$/.test(text.trim()) ? Number(text.trim()) : undefined);
+  const apply = (): void => {
+    const s = section.trim();
+    if (!readField(headerSection, s).ok) return setError('Header section: use 2x4…2x12, or LVL / PSL <width>x<depth>.');
+    const p = whole(plies);
+    if (p === undefined) return setError('Plies: type a whole number, 1 or more.');
+    const j = jacks.trim() === '' ? undefined : whole(jacks);
+    if (jacks.trim() !== '' && j === undefined) return setError('Jack studs per side: type a whole number, or leave it empty.');
+    setError(undefined);
+    onApply(setHeaderEdits(scope, { section: s, plies: p, ...(j === undefined ? {} : { jackStuds: j }) }));
+    setOpen(false);
+  };
+  return (
+    <div className="space-y-2 rounded-md border border-line bg-paper-2 p-2">
+      <div className="grid grid-cols-3 items-end gap-2">
+        <div className="space-y-1">
+          <Label htmlFor={id('section')} className="text-[12px] text-ink-2">
+            Header section
+          </Label>
+          <Input id={id('section')} value={section} placeholder="2x12" className="h-8 font-mono text-[13px]" onChange={(e) => setSection(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={id('plies')} className="text-[12px] text-ink-2">
+            Plies
+          </Label>
+          <Input id={id('plies')} value={plies} inputMode="numeric" className="h-8 text-[13px]" onChange={(e) => setPlies(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={id('jacks')} className="text-[12px] text-ink-2">
+            Jack studs per side
+          </Label>
+          <Input id={id('jacks')} value={jacks} inputMode="numeric" placeholder="auto" className="h-8 text-[13px]" onChange={(e) => setJacks(e.target.value)} />
+        </div>
+      </div>
+      {scopes.length > 1 ? (
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Apply to">
+          {scopes.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              aria-pressed={s.key === scope.key}
+              onClick={() => setScopeKey(s.key)}
+              className={cn('rounded-sm border px-1.5 text-[11px] transition-colors hover:border-line-strong', s.key === scope.key ? 'border-navy-900 bg-navy-900 text-paper' : 'border-line text-ink-2')}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {error !== undefined ? (
+        <p className="text-[12px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex gap-1">
+        <Button variant="accent" size="xs" onClick={apply}>
+          Apply to {scope.key === 'all' ? scope.label.charAt(0).toLowerCase() + scope.label.slice(1) : scope.label}
+        </Button>
+        <Button variant="ghost" size="xs" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+      <p className="text-[11px] leading-snug text-ink-3">The header from the engineer goes on each opening; king studs still come from the wind table. Undo (Ctrl+Z) reverts all of them at once.</p>
+    </div>
   );
 }
 

@@ -235,6 +235,9 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   seção, rola até o campo, põe o cursor nele e o destaca por 1,8 s (contorno gold parado + fundo gold-100 que
   esmaece; `[data-field-focus]` em `globals.css`). Issue de projeto: o botão "Open project settings" abre o
   diálogo no campo. Toda família tem "o que é" e "como resolver" (teste de cobertura em `issue-help.test.ts`).
+  **Conserto em grupo** (S49): a linha de header ("Set header…": seção, plies, jacks opcionais; escopo "All N
+  openings" ou por tipo, em chips; botão accent "Apply to …") e a de altura de porta (dois botões outline, o que
+  muda o framing diz "(changes framing)") aplicam a edição a todas as aberturas da linha num passo só de desfazer.
   Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
 - **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;
