@@ -444,3 +444,13 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   dela ser resolvido. `generate` não muda (com erro não gera nada). Motor e CLI não mudam. Rejeitado nesta sessão,
   por escopo: fazer o motor seguir depois do primeiro erro da parede para listar todas as aberturas com erro (muda
   `panelizeWall`; sessão própria).
+- **2026-11-12 — A aba Issues conta e mostra causas, não ocorrências (S46; pedido do humano).** Uma linha por
+  família de issue (a chave do grupo que já existia), em três níveis: Must fix (problema, trava o Generate), To
+  review (aviso que pede decisão) e Fine to leave (aviso que a fábrica resolve; recolhido). O nível é um campo
+  explícito por código (`FINE_TO_LEAVE`, inicial só `STUDS_OVERLAP`), não lido do texto da ajuda; problema é sempre
+  Must fix e nunca fica recolhido. A frase da linha usa só os parâmetros iguais em todas as ocorrências; quando
+  divergem ou a família não tem modelo, vale a frase genérica da ajuda. O número da aba e o chip do topo passam a
+  contar causas. "Fine to leave" não acende parede nem conta na lista de paredes, mas continua no inspetor e — como
+  todo aviso — na folha do painel e no `panels.csv`. Rejeitado: subdividir a família por valores (a linha continua
+  uma só) e um botão para esconder avisos (esconde sem resolver). Desenho inteiro (clique até o campo, conserto em
+  grupo, "revisado") em `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md`.

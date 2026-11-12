@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Notice } from '@/types/panels';
-import { dropRepeated, groupIssues, groupKey, groupTitle, needsProjectData } from './issue-groups';
+import { causeCounts, commonParams, dropRepeated, groupIssues, groupKey, groupTitle, needsProjectData, openingInfo, tierOf, type OpeningInfo } from './issue-groups';
 import { draftIssues, issueFromNotice, type IdIndex, type Issue } from './problems';
 import { draftFromJson } from './draft';
 
@@ -83,5 +83,109 @@ describe('groupIssues', () => {
     expect(groups[1]!.wallIds).toEqual(['N1', 'S1']);
     expect(groups[1]!.action).toBeUndefined();
     expect(needsProjectData([warn, crossing])).toBe(false);
+  });
+});
+
+/** S46: a lista conta e mostra uma linha por causa, em três níveis, com a frase dos valores em comum. */
+describe('issues por causa (S46)', () => {
+  const doorIds: IdIndex = {
+    walls: ['I1', 'I2', 'I3', 'X1', 'X2'],
+    openings: new Map([
+      ['I1', ['I1-D']],
+      ['I2', ['I2-D']],
+      ['I3', ['I3-D']],
+      ['X1', ['X1-W']],
+      ['X2', ['X2-W']],
+    ]),
+  };
+  const info = new Map<string, OpeningInfo>([
+    ['I1-D', { tag: 'C', kind: 'door' }],
+    ['I2-D', { tag: 'A', kind: 'door' }],
+    ['I3-D', { tag: 'C', kind: 'door' }],
+    ['X1-W', { tag: 'E2', kind: 'window' }],
+    ['X2-W', { tag: 'F', kind: 'window' }],
+  ]);
+  const notice = (code: string, wallId: string, openingId: string, params: Record<string, unknown>): Notice => ({ source: 'engine', code, message: 'x', wallId, openingId, params });
+  const cripples = (wallId: string): Issue => issueFromNotice(notice('FLAT_HEADER_CRIPPLES', wallId, wallId + '-D', { top: 83, gap: 24.125, topPlate: 107.125, max: 24 }), 'warning', doorIds);
+  const mismatch = (wallId: string): Issue => issueFromNotice(notice('DOOR_RO_HEIGHT_MISMATCH', wallId, wallId + '-D', { roughHeight: 82.5, headerBase: 81.5 }), 'warning', doorIds);
+  const outOfTable = (wallId: string, params: Record<string, unknown>): Issue => issueFromNotice(notice('HEADER_OUT_OF_TABLE', wallId, wallId + '-W', params), 'problem', doorIds);
+  const overlap = (panelId: string): Issue => issueFromNotice({ source: 'engine', code: 'STUDS_OVERLAP', message: 'x', panelId, params: { aRole: 'stud', aX: 143.25, bRole: 'stud', bX: 144.375, overlap: 0.375 } }, 'warning', doorIds);
+
+  it('tierOf: problema é sempre "fix"; aviso é "review", salvo os que a fábrica resolve ("fine")', () => {
+    expect(tierOf({ severity: 'problem', code: 'HEADER_OUT_OF_TABLE' })).toBe('fix');
+    expect(tierOf({ severity: 'warning', code: 'FLAT_HEADER_CRIPPLES' })).toBe('review');
+    expect(tierOf({ severity: 'warning', code: 'STUDS_OVERLAP' })).toBe('fine');
+    expect(tierOf({ severity: 'problem', code: 'STUDS_OVERLAP' })).toBe('fix');
+    expect(tierOf({ severity: 'problem', kind: 'wall.height' })).toBe('fix');
+  });
+
+  it('commonParams: só as chaves com o mesmo valor em todos os itens; item sem params zera', () => {
+    const item = (params?: Record<string, unknown>): Issue => ({ severity: 'warning', source: 'engine', code: 'X', text: 'x', ...(params === undefined ? {} : { params }) });
+    expect(commonParams([item({ a: 1, b: 2 }), item({ a: 1, b: 3 }), item({ a: 1 })])).toEqual({ a: 1 });
+    expect(commonParams([item({ a: 1 }), item()])).toEqual({});
+    expect(commonParams([])).toEqual({});
+  });
+
+  it('frase-resumo das portas: quantas, de que tipos, e a medida em comum', () => {
+    const [g] = groupIssues([cripples('I1'), cripples('I2'), cripples('I3')], doorIds, { openings: info });
+    expect(g).toMatchObject({ key: 'FLAT_HEADER_CRIPPLES', tier: 'review', count: 3, tags: ['A', 'C'] });
+    expect(g!.summary).toBe('3 doors (types A, C): flat header 24 1/8" below the top plate, over the 24" limit.');
+    const [m] = groupIssues([mismatch('I1'), mismatch('I3')], doorIds, { openings: info });
+    expect(m!.summary).toBe("2 doors (type C): RO height 6'-10 1/2\", header at 6'-9 1/2\".");
+    // sem o contexto do draft: não sabe se é porta nem o tipo
+    expect(groupIssues([cripples('I1'), cripples('I2')], doorIds)[0]!.summary).toBe('2 openings: flat header 24 1/8" below the top plate, over the 24" limit.');
+  });
+
+  it('frase-resumo do header fora da tabela: usa só o que é comum; sem os valores, não há frase', () => {
+    const width = { why: 'width', width: 600, snow: 30, table: 'R602.7(1)' };
+    const same = groupIssues([outOfTable('X1', width), outOfTable('X2', width)], doorIds, { openings: info });
+    expect(same[0]).toMatchObject({ tier: 'fix', tags: ['E2', 'F'] });
+    expect(same[0]!.summary).toBe("The building is 50'-0\" wide, outside IRC table R602.7(1).");
+    const twoTables = groupIssues([outOfTable('X1', width), outOfTable('X2', { why: 'width', width: 600, table: 'R602.7(2)' })], doorIds, { openings: info });
+    expect(twoTables[0]!.summary).toBe("The building is 50'-0\" wide, outside the IRC header tables.");
+    const span = groupIssues([outOfTable('X1', { why: 'span' })], doorIds, { openings: info });
+    expect(span[0]!.summary).toBeUndefined();
+    const mixed = groupIssues([outOfTable('X1', width), outOfTable('X2', { why: 'span' })], doorIds, { openings: info });
+    expect(mixed[0]!.summary).toBeUndefined();
+  });
+
+  it('frase-resumo das famílias do editor: contagem de paredes ou de aberturas', () => {
+    const heights: Issue[] = ['I1', 'I2'].map((w) => ({ severity: 'problem', source: 'draft', kind: 'wall.height', text: 'wall ' + w + ': height is missing', wallId: w }));
+    expect(groupIssues(heights, doorIds)[0]!.summary).toBe('2 walls have no height.');
+    expect(groupIssues(heights.slice(0, 1), doorIds)[0]!.summary).toBe('1 wall has no height.');
+    const floors: Issue[] = [{ severity: 'problem', source: 'draft', kind: 'wall.floorsSupported', text: 'x', wallId: 'X1' }];
+    expect(groupIssues(floors, doorIds)[0]!.summary).toBe('1 bearing wall does not say how many floors it carries.');
+    const positions: Issue[] = ['I1', 'I2'].map((w) => ({ severity: 'problem', source: 'draft', kind: 'opening.position', text: 'x', wallId: w, openingId: w + '-D' }));
+    expect(groupIssues(positions, doorIds)[0]!.summary).toBe('2 openings have no position.');
+  });
+
+  it('ordem por nível (fix, review, fine) e contagem por causa', () => {
+    const groups = groupIssues([overlap('1-I1-P1'), overlap('1-I2-P1'), overlap('1-I3-P1'), overlap('1-X1-P1'), cripples('I1'), cripples('I2'), outOfTable('X1', { why: 'span' })], doorIds, { openings: info });
+    expect(groups.map((g) => [g.key, g.tier, g.count])).toEqual([
+      ['HEADER_OUT_OF_TABLE', 'fix', 1],
+      ['FLAT_HEADER_CRIPPLES', 'review', 2],
+      ['STUDS_OVERLAP', 'fine', 4],
+    ]);
+    expect(causeCounts(groups)).toEqual({ fix: 1, review: 1, fine: 1 });
+    expect(causeCounts([])).toEqual({ fix: 0, review: 0, fine: 0 });
+  });
+
+  it('openingInfo: tipo da abertura pela tag do catálogo ou pelo type da própria abertura', () => {
+    const load = draftFromJson({
+      config: { studSpacing: 16, studLength: [92.625], openingTypes: { A: { kind: 'door', width: 36, height: 80 } } },
+      walls: [
+        {
+          id: 'W1', length: 240, height: 97.125, section: '2x4', exterior: false, bearing: false,
+          openings: [
+            { id: 'D1', tag: 'A', center: 60 },
+            { id: 'J1', type: 'window', offset: 120, roughWidth: 36, roughHeight: 48 },
+          ],
+        },
+      ],
+    });
+    if (!load.ok) throw new Error('draft should load');
+    const map = openingInfo(load.draft);
+    expect(map.get('D1')).toEqual({ tag: 'A', kind: 'door' });
+    expect(map.get('J1')).toEqual({ kind: 'window' });
   });
 });

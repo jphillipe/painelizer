@@ -3,12 +3,69 @@
  * em vez de uma linha por parede. A chave é o `kind` do próprio editor ou o código do motor/parser/leitura (S26:
  * todo aviso tem código; nada é reconhecido pelo texto). O título é inglês (mapa abaixo); o texto original de
  * cada issue fica intacto em `items` — nunca some, só vira detalhe (docs/10-design.md §3).
+ *
+ * S46: cada grupo é uma **causa**. A lista conta causas, não ocorrências, em três níveis (`tier`): o que trava a
+ * geração, o que pede uma decisão e o que a fábrica resolve sozinha; e mostra uma frase com os valores que todas as
+ * ocorrências têm em comum (`summary`).
  */
 
+import type { ProjectDraft } from './draft';
+import { formatInchesOnly, formatMeasure } from './measure';
 import type { IdIndex, Issue, Severity } from './problems';
 
 /** O que a interface oferece para resolver o grupo de uma vez. */
 export type IssueAction = 'projectData' | 'projectSettings' | 'openWall';
+
+/** Nível da causa (S46): `fix` trava "Generate"; `review` pede uma decisão; `fine` a fábrica resolve na bancada. */
+export type IssueTier = 'fix' | 'review' | 'fine';
+
+/**
+ * Avisos que não pedem decisão do revisor. Campo explícito por código — não se lê do texto da ajuda. Inicial: só o
+ * que a ajuda já dá como "Fine to leave" sem condição.
+ */
+export const FINE_TO_LEAVE: ReadonlySet<string> = new Set(['STUDS_OVERLAP']);
+
+/** Problema é sempre `fix`, mesmo com código de `FINE_TO_LEAVE`: o que trava a geração nunca fica recolhido. */
+export function tierOf(issue: Pick<Issue, 'severity' | 'code' | 'kind'>): IssueTier {
+  if (issue.severity === 'problem') return 'fix';
+  return FINE_TO_LEAVE.has(issue.kind ?? issue.code ?? '') ? 'fine' : 'review';
+}
+
+/** O que a frase-resumo precisa saber de uma abertura: a tag do catálogo e se é porta ou janela. */
+export interface OpeningInfo {
+  tag?: string;
+  kind?: 'window' | 'door';
+}
+
+/** Contexto do draft para os grupos; sem ele a frase fala em "openings" e não cita tipos. */
+export interface GroupContext {
+  /** Por id de abertura (únicos no projeto). */
+  openings?: ReadonlyMap<string, OpeningInfo>;
+}
+
+/** Tag e tipo de cada abertura do draft: o `type` da própria abertura, senão o `kind` do tipo do catálogo. */
+export function openingInfo(draft: ProjectDraft): Map<string, OpeningInfo> {
+  const out = new Map<string, OpeningInfo>();
+  for (const w of draft.walls) {
+    for (const o of w.openings) {
+      const kind = o.type ?? (o.tag === undefined ? undefined : draft.config.openingTypes?.[o.tag]?.kind);
+      out.set(o.id, { ...(o.tag === undefined ? {} : { tag: o.tag }), ...(kind === undefined ? {} : { kind }) });
+    }
+  }
+  return out;
+}
+
+/** Parâmetros com o mesmo valor em todas as ocorrências; vazio quando alguma não tem parâmetros. */
+export function commonParams(items: readonly Issue[]): Readonly<Record<string, unknown>> {
+  const first = items[0]?.params;
+  if (first === undefined || items.some((i) => i.params === undefined)) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(first)) {
+    const same = JSON.stringify(value);
+    if (items.every((i) => i.params !== undefined && key in i.params && JSON.stringify(i.params[key]) === same)) out[key] = value;
+  }
+  return out;
+}
 
 export interface IssueGroup {
   key: string;
@@ -20,6 +77,24 @@ export interface IssueGroup {
   openingIds: string[];
   items: Issue[];
   action?: IssueAction;
+  tier: IssueTier;
+  /** Tags (tipos do catálogo) das aberturas citadas, sem repetir, em ordem alfabética. */
+  tags: string[];
+  /** Frase com os valores em comum das ocorrências; ausente quando a família não tem modelo ou os valores divergem. */
+  summary?: string;
+}
+
+/** Causas por nível: é o que a aba e o topo contam (S46). */
+export interface CauseCounts {
+  fix: number;
+  review: number;
+  fine: number;
+}
+
+export function causeCounts(groups: readonly Pick<IssueGroup, 'tier'>[]): CauseCounts {
+  const counts: CauseCounts = { fix: 0, review: 0, fine: 0 };
+  for (const g of groups) counts[g.tier] += 1;
+  return counts;
 }
 
 /** Títulos em inglês por `kind` (editor), código da extração ou código do motor. */
@@ -160,14 +235,64 @@ export function groupTitle(issue: Issue, _ids?: IdIndex): string {
   return issue.text;
 }
 
-/** Problemas antes de avisos; dentro de cada severidade, grupos maiores primeiro, empate pela ordem de chegada. */
-export function groupIssues(issues: readonly Issue[], ids: IdIndex): IssueGroup[] {
+const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+const counted = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+interface SummaryInput {
+  count: number;
+  walls: number;
+  common: Readonly<Record<string, unknown>>;
+  /** "18 doors (types A, B, C)". */
+  subject: string;
+}
+
+/** Frase-resumo por família. Devolve `undefined` quando falta um valor em comum: a lista usa a ajuda genérica. */
+const SUMMARIES: Readonly<Record<string, (s: SummaryInput) => string | undefined>> = {
+  // O parâmetro não traz o limite da tabela (36'): a frase cita a largura e a tabela.
+  HEADER_OUT_OF_TABLE: ({ common }) => {
+    const width = num(common['width']);
+    if (common['why'] !== 'width' || width === undefined) return undefined;
+    const table = typeof common['table'] === 'string' ? `IRC table ${common['table']}` : 'the IRC header tables';
+    return `The building is ${formatMeasure(width)} wide, outside ${table}.`;
+  },
+  FLAT_HEADER_CRIPPLES: ({ common, subject }) => {
+    const gap = num(common['gap']);
+    const max = num(common['max']);
+    if (gap === undefined || max === undefined) return undefined;
+    return `${subject}: flat header ${formatInchesOnly(gap)} below the top plate, over the ${formatInchesOnly(max)} limit.`;
+  },
+  DOOR_RO_HEIGHT_MISMATCH: ({ common, subject }) => {
+    const roughHeight = num(common['roughHeight']);
+    const headerBase = num(common['headerBase']);
+    if (roughHeight === undefined || headerBase === undefined) return undefined;
+    return `${subject}: RO height ${formatMeasure(roughHeight)}, header at ${formatMeasure(headerBase)}.`;
+  },
+  'wall.height': ({ walls }) => `${counted(walls, 'wall has', 'walls have')} no height.`,
+  'wall.floorsSupported': ({ walls }) => (walls === 1 ? '1 bearing wall does not say how many floors it carries.' : `${walls} bearing walls do not say how many floors they carry.`),
+  'opening.position': ({ count }) => `${counted(count, 'opening has', 'openings have')} no position.`,
+};
+
+/** "18 doors (types A, B, C)": porta ou janela quando todas são; "openings" quando misturam ou não se sabe. */
+function subjectOf(g: IssueGroup, context: GroupContext | undefined): string {
+  const kinds = new Set(g.items.map((i) => (i.openingId === undefined ? undefined : context?.openings?.get(i.openingId)?.kind)));
+  const only = kinds.size === 1 ? [...kinds][0] : undefined;
+  const noun = only === 'door' ? counted(g.count, 'door', 'doors') : only === 'window' ? counted(g.count, 'window', 'windows') : counted(g.count, 'opening', 'openings');
+  return g.tags.length === 0 ? noun : `${noun} (${g.tags.length === 1 ? 'type' : 'types'} ${g.tags.join(', ')})`;
+}
+
+const TIER_RANK: Readonly<Record<IssueTier, number>> = { fix: 0, review: 1, fine: 2 };
+
+/**
+ * Uma linha por causa. Ordem: nível (o que trava, o que pede decisão, o que pode ficar); dentro do nível, grupos
+ * maiores primeiro, empate pela ordem de chegada. `context` (do draft) dá os tipos das aberturas à frase-resumo.
+ */
+export function groupIssues(issues: readonly Issue[], ids: IdIndex, context?: GroupContext): IssueGroup[] {
   const groups = new Map<string, IssueGroup>();
   for (const issue of issues) {
     const key = groupKey(issue, ids);
     let g = groups.get(key);
     if (g === undefined) {
-      g = { key, severity: issue.severity, title: groupTitle(issue, ids), count: 0, wallIds: [], openingIds: [], items: [] };
+      g = { key, severity: issue.severity, title: groupTitle(issue, ids), count: 0, wallIds: [], openingIds: [], items: [], tier: tierOf(issue), tags: [] };
       const action = actionFor(issue);
       if (action !== undefined) g.action = action;
       groups.set(key, g);
@@ -178,9 +303,20 @@ export function groupIssues(issues: readonly Issue[], ids: IdIndex): IssueGroup[
     if (issue.openingId !== undefined && !g.openingIds.includes(issue.openingId)) g.openingIds.push(issue.openingId);
   }
   const list = [...groups.values()];
-  for (const g of list) if (g.action === undefined && g.wallIds.length === 1 && g.count === 1) g.action = 'openWall';
-  const rank = (s: Severity): number => (s === 'problem' ? 0 : 1);
-  return list.map((g, i) => ({ g, i })).sort((a, b) => rank(a.g.severity) - rank(b.g.severity) || b.g.count - a.g.count || a.i - b.i).map(({ g }) => g);
+  for (const g of list) {
+    if (g.action === undefined && g.wallIds.length === 1 && g.count === 1) g.action = 'openWall';
+    // Uma ocorrência que trava puxa a causa inteira para "fix": problema nunca fica recolhido.
+    if (g.items.some((i) => i.severity === 'problem')) g.tier = 'fix';
+    const tags = new Set<string>();
+    for (const id of g.openingIds) {
+      const tag = context?.openings?.get(id)?.tag;
+      if (tag !== undefined) tags.add(tag);
+    }
+    g.tags = [...tags].sort();
+    const summary = SUMMARIES[g.key]?.({ count: g.count, walls: g.wallIds.length, common: commonParams(g.items), subject: subjectOf(g, context) });
+    if (summary !== undefined) g.summary = summary;
+  }
+  return list.map((g, i) => ({ g, i })).sort((a, b) => TIER_RANK[a.g.tier] - TIER_RANK[b.g.tier] || b.g.count - a.g.count || a.i - b.i).map(({ g }) => g);
 }
 
 /** Famílias que o formulário de dados do projeto resolve (altura, precuts, estrutural). */

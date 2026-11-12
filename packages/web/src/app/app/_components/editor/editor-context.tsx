@@ -32,7 +32,10 @@ export interface EditorContextValue {
   /** Quebras de painel por parede (S29): as do draft (revisor) ou as da última checagem, com os candidatos. */
   breaks: ReadonlyMap<string, ShownBreaks>;
   check: CheckState;
-  counts: { problems: number; warnings: number };
+  /** Causas (S46), não ocorrências: `problems` = o que trava; `warnings` = o que pede decisão; `problemWalls` = paredes com problema. */
+  counts: { problems: number; warnings: number; problemWalls: number };
+  /** A checagem achou problema mas montou alguma parede: a lista de avisos ainda pode crescer (S46). */
+  partial: boolean;
   /** Checagem em dia e sem problema: o "Generate" acende. */
   ready: boolean;
   /** O que o motor exige deste projeto; `needsData` = a leitura veio sem altura / precuts (card "Before you review"). */

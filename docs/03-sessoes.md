@@ -1753,3 +1753,22 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   avisos de peça deitada caem para 17; tela capturada por Chrome headless no app sem login (`out/s45/`). Fora desta
   sessão, pedidos do humano na mesma conversa: listar todas as aberturas com erro de uma parede (hoje só a primeira;
   muda o motor), clique na issue que leva ao campo a alterar, e sugestão de resolução por IA com aprovação.
+
+- [x] **S46 — Lista de issues por causa (web; não é regra de framing).** Pedido do humano em 2026-11-12, no Matilda
+  Pines: "50 issues num projeto é muita coisa". As 50 são 4 causas (10 headers fora da tabela, 18 peças deitadas
+  longe da top plate, 18 alturas de porta diferentes do header, 4 studs sobrepostos), cada tipo com os mesmos
+  valores. Desenho em `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md` (§1), plano em
+  `docs/superpowers/plans/2026-11-12-issues-by-cause-s46.md`. **Modelo** (`lib/editor/issue-groups.ts`): cada grupo
+  ganha nível (`tier`: `fix` = problema; `review` = aviso que pede decisão; `fine` = aviso que a fábrica resolve,
+  conjunto explícito `FINE_TO_LEAVE`, inicial `STUDS_OVERLAP`), os tipos das aberturas (`tags`) e a frase-resumo
+  (`summary`) com os parâmetros iguais em todas as ocorrências (`commonParams`); `causeCounts` conta por nível.
+  **Lista**: três seções (Must fix / To review / Fine to leave recolhida), linha de contagem, chips sempre por
+  abertura quando a issue é dela (até 6 à vista, depois "Show openings (N)"), frase de lista parcial. **Fora da
+  aba**: selo da aba e chip do topo contam causas ("1 to fix", paredes no `title`); "fine" não acende parede na
+  planta nem conta na lista de paredes, e leva a etiqueta "Fine to leave" no inspetor. **Testes** (vistos falhar
+  antes): modelo, lista (SSR), editor (DOM), topo, inspetor, e um projeto inventado com as quatro causas pela
+  checagem real (`issue-causes.test.ts`; o projeto do cliente não entra no repositório). **Conferido** na tela com a
+  planta salva do Matilda (app local sem login, Chrome headless, `out/s46/`): selo 4, "1 to fix · 2 to review · 1
+  fine to leave", frases com os valores, 18 chips de porta recolhidos. Seguem, do mesmo desenho: S47 (clique que
+  leva ao campo e "como resolver" para toda família), S48 (motor lista todas as aberturas com erro de uma parede),
+  S49 (conserto em grupo), S50 ("Mark as reviewed").

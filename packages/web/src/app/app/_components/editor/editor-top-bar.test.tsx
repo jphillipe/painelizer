@@ -18,6 +18,16 @@ describe('EditorTopBar (SSR)', () => {
     expect(html).toMatch(/<button[^>]* disabled=""[^>]*>Generate panels/);
   });
 
+  it('S46: o chip conta causas e diz em quantas paredes', () => {
+    const check: CheckState = { status: 'done', result: { ok: false, problems: [{ code: 'ENGINE_INTERNAL', message: 'x' }] }, revision: 1, stale: false };
+    const html = renderToStaticMarkup(<EditorTopBar {...base} check={check} problems={1} problemWalls={10} warnings={0} ready={false} />);
+    expect(html).toContain('1 to fix');
+    expect(html).toContain('title="1 cause in 10 walls"');
+    expect(html).toContain('Fix 1 problem first.');
+    const two = renderToStaticMarkup(<EditorTopBar {...base} check={check} problems={2} problemWalls={1} warnings={0} ready={false} />);
+    expect(two).toContain('title="2 causes in 1 wall"');
+  });
+
   it('pronto: "Ready · N panels", avisos à parte e Generate ligado; dados faltando mudam a dica', () => {
     const check: CheckState = { status: 'done', result: { ok: true, projectName: 'Ringgold St', panels: [{ id: '1-W01-P1', wallId: 'W01', pieces: 1 }] as never, warnings: [{ code: 'STUDS_OVERLAP', message: 'w' }] }, revision: 1, stale: false };
     const html = renderToStaticMarkup(<EditorTopBar {...base} check={check} problems={0} warnings={1} ready />);

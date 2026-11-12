@@ -8,9 +8,9 @@ import { breaksByWall, shownBreaks } from '@/lib/editor/breaks';
 import type { ProjectDraft } from '@/lib/editor/draft';
 import { geometryIssues, planGeometry, type PlanGeometry } from '@/lib/editor/geometry';
 import { readingWarningResolved } from '@/lib/editor/issue-help';
-import { dropRepeated, groupIssues } from '@/lib/editor/issue-groups';
+import { causeCounts, dropRepeated, groupIssues, openingInfo, tierOf } from '@/lib/editor/issue-groups';
 import { projectDataNeeds } from '@/lib/editor/requirements';
-import { byWall, countIssues, draftIssues, idIndex, issueFromNotice, parseEngineResult, type Issue } from '@/lib/editor/problems';
+import { byWall, draftIssues, idIndex, issueFromNotice, parseEngineResult, type Issue } from '@/lib/editor/problems';
 import { provenanceIndex } from '@/lib/editor/provenance';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
@@ -78,8 +78,10 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
       .filter((i) => !readingWarningResolved(i, draft));
     return [...own, ...geo, ...engine, ...reading];
   }, [draft, state.loadProblems, check.result, outcome, geometry, ids]);
-  const issuesByWall = useMemo(() => byWall(issues), [issues]);
-  const groups = useMemo(() => groupIssues(issues, ids), [issues, ids]);
+  // S46: o que a fábrica resolve sozinha ("fine to leave") não acende parede nem conta na lista de paredes; o
+  // inspetor continua recebendo `issues` inteiro e mostra o aviso com a etiqueta do nível.
+  const issuesByWall = useMemo(() => byWall(issues.filter((i) => tierOf(i) !== 'fine')), [issues]);
+  const groups = useMemo(() => groupIssues(issues, ids, draft === undefined ? undefined : { openings: openingInfo(draft) }), [issues, ids, draft]);
   // Quebras de painel (S29): candidatos da última checagem; as do revisor vêm do draft (valem antes da resposta).
   const breakInfo = useMemo(() => breaksByWall(check.result), [check.result]);
   const breaks = useMemo(() => new Map((draft?.walls ?? []).map((w) => [w.id, shownBreaks(w, breakInfo.get(w.id))])), [draft?.walls, breakInfo]);
@@ -97,7 +99,12 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
   }
 
   const name = draft.name ?? outcome?.projectName ?? 'Untitled project';
-  const counts = countIssues(issues);
+  // S46: a aba e o topo contam causas (grupos), não ocorrências; o topo ainda diz em quantas paredes está o que trava.
+  const causes = causeCounts(groups);
+  const problemWalls = new Set(issues.filter((i) => i.severity === 'problem').flatMap((i) => [i.wallId, ...(i.alsoWalls ?? [])].filter((w) => w !== undefined))).size;
+  const counts = { problems: causes.fix, warnings: causes.review, problemWalls };
+  // A checagem achou problema mas montou alguma parede: as que têm problema ainda podem trazer avisos.
+  const partial = check.result?.ok === false && (check.result.walls ?? []).some((w) => w.breaks !== undefined);
   // O que o motor vai exigir, lido do próprio draft (antes da checagem): o card de setup pede tudo de uma vez.
   const needs = projectDataNeeds(draft);
   const value: EditorContextValue = {
@@ -112,6 +119,7 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
     breaks,
     check,
     counts,
+    partial,
     ready: check.status === 'done' && !check.stale && counts.problems === 0,
     needs,
     needsData: outcome !== undefined && needs.required.length > 0,

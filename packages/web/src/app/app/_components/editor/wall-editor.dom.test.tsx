@@ -160,3 +160,69 @@ describe('WallEditor: avisos junto com erros (S45)', () => {
     expect(screen.queryByText('Flat header framed with cripples — factory to review')).toBeNull();
   });
 });
+
+/**
+ * S46: fora da aba Issues a contagem é por causa, e o que a fábrica resolve sozinha ("fine to leave") não acende
+ * parede nem aparece no topo.
+ */
+describe('WallEditor: contagem por causa (S46)', () => {
+  const headerOut = (wallId: string, openingId: string) => ({
+    source: 'engine' as const,
+    code: 'HEADER_OUT_OF_TABLE',
+    message: 'x',
+    wallId,
+    openingId,
+    stage: 'wall' as const,
+    params: { why: 'span' },
+  });
+  const cripples = {
+    source: 'engine' as const,
+    code: 'FLAT_HEADER_CRIPPLES',
+    message: 'y',
+    panelId: '1-W03-P1',
+    wallId: 'W03',
+    openingId: 'P2',
+    params: { top: 83, gap: 24.125, topPlate: 107.125, max: 24 },
+  };
+  const overlap = {
+    source: 'engine' as const,
+    code: 'STUDS_OVERLAP',
+    message: 'z',
+    panelId: '1-W04-P1',
+    params: { overlap: 0.375 },
+  };
+  const row = (wallId: string): Element | undefined =>
+    [...document.querySelectorAll('ul[aria-label="Walls"] > li')].find((li) => li.textContent?.includes(wallId));
+
+  it('duas paredes com o mesmo erro são uma causa: selo 3, "1 to fix", e a parede do aviso "fine" não acende', () => {
+    const failed: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: false, problems: [headerOut('W01', 'J1'), headerOut('W02', 'J2')], warnings: [cripples, overlap] },
+    };
+    const s = load(initialEditorState, 1);
+    render(<Editor state={{ ...s, revision: 0 }} checked={failed} />);
+    expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues3');
+    expect(screen.getByText('1 to fix')).toBeTruthy();
+    expect(row('W03')?.querySelector('[title="1 warning"]')).not.toBeNull();
+    expect(row('W04')).toBeDefined();
+    expect(row('W04')?.querySelector('[title="1 warning"]') ?? null).toBeNull();
+  });
+
+  it('só um aviso que a fábrica resolve: pronto para gerar, sem selo de aviso no topo, aba inicial Walls', () => {
+    const fine: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: true, projectName: 'x', panels: [], warnings: [overlap] },
+    };
+    const s = load(initialEditorState, 1);
+    render(<Editor state={{ ...s, revision: 0 }} checked={fine} />);
+    expect(selectedTab()).toMatch(/Walls/);
+    expect(screen.getByText(/Ready ·/)).toBeTruthy();
+    expect(screen.queryByText(/\d+ warnings?$/)).toBeNull();
+    expect((screen.getByRole('button', { name: /Generate panels/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues1');
+  });
+});

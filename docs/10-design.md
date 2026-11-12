@@ -219,11 +219,18 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
 - **Navegador** (esquerda, fundo white): abas Walls / Issues / Reading. Walls = lista compacta (id mono · papel ·
   seção · nº de aberturas · comprimento · contadores de issue em err/gold-600 · ponto de confiança da IA), chips de
   filtro All / Needs attention / Low confidence, a parede selecionada expande as aberturas; selecionar pela lista
-  centraliza a planta só se a parede não está visível (nunca aproxima). Issues = **grupos** (um item por família:
-  título em inglês, `× N`, uma frase "o que aconteceu" + "como resolver" em negrito (`lib/editor/issue-help.ts`),
-  chips de ids clicáveis — da abertura quando a issue é dela —, conserto rápido inline quando existe (campo de
-  vento, campo de altura de header, botão "Add <id>" para abertura sem posição), botão de ação, textos originais
-  em "Details"); problemas antes de avisos. Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
+  centraliza a planta só se a parede não está visível (nunca aproxima). Issues = **uma linha por causa** (S46; um
+  item por família: título em inglês, `× N`, a frase com os valores que as ocorrências têm em comum — "18 doors
+  (types A, B, C): flat header 24 1/8" below the top plate…" — ou, sem ela, "o que aconteceu", mais "como resolver"
+  em negrito (`lib/editor/issue-help.ts`), chips de ids clicáveis — da abertura quando a issue é dela; até 6 à
+  vista, acima disso em "Show openings (N)" —, conserto rápido inline quando existe (campo de vento, campo de altura
+  de header, botão "Add <id>" para abertura sem posição), botão de ação, textos originais em "Details"). Três
+  seções: **Must fix** (trava o Generate), **To review** (pede uma decisão) e **Fine to leave (N)** (a fábrica
+  resolve; recolhida). A linha do topo e o selo da aba contam causas ("1 to fix · 2 to review · 1 fine to leave"),
+  não ocorrências; o chip do topo idem, com as paredes no `title`. "Fine to leave" não acende parede na planta nem
+  conta na lista de paredes, mas aparece no inspetor com a etiqueta. Enquanto há problema e alguma parede foi
+  montada, a lista termina com "Walls with a problem are not framed yet — they may add warnings once fixed."
+  Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
 - **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;
   dentro da planta, barra de escala no canto inferior esquerdo, legenda no direito, grade de 12" quando o zoom

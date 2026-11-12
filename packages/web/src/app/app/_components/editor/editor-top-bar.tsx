@@ -25,7 +25,10 @@ export interface EditorTopBarProps {
   /** Paredes marcadas como revisadas (M5); mostrado quando há leitura da IA ou alguma marca. */
   reviewed?: { done: number; total: number } | undefined;
   check: CheckState;
+  /** Causas que travam a geração (S46: grupos, não ocorrências) e em quantas paredes estão. */
   problems: number;
+  problemWalls?: number | undefined;
+  /** Causas que pedem uma decisão (S46); as que a fábrica resolve sozinha não contam aqui. */
   warnings: number;
   ready: boolean;
   pending: boolean;
@@ -56,7 +59,7 @@ export interface SaveConflictActions {
  * principal sempre visível. Downloads, configurações e "Start over" ficam no menu `⋯`. Abaixo de `sm` (M5) são
  * duas linhas fixas: passos + nome | status + Generate + menu — nada quebra em três.
  */
-export function EditorTopBar({ name, walls, openings, reviewed, check, problems, warnings, ready, pending, needsData, onGenerate, steps, menu, save, onRetrySave, saveActions }: EditorTopBarProps) {
+export function EditorTopBar({ name, walls, openings, reviewed, check, problems, problemWalls, warnings, ready, pending, needsData, onGenerate, steps, menu, save, onRetrySave, saveActions }: EditorTopBarProps) {
   const hint = problems > 0 ? (needsData ? 'Fill in the project data first.' : `Fix ${problems} problem${problems === 1 ? '' : 's'} first.`) : check.status === 'error' ? (check.error ?? 'Could not check the project.') : '';
   return (
     <div className="no-print grid shrink-0 grid-cols-1 gap-x-4 gap-y-1.5 border-b border-line bg-card px-[var(--gutter)] py-2 sm:flex sm:flex-wrap sm:items-center">
@@ -72,7 +75,7 @@ export function EditorTopBar({ name, walls, openings, reviewed, check, problems,
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-none" aria-live="polite">
-          <StatusChip check={check} problems={problems} warnings={warnings} />
+          <StatusChip check={check} problems={problems} problemWalls={problemWalls} warnings={warnings} />
           {save !== undefined ? <SaveChip status={save} onRetry={onRetrySave} actions={saveActions} /> : null}
         </div>
         {hint !== '' ? <span className="hidden truncate text-[13px] text-ink-3 md:inline">{hint}</span> : null}
@@ -192,7 +195,7 @@ function SaveChip({ status, onRetry, actions }: { status: SaveStatus; onRetry: (
 }
 
 /** Chips de status em chip claro com ícone (docs/10-design.md §3): a cor nunca é o único sinal. Cada troca de estado entra com `pop` (M4). */
-function StatusChip({ check, problems, warnings }: { check: CheckState; problems: number; warnings: number }) {
+function StatusChip({ check, problems, problemWalls, warnings }: { check: CheckState; problems: number; problemWalls?: number | undefined; warnings: number }) {
   if (check.status === 'error') {
     return (
       <Badge key="error" variant="destructive" className="animate-pop">
@@ -202,7 +205,12 @@ function StatusChip({ check, problems, warnings }: { check: CheckState; problems
   }
   if (problems > 0) {
     return (
-      <Badge key="problems" variant="destructive" className="animate-pop">
+      <Badge
+        key="problems"
+        variant="destructive"
+        className="animate-pop"
+        title={problemWalls !== undefined && problemWalls > 0 ? `${problems} cause${problems === 1 ? '' : 's'} in ${problemWalls} wall${problemWalls === 1 ? '' : 's'}` : undefined}
+      >
         <OctagonXIcon /> {problems} to fix
       </Badge>
     );

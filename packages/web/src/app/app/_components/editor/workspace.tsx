@@ -34,7 +34,7 @@ import { WallRows } from './wall-rows';
  * "Draw wall", atalhos). Remontado por `key` quando outro projeto entra.
  */
 export function Workspace() {
-  const { state, draft, dispatch, geometry, issuesByWall, breaks, groups, provenance, check, counts, ready, needs, needsData, name, slug } = useEditor();
+  const { state, draft, dispatch, geometry, issuesByWall, breaks, groups, provenance, check, counts, partial, ready, needs, needsData, name, slug } = useEditor();
   const { outcome, onOutcome, pending, onGenerate, steps, onStartOver, sourceFiles, storedDrawings, storage, save, onRetrySave, saveActions } = useProjectIO();
   const wide = useMediaQuery(WIDE_QUERY);
   const [tab, setTab] = useState<string>(() => (counts.problems > 0 ? 'issues' : 'walls'));
@@ -148,7 +148,7 @@ export function Workspace() {
     {
       id: 'issues',
       label: 'Issues',
-      count: counts.problems + counts.warnings,
+      count: groups.length, // S46: causas, não ocorrências
       alert: counts.problems > 0,
       content: (
         <IssueGroupsList
@@ -162,6 +162,7 @@ export function Workspace() {
             else openSettings();
           }}
           current={{ windSpeed: draft.config.building?.windSpeed, headerHeight: draft.config.headerHeight }}
+          partial={partial}
           onQuickFix={(fix) => {
             if (fix.kind === 'wind') dispatch({ type: 'updateBuilding', patch: { windSpeed: fix.value } });
             else if (fix.kind === 'headerHeight') dispatch({ type: 'updateConfig', patch: { headerHeight: fix.value } });
@@ -180,7 +181,7 @@ export function Workspace() {
 
   return (
     <div className="step-enter flex min-h-0 flex-1 flex-col">
-      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} save={save} onRetrySave={onRetrySave} saveActions={saveActions} />
+      <EditorTopBar name={name} walls={draft.walls.length} reviewed={reviewed} openings={draft.walls.reduce((n, w) => n + w.openings.length, 0)} check={check} problems={counts.problems} problemWalls={counts.problemWalls} warnings={counts.warnings} ready={ready} pending={pending} needsData={needsData} onGenerate={onGenerate} steps={steps} menu={menu} save={save} onRetrySave={onRetrySave} saveActions={saveActions} />
       {wide ? (
         <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="flex min-h-0 flex-col border-r border-line bg-card" aria-label="Navigator">
