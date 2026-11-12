@@ -193,6 +193,14 @@ describe('IssueGroupsList — revisado (S50)', () => {
     expect(html).toContain('Reviewed (1)');
   });
 
+  it('tudo revisado: diz que não sobrou nada por revisar, sem faixa vazia; a seção "Reviewed" fica embaixo', () => {
+    const html = render([cripples('I1', true), cripples('I2', true)]);
+    expect(html).toContain('Nothing left to review.');
+    expect(html).not.toMatch(/<p[^>]*><\/p>/);
+    expect(html).toContain('Reviewed (1)');
+    expect(html.indexOf('Nothing left to review.')).toBeLessThan(html.indexOf('Reviewed (1)'));
+  });
+
   it('sem "onReview" (passo 03, leitura): nenhum botão de revisão', () => {
     const html = renderToStaticMarkup(<IssueGroupsList groups={groupIssues([cripples('I1')], walls)} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} />);
     expect(html).not.toContain('Mark as reviewed');

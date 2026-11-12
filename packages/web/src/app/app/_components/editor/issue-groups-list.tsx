@@ -98,7 +98,8 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   const reviewed = groups.filter((g) => g.tier === 'reviewed');
   return (
     <div className={cn('workspace-pane h-full', stale && 'opacity-70')} aria-live="polite" aria-busy={checking}>
-      <p className="border-b border-line-faint px-4 py-2 text-[12px] font-medium text-ink-2">{tally}</p>
+      {/* Tudo revisado: não sobra linha de trabalho — diz isso em vez de uma faixa vazia. */}
+      <p className="border-b border-line-faint px-4 py-2 text-[12px] font-medium text-ink-2">{tally === '' ? 'Nothing left to review.' : tally}</p>
       {stale ? <p className="px-4 py-1 text-[12px] text-ink-3">Rechecking…</p> : null}
       {(['fix', 'review'] as const).map((tier) => {
         const list = groups.filter((g) => g.tier === tier);
@@ -125,7 +126,7 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
             <ChevronRightIcon className="size-3.5 transition-transform duration-200 group-open/reviewed:rotate-90" aria-hidden />
             Reviewed ({reviewed.length})
           </summary>
-          <ul className="divide-y divide-line-faint opacity-80">{reviewed.map(row)}</ul>
+          <ul className="divide-y divide-line-faint">{reviewed.map(row)}</ul>
         </details>
       ) : null}
       {partial === true ? <p className="border-t border-line-faint px-4 py-3 text-[12px] leading-snug text-ink-3">Walls with a problem are not framed yet — they may add warnings once fixed.</p> : null}
@@ -217,7 +218,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
           {!done && groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} stale={stale} rowCount={g.count} /> : null}
           {onReview !== undefined && reviewKeys.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant={done ? 'ghost' : 'outline'} size="xs" onClick={() => onReview(reviewKeys, !done)} title={done ? 'Bring it back to the list' : 'I have seen it; take it off the list (it still prints on the panel sheet)'}>
+              <Button variant={done ? 'ghost' : 'outline'} size="xs" onClick={() => onReview(reviewKeys, !done)} title={done ? 'Bring it back to the list' : 'Takes it off this list; it still prints on the panel sheet'}>
                 {done ? 'Undo review' : 'Mark as reviewed'}
               </Button>
               {!done && g.reviewedCount !== undefined && g.reviewedCount > 0 ? <span className="text-[12px] text-ink-3">+ {g.reviewedCount} reviewed</span> : null}

@@ -24,7 +24,7 @@ export function IssueCallout({ issues, onReview }: { issues: readonly Issue[]; o
           const title = ISSUE_TITLES[i.kind ?? i.code ?? ''];
           const help = helpFor(i);
           return (
-            <li key={`${n}-${i.text}`} className={cn('flex items-start gap-2', i.reviewed === true && 'opacity-70')}>
+            <li key={`${n}-${i.text}`} className="flex items-start gap-2">
               {i.severity === 'problem' ? <OctagonXIcon className="mt-0.5 size-3.5 shrink-0 text-destructive" /> : <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-warning" />}
               <span className="min-w-0 space-y-0.5">
                 {tierOf(i) === 'fine' ? <span className="eyebrow block">Fine to leave</span> : null}

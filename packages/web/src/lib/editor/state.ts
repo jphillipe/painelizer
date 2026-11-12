@@ -28,7 +28,7 @@ import {
 } from './draft';
 import { extraDrawingsOf, PROJECT_DRAWINGS_KEY, type DrawingRef } from '../drawings';
 import { inView, UNDERLAY_KEY, underlayOf, withoutView, type Underlay, type UnderlayView } from './underlay';
-import { REVIEWED_ISSUES_KEY, reviewedIssueKeys } from './reviewed-issues';
+import { pruneReviewedIssues, REVIEWED_ISSUES_KEY, reviewedIssueKeys } from './reviewed-issues';
 import { duplicateWalls, joinWalls, splitWall, type WallOp } from './wall-ops';
 
 export type Selection =
@@ -529,8 +529,10 @@ function renameKey<T>(o: Record<string, T>, from: string, to: string): Record<st
  * Troca o draft registrando histórico. Com `txn` igual ao da transação aberta, substitui sem empilhar (um
  * arraste inteiro = um undo); qualquer outro commit fecha a transação.
  */
-export function commit(state: EditorState, draft: ProjectDraft, txn?: string): EditorState {
+export function commit(state: EditorState, next: ProjectDraft, txn?: string): EditorState {
   if (state.draft === undefined) return state;
+  // S50: a marca de aviso revisado não sobrevive à parede / abertura dela (apagada ou renomeada).
+  const draft = pruneReviewedIssues(next);
   const coalesce = txn !== undefined && txn === state.txn;
   const past = coalesce ? state.past : [...state.past, state.draft].slice(-HISTORY_LIMIT);
   return fixSelection({ ...state, draft, past, future: coalesce ? state.future : [], txn, revision: state.revision + 1, dirty: true });

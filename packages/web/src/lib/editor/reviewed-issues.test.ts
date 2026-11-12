@@ -79,24 +79,106 @@ describe('setIssuesReviewed: grava no projeto, desfaz, não muda o que vai para 
   const project = {
     name: 'x',
     config: { studSpacing: 16, studLength: [92.625] },
-    walls: [{ id: 'I1', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] }],
+    walls: [
+      {
+        id: 'I1',
+        length: 240,
+        height: 97.125,
+        section: '2x4',
+        exterior: false,
+        bearing: false,
+        openings: [
+          { id: 'I1-D', type: 'door', offset: 30, roughWidth: 38, roughHeight: 82.5 },
+          { id: 'I1-D2', type: 'door', offset: 150, roughWidth: 38, roughHeight: 82.5 },
+        ],
+      },
+      { id: 'I2', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] },
+    ],
   };
   const loaded = () =>
     editorReducer(initialEditorState, { type: 'load', text: JSON.stringify(project), source: 'file' });
   const key = issueReviewKey(cripples())!;
+  const key2 = issueReviewKey(cripples({ openingId: 'I1-D2' }))!;
+  const mark = (state: ReturnType<typeof loaded>, keys: string[]) =>
+    editorReducer(state, { type: 'setIssuesReviewed', keys, reviewed: true });
+  const keysOf = (state: ReturnType<typeof loaded>): string[] => [...reviewedIssueKeys(state.draft!)].sort();
 
   it('marca, desmarca e desfaz; chaves em ordem, sem repetir; projeto sem marca não leva a chave', () => {
     const start = loaded();
-    const marked = editorReducer(start, { type: 'setIssuesReviewed', keys: [key, 'B|x', key], reviewed: true });
-    expect(marked.draft!.extra?.[REVIEWED_ISSUES_KEY]).toEqual(['B|x', key].sort());
-    expect([...reviewedIssueKeys(marked.draft!)].sort()).toEqual(['B|x', key].sort());
+    const marked = mark(start, [key, key2, key]);
+    expect(marked.draft!.extra?.[REVIEWED_ISSUES_KEY]).toEqual([key, key2].sort());
+    expect(keysOf(marked)).toEqual([key, key2].sort());
     expect(marked.dirty).toBe(true);
-    expect(editorReducer(marked, { type: 'setIssuesReviewed', keys: [key], reviewed: true })).toBe(marked);
+    expect(mark(marked, [key])).toBe(marked);
     const undone = editorReducer(marked, { type: 'undo' });
     expect(reviewedIssueKeys(undone.draft!).size).toBe(0);
-    const cleared = editorReducer(marked, { type: 'setIssuesReviewed', keys: [key, 'B|x'], reviewed: false });
+    const cleared = editorReducer(marked, { type: 'setIssuesReviewed', keys: [key, key2], reviewed: false });
     expect(cleared.draft!.extra?.[REVIEWED_ISSUES_KEY]).toBeUndefined();
     expect(editorReducer(start, { type: 'setIssuesReviewed', keys: [key], reviewed: false })).toBe(start);
+  });
+
+  it('S50 (revisão): a chave é um JSON legível de volta; ids com "|" não se confundem', () => {
+    expect(JSON.parse(key)).toEqual([
+      'FLAT_HEADER_CRIPPLES',
+      'I1',
+      'I1-D',
+      '',
+      '{"gap":24.125,"max":24,"top":83,"topPlate":107.125}',
+    ]);
+    const a = issueReviewKey(cripples({ wallId: 'A|B', openingId: 'C' }));
+    const b = issueReviewKey(cripples({ wallId: 'A', openingId: 'B|C' }));
+    expect(a).not.toBe(b);
+  });
+
+  it('S50 (revisão): apagar a abertura leva a marca junto — outra abertura com o mesmo id nasce por revisar; undo devolve', () => {
+    const marked = mark(loaded(), [key, key2]);
+    const removed = editorReducer(marked, { type: 'removeOpening', wallId: 'I1', openingId: 'I1-D' });
+    expect(keysOf(removed)).toEqual([key2]);
+    const again = editorReducer(removed, { type: 'addOpening', wallId: 'I1', preset: { id: 'I1-D' } });
+    expect(again.draft!.walls[0]!.openings.some((o) => o.id === 'I1-D')).toBe(true);
+    expect(keysOf(again)).toEqual([key2]);
+    expect(keysOf(editorReducer(removed, { type: 'undo' }))).toEqual([key, key2].sort());
+  });
+
+  it('S50 (revisão): renomear abertura ou parede, e apagar a parede, também soltam as marcas delas', () => {
+    const marked = mark(loaded(), [key, key2]);
+    const renamed = editorReducer(marked, { type: 'renameOpening', wallId: 'I1', openingId: 'I1-D', newId: 'I1-X' });
+    expect(keysOf(renamed)).toEqual([key2]);
+    expect(keysOf(editorReducer(marked, { type: 'renameWall', wallId: 'I1', newId: 'I9' }))).toEqual([]);
+    expect(keysOf(editorReducer(marked, { type: 'removeWall', wallId: 'I1' }))).toEqual([]);
+    // marcas de outra parede e de aviso sem parede ficam
+    const projectLevel = issueReviewKey({
+      severity: 'warning',
+      source: 'engine',
+      code: 'WIND_SPEED_MISSING',
+      text: 'x',
+    })!;
+    const both = mark(loaded(), [key, projectLevel]);
+    expect(keysOf(editorReducer(both, { type: 'removeWall', wallId: 'I2' }))).toEqual([key, projectLevel].sort());
+    // chave que não se lê (arquivo editado à mão) é descartada na primeira edição
+    const odd = editorReducer(mark(loaded(), ['not json']), {
+      type: 'updateWall',
+      wallId: 'I2',
+      patch: { height: 100 },
+    });
+    expect(keysOf(odd)).toEqual([]);
+  });
+
+  it('S50 (revisão): duas aberturas que a leitura não posicionou na mesma parede têm chaves diferentes', () => {
+    const unplaced = (openingId: string): Issue => ({
+      severity: 'warning',
+      source: 'extraction',
+      code: 'OPENING_UNPLACED',
+      text: 'x',
+      wallId: 'I1',
+      params: { tag: 'A' },
+      cited: { wallId: 'I1', openingId },
+    });
+    expect(issueReviewKey(unplaced('I1-A-1'))).not.toBe(issueReviewKey(unplaced('I1-A-2')));
+    // a abertura citada não existe no projeto: a marca não é descartada por isso
+    const k = issueReviewKey(unplaced('I1-A-1'))!;
+    const kept = editorReducer(mark(loaded(), [k]), { type: 'updateWall', wallId: 'I2', patch: { height: 100 } });
+    expect(keysOf(kept)).toEqual([k]);
   });
 
   it('salvar e reabrir devolve as marcas; o texto do motor é o mesmo com e sem marcas', () => {

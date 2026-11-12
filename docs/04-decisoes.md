@@ -479,6 +479,8 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   ocorrência (família + parede + abertura + parâmetros): se a medida muda ou surge outra ocorrência, o aviso volta a
   pedir revisão. Fica em `$reviewedIssues`, na raiz do arquivo do projeto — o CLI ignora chaves com `$` e elas não
   vão para a checagem —, então a folha do painel e o `panels.csv` continuam trazendo o aviso. Só aviso pode ser
-  revisado; problema nunca. Não grava quem nem quando. Chaves de avisos que deixaram de existir ficam no arquivo
-  (inofensivas). Rejeitado: marcar a família inteira de uma vez para sempre (uma porta nova entraria revisada sem
-  ninguém ter visto).
+  revisado; problema nunca. Não grava quem nem quando. A marca não sobrevive à parede ou abertura dela: apagar ou
+  renomear tira a marca no mesmo passo de desfazer (os ids são reaproveitados — sem isso uma abertura nova com o
+  mesmo id nasceria revisada). A chave é um JSON `[família, parede, abertura, painel, parâmetros]`: mudar os
+  parâmetros de um aviso no motor desfaz as marcas daquela família (o lado seguro). Rejeitado: marcar a família
+  inteira de uma vez para sempre (uma porta nova entraria revisada sem ninguém ter visto).
