@@ -59,6 +59,13 @@ describe('groupIssues', () => {
     expect(needsProjectData(groups[0]!.items)).toBe(true);
   });
 
+  it('S45: aviso do motor numa parede em que o draft aponta um problema próprio não some nem duplica', () => {
+    const own: Issue[] = [{ severity: 'problem', source: 'draft', kind: 'wall.floorsSupported', text: 'wall S2: …', wallId: 'S2' }];
+    const cripples = warning({ source: 'engine', panelId: '1-S2-P1', code: 'FLAT_HEADER_CRIPPLES', message: 'x', wallId: 'S2', openingId: 'S2-D1' });
+    expect(cripples).toMatchObject({ severity: 'warning', wallId: 'S2', openingId: 'S2-D1' });
+    expect(dropRepeated([cripples], own)).toEqual([cripples]);
+  });
+
   it('avisos do motor por painel: título do código, parede do id do painel; código novo vira título humanizado', () => {
     const w = warning({ source: 'engine', panelId: '1-S2-P1', code: 'HEADER_JACKS_BELOW_TABLE', message: 'x', openingId: 'S2-D1' });
     const [g] = groupIssues([w], ids);

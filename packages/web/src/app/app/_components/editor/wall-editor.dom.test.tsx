@@ -96,8 +96,29 @@ describe('WallEditor: avisos junto com erros (S45)', () => {
     stale: false,
     result: {
       ok: false,
-      problems: [{ source: 'engine', code: 'HEADER_OUT_OF_TABLE', message: 'x', wallId: 'W02', openingId: 'J2', stage: 'wall', params: { why: 'span' } }],
-      warnings: [{ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', message: 'y', panelId: '1-W03-P1', wallId: 'W03', openingId: 'P2', hypothesis: 'P55', params: { top: 83, gap: 24.125, topPlate: 107.125, max: 24 } }],
+      problems: [
+        {
+          source: 'engine',
+          code: 'HEADER_OUT_OF_TABLE',
+          message: 'x',
+          wallId: 'W02',
+          openingId: 'J2',
+          stage: 'wall',
+          params: { why: 'span' },
+        },
+      ],
+      warnings: [
+        {
+          source: 'engine',
+          code: 'FLAT_HEADER_CRIPPLES',
+          message: 'y',
+          panelId: '1-W03-P1',
+          wallId: 'W03',
+          openingId: 'P2',
+          hypothesis: 'P55',
+          params: { top: 83, gap: 24.125, topPlate: 107.125, max: 24 },
+        },
+      ],
     },
   };
 
@@ -113,9 +134,23 @@ describe('WallEditor: avisos junto com erros (S45)', () => {
     expect((screen.getByRole('button', { name: /Generate panels/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('na lista de paredes, a do erro conta 1 problema e a do aviso conta 1 aviso (cada issue na sua parede)', () => {
+    const s = load(initialEditorState, 1);
+    render(<Editor state={{ ...s, revision: 0 }} checked={failed} />);
+    const row = (wallId: string): Element | undefined =>
+      [...document.querySelectorAll('ul[aria-label="Walls"] > li')].find((li) => li.textContent?.includes(wallId));
+    const has = (wallId: string, title: string): boolean => row(wallId)?.querySelector(`[title="${title}"]`) != null;
+    expect(row('W02')).toBeDefined();
+    expect([has('W02', '1 problem'), has('W02', '1 warning')]).toEqual([true, false]);
+    expect([has('W03', '1 problem'), has('W03', '1 warning')]).toEqual([false, true]);
+  });
+
   it('checagem com erro e sem a lista de avisos (arquivo que não abriu): só o erro, sem quebrar', () => {
     const s = load(initialEditorState, 1);
-    const noWarnings: CheckState = { ...failed, result: { ok: false, problems: failed.result!.ok ? [] : failed.result!.problems } };
+    const noWarnings: CheckState = {
+      ...failed,
+      result: { ok: false, problems: failed.result!.ok ? [] : failed.result!.problems },
+    };
     render(<Editor state={{ ...s, revision: 0 }} checked={noWarnings} />);
     act(() => {
       fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
