@@ -300,7 +300,10 @@ describe('framingForOpening — parede não portante (R602.7.4)', () => {
       hypothesis: 'P55',
       params: { top: 70, gap: 24.125, topPlate: 94.125, max: 24 },
     });
-    expect(warnings[0]!.message).toMatch(/Wall W-window, opening win1: flat header \(R602\.7\.4\) with its top at 70".*24\.125" below the top plate.*cripples above; factory to review/);
+    // A ação vem primeiro: a folha não quebra a linha do aviso e corta o fim nas folhas estreitas (revisão da S44).
+    expect(warnings[0]!.message).toBe(
+      'Wall W-window, opening win1: factory to review — flat header (R602.7.4) framed with cripples above: top at 70", 24.125" below the top plate (94.125"), over the 24" limit',
+    );
   });
 
   it('a mais de 24" com header do projeto: em pé, com cripples acima e sem aviso', () => {

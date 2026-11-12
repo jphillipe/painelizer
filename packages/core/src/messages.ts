@@ -240,11 +240,12 @@ const WARNING: Record<WarningCode, Template> = {
     at(w, `header from table ${p.table}, which is for SPF No. 2; the project specifies ${p.species} — check the span for that species or use the project header schedule`),
   DOOR_RO_HEIGHT_MISMATCH: (p, w) =>
     at({ openingId: w.openingId }, `door RO ${inch(p.roughHeight)} tall (from the subfloor) does not match the header base at ${inch(p.headerBase)}`),
+  // A ação vem primeiro: a folha não quebra a linha do aviso e corta o fim nas folhas estreitas.
   FLAT_HEADER_CRIPPLES: (p, w) =>
     at(
       w,
-      `flat header (R602.7.4) with its top at ${inch(p.top)} sits ${inch(p.gap)} below the top plate (${inch(p.topPlate)}), over the ${inch(p.max)} limit — ` +
-        'framed with cripples above; factory to review',
+      'factory to review — flat header (R602.7.4) framed with cripples above: ' +
+        `top at ${inch(p.top)}, ${inch(p.gap)} below the top plate (${inch(p.topPlate)}), over the ${inch(p.max)} limit`,
     ),
   OPENING_AT_TEE: (p, w) =>
     at(
