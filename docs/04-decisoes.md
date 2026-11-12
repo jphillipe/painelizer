@@ -494,3 +494,17 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   clique). A chamada mora em `packages/extract` (o pacote que fala com a rede); `services/suggest.service.ts` passa a
   ser o segundo lugar do app que importa `extract` (só `extract/suggest`). Rejeitado: aplicar direto e deixar o humano
   desfazer; mandar os desenhos nesta versão (fica como próximo passo, com custo de leitura).
+- **2026-11-12 — Sugestão por IA: o cartão não deixa aplicar às cegas (S51, revisão; escolhas minhas).** (1) O que
+  a tela aplica é o que o motor conferiu: a resposta de uma server action perde as chaves `undefined`, e é assim que
+  um patch diz "apague o campo" — a limpeza viaja como `null` (`toWire`/`fromWire`). (2) O efeito diz quando a
+  proposta não resolve e quando piora um problema que já existia ("Makes an existing problem worse: … (2 → 3)");
+  "No new problems" só aparece quando nada apareceu nem cresceu. (3) Valor estrutural — header, jacks, kings,
+  portante, pavimentos, seção, **parede externa** e **espaçamento dos studs** (os dois últimos trocam a tabela e
+  tirariam um erro de header sem resolver nada) — só aplica depois de marcar "I checked these values with the
+  engineer". (4) A proposta vale para a revisão do projeto em que foi pedida: editou depois, "Apply" desliga e
+  aparece "Ask again". (5) Custo e espera: uma chamada de 60 s sem nova tentativa (o Next roda as server actions de
+  um cliente uma por vez: a IA lenta segurava a checagem e a gravação), pedido com teto de 200 mil caracteres (notas
+  da leitura até 20 mil), 20 pedidos por usuário a cada 10 minutos (em memória, por instância: freio, não cota) e
+  log de modelo e tokens por chamada, nunca o conteúdo. Fica para o dono decidir: marcar no projeto os valores que
+  vieram da IA; a regra "vale o que está nas notas da leitura" não é conferida pelo servidor; cada clique manda a
+  geometria das paredes citadas e as notas da leitura para a API.

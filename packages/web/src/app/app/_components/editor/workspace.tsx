@@ -190,6 +190,7 @@ export function Workspace() {
           draft={draft}
           onApplyEdits={(edits) => dispatch({ type: 'applyEdits', edits })}
           onReview={(keys, reviewed) => dispatch({ type: 'setIssuesReviewed', keys, reviewed })}
+          revision={state.revision}
           onSuggest={async (group) => {
             const answer = await askFix({ projectText: engineText(draft), issue: issueForSuggestion(group), ...(outcome === undefined ? {} : { notes: outcome.notes }) });
             return answer?.data ?? { ok: false, message: answer?.serverError ?? 'The AI suggestion failed. Try again.' };

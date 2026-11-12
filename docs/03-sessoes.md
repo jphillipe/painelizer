@@ -1855,3 +1855,8 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   ao header e o motor confirmou 3 → 0; no header fora da tabela não propôs edição e disse o que pedir ao
   engenheiro — e uma pela tela com a planta do Matilda (`out/s51/`): 18 → 0, "Apply" tirou a linha, um Ctrl+Z
   devolveu. Fora desta sessão: a IA olhar as folhas do PDF (achar no estrutural o header de cada abertura).
+  **Revisão (mesmo dia):** a limpeza de campo se perdia entre o servidor e a tela (o "Apply" não fazia o que o cartão
+  dizia) — corrigido com o formato de transporte; o cartão passou a dizer quando a proposta não resolve ou piora um
+  problema existente, a pedir a confirmação do engenheiro para valor estrutural (agora também parede externa e
+  espaçamento) e a recusar proposta de projeto que já mudou; a chamada ficou em 60 s sem nova tentativa, com teto de
+  tamanho, limite por usuário e log de tokens. Decisões em `04-decisoes.md`.

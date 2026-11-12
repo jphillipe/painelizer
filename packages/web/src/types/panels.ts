@@ -1,5 +1,5 @@
 /** Tipos do resultado do motor como o app os vê (sem dependência de core/cli: trafegam entre servidor e cliente). */
-import type { DraftEdit } from '@/lib/editor/state';
+import type { WireEdit } from '@/lib/ai/fix-suggestion';
 
 /**
  * Aviso ou problema do motor, do parser ou da leitura (S26): código, ids e parâmetros. A tela monta a frase em
@@ -136,6 +136,8 @@ export interface SuggestEffect {
   after: number;
   /** Títulos das famílias de problema e de aviso que apareceram com as edições. */
   newProblems: string[];
+  /** Famílias de problema que já existiam e cresceram, com a contagem: "Header outside… (2 → 3)". */
+  grownProblems: string[];
   newWarnings: string[];
 }
 
@@ -147,7 +149,8 @@ export type SuggestResult =
       confidence: 'high' | 'medium' | 'low';
       /** O que falta e onde achar; vazio quando nada falta. */
       needsFromHuman: string;
-      edits: DraftEdit[];
+      /** Formato de transporte: limpar um campo vem como `null` (`fromWire` devolve `undefined` antes de aplicar). */
+      edits: WireEdit[];
       /** As edições em inglês, uma linha por alvo (edições iguais agrupadas). */
       lines: string[];
       /** Edições da IA recusadas na conferência (alvo que não existe, valor inválido), com o motivo. */

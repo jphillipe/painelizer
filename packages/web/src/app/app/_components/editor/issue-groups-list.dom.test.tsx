@@ -36,7 +36,7 @@ const overlap = issueFromNotice(
   ids,
 );
 const edits: DraftEdit[] = [{ target: 'openingType', tag: 'A', patch: { roughHeight: 81.5 } }];
-const proposal: SuggestResult = {
+const proposal: Extract<SuggestResult, { ok: true }> = {
   ok: true,
   explanation: 'The door rough opening is 1" taller than the header base.',
   confidence: 'medium',
@@ -45,7 +45,7 @@ const proposal: SuggestResult = {
   lines: ['Opening type A: RO height → 6\'-9 1/2"'],
   rejected: [],
   structural: false,
-  effect: { before: 2, after: 0, newProblems: [], newWarnings: [] },
+  effect: { before: 2, after: 0, newProblems: [], grownProblems: [], newWarnings: [] },
 };
 
 function show(onSuggest: () => Promise<SuggestResult>, extra: { stale?: boolean; issues?: Issue[] } = {}) {
@@ -131,6 +131,7 @@ describe('IssueGroupsList — sugestão por IA (S51)', () => {
         before: 2,
         after: 0,
         newProblems: ['Project header thicker than the wall'],
+        grownProblems: [],
         newWarnings: ['Studs overlap'],
       },
     }));
@@ -176,5 +177,97 @@ describe('IssueGroupsList — sugestão por IA (S51)', () => {
       />,
     );
     expect(screen.queryByRole('button', { name: 'Suggest a fix' })).toBeNull();
+  });
+});
+
+/** S51 (revisão): o cartão não deixa aplicar às cegas. */
+describe('IssueGroupsList — sugestão por IA: proteções (revisão da S51)', () => {
+  const groups = groupIssues([mismatch('I1', 'I1-A'), mismatch('I2', 'I2-B')], ids);
+  const list = (onSuggest: () => Promise<SuggestResult>, onApplyEdits: (e: DraftEdit[]) => void, revision: number) => (
+    <IssueGroupsList
+      groups={groups}
+      stale={false}
+      checking={false}
+      selection={{ kind: 'none' }}
+      onSelect={() => {}}
+      onAction={() => {}}
+      onApplyEdits={onApplyEdits}
+      onSuggest={onSuggest}
+      revision={revision}
+    />
+  );
+
+  it('limpeza que chega como null é aplicada como "apagar o campo"', async () => {
+    const user = userEvent.setup();
+    const onApplyEdits = vi.fn();
+    const clear: SuggestResult = {
+      ...proposal,
+      edits: [{ target: 'opening', wallId: 'I1', openingId: 'I1-A', patch: { headerHeight: null } }],
+    } as SuggestResult;
+    render(list(async () => clear, onApplyEdits, 1));
+    await user.click(screen.getByRole('button', { name: 'Suggest a fix' }));
+    await user.click(await screen.findByRole('button', { name: 'Apply' }));
+    expect(onApplyEdits.mock.calls[0]![0]).toStrictEqual([
+      { target: 'opening', wallId: 'I1', openingId: 'I1-A', patch: { headerHeight: undefined } },
+    ]);
+  });
+
+  it('valor estrutural: "Apply" só liga depois de marcar que conferiu com o engenheiro', async () => {
+    const user = userEvent.setup();
+    const onApplyEdits = vi.fn();
+    render(list(async () => ({ ...proposal, structural: true }) as SuggestResult, onApplyEdits, 1));
+    await user.click(screen.getByRole('button', { name: 'Suggest a fix' }));
+    const apply = (await screen.findByRole('button', { name: 'Apply' })) as HTMLButtonElement;
+    expect(apply.disabled).toBe(true);
+    await user.click(screen.getByRole('checkbox', { name: /checked these values with the engineer/ }));
+    expect(apply.disabled).toBe(false);
+    await user.click(apply);
+    expect(onApplyEdits).toHaveBeenCalledTimes(1);
+  });
+
+  it('o projeto mudou depois do pedido: o cartão avisa e não deixa aplicar', async () => {
+    const user = userEvent.setup();
+    const onApplyEdits = vi.fn();
+    let answer: (r: SuggestResult) => void = () => {};
+    const onSuggest = () => new Promise<SuggestResult>((resolve) => (answer = resolve));
+    const view = render(list(onSuggest, onApplyEdits, 1));
+    await user.click(screen.getByRole('button', { name: 'Suggest a fix' }));
+    view.rerender(list(onSuggest, onApplyEdits, 2));
+    answer(proposal);
+    const card = await screen.findByRole('region', { name: 'AI suggestion' });
+    expect(card.textContent).toContain('The project changed since this was computed');
+    expect((screen.getByRole('button', { name: 'Apply' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Ask again' })).toBeTruthy();
+  });
+
+  it('piora de um problema que já existia e causa não resolvida aparecem no cartão; sem ocorrência antes, não diz "resolved"', async () => {
+    const user = userEvent.setup();
+    const worse: SuggestResult = {
+      ...proposal,
+      effect: {
+        before: 2,
+        after: 2,
+        newProblems: [],
+        grownProblems: ['Header outside the IRC table — engineer required (2 → 3)'],
+        newWarnings: [],
+      },
+    } as SuggestResult;
+    const view = render(list(async () => worse, vi.fn(), 1));
+    await user.click(screen.getByRole('button', { name: 'Suggest a fix' }));
+    const card = await screen.findByRole('region', { name: 'AI suggestion' });
+    expect(card.textContent).toContain('Engine check: 2 → 2 here (not resolved)');
+    expect(card.textContent).toContain(
+      'Makes an existing problem worse: Header outside the IRC table — engineer required (2 → 3)',
+    );
+    expect(card.textContent).not.toContain('No new problems');
+    view.unmount();
+    const none: SuggestResult = {
+      ...proposal,
+      effect: { before: 0, after: 0, newProblems: [], grownProblems: [], newWarnings: [] },
+    } as SuggestResult;
+    render(list(async () => none, vi.fn(), 1));
+    await user.click(screen.getByRole('button', { name: 'Suggest a fix' }));
+    const second = await screen.findByRole('region', { name: 'AI suggestion' });
+    expect(second.textContent).not.toContain('resolved');
   });
 });

@@ -18,8 +18,12 @@ import { z } from 'zod';
 export const SUGGEST_MODEL = 'claude-opus-5-5';
 /** A resposta é curta (uma explicação e uma lista de edições); o teto cobre o raciocínio adaptativo. */
 export const SUGGEST_MAX_TOKENS = 16000;
-/** Uma sugestão que demora mais que isto não vale a espera do revisor. */
-export const SUGGEST_TIMEOUT_MS = 2 * 60 * 1000;
+/**
+ * Uma sugestão que demora mais que isto não vale a espera do revisor — e, sem nova tentativa, não segura a fila: o
+ * Next roda as server actions de um cliente uma por vez, então enquanto a IA responde a checagem do motor e a
+ * gravação do editor esperam.
+ */
+export const SUGGEST_TIMEOUT_MS = 60 * 1000;
 
 /** O que uma edição pode mirar. `project` = as configurações do projeto (config e dados do prédio). */
 export const SUGGEST_TARGETS = ['opening', 'wall', 'openingType', 'project'] as const;
@@ -111,7 +115,7 @@ export interface AskResult {
  * @throws SuggestError recusa, teto de tokens, resposta fora do schema ou erro da API
  */
 export async function askForFix(prompt: { system: string; user: string }, opts: AskOptions = {}): Promise<AskResult> {
-  const client = opts.client ?? new Anthropic({ timeout: SUGGEST_TIMEOUT_MS, maxRetries: 1 });
+  const client = opts.client ?? new Anthropic({ timeout: SUGGEST_TIMEOUT_MS, maxRetries: 0 });
   let response;
   try {
     response = await client.beta.messages.parse(
@@ -126,7 +130,7 @@ export async function askForFix(prompt: { system: string; user: string }, opts: 
         system: [{ type: 'text', text: prompt.system, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: prompt.user }],
       },
-      { timeout: SUGGEST_TIMEOUT_MS, maxRetries: 1, ...(opts.signal === undefined ? {} : { signal: opts.signal }) },
+      { timeout: SUGGEST_TIMEOUT_MS, maxRetries: 0, ...(opts.signal === undefined ? {} : { signal: opts.signal }) },
     );
   } catch (e) {
     if (e instanceof Anthropic.APIError) throw new SuggestError('API_ERROR', e.message, e.status);

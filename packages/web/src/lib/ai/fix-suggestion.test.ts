@@ -302,3 +302,52 @@ describe('describeEdits / touchesStructural', () => {
     expect(touchesStructural([{ target: 'config', patch: { headerHeight: 80 } }])).toBe(false);
   });
 });
+
+/** S51 (revisão). */
+describe('revisão da S51: transporte, marca estrutural e nomes herdados', () => {
+  it('toWire / fromWire: a limpeza (undefined) viaja como null e volta como undefined', async () => {
+    const { fromWire, toWire } = await import('./fix-suggestion');
+    const edits = [
+      { target: 'opening' as const, wallId: 'I2', openingId: 'I2-B', patch: { center: 70, offset: undefined } },
+      {
+        target: 'opening' as const,
+        wallId: 'X1',
+        openingId: 'X1-E',
+        patch: { header: { section: '2x12', plies: 3 }, headerMark: undefined },
+      },
+    ];
+    const wire = toWire(edits);
+    expect(wire[0]!.patch).toStrictEqual({ center: 70, offset: null });
+    expect(JSON.parse(JSON.stringify(wire))).toEqual(wire);
+    expect(fromWire(JSON.parse(JSON.stringify(wire)))).toStrictEqual(edits);
+  });
+
+  it('valor estrutural também: parede externa / interna (escolhe a tabela do header) e espaçamento dos studs', () => {
+    expect(touchesStructural([{ target: 'wall', wallId: 'I1', patch: { exterior: false } }])).toBe(true);
+    expect(touchesStructural([{ target: 'config', patch: { studSpacing: 24 } }])).toBe(true);
+    expect(SUGGEST_SYSTEM).toMatch(/exterior/);
+  });
+
+  it('tipo de abertura com nome herdado do objeto ("constructor") não passa por existente', () => {
+    const { edits, rejected } = toDraftEdits(
+      suggestion([edit({ target: 'openingType', tag: 'constructor', field: 'roughHeight', value: '81.5' })]),
+      draft,
+    );
+    expect(edits).toEqual([]);
+    expect(rejected[0]).toMatch(/constructor.*not in the project/);
+  });
+
+  it('notas da leitura além do teto ficam de fora, e o pedido diz quantas', () => {
+    const notes = Array.from({ length: 30 }, (_, i) => String(i).padStart(2, '0') + ' ' + 'n'.repeat(1997));
+    const sent = JSON.parse(suggestPrompt(issueForSuggestion(group), draft, notes).user) as {
+      readingNotes: string[];
+      readingNotesOmitted?: number;
+    };
+    expect(sent.readingNotes).toHaveLength(10);
+    expect(sent.readingNotesOmitted).toBe(20);
+    const few = JSON.parse(suggestPrompt(issueForSuggestion(group), draft, ['a']).user) as {
+      readingNotesOmitted?: number;
+    };
+    expect(few.readingNotesOmitted).toBeUndefined();
+  });
+});

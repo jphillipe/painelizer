@@ -67,7 +67,7 @@ describe('suggestFix', () => {
       lines: ['Opening type A: RO height → 6\'-9 1/2"', 'Opening type B: RO height → 6\'-9 1/2"'],
       rejected: [],
       structural: false,
-      effect: { before: 3, after: 0, newProblems: [], newWarnings: [] },
+      effect: { before: 3, after: 0, newProblems: [], grownProblems: [], newWarnings: [] },
     });
     const [prompt] = ask.mock.calls[0]! as unknown as [{ system: string; user: string }];
     expect(prompt.system).toBe(SUGGEST_SYSTEM);
@@ -97,6 +97,7 @@ describe('suggestFix', () => {
       before: 3,
       after: 0,
       newProblems: ['Project header thicker than the wall'],
+      grownProblems: [],
       newWarnings: [],
     });
   });
@@ -149,5 +150,102 @@ describe('suggestFix', () => {
       message: 'The project could not be read.',
     });
     expect(ask).not.toHaveBeenCalled();
+  });
+});
+
+const { fromWire } = await import('@/lib/ai/fix-suggestion');
+const { applyEdit } = await import('@/lib/editor/state');
+
+/** S51 (revisão): o que a tela aplica é o que o motor conferiu; o efeito não esconde piora; a conta da API tem teto. */
+describe('suggestFix — transporte, piora e limites (revisão da S51)', () => {
+  const doors = [
+    ['I1', 'I1-A'],
+    ['I2', 'I2-B'],
+    ['I3', 'I3-A'],
+  ] as const;
+
+  it('"limpar um campo" sobrevive à viagem do servidor para a tela: o que o Apply aplica é o que o motor conferiu', async () => {
+    // limpar o topo do RO das três portas: passa a valer o do projeto (82 1/2"), e os dois avisos somem
+    const ask = async () =>
+      answer(doors.map(([wallId, openingId]) => edit({ wallId, openingId, field: 'headerHeight', value: '' })));
+    const r = await suggestFix({ projectText, issue: issueOf('DOOR_RO_HEIGHT_MISMATCH') }, ask);
+    if (!r.ok) throw new Error('expected a suggestion');
+    expect(r.effect).toMatchObject({ before: 3, after: 0 });
+    expect(r.lines).toEqual(['3 openings (I1-A, I2-B, I3-A): Top of RO → cleared']);
+    // a resposta de uma server action perde as chaves com valor undefined (como o JSON): a limpeza viaja como null
+    const wire = JSON.parse(JSON.stringify(r)) as typeof r;
+    expect(wire.edits[0]).toEqual({
+      target: 'opening',
+      wallId: 'I1',
+      openingId: 'I1-A',
+      patch: { headerHeight: null },
+    });
+    const load = draftFromJson(fourCausesProject);
+    if (!load.ok) throw new Error('draft should load');
+    const applied = fromWire(wire.edits).reduce(applyEdit, load.draft);
+    const openings = applied.walls.flatMap((w) => w.openings).filter((o) => doors.some(([, id]) => id === o.id));
+    expect(openings.map((o) => 'headerHeight' in o)).toEqual([false, false, false]);
+  });
+
+  it('piora de um problema que já existia aparece no efeito (não é "nada novo")', async () => {
+    // a parede I1 vira externa portante: a porta dela entra no mesmo erro de header que X1 e X2 já tinham
+    const ask = async () =>
+      answer([
+        edit({ target: 'wall', wallId: 'I1', field: 'bearing', value: 'true' }),
+        edit({ target: 'wall', wallId: 'I1', field: 'exterior', value: 'true' }),
+        edit({ target: 'wall', wallId: 'I1', field: 'floorsSupported', value: '1' }),
+      ]);
+    const r = await suggestFix({ projectText, issue: issueOf('DOOR_RO_HEIGHT_MISMATCH') }, ask);
+    if (!r.ok) throw new Error('expected a suggestion');
+    expect(r.effect?.newProblems).toEqual([]);
+    expect(r.effect?.grownProblems).toEqual(['Header outside the IRC table — engineer required (2 → 3)']);
+    expect(r.structural).toBe(true);
+  });
+
+  it('pedido grande demais não vai para a IA (teto da conta)', async () => {
+    const ask = vi.fn(async () => answer([]));
+    const issue = issueOf('DOOR_RO_HEIGHT_MISMATCH');
+    const huge = { ...issue, occurrences: [{ ...issue.occurrences[0]!, params: { blob: 'x'.repeat(250_000) } }] };
+    expect(await suggestFix({ projectText, issue: huge }, ask)).toEqual({
+      ok: false,
+      message: 'This issue is too large to send to the AI.',
+    });
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('limite por usuário: 20 pedidos em 10 minutos; outro usuário e a janela seguinte passam', async () => {
+    const ask = vi.fn(async () => answer([]));
+    const issue = issueOf('DOOR_RO_HEIGHT_MISMATCH');
+    let now = 1_000_000;
+    const call = (userKey: string) => suggestFix({ projectText, issue }, ask, { userKey, now: () => now });
+    for (let i = 0; i < 20; i += 1) expect((await call('limit-user-a')).ok).toBe(true);
+    expect(await call('limit-user-a')).toEqual({
+      ok: false,
+      message: 'Too many AI suggestions in a short time. Try again in a few minutes.',
+    });
+    expect(ask).toHaveBeenCalledTimes(20);
+    expect((await call('limit-user-b')).ok).toBe(true);
+    now += 10 * 60 * 1000 + 1;
+    expect((await call('limit-user-a')).ok).toBe(true);
+  });
+
+  it('cada chamada deixa no log o modelo e os tokens, sem o conteúdo; a falha da API deixa código e status', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await suggestFix({ projectText, issue: issueOf('DOOR_RO_HEIGHT_MISMATCH') }, async () => answer([]));
+    expect(info).toHaveBeenCalledWith('[suggestFix]', {
+      family: 'DOOR_RO_HEIGHT_MISMATCH',
+      model: 'claude-opus-5-5',
+      inputTokens: 1000,
+      outputTokens: 100,
+      edits: 0,
+      rejected: 0,
+    });
+    await suggestFix({ projectText, issue: issueOf('DOOR_RO_HEIGHT_MISMATCH') }, async () =>
+      Promise.reject(new SuggestError('API_ERROR', 'credit balance too low', 400)),
+    );
+    expect(warn).toHaveBeenCalledWith('[suggestFix] failed', { code: 'API_ERROR', status: 400 });
+    info.mockRestore();
+    warn.mockRestore();
   });
 });

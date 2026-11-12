@@ -92,7 +92,7 @@ All measures are decimal inches. Heights are measured from the subfloor. Opening
 An empty "value" clears an optional field (roughWidth, roughHeight, sillHeight, headerHeight, jackStuds, kingStuds, headerSection). Use only ids and tags that appear in "project".
 
 ## Rules
-1. Never invent a structural value. Header section and plies, jack and king stud counts, whether a wall is bearing, floors carried, snow load, building width and wind speed come from the engineer or the drawings. Propose one only when that exact value is stated in "project" or "readingNotes", and say where in the explanation. Otherwise return no edit for it and use "needsFromHuman".
+1. Never invent a structural value. Header section and plies, jack and king stud counts, whether a wall is bearing or exterior, floors carried, stud spacing, snow load, building width and wind speed come from the engineer or the drawings. Propose one only when that exact value is stated in "project" or "readingNotes", and say where in the explanation. Otherwise return no edit for it and use "needsFromHuman". Never change one of these just to make an issue disappear.
 2. Prefer the smallest change that removes the issue, and the one that does not move lumber when one exists. Say in the explanation when an edit changes the framing.
 3. When several occurrences share the cause, fix them the same way. Prefer one edit on the opening type or the project setting over many identical edits, but only when every opening it affects should change.
 4. Do not move or resize openings unless the issue is about their position or size; then move them the minimum the message asks for.
@@ -130,6 +130,22 @@ function projectSlice(
   return { config, walls: walls.map((w) => ({ ...withoutExtra(w), openings: w.openings.map(withoutExtra) })) };
 }
 
+/** Teto das notas da leitura no pedido: são contexto, não o assunto; o que fica de fora é contado e dito. */
+export const MAX_NOTES_CHARS = 20_000;
+
+function cappedNotes(notes: readonly string[]): { readingNotes: string[]; readingNotesOmitted?: number } {
+  const kept: string[] = [];
+  let used = 0;
+  for (const note of notes) {
+    if (used + note.length > MAX_NOTES_CHARS) break;
+    kept.push(note);
+    used += note.length;
+  }
+  return kept.length === notes.length
+    ? { readingNotes: kept }
+    : { readingNotes: kept, readingNotesOmitted: notes.length - kept.length };
+}
+
 /** O pedido: as regras (estáveis) e a causa com o trecho do projeto. Nenhum desenho, nenhum dado de conta. */
 export function suggestPrompt(
   issue: SuggestIssue,
@@ -138,7 +154,7 @@ export function suggestPrompt(
 ): { system: string; user: string } {
   return {
     system: SUGGEST_SYSTEM,
-    user: JSON.stringify({ issue, project: projectSlice(issue, draft), readingNotes: notes }, null, 1),
+    user: JSON.stringify({ issue, project: projectSlice(issue, draft), ...cappedNotes(notes) }, null, 1),
   };
 }
 
@@ -300,7 +316,7 @@ export function toDraftEdits(
         slot(`wall:${wall.id}`, () => ({ target: 'wall', wallId: wall.id, patch: {} })),
       );
     } else if (e.target === 'openingType') {
-      if (draft.config.openingTypes?.[e.tag] === undefined) {
+      if (draft.config.openingTypes === undefined || !Object.hasOwn(draft.config.openingTypes, e.tag)) {
         rejected.push(`opening type ${e.tag || '?'}: not in the project`);
         continue;
       }
@@ -429,7 +445,9 @@ export function describeEdits(edits: readonly DraftEdit[], _draft?: ProjectDraft
 }
 
 const STRUCTURAL_OPENING: ReadonlySet<string> = new Set(['header', 'jackStuds', 'kingStuds']);
-const STRUCTURAL_WALL: ReadonlySet<string> = new Set(['bearing', 'floorsSupported', 'section']);
+// `exterior` escolhe a tabela do header (e se a neve conta): trocar tira um erro de header sem resolver nada.
+const STRUCTURAL_WALL: ReadonlySet<string> = new Set(['bearing', 'floorsSupported', 'section', 'exterior']);
+const STRUCTURAL_CONFIG: ReadonlySet<string> = new Set(['studSpacing']);
 
 /** A proposta mexe em valor que vem do engenheiro ou do desenho (header, jacks, kings, carga, dados do prédio). */
 export function touchesStructural(edits: readonly DraftEdit[]): boolean {
@@ -438,6 +456,38 @@ export function touchesStructural(edits: readonly DraftEdit[]): boolean {
     if (e.target === 'building') return fields.length > 0;
     if (e.target === 'opening') return fields.some((f) => STRUCTURAL_OPENING.has(f));
     if (e.target === 'wall') return fields.some((f) => STRUCTURAL_WALL.has(f));
+    if (e.target === 'config') return fields.some((f) => STRUCTURAL_CONFIG.has(f));
     return false;
   });
+}
+
+/**
+ * A edição como viaja do servidor para a tela. A resposta de uma server action (como o JSON) perde as chaves com valor
+ * `undefined` — e é assim que um patch diz "apague este campo". Na viagem a limpeza vai como `null`; `fromWire` a
+ * devolve como `undefined` antes de aplicar. Sem isto o cartão diria "resolvido" e o Apply não mudaria nada.
+ */
+export type WireEdit = DraftEdit extends infer E
+  ? E extends { patch: unknown }
+    ? Omit<E, 'patch'> & { patch: Record<string, unknown> }
+    : never
+  : never;
+
+export function toWire(edits: readonly DraftEdit[]): WireEdit[] {
+  return edits.map(
+    (e) =>
+      ({
+        ...e,
+        patch: Object.fromEntries(Object.entries(e.patch).map(([k, v]) => [k, v === undefined ? null : v])),
+      }) as WireEdit,
+  );
+}
+
+export function fromWire(edits: readonly WireEdit[]): DraftEdit[] {
+  return edits.map(
+    (e) =>
+      ({
+        ...e,
+        patch: Object.fromEntries(Object.entries(e.patch).map(([k, v]) => [k, v === null ? undefined : v])),
+      }) as DraftEdit,
+  );
 }

@@ -88,3 +88,13 @@ describe('askForFix (S51): a chamada da sugestão de resolução', () => {
     expect(SUGGEST_FIELDS).toContain('roughHeight');
   });
 });
+
+describe('askForFix — prazo (revisão da S51)', () => {
+  it('um minuto e nenhuma nova tentativa: enquanto a IA responde, a checagem e a gravação do editor esperam na fila', async () => {
+    const { SUGGEST_TIMEOUT_MS } = await import('../src/suggest');
+    const { client, parse } = fakeClient({});
+    await askForFix({ system: 's', user: 'u' }, { client });
+    expect(SUGGEST_TIMEOUT_MS).toBe(60_000);
+    expect(parse.mock.calls[0]![1]).toMatchObject({ timeout: 60_000, maxRetries: 0 });
+  });
+});
