@@ -63,6 +63,9 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
   // Esc reverte e tira o foco; o blur que isso provoca ainda vê o texto digitado no closure e confirmaria (M10
   // pegou: Esc confirmava em vez de reverter). O flag faz esse blur só soltar o foco.
   const reverting = useRef(false);
+  // S47: o clique numa issue põe o cursor aqui. Sair sem digitar não confirma nada — senão um valor fora da grade
+  // de 1/16" (87.3" de uma leitura por escala) seria arredondado só por ter recebido o foco.
+  const touched = useRef(false);
 
   // Valor novo de fora (outro campo, undo, arraste): só entra no texto quando o campo não está em foco.
   useEffect(() => {
@@ -104,7 +107,10 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
       aria-invalid={error !== undefined || undefined}
       className={cn('h-8 text-[13px]', mono && 'font-mono', flashing && 'commit-flash', className)}
       onAnimationEnd={() => setFlashing(false)}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(e) => {
+        touched.current = true;
+        setText(e.target.value);
+      }}
       onFocus={() => {
         focused.current = true;
       }}
@@ -114,6 +120,8 @@ export function CommitInput<T>({ id, value, format, parse, onCommit, equals = Ob
           reverting.current = false;
           return;
         }
+        if (!touched.current) return;
+        touched.current = false;
         commitNow();
       }}
       onKeyDown={(e) => {

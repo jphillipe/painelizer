@@ -15,8 +15,10 @@ export interface IssueFocus {
   fieldIds: string[];
 }
 
-type Target =
-  { scope: 'opening' | 'wall'; fields: readonly string[] } | { scope: 'project'; fields: readonly string[] };
+interface Target {
+  scope: 'opening' | 'wall' | 'project';
+  fields: readonly string[];
+}
 
 const opening = (...fields: string[]): Target => ({ scope: 'opening', fields });
 const wall = (...fields: string[]): Target => ({ scope: 'wall', fields });
@@ -27,19 +29,23 @@ const TOP_OF_RO = opening('hh');
 const POSITION = opening('center', 'offset');
 const WALL_ENDS = wall('sx');
 
-const TARGETS: Readonly<Record<string, Target>> = {
+/** Exportado para o teste de contrato: todo `id` daqui tem de existir na tela. Chave `CÓDIGO:motivo` = variante por `params.reason`. */
+export const ISSUE_TARGETS: Readonly<Record<string, Target>> = {
   // abertura — header
   HEADER_OUT_OF_TABLE: HEADER,
   FLAT_HEADER_CRIPPLES: HEADER,
   FLAT_HEADER_SPAN: HEADER,
-  HEADER_TOO_THICK: HEADER,
+  // seção e plies só aparecem quando o header é "Specified here"; senão, o seletor
+  HEADER_TOO_THICK: opening('hs', 'hby'),
+  HEADER_SECTION_UNKNOWN: opening('hs', 'hby'),
   HEADER_MARK_UNKNOWN: HEADER,
   'opening.headerMark': HEADER,
   // abertura — alturas
   DOOR_RO_HEIGHT_MISMATCH: TOP_OF_RO,
   HEADER_ABOVE_TOP_PLATE: TOP_OF_RO,
   HEADER_NO_ROOM_FOR_JACK: TOP_OF_RO,
-  SILL_NO_ROOM: opening('sill'),
+  // a base do RO sai do topo do RO menos a altura: é o topo que sobe (o peitoril só vale sem topo próprio)
+  SILL_NO_ROOM: TOP_OF_RO,
   DOOR_RO_HEIGHT_ASSUMED: opening('rh'),
   // abertura — posição
   OPENING_NEAR_CORNER: POSITION,
@@ -50,23 +56,29 @@ const TARGETS: Readonly<Record<string, Target>> = {
   OPENING_OUT_OF_WALL: POSITION,
   OPENING_ESTIMATED: POSITION,
   OPENING_POSITION_MISSING: POSITION,
+  OPENING_NOT_FINITE: POSITION,
   'opening.position': POSITION,
   // abertura — tipo e tamanho
   OPENING_TAG_UNKNOWN: opening('size'),
   'opening.tag': opening('size'),
   OPENING_SIZE_MISSING: opening('rw'),
+  OPENING_SIZE_INVALID: opening('rw'),
   'opening.size': opening('rw'),
   OPENING_TYPE_MISSING: opening('type'),
   'opening.type': opening('type'),
   // abertura — studs
-  HEADER_JACKS_BELOW_TABLE: opening('jacks'),
-  HEADER_KINGS_BELOW_TABLE: opening('kings'),
+  // vizinhança apertada (o motivo padrão): o que resolve é afastar as aberturas; a contagem só quando o projeto
+  // pediu menos que a tabela (`reason: 'table'`)
+  HEADER_JACKS_BELOW_TABLE: POSITION,
+  HEADER_KINGS_BELOW_TABLE: POSITION,
+  'HEADER_JACKS_BELOW_TABLE:table': opening('jacks'),
+  'HEADER_KINGS_BELOW_TABLE:table': opening('kings'),
   KINGS_OUT_OF_TABLE: opening('kings'),
   'opening.duplicateId': opening('id'),
   // parede
   'wall.height': wall('height'),
   STUD_LENGTH_MISMATCH: wall('height'),
-  STUD_HEIGHT_ABOVE_LIMIT: wall('height'),
+  STUD_HEIGHT_ABOVE_LIMIT: wall('section'),
   'wall.section': wall('section'),
   'wall.exterior': wall('ext'),
   'wall.bearing': wall('bearing'),
@@ -79,10 +91,16 @@ const TARGETS: Readonly<Record<string, Target>> = {
   'wall.noAxis': WALL_ENDS,
   WALL_OFF_AXIS: WALL_ENDS,
   WALL_ZERO_LENGTH: WALL_ENDS,
+  WALL_POINT_NOT_FINITE: WALL_ENDS,
   // projeto (Project settings)
   WIND_SPEED_MISSING: project('b-wind'),
   'config.building': project('b-snow'),
-  HEADER_DATA_MISSING: project('b-snow'),
+  SNOW_LOAD_REQUIRED: project('b-snow'),
+  SPECIES_NOT_IN_TABLE: project('b-species'),
+  PRECUTS_EMPTY: project('c-precuts'),
+  PANEL_MIN_LAP_ABOVE_LAP: project('pn-minlap'),
+  STOCK_EMPTY: project('c-stock'),
+  STOCK_INVALID: project('c-stock'),
   'config.studSpacing': project('c-spacing'),
   'config.studLength': project('c-precuts'),
   DEFAULT_HEADER_HEIGHT: project('c-hh'),
@@ -92,7 +110,9 @@ const TARGETS: Readonly<Record<string, Target>> = {
 
 /** Onde o clique numa issue leva. `undefined`: família sem alvo, ou issue sem a parede / abertura que o alvo pede. */
 export function focusFor(issue: Issue): IssueFocus | undefined {
-  const target = TARGETS[issue.kind ?? issue.code ?? ''];
+  const key = issue.kind ?? issue.code ?? '';
+  const reason = issue.params?.['reason'];
+  const target = (typeof reason === 'string' ? ISSUE_TARGETS[`${key}:${reason}`] : undefined) ?? ISSUE_TARGETS[key];
   if (target === undefined) return undefined;
   if (target.scope === 'project') return { selection: { kind: 'project' }, fieldIds: [...target.fields] };
   if (issue.wallId === undefined) return undefined;

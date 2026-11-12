@@ -224,7 +224,7 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
     case 'reset':
       return { ...initialEditorState, revision: state.revision + 1, loads: state.loads + 1 };
     case 'select':
-      return { ...state, selection: action.selection, txn: undefined, focus: action.focus === undefined ? undefined : { fieldIds: [...action.focus] } };
+      return { ...state, selection: action.selection, txn: undefined, focus: Array.isArray(action.focus) ? { fieldIds: [...action.focus] } : undefined };
     case 'endTransaction':
       return state.txn === undefined ? state : { ...state, txn: undefined };
     case 'undo': {

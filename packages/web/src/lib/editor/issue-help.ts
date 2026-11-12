@@ -65,7 +65,10 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
     what: 'A non-bearing opening whose flat header sits more than 24" below the top plate. The panel keeps the flat header and adds cripples above it.',
     fix: 'Have the factory review it, or select the opening and specify a header.',
   },
-  DOOR_RO_HEIGHT_MISMATCH: { what: 'The door rough opening does not match the header height.', fix: 'Check the door height and the header height in Project settings.' },
+  DOOR_RO_HEIGHT_MISMATCH: {
+    what: 'The door rough opening does not match the header height.',
+    fix: 'Select the opening and make RO height and Top of RO agree, or correct the door type height in the opening schedule.',
+  },
   SPECIES_NOT_IN_TABLE: { what: 'The IRC header table is for SPF No. 2; the project specifies another species.', fix: 'Fine to leave if the engineer accepts the SPF sizes, else set the species in Project settings.' },
   // motor — erros
   HEADER_OUT_OF_TABLE: {
@@ -154,7 +157,7 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   'wall.duplicateId': { what: 'Two walls have the same id.', fix: 'Select one of them and change its Id.' },
   'walls.mixed': {
     what: 'Some walls are drawn in plan (start / end) and others only have a length; a project uses one form.',
-    fix: 'Give every wall a start and an end, or keep them all by length.',
+    fix: 'Draw the walls that only have a length on the plan (Draw wall), or keep every wall by length.',
   },
   'walls.empty': { what: 'There is nothing to frame yet.', fix: 'Draw a wall on the plan (Draw wall) or add one with Add wall.' },
   // editor — abertura
@@ -199,7 +202,10 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
     fix: 'Select the opening and lower Top of RO, pick a shallower header, or raise the wall Height.',
   },
   HEADER_NO_ROOM_FOR_JACK: { what: 'The top of the rough opening is so low that no jack stud fits under the header.', fix: 'Select the opening and raise Top of RO.' },
-  SILL_NO_ROOM: { what: 'The bottom of the rough opening is so low that the sill does not fit on the bottom plate.', fix: 'Select the opening and raise Sill height, or make it a door.' },
+  SILL_NO_ROOM: {
+    what: 'The bottom of the rough opening is so low that the sill does not fit on the bottom plate.',
+    fix: 'Select the opening and raise Top of RO or reduce RO height (Sill height only counts when Top of RO is empty), or make it a door.',
+  },
   OPENINGS_TOO_CLOSE: {
     what: 'Two openings are too close for their jack studs and a shared king stud.',
     fix: 'Select one of them and move it away, or replace the two with one wider opening.',
@@ -239,7 +245,7 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   // motor — erros de painel e de plate
   CANNOT_SPLIT: {
     what: 'The wall is longer than the panel limit and has no free layout stud where it could be split.',
-    fix: 'Select the wall and add a break on the plan, raise Max panel length in Project settings, or move the opening that covers the split zone.',
+    fix: 'Raise Max panel length in Project settings, or move the opening that covers the split zone so a layout stud is free.',
   },
   LAP_NO_ROOM: {
     what: 'After a panel break there is no room for the double top plate to lap onto the next panel.',
@@ -265,7 +271,7 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   POST_OVERLAP: { what: 'A post lands on another full-height stud.', fix: 'Select the wall and move the post or the stud it lands on.' },
   BLOCKING_PRESET_UNKNOWN: {
     what: 'A blocking row uses a preset that the project does not have.',
-    fix: 'Select the wall and pick another preset for the row, or add the preset to the project blocking presets.',
+    fix: 'Select the wall and pick another preset for the row (new presets are added in the project file).',
   },
   BLOCKING_ROW_INVALID: {
     what: 'A blocking row is outside the wall, or its center does not fit between the plates.',
@@ -277,6 +283,46 @@ export const ISSUE_HELP: Readonly<Record<string, IssueHelp>> = {
   PROJECT_INVALID: { what: 'A value in the project file is not valid.', fix: 'See Details for the field; correct it in the editor or in the file and open it again.' },
   PROJECT_JSON_INVALID: { what: 'The file is not valid JSON, so it cannot be opened as a project.', fix: 'Fix the syntax in a text editor, or download the project file again from the app.' },
   ENGINE_INTERNAL: { what: 'The engine stopped on an internal check.', fix: 'See Details for the engine message and send it to support with the project file.' },
+
+  // motor — erros de valor
+  CONFIG_INVALID: { what: 'A measurement or weight in Project settings is not a valid number above 0.', fix: 'Open Project settings and correct the field named in Details.' },
+  PRECUTS_EMPTY: { what: 'The project has no precut stud length.', fix: 'Open Project settings and fill in Precut studs (wall height minus three plates).' },
+  STOCK_EMPTY: { what: 'The project has no stock length to cut plates and headers from.', fix: "Open Project settings and fill in Stock lengths (8' to 16' is the usual set)." },
+  STOCK_INVALID: { what: 'A stock length is not a valid measurement.', fix: 'Open Project settings and correct Stock lengths.' },
+  PRICE_INVALID: { what: 'A price in the project is invalid or given twice for the same section and length.', fix: 'Correct the price named in Details: one price per section and length, above 0.' },
+  PANEL_MIN_LAP_ABOVE_LAP: { what: 'In Project settings the minimum lap is larger than the top plate lap.', fix: 'Open Project settings and lower Min lap or raise Top plate lap.' },
+  SNOW_LOAD_REQUIRED: {
+    what: 'An exterior bearing wall needs the ground snow load to pick its header from the IRC table.',
+    fix: 'Open Project settings and fill in the ground snow load, or give the opening its own Header.',
+  },
+  HEADER_SECTION_UNKNOWN: {
+    what: 'The header section typed for the opening is not a size the engine knows.',
+    fix: 'Select the opening and type Header section as 2x6 to 2x12, or as LVL / PSL width x depth.',
+  },
+  HEADER_TABLE_NOT_APPLICABLE: {
+    what: 'The IRC header table has no case for this wall, for example an interior bearing wall that carries no floor.',
+    fix: 'Select the opening and specify its Header, or check Load and the floors above on the wall.',
+  },
+  OPENING_NOT_FINITE: { what: 'A measurement of the opening is not a number.', fix: 'Select the opening and retype its position and size.' },
+  OPENING_SIZE_INVALID: { what: 'The rough opening needs a width and a height above 0.', fix: 'Select the opening and correct RO width and RO height.' },
+  EXTRA_STUD_INVALID: { what: 'An extra stud has no valid position or count.', fix: 'Select the wall and correct the extra stud Left edge and Count.' },
+  PLATE_NO_LENGTH: {
+    what: 'The walls at both ends take the whole length of this wall, so its plate has no length left.',
+    fix: 'Lengthen the wall on the plan, or change which wall runs through the corners (Start corner / End corner).',
+  },
+  WALL_POINT_NOT_FINITE: { what: 'The start or the end of the wall is not a number.', fix: 'Select the wall and retype Start and End.' },
+  VALUE_INVALID: { what: 'A field of the wall or the opening has a value the engine cannot use.', fix: 'See Details for the field and correct it on the wall or the opening.' },
+  VALUE_NOT_COUNT: { what: 'A field that counts pieces is not a whole number of 1 or more.', fix: 'See Details for the field and type a whole number.' },
+  VALUE_NOT_POSITIVE: { what: 'A measurement that has to be above 0 is zero or negative.', fix: 'See Details for the field and type a measurement above 0.' },
+  WALL_DUPLICATE_ID: { what: 'Two walls have the same id.', fix: 'Select one of them and change its Id.' },
+  WALL_TYPE_UNKNOWN: {
+    what: 'The wall uses a wall type that is not in the project wall types, and the wall itself does not give section, position or load.',
+    fix: 'Select the wall and pick an existing Wall type, or add the type to the project wall types.',
+  },
+  WALL_FIELD_MISSING: {
+    what: 'The wall does not give its section, its position (exterior / interior) or its load, and its wall type does not either.',
+    fix: 'Select the wall and fill in Section, Position and Load, or give it a wall type.',
+  },
 };
 
 /** Ajuda pela família do editor ou pelo código (S26: nada pelo texto). */

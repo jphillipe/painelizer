@@ -93,7 +93,7 @@ export function Workspace() {
   const menu: TopBarMenuItem[] = [
     // Um arquivo só (M2): o projeto do CLI com a leitura da IA dentro (`$panelizer`); reabre no app com a proveniência.
     { label: 'Download project file', onSelect: () => downloadText(projectFileName(slug), projectFileText(draft, outcome)) },
-    { label: 'Project settings', separator: true, onSelect: openSettings },
+    { label: 'Project settings', separator: true, onSelect: () => openSettings() },
     { label: 'Start over', separator: true, destructive: true, onSelect: onStartOver },
   ];
 

@@ -198,6 +198,28 @@ export const ISSUE_TITLES: Readonly<Record<string, string>> = {
   PROJECT_INVALID: 'Invalid value in the project file',
   PROJECT_JSON_INVALID: 'The project file is not valid JSON',
   ENGINE_INTERNAL: 'The engine rejected the project',
+  // motor — erros de valor (S47: toda família tem título e ajuda)
+  CONFIG_INVALID: 'Invalid value in Project settings',
+  PRECUTS_EMPTY: 'Precut stud list is empty',
+  STOCK_EMPTY: 'Stock length list is empty',
+  STOCK_INVALID: 'Invalid stock length',
+  PRICE_INVALID: 'Invalid price in the project',
+  PANEL_MIN_LAP_ABOVE_LAP: 'Min lap larger than the top plate lap',
+  SNOW_LOAD_REQUIRED: 'Ground snow load is missing',
+  HEADER_SECTION_UNKNOWN: 'Unknown header section',
+  HEADER_TABLE_NOT_APPLICABLE: 'IRC header table does not apply',
+  OPENING_NOT_FINITE: 'Opening measurement is not a number',
+  OPENING_SIZE_INVALID: 'Rough opening size must be above 0',
+  EXTRA_STUD_INVALID: 'Extra stud without a position or count',
+  PLATE_NO_LENGTH: 'Wall plate has no length',
+  WALL_POINT_NOT_FINITE: 'Wall start or end is not a number',
+  VALUE_INVALID: 'Invalid value',
+  VALUE_NOT_COUNT: 'Value must be a whole number',
+  VALUE_NOT_POSITIVE: 'Value must be above 0',
+  // o draft costuma apontar estes antes, com a família do editor; quando chegam pelo motor, mesmo título
+  WALL_DUPLICATE_ID: 'Duplicate wall id',
+  WALL_TYPE_UNKNOWN: 'Wall type is not in the project wall types',
+  WALL_FIELD_MISSING: 'Wall is missing section, position or load',
 };
 
 const ISSUE_ACTIONS: Readonly<Record<string, IssueAction>> = {

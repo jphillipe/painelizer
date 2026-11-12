@@ -140,3 +140,25 @@ describe('CommitInput no DOM (M10)', () => {
     expect(input).toHaveProperty('value', '4'); // sem foco, o draft manda
   });
 });
+
+/**
+ * S47 (revisão): o clique numa issue põe o cursor num campo. Sair dele sem digitar não pode editar o projeto — um valor
+ * fora da grade de 1/16" (87.3", vindo de uma leitura por escala) seria arredondado só por ter recebido o foco.
+ */
+describe('MeasureInput: foco sem digitação não confirma', () => {
+  it('87.3" recebe o foco e perde: nenhum commit; digitando, confirma como sempre', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(<Controlled initial={87.3} onCommit={onCommit} />);
+    const input = screen.getByLabelText('Length');
+    await user.click(input);
+    await user.click(screen.getByRole('button', { name: 'elsewhere' }));
+    expect(onCommit).not.toHaveBeenCalled();
+    await user.click(input);
+    await user.clear(input);
+    await user.type(input, '88');
+    await user.click(screen.getByRole('button', { name: 'elsewhere' }));
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith(88);
+  });
+});

@@ -61,6 +61,13 @@ describe('S47: a seleção carrega o campo a focar', () => {
     expect(edited.focus).toBe(second.focus);
   });
 
+  it('focus que não é uma lista (o evento de um menu passado por engano) é ignorado, sem lançar', () => {
+    const event = { type: 'menu.itemSelect' } as unknown as readonly string[];
+    const s = editorReducer(loaded(), { type: 'select', selection: { kind: 'project' }, focus: event });
+    expect(s.selection).toEqual({ kind: 'project' });
+    expect(s.focus).toBeUndefined();
+  });
+
   it('carregar outro projeto ou zerar apaga o focus', () => {
     const s = editorReducer(loaded(), { type: 'select', selection: opening, focus: ['o-J1-hby'] });
     expect(editorReducer(s, { type: 'load', text: EXAMPLES[2]!.text, source: 'file' }).focus).toBeUndefined();

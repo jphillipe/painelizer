@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useReducer } from 'react';
+import { ISSUE_TARGETS } from '@/lib/editor/issue-targets';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EXAMPLES } from 'cli/examples';
 import { editorReducer, initialEditorState, type EditorState } from '@/lib/editor/state';
@@ -334,5 +336,99 @@ describe('WallEditor: lista parcial (S46)', () => {
   it('nenhuma parede foi montada: não há aviso nenhum a esperar de outra parede, a frase não aparece', () => {
     show([notFramed('W02'), notFramed('W03')]);
     expect(screen.queryByText(sentence)).toBeNull();
+  });
+});
+
+/** S47 (revisão): os caminhos que a primeira versão não testava. */
+describe('WallEditor: clique que leva ao campo — menu, projeto, seção fechada e ids (S47)', () => {
+  function Live({ initial, checked }: { initial: EditorState; checked: CheckState }) {
+    const [state, dispatch] = useReducer(editorReducer, initial);
+    return (
+      <ProjectIOContext value={io}>
+        <WallEditor state={state} dispatch={dispatch} check={checked} />
+      </ProjectIOContext>
+    );
+  }
+  const base = (): EditorState => ({ ...load(initialEditorState, 1), revision: 0 });
+  const done = (result: CheckState['result']): CheckState => ({ status: 'done', revision: 0, stale: false, result });
+  const openIssues = (): void => {
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+  };
+
+  it('menu ⋯ → "Project settings" abre o diálogo (o evento do menu não vira "focus")', async () => {
+    const user = userEvent.setup();
+    render(<Live initial={base()} checked={check} />);
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Project settings' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+  });
+
+  it('issue de projeto: "Open project settings" abre o diálogo com o cursor no campo', async () => {
+    const overweight = {
+      source: 'engine' as const,
+      code: 'PANEL_OVERWEIGHT',
+      message: 'x',
+      panelId: '1-W01-P1',
+      params: {},
+    };
+    render(
+      <Live initial={base()} checked={done({ ok: true, projectName: 'x', panels: [], warnings: [overweight] })} />,
+    );
+    openIssues();
+    fireEvent.click(screen.getByRole('button', { name: 'Open project settings' }));
+    await waitFor(() => expect(document.activeElement?.id).toBe('pn-weight'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('campo numa seção que nasce fechada ("Heights"): a seção abre', async () => {
+    const tooHigh = (wallId: string, openingId: string) => ({
+      source: 'engine' as const,
+      code: 'HEADER_ABOVE_TOP_PLATE',
+      message: 'x',
+      wallId,
+      openingId,
+      stage: 'wall' as const,
+      params: {},
+    });
+    render(
+      <Live
+        initial={base()}
+        checked={done({ ok: false, problems: [tooHigh('W01', 'J1'), tooHigh('W02', 'J3')], warnings: [] })}
+      />,
+    );
+    openIssues();
+    fireEvent.click(screen.getByRole('button', { name: 'J3' }));
+    await waitFor(() => expect(document.activeElement?.id).toBe('o-J3-hh'));
+    const section = document.getElementById('o-J3-hh')!.closest('details')!;
+    expect(section.querySelector('summary')?.textContent).toContain('Heights');
+    expect(section.open).toBe(true);
+  });
+
+  it('contrato: todo alvo do mapa existe na tela (parede, abertura sem tag, configurações)', async () => {
+    const ids = (scope: string): string[][] =>
+      Object.values(ISSUE_TARGETS)
+        .filter((t) => t.scope === scope)
+        .map((t) => [...t.fields]);
+    const missing = (prefix: string, groups: string[][]): string[] =>
+      groups
+        .filter((fields) => !fields.some((f) => document.getElementById(prefix + f) !== null))
+        .map((fields) => fields.join('|'));
+
+    const wall = render(<Editor state={{ ...base(), selection: { kind: 'wall', wallId: 'W01' } }} />);
+    expect(missing('w-W01-', ids('wall'))).toEqual([]);
+    wall.unmount();
+
+    const opening = render(
+      <Editor state={{ ...base(), selection: { kind: 'opening', wallId: 'W01', openingId: 'J1' } }} />,
+    );
+    expect(missing('o-J1-', ids('opening'))).toEqual([]);
+    opening.unmount();
+
+    render(<Editor state={{ ...base(), selection: { kind: 'project' } }} />);
+    await screen.findByRole('dialog');
+    expect(missing('', ids('project'))).toEqual([]);
   });
 });

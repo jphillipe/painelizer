@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ISSUE_HELP as ALL_HELP } from './issue-help';
 import { ISSUE_TITLES } from './issue-groups';
-import { WARNING_CODES } from 'core';
+import { ENGINE_ERROR_CODES, WARNING_CODES } from 'core';
 import { draftFromJson } from './draft';
 import { helpFor, quickFixFor, readingWarningResolved } from './issue-help';
 import { legacyNotice } from 'extract/notices';
@@ -111,8 +111,9 @@ describe('ajuda pelo motivo (S26)', () => {
 
 /** S47: toda família que a lista pode mostrar diz o que é e como resolver. */
 describe('ajuda para toda família (S47)', () => {
-  it('toda chave de ISSUE_TITLES e todo aviso do motor tem "what" e "fix"', () => {
-    const keys = [...new Set([...Object.keys(ISSUE_TITLES), ...WARNING_CODES])];
+  it('toda chave de ISSUE_TITLES, todo aviso e todo erro do motor tem título, "what" e "fix"', () => {
+    const keys = [...new Set([...Object.keys(ISSUE_TITLES), ...WARNING_CODES, ...ENGINE_ERROR_CODES])];
+    expect(keys.filter((k) => ISSUE_TITLES[k] === undefined)).toEqual([]);
     const missing = keys.filter((k) => {
       const h = ALL_HELP[k];
       return h === undefined || h.what.trim() === '' || h.fix.trim() === '';

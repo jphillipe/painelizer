@@ -130,3 +130,21 @@ describe('IssueGroupsList — abertura citada que não está no projeto (S46)', 
     expect(html.match(/<button[^>]*>W\d-U2-1<\/button>/g)).toBeNull();
   });
 });
+
+/** S47 (revisão): toda família com alvo em Project settings tem o botão que abre o diálogo no campo. */
+describe('IssueGroupsList — botão das configurações (S47)', () => {
+  const walls: IdIndex = { walls: ['W1'], openings: new Map([['W1', []]]) };
+  const html = (code: string, severity: 'problem' | 'warning'): string =>
+    renderToStaticMarkup(<IssueGroupsList groups={groupIssues([issueFromNotice({ source: 'engine', code, message: 'x', panelId: '1-W1-P1', params: {} }, severity, walls)], walls)} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} onQuickFix={() => {}} />);
+
+  it('painel acima do peso, peça maior que o estoque, espécie fora da tabela: "Open project settings"', () => {
+    expect(html('PANEL_OVERWEIGHT', 'warning')).toContain('Open project settings');
+    expect(html('PIECE_OVER_STOCK', 'problem')).toContain('Open project settings');
+    expect(html('SPECIES_NOT_IN_TABLE', 'warning')).toContain('Open project settings');
+  });
+
+  it('família sem alvo de projeto não ganha o botão; vento continua com o campo na própria linha', () => {
+    expect(html('STUDS_OVERLAP', 'warning')).not.toContain('Open project settings');
+    expect(html('WIND_SPEED_MISSING', 'warning')).not.toContain('Open project settings');
+  });
+});

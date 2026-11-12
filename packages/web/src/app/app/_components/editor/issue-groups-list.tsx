@@ -116,6 +116,8 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
   const help = helpFor(first);
   const fix = quickFixFor(first);
   const single = g.items.length === 1 ? targetOf(first) : undefined;
+  // A ação do grupo; sem uma, a família que tem um campo em Project settings ganha o botão que abre o diálogo nele.
+  const settingsAction: Exclude<IssueAction, 'openWall'> | undefined = g.action !== undefined && g.action !== 'openWall' ? g.action : projectFocus(first) !== undefined ? 'projectSettings' : undefined;
   /**
    * S47: o clique leva ao campo que resolve a issue — a seleção do alvo e os ids do campo. Sem alvo (ou alvo de
    * projeto, que é do botão de ação), seleciona a parede / abertura como sempre. `wallOnly`: chip de parede não
@@ -181,9 +183,9 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
             )
           ) : null}
           {fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
-          {g.action !== undefined && g.action !== 'openWall' && fix === undefined ? (
-            <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(g.action as Exclude<IssueAction, 'openWall'>, projectFocus(first))}>
-              {ACTION_LABEL[g.action]}
+          {settingsAction !== undefined && fix === undefined ? (
+            <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(settingsAction, projectFocus(first))}>
+              {ACTION_LABEL[settingsAction]}
             </Button>
           ) : null}
           <details className="text-[12px]">
