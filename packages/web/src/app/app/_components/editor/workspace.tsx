@@ -15,10 +15,14 @@ import { useEditor, useProjectIO } from './editor-context';
 import { EditorToolbar } from './editor-toolbar';
 import { EditorTopBar, type TopBarMenuItem } from './editor-top-bar';
 import { Inspector } from './inspector';
+import { useAction } from 'next-safe-action/hooks';
+import { issueForSuggestion } from '@/lib/ai/fix-suggestion';
 import { revealFirst } from '@/lib/editor/field-focus';
 import { groupFixFor, type GroupFix } from '@/lib/editor/group-fixes';
 import { openingInfo } from '@/lib/editor/issue-groups';
+import { suggestFix } from '../../_actions/suggest-fix';
 import { IssueGroupsList } from './issue-groups-list';
+import { engineText } from './use-project-check';
 import { Navigator, type NavigatorTab } from './navigator';
 import { PlanCanvas, type PlanCanvasHandle } from './plan-canvas';
 import { ProjectSettingsDialog } from './project-settings-dialog';
@@ -89,6 +93,8 @@ export function Workspace() {
     }
     return out;
   }, [groups, draft]);
+  // S51: "Suggest a fix" — a proposta volta conferida pelo motor; só o "Apply" do cartão edita.
+  const { executeAsync: askFix } = useAction(suggestFix);
   const focus = state.focus;
   useEffect(() => (focus === undefined ? undefined : revealFirst(focus.fieldIds)), [focus]);
   /** Seleção vinda de uma lista: traz a parede para a vista e, em tela estreita, abre o inspetor. */
@@ -184,6 +190,10 @@ export function Workspace() {
           draft={draft}
           onApplyEdits={(edits) => dispatch({ type: 'applyEdits', edits })}
           onReview={(keys, reviewed) => dispatch({ type: 'setIssuesReviewed', keys, reviewed })}
+          onSuggest={async (group) => {
+            const answer = await askFix({ projectText: engineText(draft), issue: issueForSuggestion(group), ...(outcome === undefined ? {} : { notes: outcome.notes }) });
+            return answer?.data ?? { ok: false, message: answer?.serverError ?? 'The AI suggestion failed. Try again.' };
+          }}
           onQuickFix={(fix) => {
             if (fix.kind === 'wind') dispatch({ type: 'updateBuilding', patch: { windSpeed: fix.value } });
             else if (fix.kind === 'headerHeight') dispatch({ type: 'updateConfig', patch: { headerHeight: fix.value } });

@@ -241,7 +241,13 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   **Revisado** (S50): linha de aviso tem "Mark as reviewed" (outline); a linha vai para a seção recolhida
   "Reviewed (N)", depois de "Fine to leave", com "Undo review" (ghost) e opacidade 80%; uma ocorrência nova da
   mesma família volta para "To review" com a nota "+ N reviewed". Revisado não conta no selo da aba nem no topo, não
-  acende parede; no inspetor aparece apagado com a etiqueta "Reviewed" e o link "Undo review".
+  acende parede; no inspetor aparece com a etiqueta "Reviewed" e o link "Undo review".
+  **Sugestão por IA** (S51): botão outline "Suggest a fix" (ícone de brilho) nas linhas Must fix e To review; enquanto
+  pergunta, "Asking the AI…"; a proposta vem num cartão (`role="region"`, fundo paper-2) com eyebrow "AI suggestion ·
+  <confiança> confidence", a explicação, as edições em lista, "Needed from you", o efeito medido pelo motor ("Engine
+  check: 18 → 0 here (resolved). No new problems."), os avisos (problema novo em vermelho, "Structural value —
+  confirm with the engineer before applying.", edições descartadas) e os botões "Apply" (accent) e "Dismiss" (ghost).
+  Nada muda sem o "Apply"; um Ctrl+Z desfaz. Falha vira uma frase com "Try again".
   Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
 - **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;

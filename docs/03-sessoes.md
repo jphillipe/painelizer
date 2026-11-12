@@ -1836,3 +1836,22 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   topo "Ready"; desmarcar devolve). **Conferido** na tela com a planta do Matilda (`out/s50/`): marcando os dois
   avisos de porta, a aba passa de 4 para 2 linhas, "Reviewed (2)", e as 15 paredes em aviso apagam. A folha do
   painel e o `panels.csv` não mudam (a marca não vai para o motor).
+
+- [x] **S51 — Sugestão de resolução por IA (extract, web; a IA não entra no motor).** Pedido do humano em 2026-11-12
+  ("um botão, sugerir resolução, e já edita automaticamente e a pessoa só aprova"); ele pediu para implementar sem
+  esperar a aprovação do desenho. Desenho em `docs/superpowers/specs/2026-11-12-ai-fix-suggestion-design.md`, plano em
+  `docs/superpowers/plans/2026-11-12-ai-fix-suggestion-s51.md`. **Chamada** (`packages/extract/src/suggest.ts`,
+  export `extract/suggest`): `askForFix` — `client.beta.messages.parse`, `claude-opus-5-5`, raciocínio adaptativo,
+  effort `medium`, saída estruturada por zod (schema plano, sem campo nulo), fallback do servidor ligado. **Puro**
+  (`packages/web/src/lib/ai/fix-suggestion.ts`): `suggestPrompt` (regras + a causa + só as paredes citadas, sem
+  chaves do editor), `toDraftEdits` (confere alvo, campo e valor; recusa com motivo; header = seção + plies juntos),
+  `describeEdits`, `touchesStructural`. **Regra** (`services/suggest.service.ts`): aplica numa cópia e roda a
+  checagem do motor antes e depois — ocorrências da causa e famílias que apareceram. **Tela**: botão "Suggest a fix"
+  nas linhas Must fix / To review e o cartão da proposta, com "Apply" (pela ação `applyEdits` da S49: um passo de
+  desfazer) e "Dismiss". **Testes** (vistos falhar antes; nenhum chama a API): chamada com cliente falso, prompt e
+  validação, serviço com `ask` falso e a checagem real (proposta boa 3 → 0; proposta que cria `HEADER_TOO_THICK`; id
+  inventado; falhas da API viram frase), tela (jsdom). **Chamadas reais** (pagas): duas pelo serviço no projeto das
+  quatro causas (2 057 tokens de entrada, 1 158 de saída, ~US$ 0,03) — na altura de porta a IA propôs igualar o RO
+  ao header e o motor confirmou 3 → 0; no header fora da tabela não propôs edição e disse o que pedir ao
+  engenheiro — e uma pela tela com a planta do Matilda (`out/s51/`): 18 → 0, "Apply" tirou a linha, um Ctrl+Z
+  devolveu. Fora desta sessão: a IA olhar as folhas do PDF (achar no estrutural o header de cada abertura).

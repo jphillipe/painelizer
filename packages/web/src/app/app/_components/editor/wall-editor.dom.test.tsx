@@ -12,6 +12,7 @@ import { WallEditor } from './wall-editor';
 
 vi.mock('../../_actions/apply-project-data', () => ({ applyProjectData: {} }));
 vi.mock('../../_actions/check-project', () => ({ checkProject: {} }));
+vi.mock('../../_actions/suggest-fix', () => ({ suggestFix: {} }));
 vi.mock('../../_actions/download-pdf', () => ({ downloadPdf: {} }));
 vi.mock('next-safe-action/hooks', () => ({
   useAction: () => ({ execute: () => {}, executeAsync: async () => undefined, isPending: false }),

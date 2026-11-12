@@ -484,3 +484,13 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   mesmo id nasceria revisada). A chave é um JSON `[família, parede, abertura, painel, parâmetros]`: mudar os
   parâmetros de um aviso no motor desfaz as marcas daquela família (o lado seguro). Rejeitado: marcar a família
   inteira de uma vez para sempre (uma porta nova entraria revisada sem ninguém ter visto).
+- **2026-11-12 — Sugestão por IA: a IA propõe, o motor confere, o humano aplica (S51; pedido do humano, desenho
+  meu).** "Sem IA generativa dentro do motor" continua valendo: a IA só propõe edições do projeto (`DraftEdit`, num
+  vocabulário fechado de campos), o servidor mede o efeito com a checagem determinística antes e depois, e nada entra
+  no projeto sem o clique em "Apply". O prompt proíbe inventar valor estrutural (header, jacks, kings, parede
+  portante, pavimentos, neve, largura, vento): só vale o que está no projeto ou nas notas da leitura; faltando, a
+  resposta certa é nenhuma edição e o que pedir ao engenheiro. A tela marca toda proposta que mexe nesses campos e
+  avisa quando a proposta cria um problema novo. Modelo `claude-opus-5-5`, effort `medium`, só texto (centavos por
+  clique). A chamada mora em `packages/extract` (o pacote que fala com a rede); `services/suggest.service.ts` passa a
+  ser o segundo lugar do app que importa `extract` (só `extract/suggest`). Rejeitado: aplicar direto e deixar o humano
+  desfazer; mandar os desenhos nesta versão (fica como próximo passo, com custo de leitura).

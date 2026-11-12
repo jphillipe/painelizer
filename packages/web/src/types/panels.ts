@@ -1,4 +1,5 @@
 /** Tipos do resultado do motor como o app os vê (sem dependência de core/cli: trafegam entre servidor e cliente). */
+import type { DraftEdit } from '@/lib/editor/state';
 
 /**
  * Aviso ou problema do motor, do parser ou da leitura (S26): código, ids e parâmetros. A tela monta a frase em
@@ -127,3 +128,33 @@ export interface Example {
   facts: string;
   text: string;
 }
+
+/** S51: o efeito de uma proposta da IA, medido pela checagem do motor antes e depois das edições. */
+export interface SuggestEffect {
+  /** Ocorrências desta causa antes e depois. */
+  before: number;
+  after: number;
+  /** Títulos das famílias de problema e de aviso que apareceram com as edições. */
+  newProblems: string[];
+  newWarnings: string[];
+}
+
+/** S51: a proposta de resolução de uma causa. Nada foi aplicado: `edits` só entra no projeto com o clique do revisor. */
+export type SuggestResult =
+  | {
+      ok: true;
+      explanation: string;
+      confidence: 'high' | 'medium' | 'low';
+      /** O que falta e onde achar; vazio quando nada falta. */
+      needsFromHuman: string;
+      edits: DraftEdit[];
+      /** As edições em inglês, uma linha por alvo (edições iguais agrupadas). */
+      lines: string[];
+      /** Edições da IA recusadas na conferência (alvo que não existe, valor inválido), com o motivo. */
+      rejected: string[];
+      /** Mexe em valor que vem do engenheiro ou do desenho. */
+      structural: boolean;
+      /** Ausente quando não sobrou edição válida. */
+      effect?: SuggestEffect;
+    }
+  | { ok: false; message: string };

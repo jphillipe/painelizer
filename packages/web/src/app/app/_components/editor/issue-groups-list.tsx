@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRightIcon, CircleCheckIcon, Loader2Icon, OctagonXIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { ChevronRightIcon, CircleCheckIcon, Loader2Icon, OctagonXIcon, PlusIcon, SparklesIcon, TriangleAlertIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { headerSection, readField } from 'cli/schema';
@@ -11,6 +11,7 @@ import { doorHeightEdits, setHeaderEdits, type GroupFix, type HeaderScope } from
 import { helpFor, quickFixFor, type QuickFix } from '@/lib/editor/issue-help';
 import { formatMeasure } from '@/lib/editor/measure';
 import type { DraftEdit } from '@/lib/editor/state';
+import type { SuggestResult } from '@/types/panels';
 import { focusFor } from '@/lib/editor/issue-targets';
 import { LABELS } from '@/lib/editor/labels';
 import { causeCounts, type IssueAction, type IssueGroup, type IssueTier } from '@/lib/editor/issue-groups';
@@ -39,6 +40,11 @@ export interface IssueGroupsListProps {
   current?: { windSpeed?: number | undefined; headerHeight?: number | undefined } | undefined;
   /** A checagem achou problema mas montou alguma parede: as paredes com problema ainda podem trazer avisos (S46). */
   partial?: boolean | undefined;
+  /**
+   * "Suggest a fix" (S51): pede à IA uma proposta para a causa. Devolve a proposta já conferida pelo motor; nada é
+   * aplicado — só o "Apply" do cartão chama `onApplyEdits`. Ausente = sem o botão.
+   */
+  onSuggest?: ((group: IssueGroup) => Promise<SuggestResult>) | undefined;
   /** Marcar / desmarcar avisos como revisados (S50): as chaves das ocorrências da linha. Ausente = sem os botões. */
   onReview?: ((keys: string[], reviewed: boolean) => void) | undefined;
   /** Conserto em grupo de cada causa (S49), pela chave do grupo. */
@@ -77,7 +83,7 @@ function projectFocus(i: Issue): readonly string[] | undefined {
  * CHIPS_IN_VIEW ficam recolhidos), conserto rápido quando há um e a ação quando há uma. Os textos originais do
  * motor / da extração ficam em "Details", nunca somem. A contagem do topo é de causas, não de ocorrências.
  */
-export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial, fixes, onApplyEdits, draft, onReview }: IssueGroupsListProps) {
+export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial, fixes, onApplyEdits, draft, onReview, onSuggest }: IssueGroupsListProps) {
   if (groups.length === 0) {
     return (
       <div className="flex items-start gap-2 px-4 py-4 text-sm" aria-live="polite">
@@ -92,7 +98,7 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   const counts = causeCounts(groups);
   const tally = [counts.fix > 0 ? `${counts.fix} to fix` : '', counts.review > 0 ? `${counts.review} to review` : '', counts.fine > 0 ? `${counts.fine} fine to leave` : ''].filter((s) => s !== '').join(' · ');
   const row = (g: IssueGroup) => (
-    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} onReview={onReview} stale={stale} />
+    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} onReview={onReview} onSuggest={onSuggest} stale={stale} />
   );
   const fine = groups.filter((g) => g.tier === 'fine');
   const reviewed = groups.filter((g) => g.tier === 'reviewed');
@@ -134,10 +140,10 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   );
 }
 
-type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft' | 'onReview'> & { group: IssueGroup; groupFix: GroupFix | undefined; stale: boolean };
+type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft' | 'onReview' | 'onSuggest'> & { group: IssueGroup; groupFix: GroupFix | undefined; stale: boolean };
 
 /** Uma causa: título, frase, chips, conserto rápido, ação e "Details". */
-function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft, onReview, stale }: GroupRowProps) {
+function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft, onReview, onSuggest, stale }: GroupRowProps) {
   // S50: linha já revisada só oferece desfazer; linha de aviso oferece marcar. Problema nunca.
   const done = g.tier === 'reviewed';
   const reviewKeys = g.severity === 'problem' ? [] : g.items.map(issueReviewKey).filter((k): k is string => k !== undefined);
@@ -216,6 +222,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
           ) : null}
           {!done && fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
           {!done && groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} stale={stale} rowCount={g.count} /> : null}
+          {onSuggest !== undefined && onApplyEdits !== undefined && (g.tier === 'fix' || g.tier === 'review') ? <SuggestRow group={g} stale={stale} onSuggest={onSuggest} onApply={onApplyEdits} /> : null}
           {onReview !== undefined && reviewKeys.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button variant={done ? 'ghost' : 'outline'} size="xs" onClick={() => onReview(reviewKeys, !done)} title={done ? 'Bring it back to the list' : 'Takes it off this list; it still prints on the panel sheet'}>
@@ -252,6 +259,117 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
         </div>
       </div>
     </li>
+  );
+}
+
+type SuggestState = { status: 'idle' } | { status: 'asking' } | { status: 'done'; result: SuggestResult };
+
+/**
+ * "Suggest a fix" (S51): a IA propõe edições para a causa. O cartão mostra a explicação, o que mudaria e o efeito
+ * medido pelo motor antes e depois; só "Apply" edita o projeto (um passo de desfazer). Sem edições, diz o que falta.
+ */
+function SuggestRow({ group, stale, onSuggest, onApply }: { group: IssueGroup; stale: boolean; onSuggest: (group: IssueGroup) => Promise<SuggestResult>; onApply: (edits: DraftEdit[]) => void }) {
+  const [state, setState] = useState<SuggestState>({ status: 'idle' });
+  const ask = async (): Promise<void> => {
+    setState({ status: 'asking' });
+    try {
+      setState({ status: 'done', result: await onSuggest(group) });
+    } catch {
+      setState({ status: 'done', result: { ok: false, message: 'The AI suggestion failed. Try again.' } });
+    }
+  };
+  if (state.status === 'idle') {
+    return (
+      <Button variant="outline" size="xs" disabled={stale} onClick={() => void ask()} title="Asks the AI for a proposal. Nothing changes until you apply it.">
+        <SparklesIcon /> Suggest a fix
+      </Button>
+    );
+  }
+  if (state.status === 'asking') {
+    return (
+      <p className="flex items-center gap-1.5 text-[12px] text-ink-3" aria-live="polite">
+        <Loader2Icon className="size-3.5 animate-spin" /> Asking the AI…
+      </p>
+    );
+  }
+  const r = state.result;
+  const dismiss = (): void => setState({ status: 'idle' });
+  if (!r.ok) {
+    return (
+      <div className="space-y-1.5 text-[12px]">
+        <p className="text-destructive" role="alert">
+          {r.message}
+        </p>
+        <div className="flex gap-1">
+          <Button variant="outline" size="xs" onClick={() => void ask()}>
+            Try again
+          </Button>
+          <Button variant="ghost" size="xs" onClick={dismiss}>
+            Dismiss
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  const effect = r.effect;
+  return (
+    <div className="space-y-2 rounded-md border border-line bg-paper-2 p-2 text-[12px] leading-snug text-ink-2" role="region" aria-label="AI suggestion">
+      <p className="eyebrow">AI suggestion · {r.confidence} confidence</p>
+      <p className="text-ink">{r.explanation}</p>
+      {r.lines.length > 0 ? (
+        <ul className="list-disc space-y-0.5 pl-4 text-ink">
+          {r.lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="font-semibold text-ink">No edit proposed.</p>
+      )}
+      {r.needsFromHuman !== '' ? (
+        <p>
+          <span className="font-semibold text-ink">Needed from you:</span> {r.needsFromHuman}
+        </p>
+      ) : null}
+      {effect !== undefined ? (
+        <p>
+          Engine check: {effect.before} → {effect.after} here{effect.after === 0 ? ' (resolved)' : ''}. {effect.newProblems.length === 0 ? 'No new problems.' : null}
+        </p>
+      ) : null}
+      {effect !== undefined && effect.newProblems.length > 0 ? (
+        <p className="font-semibold text-destructive">
+          Adds a new problem: {effect.newProblems.join('; ')}.
+        </p>
+      ) : null}
+      {effect !== undefined && effect.newWarnings.length > 0 ? (
+        <p>
+          New warning{effect.newWarnings.length === 1 ? '' : 's'}: {effect.newWarnings.join('; ')}.
+        </p>
+      ) : null}
+      {r.structural ? <p className="font-semibold text-ink">Structural value — confirm with the engineer before applying.</p> : null}
+      {r.rejected.length > 0 ? (
+        <p title={r.rejected.join('\n')}>
+          {r.rejected.length} edit{r.rejected.length === 1 ? '' : 's'} from the AI {r.rejected.length === 1 ? 'was' : 'were'} discarded (not valid for this project).
+        </p>
+      ) : null}
+      <div className="flex gap-1">
+        {r.edits.length > 0 ? (
+          <Button
+            variant="accent"
+            size="xs"
+            disabled={stale}
+            onClick={() => {
+              onApply(r.edits);
+              dismiss();
+            }}
+          >
+            Apply
+          </Button>
+        ) : null}
+        <Button variant="ghost" size="xs" onClick={dismiss}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
   );
 }
 
