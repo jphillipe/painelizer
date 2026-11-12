@@ -92,7 +92,7 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   const counts = causeCounts(groups);
   const tally = [counts.fix > 0 ? `${counts.fix} to fix` : '', counts.review > 0 ? `${counts.review} to review` : '', counts.fine > 0 ? `${counts.fine} fine to leave` : ''].filter((s) => s !== '').join(' · ');
   const row = (g: IssueGroup) => (
-    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} onReview={onReview} />
+    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} onReview={onReview} stale={stale} />
   );
   const fine = groups.filter((g) => g.tier === 'fine');
   const reviewed = groups.filter((g) => g.tier === 'reviewed');
@@ -133,10 +133,10 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   );
 }
 
-type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft' | 'onReview'> & { group: IssueGroup; groupFix: GroupFix | undefined };
+type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft' | 'onReview'> & { group: IssueGroup; groupFix: GroupFix | undefined; stale: boolean };
 
 /** Uma causa: título, frase, chips, conserto rápido, ação e "Details". */
-function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft, onReview }: GroupRowProps) {
+function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft, onReview, stale }: GroupRowProps) {
   // S50: linha já revisada só oferece desfazer; linha de aviso oferece marcar. Problema nunca.
   const done = g.tier === 'reviewed';
   const reviewKeys = g.severity === 'problem' ? [] : g.items.map(issueReviewKey).filter((k): k is string => k !== undefined);
@@ -214,7 +214,7 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
             )
           ) : null}
           {!done && fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
-          {!done && groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} /> : null}
+          {!done && groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} stale={stale} rowCount={g.count} /> : null}
           {onReview !== undefined && reviewKeys.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button variant={done ? 'ghost' : 'outline'} size="xs" onClick={() => onReview(reviewKeys, !done)} title={done ? 'Bring it back to the list' : 'I have seen it; take it off the list (it still prints on the panel sheet)'}>
@@ -258,15 +258,24 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
  * Conserto em grupo (S49): uma edição para todas as aberturas da causa. Nada entra sem o clique; o que muda o framing
  * diz isso no botão.
  */
-function GroupFixRow({ fix, groupKey, draft, onApply }: { fix: GroupFix; groupKey: string; draft: ProjectDraft | undefined; onApply: (edits: DraftEdit[]) => void }) {
-  if (fix.kind === 'setHeader') return <SetHeaderForm scopes={fix.scopes} groupKey={groupKey} onApply={onApply} />;
+function GroupFixRow({ fix, groupKey, draft, onApply, stale, rowCount }: { fix: GroupFix; groupKey: string; draft: ProjectDraft | undefined; onApply: (edits: DraftEdit[]) => void; stale: boolean; rowCount: number }) {
+  // Com a checagem atrasada a linha ainda mostra o projeto de antes da última edição: o conserto espera ela voltar.
+  if (fix.kind === 'setHeader') return <SetHeaderForm scopes={fix.scopes} groupKey={groupKey} onApply={onApply} disabled={stale} />;
   if (draft === undefined) return null;
+  const n = fix.openings.length;
+  // Os rótulos são longos para a coluna: os botões quebram linha em vez de cortar o "(changes framing)".
+  const wrap = 'h-auto min-h-6 justify-start whitespace-normal py-1 text-left';
   return (
-    <div className="flex flex-wrap gap-1">
-      <Button variant="outline" size="xs" title="The door rough opening follows the header; the framing does not change" onClick={() => onApply(doorHeightEdits(fix, 'roFromHeader', draft))}>
+    <div className="space-y-1">
+      {n < rowCount ? (
+        <p className="text-[12px] text-ink-3">
+          For the {n} door{n === 1 ? '' : 's'} with RO {formatMeasure(fix.roughHeight)} and header at {formatMeasure(fix.headerBase)}:
+        </p>
+      ) : null}
+      <Button variant="outline" size="xs" className={wrap} disabled={stale} title="The door rough opening follows the header; studs, plates and header stay as they are" onClick={() => onApply(doorHeightEdits(fix, 'roFromHeader', draft))}>
         Use {formatMeasure(fix.headerBase)} as the door RO height
       </Button>
-      <Button variant="outline" size="xs" title="Moves the header of these openings to the door rough opening height" onClick={() => onApply(doorHeightEdits(fix, 'headerFromRo', draft))}>
+      <Button variant="outline" size="xs" className={wrap} disabled={stale} title="Moves the header of these openings to the door rough opening height" onClick={() => onApply(doorHeightEdits(fix, 'headerFromRo', draft))}>
         Set the header at {formatMeasure(fix.roughHeight)} (changes framing)
       </Button>
     </div>
@@ -274,7 +283,7 @@ function GroupFixRow({ fix, groupKey, draft, onApply }: { fix: GroupFix; groupKe
 }
 
 /** "Set header…": seção, plies e (opcional) jacks do engenheiro, para todas as aberturas da linha ou só as de um tipo. */
-function SetHeaderForm({ scopes, groupKey, onApply }: { scopes: readonly HeaderScope[]; groupKey: string; onApply: (edits: DraftEdit[]) => void }) {
+function SetHeaderForm({ scopes, groupKey, onApply, disabled }: { scopes: readonly HeaderScope[]; groupKey: string; onApply: (edits: DraftEdit[]) => void; disabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState('');
   const [plies, setPlies] = useState('2');
@@ -283,7 +292,7 @@ function SetHeaderForm({ scopes, groupKey, onApply }: { scopes: readonly HeaderS
   const [error, setError] = useState<string | undefined>(undefined);
   if (!open) {
     return (
-      <Button variant="outline" size="xs" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="xs" disabled={disabled} onClick={() => setOpen(true)}>
         Set header…
       </Button>
     );
@@ -321,7 +330,7 @@ function SetHeaderForm({ scopes, groupKey, onApply }: { scopes: readonly HeaderS
           <Label htmlFor={id('jacks')} className="text-[12px] text-ink-2">
             Jack studs per side
           </Label>
-          <Input id={id('jacks')} value={jacks} inputMode="numeric" placeholder="auto" className="h-8 text-[13px]" onChange={(e) => setJacks(e.target.value)} />
+          <Input id={id('jacks')} value={jacks} inputMode="numeric" placeholder="keep" className="h-8 text-[13px]" onChange={(e) => setJacks(e.target.value)} />
         </div>
       </div>
       {scopes.length > 1 ? (
@@ -345,14 +354,16 @@ function SetHeaderForm({ scopes, groupKey, onApply }: { scopes: readonly HeaderS
         </p>
       ) : null}
       <div className="flex gap-1">
-        <Button variant="accent" size="xs" onClick={apply}>
+        <Button variant="accent" size="xs" disabled={disabled} onClick={apply}>
           Apply to {scope.key === 'all' ? scope.label.charAt(0).toLowerCase() + scope.label.slice(1) : scope.label}
         </Button>
         <Button variant="ghost" size="xs" onClick={() => setOpen(false)}>
           Cancel
         </Button>
       </div>
-      <p className="text-[11px] leading-snug text-ink-3">The header from the engineer goes on each opening; king studs still come from the wind table. Undo (Ctrl+Z) reverts all of them at once.</p>
+      <p className="text-[12px] leading-snug text-ink-3">
+        The header goes on each opening; king studs still come from the wind table. Jack studs: empty keeps what each opening has (1 per side when it has none). Undo (Ctrl+Z) reverts all of them at once.
+      </p>
     </div>
   );
 }

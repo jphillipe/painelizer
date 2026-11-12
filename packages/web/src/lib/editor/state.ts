@@ -441,7 +441,8 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
     }
     case 'applyEdits': {
       const next = action.edits.reduce(applyEdit, d);
-      return next === d ? state : commit(state, next);
+      // nada mudou (alvos que não existem, ou o mesmo conserto clicado de novo): sem passo de desfazer vazio
+      return next === d || JSON.stringify(next) === JSON.stringify(d) ? state : commit(state, next);
     }
     case 'renameOpening': {
       const newId = action.newId.trim();
@@ -564,8 +565,11 @@ export function applyEdit(d: ProjectDraft, edit: DraftEdit): ProjectDraft {
     }
     case 'wall':
       return d.walls.some((w) => w.id === edit.wallId) ? mapWall(d, edit.wallId, (w) => applyPatch(w, edit.patch)) : d;
-    case 'openingType':
-      return { ...d, config: withEntry(d.config, 'openingTypes', edit.tag, applyPatch(d.config.openingTypes?.[edit.tag] ?? {}, edit.patch)) };
+    case 'openingType': {
+      // só edita tipo que existe: um tipo novo só com um campo seria recusado pelo parser (falta `kind`)
+      const current = d.config.openingTypes?.[edit.tag];
+      return current === undefined ? d : { ...d, config: withEntry(d.config, 'openingTypes', edit.tag, applyPatch(current, edit.patch)) };
+    }
     case 'config':
       return { ...d, config: applyPatch(d.config, edit.patch) };
     case 'building': {

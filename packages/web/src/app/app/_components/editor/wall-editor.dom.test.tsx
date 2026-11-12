@@ -439,7 +439,13 @@ describe('WallEditor: conserto em grupo (S49)', () => {
     const [state, dispatch] = useReducer(editorReducer, initial);
     const openings =
       state.draft?.walls.flatMap((w) =>
-        w.openings.map((o) => ({ id: o.id, header: o.header, headerMark: o.headerMark, headerHeight: o.headerHeight })),
+        w.openings.map((o) => ({
+          id: o.id,
+          header: o.header,
+          headerMark: o.headerMark,
+          headerHeight: o.headerHeight,
+          jackStuds: o.jackStuds,
+        })),
       ) ?? [];
     return (
       <ProjectIOContext value={io}>
@@ -456,6 +462,7 @@ describe('WallEditor: conserto em grupo (S49)', () => {
     id: string;
     header?: { section?: unknown; plies?: number; jackStuds?: number };
     headerHeight?: number;
+    jackStuds?: number;
   }[] => JSON.parse(screen.getByTestId('openings').textContent ?? '[]');
   const headerOf = (id: string) => openingsNow().find((o) => o.id === id)?.header;
   const openIssues = (): void => {
@@ -502,6 +509,51 @@ describe('WallEditor: conserto em grupo (S49)', () => {
 
     await user.click(screen.getByRole('button', { name: 'test-undo' }));
     expect([headerOf('J1'), headerOf('J3')]).toEqual(before);
+  });
+
+  it('"Set header": seção vazia, plies zero e jacks inválidos não aplicam; jacks válidos vão para a abertura', async () => {
+    const user = userEvent.setup();
+    const failed: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: false,
+      result: { ok: false, problems: [headerOut('W01', 'J1'), headerOut('W02', 'J3')], warnings: [] },
+    };
+    render(<Live initial={base()} checked={failed} />);
+    openIssues();
+    const before = headerOf('J1');
+    await user.click(screen.getByRole('button', { name: 'Set header…' }));
+    const apply = () => user.click(screen.getByRole('button', { name: 'Apply to all 2 openings' }));
+    await apply();
+    expect(screen.getByRole('alert').textContent).toMatch(/Header section/);
+    await user.type(screen.getByLabelText('Header section'), '2x12');
+    await user.clear(screen.getByLabelText('Plies'));
+    await user.type(screen.getByLabelText('Plies'), '0');
+    await apply();
+    expect(screen.getByRole('alert').textContent).toMatch(/Plies/);
+    await user.clear(screen.getByLabelText('Plies'));
+    await user.type(screen.getByLabelText('Plies'), '3');
+    await user.type(screen.getByLabelText('Jack studs per side'), 'two');
+    await apply();
+    expect(screen.getByRole('alert').textContent).toMatch(/Jack studs/);
+    expect(headerOf('J1')).toEqual(before);
+    await user.clear(screen.getByLabelText('Jack studs per side'));
+    await user.type(screen.getByLabelText('Jack studs per side'), '2');
+    await apply();
+    expect(headerOf('J1')).toEqual({ section: '2x12', plies: 3 });
+    expect(openingsNow().find((o) => o.id === 'J1')?.jackStuds).toBe(2);
+  });
+
+  it('checagem atrasada (stale): os botões do conserto ficam desligados até a checagem voltar', () => {
+    const stale: CheckState = {
+      status: 'done',
+      revision: 0,
+      stale: true,
+      result: { ok: false, problems: [headerOut('W01', 'J1'), headerOut('W02', 'J3')], warnings: [] },
+    };
+    render(<Live initial={base()} checked={stale} />);
+    openIssues();
+    expect((screen.getByRole('button', { name: 'Set header…' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('altura de porta: os dois botões dizem a medida; o que muda o framing diz isso e sobe o topo do RO', async () => {

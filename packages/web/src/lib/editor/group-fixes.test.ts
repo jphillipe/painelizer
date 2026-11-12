@@ -90,7 +90,7 @@ describe('groupFixFor', () => {
     ).toMatchObject({ kind: 'setHeader' });
   });
 
-  it('altura de porta: só quando todas as ocorrências têm as mesmas duas medidas', () => {
+  it('altura de porta: as portas com as mesmas duas medidas; com medidas diferentes na linha, o maior conjunto', () => {
     expect(groupFixFor(groupOf([mismatch('I1', 'I1-d'), mismatch('I2', 'I2-d')]), info)).toEqual({
       kind: 'doorHeight',
       roughHeight: 82.5,
@@ -100,7 +100,25 @@ describe('groupFixFor', () => {
         { wallId: 'I2', openingId: 'I2-d' },
       ],
     });
-    expect(groupFixFor(groupOf([mismatch('I1', 'I1-d'), mismatch('I2', 'I2-d', 84)]), info)).toBeUndefined();
+    // S49 (revisão): uma porta diferente não tira o conserto das outras — vale o maior conjunto de medidas iguais
+    expect(
+      groupFixFor(groupOf([mismatch('I3', 'I3-d', 84), mismatch('I1', 'I1-d'), mismatch('I2', 'I2-d')]), info),
+    ).toEqual({
+      kind: 'doorHeight',
+      roughHeight: 82.5,
+      headerBase: 81.5,
+      openings: [
+        { wallId: 'I1', openingId: 'I1-d' },
+        { wallId: 'I2', openingId: 'I2-d' },
+      ],
+    });
+    // empate: o primeiro conjunto, na ordem da linha
+    expect(groupFixFor(groupOf([mismatch('I1', 'I1-d'), mismatch('I2', 'I2-d', 84)]), info)).toMatchObject({
+      roughHeight: 82.5,
+      openings: [{ wallId: 'I1', openingId: 'I1-d' }],
+    });
+    // sem as duas medidas no aviso: sem conserto
+    expect(groupFixFor(groupOf([issue('DOOR_RO_HEIGHT_MISMATCH', 'I1', 'I1-d', {})]), info)).toBeUndefined();
   });
 
   it('famílias sem conserto em grupo, e issue sem abertura', () => {
@@ -115,7 +133,28 @@ describe('groupFixFor', () => {
 });
 
 describe('setHeaderEdits', () => {
-  it('header direto em cada abertura do escopo, tirando a marca do schedule; jacks só quando informados', () => {
+  it('a marca do schedule sai de verdade (chave presente no patch) e os jacks vão no campo da abertura, o que o inspetor mostra', () => {
+    const scope = { key: 'all', label: 'This opening', openings: [{ wallId: 'X1', openingId: 'X1-a' }] };
+    // toStrictEqual: `headerMark: undefined` tem de estar no patch — é ele que apaga a marca
+    expect(setHeaderEdits(scope, { section: '2x12', plies: 3 })).toStrictEqual([
+      {
+        target: 'opening',
+        wallId: 'X1',
+        openingId: 'X1-a',
+        patch: { header: { section: '2x12', plies: 3 }, headerMark: undefined },
+      },
+    ]);
+    expect(setHeaderEdits(scope, { section: '2x12', plies: 3, jackStuds: 2 })).toStrictEqual([
+      {
+        target: 'opening',
+        wallId: 'X1',
+        openingId: 'X1-a',
+        patch: { header: { section: '2x12', plies: 3 }, headerMark: undefined, jackStuds: 2 },
+      },
+    ]);
+  });
+
+  it('header direto em cada abertura do escopo, tirando a marca do schedule', () => {
     const scope = {
       key: 'all',
       label: 'All 2 openings',
@@ -138,9 +177,6 @@ describe('setHeaderEdits', () => {
         patch: { header: { section: '2x12', plies: 3 }, headerMark: undefined },
       },
     ]);
-    expect(setHeaderEdits(scope, { section: '2x12', plies: 3, jackStuds: 2 })[0]).toMatchObject({
-      patch: { header: { section: '2x12', plies: 3, jackStuds: 2 } },
-    });
   });
 });
 

@@ -7,11 +7,12 @@
  *   cada abertura (`header`), nunca pelo header schedule — a entrada do schedule exige kings, que passariam por cima
  *   da tabela de vento (R602.7.5) nas paredes externas.
  * - Altura de porta × header (`DOOR_RO_HEIGHT_MISMATCH`): só o humano sabe qual medida vale. Usar a altura do header
- *   como RO não muda o framing (o RO da porta só gera o aviso); subir o header até o RO muda.
+ *   como RO não muda a madeira (studs, plates, header: o RO da porta não entra na geometria das peças; a chapa de
+ *   sheathing, quando há, acompanha o RO); pôr o header na altura do RO muda o framing.
  */
 
 import type { ProjectDraft } from './draft';
-import { commonParams, type IssueGroup, type OpeningInfo } from './issue-groups';
+import type { IssueGroup, OpeningInfo } from './issue-groups';
 import type { DraftEdit } from './state';
 
 export interface OpeningRef {
@@ -81,11 +82,23 @@ export function groupFixFor(group: IssueGroup, openings?: ReadonlyMap<string, Op
     };
   }
   if (group.key === 'DOOR_RO_HEIGHT_MISMATCH') {
-    const common = commonParams(group.items);
-    const roughHeight = num(common['roughHeight']);
-    const headerBase = num(common['headerBase']);
-    if (roughHeight === undefined || headerBase === undefined) return undefined;
-    return { kind: 'doorHeight', roughHeight, headerBase, openings: refs };
+    // O conserto vale para portas com as mesmas duas medidas. Uma porta diferente na linha não o tira das outras:
+    // fica o maior conjunto (no empate, o primeiro), e a tela diz quantas portas ele alcança.
+    type DoorSet = { roughHeight: number; headerBase: number; openings: OpeningRef[] };
+    const sets = new Map<string, DoorSet>();
+    for (const i of group.items) {
+      const roughHeight = num(i.params?.['roughHeight']);
+      const headerBase = num(i.params?.['headerBase']);
+      const ref = refs.find((r) => r.openingId === i.openingId);
+      if (roughHeight === undefined || headerBase === undefined || ref === undefined) continue;
+      const key = `${roughHeight}|${headerBase}`;
+      const set = sets.get(key) ?? { roughHeight, headerBase, openings: [] };
+      if (!set.openings.includes(ref)) set.openings.push(ref);
+      sets.set(key, set);
+    }
+    let best: DoorSet | undefined;
+    for (const set of sets.values()) if (best === undefined || set.openings.length > best.openings.length) best = set;
+    return best === undefined ? undefined : { kind: 'doorHeight', ...best };
   }
   return undefined;
 }
@@ -93,22 +106,26 @@ export function groupFixFor(group: IssueGroup, openings?: ReadonlyMap<string, Op
 export interface HeaderInput {
   section: string;
   plies: number;
-  /** Jacks por lado; ausente = o padrão do motor para header do projeto. */
+  /** Jacks por lado; ausente = não mexe (a abertura fica com o que tinha; sem nada, o motor usa 1). */
   jackStuds?: number;
 }
 
-/** Header direto em cada abertura do escopo; a marca do schedule sai (as duas formas não convivem). */
+/**
+ * Header direto em cada abertura do escopo; a marca do schedule sai (as duas formas não convivem). Os jacks, quando
+ * informados, vão no campo da própria abertura ("Jack studs per side" do inspetor): é ele que o motor lê primeiro e
+ * o único que a tela mostra.
+ */
 export function setHeaderEdits(scope: HeaderScope, header: HeaderInput): DraftEdit[] {
-  const value = {
-    section: header.section,
-    plies: header.plies,
-    ...(header.jackStuds === undefined ? {} : { jackStuds: header.jackStuds }),
-  };
+  const value = { section: header.section, plies: header.plies };
   return scope.openings.map((o) => ({
     target: 'opening',
     wallId: o.wallId,
     openingId: o.openingId,
-    patch: { header: value, headerMark: undefined },
+    patch: {
+      header: value,
+      headerMark: undefined,
+      ...(header.jackStuds === undefined ? {} : { jackStuds: header.jackStuds }),
+    },
   }));
 }
 

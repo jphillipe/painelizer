@@ -85,7 +85,7 @@ describe('S49: applyEdits — várias edições, um passo de desfazer', () => {
       edits: [
         { target: 'opening', wallId: 'W01', openingId: 'J1', patch: { header, headerMark: undefined } },
         { target: 'opening', wallId: 'W02', openingId: 'J3', patch: { header } },
-        { target: 'openingType', tag: 'A', patch: { roughHeight: 81.5 } },
+        { target: 'openingType', tag: 'NOPE', patch: { roughHeight: 81.5 } },
         { target: 'building', patch: { windSpeed: 130 } },
         { target: 'wall', wallId: 'W03', patch: { height: 109.125 } },
         { target: 'config', patch: { headerHeight: 80 } },
@@ -94,7 +94,7 @@ describe('S49: applyEdits — várias edições, um passo de desfazer', () => {
     const opening = (s: typeof after, wallId: string, id: string) => s.draft!.walls.find((w) => w.id === wallId)!.openings.find((o) => o.id === id)!;
     expect(opening(after, 'W01', 'J1').header).toEqual(header);
     expect(opening(after, 'W02', 'J3').header).toEqual(header);
-    expect(after.draft!.config.openingTypes?.['A']).toEqual({ roughHeight: 81.5 });
+    expect(after.draft!.config.openingTypes?.['NOPE']).toBeUndefined();
     expect(after.draft!.config.building?.windSpeed).toBe(130);
     expect(after.draft!.walls.find((w) => w.id === 'W03')!.height).toBe(109.125);
     expect(after.draft!.config.headerHeight).toBe(80);
@@ -102,6 +102,32 @@ describe('S49: applyEdits — várias edições, um passo de desfazer', () => {
     expect(after.dirty).toBe(true);
     const undone = editorReducer(after, { type: 'undo' });
     expect(undone.draft).toEqual(before.draft);
+  });
+
+  it('tipo de abertura que existe é editado; a marca do schedule sai da abertura; edição que não muda nada não entra no histórico', () => {
+    const typed = editorReducer(initialEditorState, {
+      type: 'load',
+      source: 'file',
+      text: JSON.stringify({
+        name: 'x',
+        config: { studSpacing: 16, studLength: [92.625], openingTypes: { A: { kind: 'door', width: 36, height: 80 } }, headerSchedule: { H1: { section: '2x10', plies: 2, jackStuds: 1, kingStuds: 1 } } },
+        walls: [{ id: 'I1', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: true, floorsSupported: 0, openings: [{ id: 'D1', tag: 'A', center: 60, headerMark: 'H1' }] }],
+      }),
+    });
+    const fixed = editorReducer(typed, {
+      type: 'applyEdits',
+      edits: [
+        { target: 'openingType', tag: 'A', patch: { roughHeight: 81.5 } },
+        { target: 'opening', wallId: 'I1', openingId: 'D1', patch: { header, headerMark: undefined } },
+      ],
+    });
+    expect(fixed.draft!.config.openingTypes?.['A']).toEqual({ kind: 'door', width: 36, height: 80, roughHeight: 81.5 });
+    const d1 = fixed.draft!.walls[0]!.openings[0]!;
+    expect(d1.header).toEqual(header);
+    expect('headerMark' in d1).toBe(false);
+    // o mesmo conserto de novo (segundo clique antes da rechecagem): nada muda, nenhum passo de desfazer a mais
+    const again = editorReducer(fixed, { type: 'applyEdits', edits: [{ target: 'openingType', tag: 'A', patch: { roughHeight: 81.5 } }] });
+    expect(again).toBe(fixed);
   });
 
   it('alvo que não existe mais é ignorado; se nenhum existe, nada muda e não entra passo de desfazer', () => {
