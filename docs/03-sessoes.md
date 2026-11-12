@@ -1737,3 +1737,19 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   portante (cópia de teste) a casa gera 53 painéis, com 18 avisos `FLAT_HEADER_CRIPPLES` em 15 paredes; folha do
   1-I1-P1 conferida como PNG. Ainda bloqueando o Matilda: os headers das 13 aberturas de parede portante (o app
   lista um erro por parede, por isso mostrava 10), que vêm do estrutural.
+
+- [x] **S45 — Avisos aparecem na lista de issues mesmo com erro (web; não é regra de framing).** Pedido do humano em
+  2026-11-12, no Matilda Pines: os 18 avisos `FLAT_HEADER_CRIPPLES` da S44 não apareciam no editor porque a planta
+  ainda tem erro de header em parede portante — e o engenheiro precisa ver o aviso para resolver antes de gerar. O
+  motor já devolvia os painéis das paredes boas junto com os problemas (`panelizeProject`); a checagem do app
+  (`services/panels.service.ts`, `check`) descartava os avisos quando havia problema. Plano em
+  `docs/superpowers/plans/2026-11-12-warnings-with-errors.md`. **Web**: `CheckResult` com erro ganha `warnings`
+  (avisos das paredes montadas; ausente quando o arquivo nem abre); o editor (`wall-editor.tsx`) lista problemas e
+  avisos juntos. Parede com erro não é montada, então os avisos dela só aparecem depois do erro resolvido. "Generate"
+  continua bloqueado por erro. **Testes** (vistos falhar antes): checagem com erro numa parede e aviso em outra;
+  planta que não fecha (avisos vazios); lista do editor com os dois títulos e "Generate" desabilitado. **Conferido**
+  com a planta salva do Matilda (largura 50'): a checagem devolve 10 problemas `HEADER_OUT_OF_TABLE` e 40 avisos (18
+  `FLAT_HEADER_CRIPPLES` em 15 paredes, 18 `DOOR_RO_HEIGHT_MISMATCH`, 4 `STUDS_OVERLAP`); com header numa porta os
+  avisos de peça deitada caem para 17; tela capturada por Chrome headless no app sem login (`out/s45/`). Fora desta
+  sessão, pedidos do humano na mesma conversa: listar todas as aberturas com erro de uma parede (hoje só a primeira;
+  muda o motor), clique na issue que leva ao campo a alterar, e sugestão de resolução por IA com aprovação.

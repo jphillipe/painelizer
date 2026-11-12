@@ -65,7 +65,8 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
   const issues = useMemo<Issue[]>(() => {
     if (draft === undefined) return [];
     const own = draftIssues(draft, state.loadProblems);
-    const engine = check.result === undefined ? [] : dropRepeated(parseEngineResult(check.result.ok ? { warnings: check.result.warnings } : { problems: check.result.problems }, ids), own);
+    // S45: com erro, a checagem ainda traz os avisos das paredes que o motor montou — a lista mostra os dois.
+    const engine = check.result === undefined ? [] : dropRepeated(parseEngineResult(check.result.ok ? { warnings: check.result.warnings } : { problems: check.result.problems, warnings: check.result.warnings ?? [] }, ids), own);
     // A geometria no cliente vê o mesmo erro que o motor dirá (etapa da planta): não repetir quando a checagem já
     // chegou — mesmo código na mesma parede.
     const said = new Set(engine.map((i) => `${i.code ?? ''}:${i.wallId ?? ''}`));

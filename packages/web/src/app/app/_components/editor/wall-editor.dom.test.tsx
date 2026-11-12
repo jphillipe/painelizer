@@ -48,10 +48,10 @@ const check: CheckState = { status: 'idle', result: undefined, revision: 0, stal
 const load = (s: EditorState, i: number): EditorState =>
   editorReducer(s, { type: 'load', text: EXAMPLES[i]!.text, source: 'sample' });
 
-function Editor({ state }: { state: EditorState }) {
+function Editor({ state, checked = check }: { state: EditorState; checked?: CheckState }) {
   return (
     <ProjectIOContext value={io}>
-      <WallEditor state={state} dispatch={vi.fn()} check={check} />
+      <WallEditor state={state} dispatch={vi.fn()} check={checked} />
     </ProjectIOContext>
   );
 }
@@ -82,5 +82,46 @@ describe('WallEditor: remontagem do workspace', () => {
     // Outro projeto: o workspace volta ao início (aba Walls).
     rerender(<Editor state={load(s, 0)} />);
     expect(selectedTab()).toMatch(/Walls/);
+  });
+});
+
+/**
+ * S45: o erro de uma parede não esconde os avisos das outras. A checagem devolve os dois (`ok: false` com
+ * `warnings`) e a lista mostra os dois; "Generate" continua bloqueado pelo erro.
+ */
+describe('WallEditor: avisos junto com erros (S45)', () => {
+  const failed: CheckState = {
+    status: 'done',
+    revision: 0,
+    stale: false,
+    result: {
+      ok: false,
+      problems: [{ source: 'engine', code: 'HEADER_OUT_OF_TABLE', message: 'x', wallId: 'W02', openingId: 'J2', stage: 'wall', params: { why: 'span' } }],
+      warnings: [{ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', message: 'y', panelId: '1-W03-P1', wallId: 'W03', openingId: 'P2', hypothesis: 'P55', params: { top: 83, gap: 24.125, topPlate: 107.125, max: 24 } }],
+    },
+  };
+
+  it('a lista de issues mostra o erro de uma parede e o aviso de outra; Generate continua bloqueado', () => {
+    const s = load(initialEditorState, 1);
+    render(<Editor state={{ ...s, revision: 0 }} checked={failed} />);
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+    expect(screen.getByText('Header outside the IRC table — engineer required')).toBeTruthy();
+    expect(screen.getByText('Flat header framed with cripples — factory to review')).toBeTruthy();
+    expect((screen.getByRole('button', { name: /Generate panels/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('checagem com erro e sem a lista de avisos (arquivo que não abriu): só o erro, sem quebrar', () => {
+    const s = load(initialEditorState, 1);
+    const noWarnings: CheckState = { ...failed, result: { ok: false, problems: failed.result!.ok ? [] : failed.result!.problems } };
+    render(<Editor state={{ ...s, revision: 0 }} checked={noWarnings} />);
+    act(() => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /Issues/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Issues/ }));
+    });
+    expect(screen.getByText('Header outside the IRC table — engineer required')).toBeTruthy();
+    expect(screen.queryByText('Flat header framed with cripples — factory to review')).toBeNull();
   });
 });

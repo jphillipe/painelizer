@@ -109,6 +109,46 @@ describe('panels.service.check', () => {
     expect(bad.walls?.[0]).toMatchObject({ wallId: 'W1', manual: true });
     expect(bad.walls?.[0]).not.toHaveProperty('breaks');
   });
+
+  it('S45: erro numa parede não esconde os avisos das outras', () => {
+    const text = JSON.stringify({
+      name: 'x',
+      config: { studSpacing: 16, studLength: [92.625], headerHeight: 82.5, building: { groundSnowLoad: 50, buildingWidth: 336 } },
+      walls: [
+        {
+          id: 'W1', length: 240, height: 97.125, section: '2x6', exterior: true, bearing: true, floorsSupported: 2,
+          openings: [{ id: 'J', type: 'window', offset: 48, roughWidth: 144, roughHeight: 48 }],
+        },
+        {
+          // peça deitada com topo em 69.5, a 24.625" da top plate (94.125): aviso FLAT_HEADER_CRIPPLES (S44)
+          id: 'W2', length: 120, height: 97.125, section: '2x4', exterior: false, bearing: false,
+          openings: [{ id: 'D1', type: 'door', offset: 40, roughWidth: 38, roughHeight: 68, headerHeight: 68 }],
+        },
+      ],
+    });
+    const r = check(text);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.problems).toEqual([expect.objectContaining({ source: 'engine', code: 'HEADER_OUT_OF_TABLE', wallId: 'W1', openingId: 'J' })]);
+    expect(r.warnings).toEqual([expect.objectContaining({ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', wallId: 'W2', openingId: 'D1', panelId: expect.stringContaining('W2') })]);
+  });
+
+  it('S45: planta que não fecha: só o problema da planta, avisos vazios', () => {
+    const wall = { height: 97.125, section: '2x4', exterior: false, bearing: false, openings: [] };
+    const text = JSON.stringify({
+      name: 'x',
+      config: { studSpacing: 16, studLength: [92.625] },
+      walls: [
+        { ...wall, id: 'A', start: { x: 0, y: 0 }, end: { x: 120, y: 0 } },
+        { ...wall, id: 'B', start: { x: 60, y: -60 }, end: { x: 60, y: 60 } },
+      ],
+    });
+    const r = check(text);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.problems).toEqual([expect.objectContaining({ code: 'WALLS_CROSS', stage: 'plan' })]);
+    expect(r.warnings).toEqual([]);
+  });
 });
 
 describe('listExamples', () => {

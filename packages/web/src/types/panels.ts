@@ -109,10 +109,14 @@ export interface WallBreaks {
   manual: boolean;
 }
 
-/** Checagem do editor (S21): o que o motor diria, sem os arquivos. `walls`: quebras por parede (S29), quando o arquivo abriu. */
+/**
+ * Checagem do editor (S21): o que o motor diria, sem os arquivos. `walls`: quebras por parede (S29), quando o arquivo abriu.
+ * Com erro (S45), `warnings` traz os avisos das paredes que o motor montou mesmo assim — a parede com erro não tem
+ * painel, logo não tem aviso; ausente quando o arquivo nem abriu.
+ */
 export type CheckResult =
   | { ok: true; projectName: string; panels: PanelSummary[]; warnings: Notice[]; walls?: WallBreaks[] }
-  | { ok: false; problems: Notice[]; walls?: WallBreaks[] };
+  | { ok: false; problems: Notice[]; warnings?: Notice[]; walls?: WallBreaks[] };
 
 export interface Example {
   id: string;

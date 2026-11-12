@@ -97,7 +97,8 @@ export function check(projectText: string): CheckResult {
     // S29: quebras e candidatos por parede (`walls`), da mesma divisão; também com erro (a planta deixa o revisor
     // corrigir a quebra recusada).
     const { panels, problems, walls } = panelizeProject(project);
-    if (problems.length > 0) return { ok: false, problems: problems.map((p): Notice => ({ source: 'engine', ...p })), walls };
+    // S45: o erro de uma parede não esconde os avisos das que o motor montou (o revisor resolve os dois antes de gerar).
+    if (problems.length > 0) return { ok: false, problems: problems.map((p): Notice => ({ source: 'engine', ...p })), warnings: summarize(panels).warnings, walls };
     return { ok: true, projectName: project.name, ...summarize(panels), walls };
   } catch (e) {
     return { ok: false, problems: problemsOf(e) };

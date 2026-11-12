@@ -435,3 +435,12 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   a hipótese `config.defaultHeader*` já tinha sido substituída em 2026-10-05) e tolerância no limite de 24" (o
   motor não arredonda regra de código). Se a fábrica responder header de pé, troca-se só `openingCripples` /
   `resolveOpeningHeader` e o fixture novo.
+- **2026-11-12 — Avisos aparecem no editor mesmo quando há erro (S45; pedido do humano).** A checagem do app
+  devolvia só os problemas quando alguma parede dava erro, e os avisos das paredes que o motor montou ficavam
+  escondidos até o último erro sair — no Matilda, os 18 avisos de peça deitada com cripples (S44) sumiam atrás dos
+  erros de header das paredes portantes, e o engenheiro não tinha como resolvê-los antes de gerar. Agora
+  `CheckResult` com `ok: false` leva `warnings` (dos painéis das paredes boas, que `panelizeProject` já devolvia) e a
+  lista de issues mostra os dois, problemas em cima. Parede com erro não tem painel, logo não tem aviso até o erro
+  dela ser resolvido. `generate` não muda (com erro não gera nada). Motor e CLI não mudam. Rejeitado nesta sessão,
+  por escopo: fazer o motor seguir depois do primeiro erro da parede para listar todas as aberturas com erro (muda
+  `panelizeWall`; sessão própria).
