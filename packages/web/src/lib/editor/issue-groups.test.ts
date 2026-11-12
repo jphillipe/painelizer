@@ -172,8 +172,8 @@ describe('issues por causa (S46)', () => {
       ['FLAT_HEADER_CRIPPLES', 'review', 2],
       ['STUDS_OVERLAP', 'fine', 4],
     ]);
-    expect(causeCounts(groups)).toEqual({ fix: 1, review: 1, fine: 1 });
-    expect(causeCounts([])).toEqual({ fix: 0, review: 0, fine: 0 });
+    expect(causeCounts(groups)).toEqual({ fix: 1, review: 1, fine: 1, reviewed: 0 });
+    expect(causeCounts([])).toEqual({ fix: 0, review: 0, fine: 0, reviewed: 0 });
   });
 
   it('openingInfo: tipo da abertura pela tag do catálogo ou pelo type da própria abertura', () => {
@@ -193,5 +193,48 @@ describe('issues por causa (S46)', () => {
     const map = openingInfo(load.draft);
     expect(map.get('D1')).toEqual({ tag: 'A', kind: 'door' });
     expect(map.get('J1')).toEqual({ kind: 'window' });
+  });
+});
+
+/** S50: aviso revisado sai das seções de trabalho e vai para "Reviewed"; problema nunca. */
+describe('issues revisadas (S50)', () => {
+  const walls: IdIndex = { walls: ['I1', 'I2', 'I3'], openings: new Map([['I1', ['I1-D']], ['I2', ['I2-D']], ['I3', ['I3-D']]]) };
+  const cripples = (wallId: string, reviewed = false): Issue => ({
+    ...issueFromNotice({ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', message: 'x', wallId, openingId: wallId + '-D', params: { gap: 24.125, max: 24 } }, 'warning', walls),
+    ...(reviewed ? { reviewed: true } : {}),
+  });
+
+  it('tierOf: aviso revisado é "reviewed"; problema com a marca continua "fix"', () => {
+    expect(tierOf({ severity: 'warning', code: 'FLAT_HEADER_CRIPPLES', reviewed: true })).toBe('reviewed');
+    expect(tierOf({ severity: 'warning', code: 'STUDS_OVERLAP', reviewed: true })).toBe('reviewed');
+    expect(tierOf({ severity: 'problem', code: 'HEADER_OUT_OF_TABLE', reviewed: true })).toBe('fix');
+  });
+
+  it('família toda revisada: uma linha só, no nível "reviewed", por último, com a chave própria', () => {
+    const header: Issue = { severity: 'problem', source: 'engine', code: 'HEADER_OUT_OF_TABLE', text: 'x', wallId: 'I1', openingId: 'I1-D' };
+    const groups = groupIssues([cripples('I1', true), cripples('I2', true), header], walls);
+    expect(groups.map((g) => [g.key, g.family, g.tier, g.count])).toEqual([
+      ['HEADER_OUT_OF_TABLE', 'HEADER_OUT_OF_TABLE', 'fix', 1],
+      ['reviewed:FLAT_HEADER_CRIPPLES', 'FLAT_HEADER_CRIPPLES', 'reviewed', 2],
+    ]);
+    expect(groups[1]!.title).toBe('Flat header framed with cripples — factory to review');
+    expect(groups[1]!.summary).toBe('2 openings: flat header 24 1/8" below the top plate, over the 24" limit.');
+    expect(causeCounts(groups)).toEqual({ fix: 1, review: 0, fine: 0, reviewed: 1 });
+  });
+
+  it('ocorrência nova na família revisada: a linha de trabalho volta só com a nova e diz quantas já foram revisadas', () => {
+    const groups = groupIssues([cripples('I1', true), cripples('I2', true), cripples('I3')], walls);
+    expect(groups.map((g) => [g.key, g.tier, g.count, g.reviewedCount ?? 0])).toEqual([
+      ['FLAT_HEADER_CRIPPLES', 'review', 1, 2],
+      ['reviewed:FLAT_HEADER_CRIPPLES', 'reviewed', 2, 0],
+    ]);
+    expect(groups[0]!.wallIds).toEqual(['I3']);
+  });
+
+  it('problema marcado à força não vai para "reviewed" nem some da contagem', () => {
+    const forced: Issue = { severity: 'problem', source: 'engine', code: 'HEADER_OUT_OF_TABLE', text: 'x', wallId: 'I1', openingId: 'I1-D', reviewed: true };
+    const groups = groupIssues([forced], walls);
+    expect(groups.map((g) => [g.key, g.tier])).toEqual([['HEADER_OUT_OF_TABLE', 'fix']]);
+    expect(causeCounts(groups)).toEqual({ fix: 1, review: 0, fine: 0, reviewed: 0 });
   });
 });

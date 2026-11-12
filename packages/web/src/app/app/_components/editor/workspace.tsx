@@ -165,7 +165,7 @@ export function Workspace() {
     {
       id: 'issues',
       label: 'Issues',
-      count: groups.length, // S46: causas, não ocorrências
+      count: groups.filter((g) => g.tier !== 'reviewed').length, // S46: causas, não ocorrências; S50: sem as revisadas
       alert: counts.problems > 0,
       content: (
         <IssueGroupsList
@@ -183,6 +183,7 @@ export function Workspace() {
           fixes={fixes}
           draft={draft}
           onApplyEdits={(edits) => dispatch({ type: 'applyEdits', edits })}
+          onReview={(keys, reviewed) => dispatch({ type: 'setIssuesReviewed', keys, reviewed })}
           onQuickFix={(fix) => {
             if (fix.kind === 'wind') dispatch({ type: 'updateBuilding', patch: { windSpeed: fix.value } });
             else if (fix.kind === 'headerHeight') dispatch({ type: 'updateConfig', patch: { headerHeight: fix.value } });

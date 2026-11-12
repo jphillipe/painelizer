@@ -532,3 +532,59 @@ describe('WallEditor: conserto em grupo (S49)', () => {
     ).toEqual([82.5, 82.5]);
   });
 });
+
+/** S50: marcar um aviso como revisado tira a linha do trabalho, apaga a parede e libera o topo; desfaz com "Undo review". */
+describe('WallEditor: marcar como revisado (S50)', () => {
+  function Live({ initial, checked }: { initial: EditorState; checked: CheckState }) {
+    const [state, dispatch] = useReducer(editorReducer, initial);
+    return (
+      <ProjectIOContext value={io}>
+        <WallEditor state={state} dispatch={dispatch} check={checked} />
+        <output data-testid="reviewed">{JSON.stringify(state.draft?.extra?.['$reviewedIssues'] ?? [])}</output>
+      </ProjectIOContext>
+    );
+  }
+  const cripples = {
+    source: 'engine' as const,
+    code: 'FLAT_HEADER_CRIPPLES',
+    message: 'y',
+    panelId: '1-W03-P1',
+    wallId: 'W03',
+    openingId: 'P2',
+    params: { top: 83, gap: 24.125, topPlate: 107.125, max: 24 },
+  };
+  const ok: CheckState = {
+    status: 'done',
+    revision: 0,
+    stale: false,
+    result: { ok: true, projectName: 'x', panels: [], warnings: [cripples] },
+  };
+  const row = (wallId: string): Element | undefined =>
+    [...document.querySelectorAll('ul[aria-label="Walls"] > li')].find((li) => li.textContent?.includes(wallId));
+
+  it('marca: a linha vai para "Reviewed (1)", o selo zera, a parede apaga, o topo fica só "Ready"; desmarca: volta', async () => {
+    const user = userEvent.setup();
+    render(<Live initial={{ ...load(initialEditorState, 1), revision: 0 }} checked={ok} />);
+    expect(row('W03')?.querySelector('[title="1 warning"]')).not.toBeNull();
+    expect(screen.getAllByText('1 to review').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('tab', { name: /Issues/ }));
+    expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues1');
+    await user.click(screen.getByRole('button', { name: 'Mark as reviewed' }));
+
+    expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues0');
+    expect(screen.getByText('Reviewed (1)')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Mark as reviewed' })).toBeNull();
+    expect(JSON.parse(screen.getByTestId('reviewed').textContent ?? '[]')).toHaveLength(1);
+    expect(screen.queryAllByText('1 to review')).toHaveLength(0);
+    expect(screen.getByText(/Ready ·/)).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: /Walls/ }));
+    expect(row('W03')?.querySelector('[title="1 warning"]') ?? null).toBeNull();
+
+    await user.click(screen.getByRole('tab', { name: /Issues/ }));
+    await user.click(screen.getByText('Reviewed (1)'));
+    await user.click(screen.getByRole('button', { name: 'Undo review' }));
+    expect(JSON.parse(screen.getByTestId('reviewed').textContent ?? '[]')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Mark as reviewed' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Issues/ }).textContent).toBe('Issues1');
+  });
+});

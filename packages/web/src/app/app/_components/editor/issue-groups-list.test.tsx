@@ -148,3 +148,53 @@ describe('IssueGroupsList — botão das configurações (S47)', () => {
     expect(html('WIND_SPEED_MISSING', 'warning')).not.toContain('Open project settings');
   });
 });
+
+/** S50: "Mark as reviewed" nas linhas de aviso; a seção "Reviewed (N)" recolhida, com "Undo review". */
+describe('IssueGroupsList — revisado (S50)', () => {
+  const walls: IdIndex = { walls: ['I1', 'I2', 'I3', 'X1'], openings: new Map([['I1', ['I1-D']], ['I2', ['I2-D']], ['I3', ['I3-D']], ['X1', ['X1-W']]]) };
+  const cripples = (wallId: string, reviewed = false): Issue => ({
+    ...issueFromNotice({ source: 'engine', code: 'FLAT_HEADER_CRIPPLES', message: 'x', wallId, openingId: wallId + '-D', params: { gap: 24.125, max: 24 } }, 'warning', walls),
+    ...(reviewed ? { reviewed: true } : {}),
+  });
+  const header = issueFromNotice({ source: 'engine', code: 'HEADER_OUT_OF_TABLE', message: 'x', wallId: 'X1', openingId: 'X1-W', params: { why: 'span' } }, 'problem', walls);
+  const render = (issues: Issue[]): string =>
+    renderToStaticMarkup(<IssueGroupsList groups={groupIssues(issues, walls)} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} onReview={() => {}} />);
+  const sectionOf = (html: string, summary: string): string => {
+    const at = html.indexOf(summary);
+    if (at < 0) return '';
+    return html.slice(html.lastIndexOf('<details', at));
+  };
+
+  it('aviso tem "Mark as reviewed"; problema não', () => {
+    const html = render([header, cripples('I1'), cripples('I2')]);
+    expect(html.match(/Mark as reviewed/g)).toHaveLength(1);
+    const mustFix = html.slice(html.indexOf('Must fix'), html.indexOf('To review'));
+    expect(mustFix).not.toContain('Mark as reviewed');
+    expect(html).not.toContain('Reviewed (');
+  });
+
+  it('família revisada vai para "Reviewed (1)", recolhida, com "Undo review"; não conta na linha do topo', () => {
+    const html = render([header, cripples('I1', true), cripples('I2', true)]);
+    expect(html).toContain('>1 to fix</p>');
+    expect(html).not.toContain('To review');
+    const reviewed = sectionOf(html, 'Reviewed (1)');
+    expect(reviewed.startsWith('<details')).toBe(true);
+    expect(reviewed.slice(0, reviewed.indexOf('>'))).not.toContain('open');
+    expect(reviewed).toContain('Flat header framed with cripples');
+    expect(reviewed).toContain('Undo review');
+    expect(reviewed).not.toContain('Mark as reviewed');
+    expect(html.slice(0, html.indexOf('Reviewed (1)'))).not.toContain('Flat header framed with cripples');
+  });
+
+  it('ocorrência nova: a linha volta para "To review" e diz quantas já foram revisadas', () => {
+    const html = render([cripples('I1', true), cripples('I2', true), cripples('I3')]);
+    expect(html).toContain('1 to review');
+    expect(html).toContain('+ 2 reviewed');
+    expect(html).toContain('Reviewed (1)');
+  });
+
+  it('sem "onReview" (passo 03, leitura): nenhum botão de revisão', () => {
+    const html = renderToStaticMarkup(<IssueGroupsList groups={groupIssues([cripples('I1')], walls)} stale={false} checking={false} selection={{ kind: 'none' }} onSelect={() => {}} onAction={() => {}} />);
+    expect(html).not.toContain('Mark as reviewed');
+  });
+});

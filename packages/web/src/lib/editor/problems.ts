@@ -39,6 +39,8 @@ export interface Issue {
    * (`OPENING_UNPLACED`) não está no projeto, mas o "Add opening" precisa do id dela.
    */
   cited?: { wallId?: string; openingId?: string };
+  /** S50: aviso que o revisor marcou como revisado (`lib/editor/reviewed-issues.ts`); nunca num problema. */
+  reviewed?: boolean;
 }
 
 /** Ids do projeto na ordem do arquivo: os índices dos caminhos do parser mapeiam por aqui. */

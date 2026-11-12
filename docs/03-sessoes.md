@@ -1820,3 +1820,19 @@ de chapa, 3D, posts lidos da planta estrutural pela IA (tags P-01…), viga LVL 
   aplica; válida vai para as aberturas; undo). **Conferido** na tela com a planta do Matilda (`out/s49/`): 13
   aberturas, "Set header" 2x12 × 2 no tipo E2 (ficam 10) e depois em todas → sem "Must fix", "Ready · 53 panels",
   Generate ligado; um Ctrl+Z desfaz o último conserto inteiro.
+
+- [x] **S50 — "Mark as reviewed" (web; não é regra de framing).** Desenho §4 de
+  `docs/superpowers/specs/2026-11-12-issues-by-cause-design.md`; plano em
+  `docs/superpowers/plans/2026-11-12-mark-reviewed-s50.md`. **Chave** (`lib/editor/reviewed-issues.ts`,
+  `issueReviewKey`): família + parede + abertura + parâmetros (o painel só entra em aviso que não é de abertura);
+  problema nunca tem chave. **Armazenamento**: `$reviewedIssues` na raiz do arquivo do projeto, pela ação
+  `setIssuesReviewed` (desfazível; não vai para a checagem do motor). **Grupos**: `tierOf` devolve `reviewed` para
+  aviso marcado; os revisados ficam num grupo à parte (`reviewed:<família>`), por último; o grupo de trabalho da
+  mesma família leva `reviewedCount`. **Tela**: "Mark as reviewed" nas linhas de aviso, seção recolhida "Reviewed
+  (N)" com "Undo review", nota "+ N reviewed"; revisado não conta no selo nem no topo e não acende parede; no
+  inspetor aparece apagado, com "Reviewed" e "Undo review" (e "Mark as reviewed" por aviso). **Testes** (vistos
+  falhar antes): chave (ordem dos parâmetros, medida que muda, painel), gravar / desfazer / reabrir, texto do motor
+  igual com e sem marcas, grupos, lista (SSR), inspetor, editor de verdade (marcar tira a linha, apaga a parede,
+  topo "Ready"; desmarcar devolve). **Conferido** na tela com a planta do Matilda (`out/s50/`): marcando os dois
+  avisos de porta, a aba passa de 4 para 2 linhas, "Reviewed (2)", e as 15 paredes em aviso apagam. A folha do
+  painel e o `panels.csv` não mudam (a marca não vai para o motor).

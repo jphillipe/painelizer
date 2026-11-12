@@ -16,8 +16,11 @@ import type { IdIndex, Issue, Severity } from './problems';
 /** O que a interface oferece para resolver o grupo de uma vez. */
 export type IssueAction = 'projectData' | 'projectSettings' | 'openWall';
 
-/** Nível da causa (S46): `fix` trava "Generate"; `review` pede uma decisão; `fine` a fábrica resolve na bancada. */
-export type IssueTier = 'fix' | 'review' | 'fine';
+/**
+ * Nível da causa (S46): `fix` trava "Generate"; `review` pede uma decisão; `fine` a fábrica resolve na bancada;
+ * `reviewed` (S50) o revisor já aceitou — sai do trabalho, não do que o motor gera.
+ */
+export type IssueTier = 'fix' | 'review' | 'fine' | 'reviewed';
 
 /**
  * Avisos que não pedem decisão do revisor. Campo explícito por código — não se lê do texto da ajuda. Inicial: só o
@@ -26,8 +29,9 @@ export type IssueTier = 'fix' | 'review' | 'fine';
 export const FINE_TO_LEAVE: ReadonlySet<string> = new Set(['STUDS_OVERLAP']);
 
 /** Problema é sempre `fix`, mesmo com código de `FINE_TO_LEAVE`: o que trava a geração nunca fica recolhido. */
-export function tierOf(issue: Pick<Issue, 'severity' | 'code' | 'kind'>): IssueTier {
+export function tierOf(issue: Pick<Issue, 'severity' | 'code' | 'kind' | 'reviewed'>): IssueTier {
   if (issue.severity === 'problem') return 'fix';
+  if (issue.reviewed === true) return 'reviewed';
   return FINE_TO_LEAVE.has(issue.kind ?? issue.code ?? '') ? 'fine' : 'review';
 }
 
@@ -78,6 +82,10 @@ export interface IssueGroup {
   items: Issue[];
   action?: IssueAction;
   tier: IssueTier;
+  /** A família (`kind` ou código) sem o prefixo dos revisados: é dela que saem a frase-resumo e o conserto. */
+  family: string;
+  /** Ocorrências da mesma família que já foram revisadas (S50); só nos grupos de trabalho. */
+  reviewedCount?: number;
   /** Tags (tipos do catálogo) das aberturas citadas, sem repetir, em ordem alfabética. */
   tags: string[];
   /** Frase com os valores em comum das ocorrências; ausente quando a família não tem modelo ou os valores divergem. */
@@ -89,10 +97,11 @@ export interface CauseCounts {
   fix: number;
   review: number;
   fine: number;
+  reviewed: number;
 }
 
 export function causeCounts(groups: readonly Pick<IssueGroup, 'tier'>[]): CauseCounts {
-  const counts: CauseCounts = { fix: 0, review: 0, fine: 0 };
+  const counts: CauseCounts = { fix: 0, review: 0, fine: 0, reviewed: 0 };
   for (const g of groups) counts[g.tier] += 1;
   return counts;
 }
@@ -304,7 +313,10 @@ function subjectOf(g: IssueGroup, context: GroupContext | undefined): string {
   return g.tags.length === 0 ? noun : `${noun} (${g.tags.length === 1 ? 'type' : 'types'} ${g.tags.join(', ')})`;
 }
 
-const TIER_RANK: Readonly<Record<IssueTier, number>> = { fix: 0, review: 1, fine: 2 };
+/** Prefixo da chave dos grupos revisados: `reviewed:FLAT_HEADER_CRIPPLES`. */
+const REVIEWED_PREFIX = 'reviewed:';
+
+const TIER_RANK: Readonly<Record<IssueTier, number>> = { fix: 0, review: 1, fine: 2, reviewed: 3 };
 
 /**
  * Uma linha por causa. Ordem: nível (o que trava, o que pede decisão, o que pode ficar); dentro do nível, grupos
@@ -313,10 +325,12 @@ const TIER_RANK: Readonly<Record<IssueTier, number>> = { fix: 0, review: 1, fine
 export function groupIssues(issues: readonly Issue[], ids: IdIndex, context?: GroupContext): IssueGroup[] {
   const groups = new Map<string, IssueGroup>();
   for (const issue of issues) {
-    const key = groupKey(issue, ids);
+    // S50: o que já foi revisado fica num grupo à parte da mesma família (uma ocorrência nova volta ao trabalho).
+    const family = groupKey(issue, ids);
+    const key = tierOf(issue) === 'reviewed' ? `${REVIEWED_PREFIX}${family}` : family;
     let g = groups.get(key);
     if (g === undefined) {
-      g = { key, severity: issue.severity, title: groupTitle(issue, ids), count: 0, wallIds: [], openingIds: [], items: [], tier: tierOf(issue), tags: [] };
+      g = { key, family, severity: issue.severity, title: groupTitle(issue, ids), count: 0, wallIds: [], openingIds: [], items: [], tier: tierOf(issue), tags: [] };
       const action = actionFor(issue);
       if (action !== undefined) g.action = action;
       groups.set(key, g);
@@ -337,7 +351,9 @@ export function groupIssues(issues: readonly Issue[], ids: IdIndex, context?: Gr
       if (tag !== undefined) tags.add(tag);
     }
     g.tags = [...tags].sort();
-    const summary = SUMMARIES[g.key]?.({ count: g.count, walls: g.wallIds.length, common: commonParams(g.items), subject: subjectOf(g, context) });
+    const reviewed = g.tier === 'reviewed' ? undefined : groups.get(`${REVIEWED_PREFIX}${g.family}`);
+    if (reviewed !== undefined) g.reviewedCount = reviewed.count;
+    const summary = SUMMARIES[g.family]?.({ count: g.count, walls: g.wallIds.length, common: commonParams(g.items), subject: subjectOf(g, context) });
     if (summary !== undefined) g.summary = summary;
   }
   return list.map((g, i) => ({ g, i })).sort((a, b) => TIER_RANK[a.g.tier] - TIER_RANK[b.g.tier] || b.g.count - a.g.count || a.i - b.i).map(({ g }) => g);

@@ -475,3 +475,10 @@ Formato: data — decisão — motivo. Uma linha por decisão. Nunca apagar; se 
   porta × header o app oferece as duas saídas e diz qual muda o framing, porque só o humano sabe qual medida vale;
   o tipo de porta só é editado quando todas as aberturas dele estão na linha. Tudo entra por `applyEdits`, um
   commit só: um Ctrl+Z desfaz o conserto inteiro. Nada é aplicado sem clique.
+- **2026-11-12 — Aviso revisado sai da lista, não das saídas da fábrica (S50; pedido do humano).** A marca é por
+  ocorrência (família + parede + abertura + parâmetros): se a medida muda ou surge outra ocorrência, o aviso volta a
+  pedir revisão. Fica em `$reviewedIssues`, na raiz do arquivo do projeto — o CLI ignora chaves com `$` e elas não
+  vão para a checagem —, então a folha do painel e o `panels.csv` continuam trazendo o aviso. Só aviso pode ser
+  revisado; problema nunca. Não grava quem nem quando. Chaves de avisos que deixaram de existir ficam no arquivo
+  (inofensivas). Rejeitado: marcar a família inteira de uma vez para sempre (uma porta nova entraria revisada sem
+  ninguém ter visto).

@@ -12,6 +12,7 @@ import { causeCounts, dropRepeated, groupIssues, openingInfo, tierOf } from '@/l
 import { projectDataNeeds } from '@/lib/editor/requirements';
 import { byWall, draftIssues, idIndex, issueFromNotice, parseEngineResult, type Issue } from '@/lib/editor/problems';
 import { provenanceIndex } from '@/lib/editor/provenance';
+import { markReviewed, reviewedIssueKeys } from '@/lib/editor/reviewed-issues';
 import type { EditorAction, EditorState } from '@/lib/editor/state';
 import { projectSlug } from '@/lib/files';
 import { EditorContext, useProjectIO, type EditorContextValue } from './editor-context';
@@ -76,11 +77,12 @@ export function WallEditor({ state, dispatch: rawDispatch, check }: WallEditorPr
       .filter((w) => w.source === 'extraction')
       .map((w) => issueFromNotice(w, 'warning', ids))
       .filter((i) => !readingWarningResolved(i, draft));
-    return [...own, ...geo, ...engine, ...reading];
+    // S50: os avisos que o projeto guarda como revisados saem do trabalho (lista, paredes, topo), não do motor.
+    return markReviewed([...own, ...geo, ...engine, ...reading], reviewedIssueKeys(draft));
   }, [draft, state.loadProblems, check.result, outcome, geometry, ids]);
   // S46: o que a fábrica resolve sozinha ("fine to leave") não acende parede nem conta na lista de paredes; o
   // inspetor continua recebendo `issues` inteiro e mostra o aviso com a etiqueta do nível.
-  const issuesByWall = useMemo(() => byWall(issues.filter((i) => tierOf(i) !== 'fine')), [issues]);
+  const issuesByWall = useMemo(() => byWall(issues.filter((i) => tierOf(i) === 'fix' || tierOf(i) === 'review')), [issues]);
   const groups = useMemo(() => groupIssues(issues, ids, draft === undefined ? undefined : { openings: openingInfo(draft) }), [issues, ids, draft]);
   // Quebras de painel (S29): candidatos da última checagem; as do revisor vêm do draft (valem antes da resposta).
   const breakInfo = useMemo(() => breaksByWall(check.result), [check.result]);

@@ -238,6 +238,10 @@ o passo é estado do cliente. Estrutura, em `lg+` (`grid-cols-[260px_1fr_320px]`
   **Conserto em grupo** (S49): a linha de header ("Set header…": seção, plies, jacks opcionais; escopo "All N
   openings" ou por tipo, em chips; botão accent "Apply to …") e a de altura de porta (dois botões outline, o que
   muda o framing diz "(changes framing)") aplicam a edição a todas as aberturas da linha num passo só de desfazer.
+  **Revisado** (S50): linha de aviso tem "Mark as reviewed" (outline); a linha vai para a seção recolhida
+  "Reviewed (N)", depois de "Fine to leave", com "Undo review" (ghost) e opacidade 80%; uma ocorrência nova da
+  mesma família volta para "To review" com a nota "+ N reviewed". Revisado não conta no selo da aba nem no topo, não
+  acende parede; no inspetor aparece apagado com a etiqueta "Reviewed" e o link "Undo review".
   Reading = modelo, páginas, origem, tokens, notas da IA, relatório completo, download da leitura.
 - **Centro**: `PlanCanvas` em modo `fill` (preenche o painel; barra com pavimentos, zoom − / % / + / Fit e a
   toolbar do editor à direita — botões com `Tooltip` e atalho, só ícones abaixo de `sm`; dica de uso no rodapé;

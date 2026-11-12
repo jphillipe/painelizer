@@ -52,7 +52,7 @@ export function WallProperties({ draft, wall, breaks, provenance, issues, dispat
 
   return (
     <div className="space-y-6">
-      <IssueCallout issues={issues} />
+      <IssueCallout issues={issues} onReview={(keys, reviewed) => dispatch({ type: 'setIssuesReviewed', keys, reviewed })} />
       <Section
         title="Wall"
         collapsible

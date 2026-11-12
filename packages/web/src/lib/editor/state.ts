@@ -28,6 +28,7 @@ import {
 } from './draft';
 import { extraDrawingsOf, PROJECT_DRAWINGS_KEY, type DrawingRef } from '../drawings';
 import { inView, UNDERLAY_KEY, underlayOf, withoutView, type Underlay, type UnderlayView } from './underlay';
+import { REVIEWED_ISSUES_KEY, reviewedIssueKeys } from './reviewed-issues';
 import { duplicateWalls, joinWalls, splitWall, type WallOp } from './wall-ops';
 
 export type Selection =
@@ -157,6 +158,8 @@ export type EditorAction =
   | { type: 'addOpening'; wallId: string; preset?: { id?: string | undefined; tag?: string | undefined } }
   | { type: 'removeOpening'; wallId: string; openingId: string }
   | { type: 'updateOpening'; wallId: string; openingId: string; patch: Patch<Omit<DraftOpening, 'id' | 'extra'>> }
+  /** Avisos revisados (S50): chaves de `issueReviewKey`, gravadas em `$reviewedIssues` na raiz do projeto. */
+  | { type: 'setIssuesReviewed'; keys: readonly string[]; reviewed: boolean }
   /** Várias edições num commit só (S49): alvo que não existe mais é ignorado; sem nenhum, nada muda. */
   | { type: 'applyEdits'; edits: readonly DraftEdit[] }
   | { type: 'renameOpening'; wallId: string; openingId: string; newId: string }
@@ -423,6 +426,19 @@ function reduce(state: EditorState, action: EditorAction): EditorState {
     }
     case 'updateOpening':
       return commit(state, mapOpening(d, action.wallId, action.openingId, (o) => applyPatch(o, action.patch)));
+    case 'setIssuesReviewed': {
+      const current = reviewedIssueKeys(d);
+      const next = new Set(current);
+      for (const key of action.keys) {
+        if (action.reviewed) next.add(key);
+        else next.delete(key);
+      }
+      if (next.size === current.size && [...next].every((k) => current.has(k))) return state;
+      const extra = { ...(d.extra ?? {}) };
+      if (next.size === 0) delete extra[REVIEWED_ISSUES_KEY];
+      else extra[REVIEWED_ISSUES_KEY] = [...next].sort();
+      return commit(state, Object.keys(extra).length === 0 ? omit(d, 'extra') : { ...d, extra });
+    }
     case 'applyEdits': {
       const next = action.edits.reduce(applyEdit, d);
       return next === d ? state : commit(state, next);

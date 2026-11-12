@@ -48,7 +48,7 @@ export function OpeningProperties({ draft, wall, opening, provenance, issues, di
 
   return (
     <div className="space-y-6">
-      <IssueCallout issues={issues} />
+      <IssueCallout issues={issues} onReview={(keys, reviewed) => dispatch({ type: 'setIssuesReviewed', keys, reviewed })} />
       <Section
         title={`Opening on ${wall.id}`}
         collapsible

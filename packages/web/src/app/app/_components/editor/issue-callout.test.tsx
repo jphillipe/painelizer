@@ -34,6 +34,23 @@ describe('IssueCallout (SSR)', () => {
     expect(review).not.toContain('Fine to leave');
   });
 
+  it('S50: aviso revisado leva a etiqueta "Reviewed" e "Undo review"; aviso por revisar oferece "Mark as reviewed"; problema, nada', () => {
+    const reviewed = renderToStaticMarkup(
+      <IssueCallout issues={[{ ...cripples, reviewed: true }]} onReview={() => {}} />,
+    );
+    expect(reviewed).toContain('>Reviewed</span>');
+    expect(reviewed).toContain('Undo review');
+    expect(reviewed).not.toContain('Mark as reviewed');
+    const pending = renderToStaticMarkup(<IssueCallout issues={[cripples]} onReview={() => {}} />);
+    expect(pending).toContain('Mark as reviewed');
+    expect(pending).not.toContain('>Reviewed</span>');
+    const problem = renderToStaticMarkup(
+      <IssueCallout issues={[{ ...cripples, severity: 'problem', code: 'HEADER_OUT_OF_TABLE' }]} onReview={() => {}} />,
+    );
+    expect(problem).not.toContain('Mark as reviewed');
+    expect(renderToStaticMarkup(<IssueCallout issues={[cripples]} />)).not.toContain('Mark as reviewed');
+  });
+
   it('sem issues não renderiza nada', () => {
     expect(renderToStaticMarkup(<IssueCallout issues={[]} />)).toBe('');
   });

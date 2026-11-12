@@ -15,6 +15,7 @@ import { focusFor } from '@/lib/editor/issue-targets';
 import { LABELS } from '@/lib/editor/labels';
 import { causeCounts, type IssueAction, type IssueGroup, type IssueTier } from '@/lib/editor/issue-groups';
 import { hasOriginal, issueMessage, type Issue } from '@/lib/editor/problems';
+import { issueReviewKey } from '@/lib/editor/reviewed-issues';
 import type { Selection } from '@/lib/editor/state';
 import { cn } from '@/lib/utils';
 import { MeasureInput, NumberInput } from './fields';
@@ -38,6 +39,8 @@ export interface IssueGroupsListProps {
   current?: { windSpeed?: number | undefined; headerHeight?: number | undefined } | undefined;
   /** A checagem achou problema mas montou alguma parede: as paredes com problema ainda podem trazer avisos (S46). */
   partial?: boolean | undefined;
+  /** Marcar / desmarcar avisos como revisados (S50): as chaves das ocorrências da linha. Ausente = sem os botões. */
+  onReview?: ((keys: string[], reviewed: boolean) => void) | undefined;
   /** Conserto em grupo de cada causa (S49), pela chave do grupo. */
   fixes?: ReadonlyMap<string, GroupFix> | undefined;
   /** O conserto confirmado: as edições entram no projeto num passo só de desfazer. */
@@ -49,7 +52,7 @@ export interface IssueGroupsListProps {
 /** Chips à vista por linha; acima disso ficam atrás de "Show openings (N)" (S46). */
 const CHIPS_IN_VIEW = 6;
 
-const TIER_HEADING: Record<Exclude<IssueTier, 'fine'>, string> = { fix: 'Must fix', review: 'To review' };
+const TIER_HEADING: Record<Extract<IssueTier, 'fix' | 'review'>, string> = { fix: 'Must fix', review: 'To review' };
 
 const ACTION_LABEL: Record<Exclude<IssueAction, 'openWall'>, string> = {
   projectData: 'Fill in project data',
@@ -74,7 +77,7 @@ function projectFocus(i: Issue): readonly string[] | undefined {
  * CHIPS_IN_VIEW ficam recolhidos), conserto rápido quando há um e a ação quando há uma. Os textos originais do
  * motor / da extração ficam em "Details", nunca somem. A contagem do topo é de causas, não de ocorrências.
  */
-export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial, fixes, onApplyEdits, draft }: IssueGroupsListProps) {
+export function IssueGroupsList({ groups, stale, checking, selection, onSelect, onAction, onQuickFix, current, partial, fixes, onApplyEdits, draft, onReview }: IssueGroupsListProps) {
   if (groups.length === 0) {
     return (
       <div className="flex items-start gap-2 px-4 py-4 text-sm" aria-live="polite">
@@ -89,9 +92,10 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
   const counts = causeCounts(groups);
   const tally = [counts.fix > 0 ? `${counts.fix} to fix` : '', counts.review > 0 ? `${counts.review} to review` : '', counts.fine > 0 ? `${counts.fine} fine to leave` : ''].filter((s) => s !== '').join(' · ');
   const row = (g: IssueGroup) => (
-    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} />
+    <GroupRow key={g.key} group={g} selection={selection} onSelect={onSelect} onAction={onAction} onQuickFix={onQuickFix} current={current} groupFix={fixes?.get(g.key)} onApplyEdits={onApplyEdits} draft={draft} onReview={onReview} />
   );
   const fine = groups.filter((g) => g.tier === 'fine');
+  const reviewed = groups.filter((g) => g.tier === 'reviewed');
   return (
     <div className={cn('workspace-pane h-full', stale && 'opacity-70')} aria-live="polite" aria-busy={checking}>
       <p className="border-b border-line-faint px-4 py-2 text-[12px] font-medium text-ink-2">{tally}</p>
@@ -115,15 +119,27 @@ export function IssueGroupsList({ groups, stale, checking, selection, onSelect, 
           <ul className="divide-y divide-line-faint">{fine.map(row)}</ul>
         </details>
       ) : null}
+      {reviewed.length > 0 ? (
+        <details className="group/reviewed border-t border-line-faint">
+          <summary className="eyebrow flex cursor-pointer list-none items-center gap-1 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
+            <ChevronRightIcon className="size-3.5 transition-transform duration-200 group-open/reviewed:rotate-90" aria-hidden />
+            Reviewed ({reviewed.length})
+          </summary>
+          <ul className="divide-y divide-line-faint opacity-80">{reviewed.map(row)}</ul>
+        </details>
+      ) : null}
       {partial === true ? <p className="border-t border-line-faint px-4 py-3 text-[12px] leading-snug text-ink-3">Walls with a problem are not framed yet — they may add warnings once fixed.</p> : null}
     </div>
   );
 }
 
-type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft'> & { group: IssueGroup; groupFix: GroupFix | undefined };
+type GroupRowProps = Pick<IssueGroupsListProps, 'selection' | 'onSelect' | 'onAction' | 'onQuickFix' | 'current' | 'onApplyEdits' | 'draft' | 'onReview'> & { group: IssueGroup; groupFix: GroupFix | undefined };
 
 /** Uma causa: título, frase, chips, conserto rápido, ação e "Details". */
-function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft }: GroupRowProps) {
+function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current, groupFix, onApplyEdits, draft, onReview }: GroupRowProps) {
+  // S50: linha já revisada só oferece desfazer; linha de aviso oferece marcar. Problema nunca.
+  const done = g.tier === 'reviewed';
+  const reviewKeys = g.severity === 'problem' ? [] : g.items.map(issueReviewKey).filter((k): k is string => k !== undefined);
   const selectedWall = selection.kind === 'wall' || selection.kind === 'opening' ? selection.wallId : undefined;
   const selectedOpening = selection.kind === 'opening' ? selection.openingId : undefined;
   const problem = g.severity === 'problem';
@@ -197,9 +213,17 @@ function GroupRow({ group: g, selection, onSelect, onAction, onQuickFix, current
               </details>
             )
           ) : null}
-          {fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
-          {groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} /> : null}
-          {settingsAction !== undefined && fix === undefined ? (
+          {!done && fix !== undefined && onQuickFix !== undefined ? <QuickFixRow fix={fix} group={g} current={current} onQuickFix={onQuickFix} /> : null}
+          {!done && groupFix !== undefined && onApplyEdits !== undefined ? <GroupFixRow fix={groupFix} groupKey={g.key} draft={draft} onApply={onApplyEdits} /> : null}
+          {onReview !== undefined && reviewKeys.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant={done ? 'ghost' : 'outline'} size="xs" onClick={() => onReview(reviewKeys, !done)} title={done ? 'Bring it back to the list' : 'I have seen it; take it off the list (it still prints on the panel sheet)'}>
+                {done ? 'Undo review' : 'Mark as reviewed'}
+              </Button>
+              {!done && g.reviewedCount !== undefined && g.reviewedCount > 0 ? <span className="text-[12px] text-ink-3">+ {g.reviewedCount} reviewed</span> : null}
+            </div>
+          ) : null}
+          {!done && settingsAction !== undefined && fix === undefined ? (
             <Button variant={problem ? 'accent' : 'outline'} size="xs" onClick={() => onAction(settingsAction, projectFocus(first))}>
               {ACTION_LABEL[settingsAction]}
             </Button>

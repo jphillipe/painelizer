@@ -100,7 +100,7 @@ describe('issues por causa, pela checagem real (S46)', () => {
       ['DOOR_RO_HEIGHT_MISMATCH', 'review', 3],
       ['STUDS_OVERLAP', 'fine', 1],
     ]);
-    expect(causeCounts(groups)).toEqual({ fix: 1, review: 2, fine: 1 });
+    expect(causeCounts(groups)).toEqual({ fix: 1, review: 2, fine: 1, reviewed: 0 });
     expect(groups.map((g) => g.summary)).toEqual([
       'The building is 50\'-0" wide with 30 psf ground snow, outside IRC table R602.7(1).',
       '3 doors (types A, B): flat header 24 1/8" below the top plate, over the 24" limit.',
